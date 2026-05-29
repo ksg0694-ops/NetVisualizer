@@ -49,11 +49,14 @@
     <!-- 데스크탑 사이드바 -->
     <aside class="w-64 bg-white border-r border-gray-200 flex flex-col justify-between hidden md:flex z-10 shrink-0">
         <div>
-            <div class="h-20 flex items-center px-8 border-b border-gray-100">
+            <div class="h-20 flex flex-col justify-center px-8 border-b border-gray-100">
                 <div class="flex items-center gap-2 text-indigo-600">
                     <i class="fas fa-wallet text-2xl"></i>
                     <span class="text-xl font-bold tracking-tight">스마트 가계부</span>
                     <span class="text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-bold ml-1">V2</span>
+                </div>
+                <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
+                    <i class="fas fa-info-circle"></i>업데이트: 포트폴리오 폼 개편 (5/29)
                 </div>
             </div>
             <nav class="p-4 space-y-1 mt-4">
@@ -445,18 +448,29 @@
 
     <!-- 💡 [신규] 포트폴리오 금액 수정 모달 -->
     <div id="pf-edit-modal" class="fixed inset-0 z-[100] hidden flex flex-col justify-end md:justify-center items-center modal-overlay md:p-4">
-        <div class="bg-white md:rounded-2xl rounded-t-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] md:max-h-full">
-            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 sticky top-0 z-10">
-                <h3 class="text-lg font-bold text-gray-800">포트폴리오 금액 업데이트</h3>
+        <div class="bg-white md:rounded-2xl rounded-t-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] md:max-h-[85vh]">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 sticky top-0 z-10 shrink-0">
+                <h3 class="text-lg font-bold text-gray-800">포트폴리오 편집</h3>
                 <button onclick="closePortfolioEditModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-lg"></i></button>
             </div>
-            <div class="p-6 overflow-y-auto space-y-4" id="pf-edit-list">
-                <!-- JS에서 기존 포트폴리오 데이터를 인풋창으로 렌더링 -->
+            
+            <div class="p-5 md:p-6 overflow-y-auto flex-1 space-y-6 bg-gray-50/50" id="pf-edit-groups">
+                <!-- JS에서 그룹화된 카드로 렌더링 -->
             </div>
-            <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 pb-safe">
-                <button onclick="closePortfolioEditModal()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
-                <button id="btn-submit-pf" onclick="submitPortfolio()" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm flex items-center gap-2">
-                    <i class="fas fa-check"></i> 시트에 덮어쓰기
+            
+            <!-- Sticky Bar (C안) -->
+            <div class="bg-indigo-50/80 backdrop-blur-sm border-t border-indigo-100 px-6 py-3 flex justify-between items-center shrink-0">
+                <span class="text-xs font-bold text-indigo-800">수정 후 예상 총 자산 (부채 제외)</span>
+                <div class="text-right">
+                    <div class="text-sm md:text-base font-bold text-indigo-900" id="pf-edit-total-preview">0원</div>
+                    <div class="text-[10px] font-bold" id="pf-edit-diff-preview">-</div>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-white pb-safe shrink-0">
+                <button onclick="closePortfolioEditModal()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">취소</button>
+                <button id="btn-submit-pf" onclick="submitPortfolio()" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm flex items-center gap-2 transition-colors">
+                    <i class="fas fa-check"></i> 저장하기
                 </button>
             </div>
         </div>
@@ -536,7 +550,9 @@
     let dynamicAssetHistory = { labels: [], data: [] };
     let dynamicAssetSnapshots = {};
     let dynamicPortfolioData = null; 
-    let rawPortfolioData = []; // 💡 [신규] 포트폴리오 수정을 위해 전체 2D 배열 원본 저장
+    let rawPortfolioData = []; 
+    let workingPortfolioData = []; // 💡 [신규] 포트폴리오 편집 모달용 상태 (항목 추가/삭제/수정용)
+    let originalNetWorthForDiff = 0; // 💡 [신규] 변경된 차액을 계산하기 위한 기준값
 
     const MOCK_DATA = {
         tx: [
@@ -895,46 +911,146 @@
             return showToast('수정할 포트폴리오 데이터가 없습니다.', 'error');
         }
         
-        const container = document.getElementById('pf-edit-list');
-        container.innerHTML = '';
+        // 깊은 복사로 workingPortfolioData 초기화
+        workingPortfolioData = JSON.parse(JSON.stringify(rawPortfolioData));
         
-        // 원본 배열에서 첫 줄(헤더)은 건너뛰고 값 입력창 생성
+        // 원본 순자산(부채 제외) 합계 계산 (C안을 위함)
+        originalNetWorthForDiff = 0;
         for (let i = 1; i < rawPortfolioData.length; i++) {
-            const row = rawPortfolioData[i];
-            if(row.length < 5) continue; // 데이터 형태가 맞지 않는 줄 스킵
-            
-            const group = row[0] || '미분류';
-            const name = row[1];
-            if(!name) continue;
-
-            const amountStr = String(row[4] || '0').replace(/[^0-9-]/g, '');
-            
-            const itemHtml = `
-                <div class="flex flex-col gap-1 pb-3 border-b border-gray-50">
-                    <label class="text-xs font-bold text-gray-500 truncate">${group} > <span class="text-gray-800">${name}</span></label>
-                    <div class="flex items-center gap-2">
-                        <input type="number" id="pf-amount-${i}" value="${amountStr}" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                        <span class="text-sm text-gray-500 font-medium">원</span>
-                    </div>
-                </div>
-            `;
-            container.insertAdjacentHTML('beforeend', itemHtml);
+            if (rawPortfolioData[i].length < 5) continue;
+            const group = rawPortfolioData[i][0] || '';
+            const amount = parseInt(String(rawPortfolioData[i][4] || '0').replace(/[^0-9-]/g, ''), 10) || 0;
+            if (group !== '부채') originalNetWorthForDiff += amount;
         }
+
+        renderPortfolioEditForm();
         document.getElementById('pf-edit-modal').classList.remove('hidden');
     }
+
+    function renderPortfolioEditForm() {
+        const container = document.getElementById('pf-edit-groups');
+        container.innerHTML = '';
+
+        // 1. 그룹별로 데이터 묶기 (index 포함하여 맵핑)
+        const groups = {};
+        for (let i = 1; i < workingPortfolioData.length; i++) {
+            const row = workingPortfolioData[i];
+            if(row.length < 5) continue;
+            const groupName = row[0] || '미분류';
+            if (!groups[groupName]) groups[groupName] = [];
+            groups[groupName].push({ index: i, name: row[1], currency: row[2] || 'KRW', amount: row[4] });
+        }
+
+        // 2. 그룹별로 카드 렌더링 (A안)
+        Object.entries(groups).forEach(([groupName, items]) => {
+            const isDebt = groupName === '부채';
+            const iconClass = isDebt ? 'fa-credit-card text-red-500' : (groupName.includes('투자') ? 'fa-chart-line text-purple-500' : 'fa-wallet text-blue-500');
+            const bgClass = isDebt ? 'bg-red-50' : (groupName.includes('투자') ? 'bg-purple-50' : 'bg-blue-50');
+            
+            let cardHtml = `
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-50 flex items-center gap-2 bg-gray-50/50">
+                        <div class="w-6 h-6 rounded-full ${bgClass} flex items-center justify-center"><i class="fas ${iconClass} text-[10px]"></i></div>
+                        <h4 class="text-sm font-bold text-gray-800">${groupName}</h4>
+                    </div>
+                    <div class="p-4 space-y-4">
+            `;
+
+            items.forEach(item => {
+                const amountStr = String(item.amount || '0').replace(/[^0-9-]/g, '');
+                cardHtml += `
+                    <div class="flex flex-col gap-1 relative group">
+                        <div class="flex justify-between items-center mb-0.5">
+                            <input type="text" value="${item.name}" onchange="updatePortfolioName(${item.index}, this.value)" class="text-xs font-bold text-gray-700 bg-transparent border-none p-0 focus:ring-0 focus:outline-none placeholder-gray-400 w-full" placeholder="자산명 입력">
+                            <button onclick="removePortfolioItem(${item.index})" class="text-gray-300 hover:text-red-500 transition-colors shrink-0 p-1 bg-white rounded-full"><i class="fas fa-trash-alt text-sm"></i></button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="number" id="pf-edit-amt-${item.index}" value="${amountStr}" oninput="calculateExpectedTotal()" onchange="updatePortfolioAmount(${item.index}, this.value)" class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                            <span class="text-xs text-gray-500 font-bold bg-gray-100 px-2 py-2 rounded-lg shrink-0">${item.currency}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // [+ 항목 추가] 버튼 (B안)
+            cardHtml += `
+                    </div>
+                    <button onclick="addPortfolioItem('${groupName}')" class="w-full py-2 bg-gray-50/80 hover:bg-gray-100 text-xs font-bold text-indigo-500 transition-colors border-t border-gray-50">
+                        <i class="fas fa-plus mr-1"></i> 항목 추가
+                    </button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', cardHtml);
+        });
+
+        calculateExpectedTotal(); // 초기 계산
+    }
+
+    window.addPortfolioItem = function(groupName) {
+        workingPortfolioData.push([groupName, "새 자산", "KRW", "", 0]);
+        renderPortfolioEditForm();
+    };
+
+    window.removePortfolioItem = function(index) {
+        workingPortfolioData.splice(index, 1);
+        renderPortfolioEditForm();
+    };
+
+    window.updatePortfolioName = function(index, val) {
+        if(workingPortfolioData[index]) workingPortfolioData[index][1] = val;
+    };
+
+    window.updatePortfolioAmount = function(index, val) {
+        if(workingPortfolioData[index]) workingPortfolioData[index][4] = val ? parseInt(val, 10) : 0;
+        calculateExpectedTotal();
+    };
+
+    window.calculateExpectedTotal = function() {
+        let expectedNetWorth = 0;
+        // input 엘리먼트들을 순회하며 즉각 반영 (렌더링을 기다리지 않음)
+        for (let i = 1; i < workingPortfolioData.length; i++) {
+            if (workingPortfolioData[i].length < 5) continue;
+            const group = workingPortfolioData[i][0] || '';
+            const inputEl = document.getElementById(`pf-edit-amt-${i}`);
+            let amount = 0;
+            if (inputEl) {
+                amount = inputEl.value ? parseInt(inputEl.value, 10) : 0;
+            } else {
+                amount = parseInt(String(workingPortfolioData[i][4] || '0').replace(/[^0-9-]/g, ''), 10) || 0;
+            }
+            if (group !== '부채') expectedNetWorth += amount;
+        }
+
+        const previewEl = document.getElementById('pf-edit-total-preview');
+        if (previewEl) previewEl.textContent = expectedNetWorth.toLocaleString() + '원';
+        
+        const diff = expectedNetWorth - originalNetWorthForDiff;
+        const diffEl = document.getElementById('pf-edit-diff-preview');
+        if (diffEl) {
+            if (diff > 0) {
+                diffEl.textContent = `▲ +${diff.toLocaleString()}원 증가`;
+                diffEl.className = 'text-[10px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded inline-block mt-0.5';
+            } else if (diff < 0) {
+                diffEl.textContent = `▼ ${diff.toLocaleString()}원 감소`;
+                diffEl.className = 'text-[10px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded inline-block mt-0.5';
+            } else {
+                diffEl.textContent = `- 변동 없음`;
+                diffEl.className = 'text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded inline-block mt-0.5';
+            }
+        }
+    };
 
     function closePortfolioEditModal() {
         document.getElementById('pf-edit-modal').classList.add('hidden');
     }
 
     async function submitPortfolio() {
-        // 원본 배열 깊은 복사 후 사용자가 수정한 금액만 갱신
-        const updatedData = JSON.parse(JSON.stringify(rawPortfolioData));
-        for (let i = 1; i < updatedData.length; i++) {
-            if(updatedData[i].length < 5) continue;
-            const inputEl = document.getElementById(`pf-amount-${i}`);
+        // 이미 updatePortfolioAmount 로 값이 반영되어 있으나, 확실히 하기 위해 한 번 더 동기화
+        for (let i = 1; i < workingPortfolioData.length; i++) {
+            if(workingPortfolioData[i].length < 5) continue;
+            const inputEl = document.getElementById(`pf-edit-amt-${i}`);
             if (inputEl) {
-                updatedData[i][4] = inputEl.value ? parseInt(inputEl.value, 10) : 0;
+                workingPortfolioData[i][4] = inputEl.value ? parseInt(inputEl.value, 10) : 0;
             }
         }
 
@@ -949,12 +1065,12 @@
             const response = await fetch(userUrls.webapp, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'updatePortfolio', data: updatedData })
+                body: JSON.stringify({ action: 'updatePortfolio', data: workingPortfolioData })
             });
 
             const result = await response.json();
             if(result.status === 'success') {
-                showToast('포트폴리오가 수정되었습니다.', 'info');
+                showToast('포트폴리오가 성공적으로 저장되었습니다.', 'info');
                 closePortfolioEditModal();
                 fetchSheetData(false); // UI 다시 그리기
             } else {
