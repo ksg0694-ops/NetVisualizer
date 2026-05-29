@@ -101,3 +101,38 @@ function testDoPost() {
   const result = doPost(mockEvent);
   Logger.log("테스트 성공 여부: " + result.getContent());
 }
+
+/**
+ * 💡 [신규] 네이버 금융 실시간 주가 가져오기 (GOOGLEFINANCE 대체용)
+ * 구글 시트에서 =GET_NAVER_PRICE("종목코드") 와 같이 사용합니다.
+ * 예시: =GET_NAVER_PRICE("360200") * F2
+ */
+function GET_NAVER_PRICE(code) {
+  if (!code) return "코드 입력 오류";
+  
+  try {
+    var url = "https://polling.finance.naver.com/api/realtime?query=SERVICE_ITEM:" + code;
+    var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    
+    if (response.getResponseCode() !== 200) {
+      return "접속 오류";
+    }
+    
+    var jsonText = response.getContentText();
+    var data = JSON.parse(jsonText);
+    
+    if (data && data.resultCode === "success" && data.result && data.result.areas) {
+      var areas = data.result.areas;
+      if (areas.length > 0 && areas[0].datas && areas[0].datas.length > 0) {
+        var nv = areas[0].datas[0].nv;
+        if (nv) {
+          return parseInt(nv, 10);
+        }
+      }
+    }
+    
+    return "가격 정보 없음";
+  } catch(e) {
+    return "요청 실패: " + e.message;
+  }
+}
