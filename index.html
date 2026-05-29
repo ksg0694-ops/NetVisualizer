@@ -958,6 +958,7 @@
 
             items.forEach(item => {
                 const amountStr = String(item.amount || '0').replace(/[^0-9-]/g, '');
+                const formattedAmount = amountStr ? parseInt(amountStr, 10).toLocaleString() : '0';
                 cardHtml += `
                     <div class="flex flex-col gap-1 relative group">
                         <div class="flex justify-between items-center mb-0.5">
@@ -965,7 +966,7 @@
                             <button onclick="removePortfolioItem(${item.index})" class="text-gray-300 hover:text-red-500 transition-colors shrink-0 p-1 bg-white rounded-full"><i class="fas fa-trash-alt text-sm"></i></button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <input type="number" id="pf-edit-amt-${item.index}" value="${amountStr}" oninput="calculateExpectedTotal()" onchange="updatePortfolioAmount(${item.index}, this.value)" class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                            <input type="text" id="pf-edit-amt-${item.index}" value="${formattedAmount}" oninput="formatNumberInput(this); updatePortfolioAmount(${item.index}, this.value)" class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-right">
                             <span class="text-xs text-gray-500 font-bold bg-gray-100 px-2 py-2 rounded-lg shrink-0">${item.currency}</span>
                         </div>
                     </div>
@@ -987,7 +988,13 @@
     }
 
     window.addPortfolioItem = function(groupName) {
-        workingPortfolioData.push([groupName, "새 자산", "KRW", "", 0]);
+        const rowLen = workingPortfolioData.length > 0 ? workingPortfolioData[0].length : 5;
+        const newRow = new Array(rowLen).fill('');
+        newRow[0] = groupName;
+        newRow[1] = "새 자산";
+        newRow[2] = "KRW";
+        newRow[4] = 0;
+        workingPortfolioData.push(newRow);
         renderPortfolioEditForm();
     };
 
@@ -1000,8 +1007,20 @@
         if(workingPortfolioData[index]) workingPortfolioData[index][1] = val;
     };
 
+    window.formatNumberInput = function(el) {
+        let val = String(el.value).replace(/[^0-9-]/g, '');
+        if (val) {
+            el.value = parseInt(val, 10).toLocaleString();
+        } else {
+            el.value = '';
+        }
+    };
+
     window.updatePortfolioAmount = function(index, val) {
-        if(workingPortfolioData[index]) workingPortfolioData[index][4] = val ? parseInt(val, 10) : 0;
+        if(workingPortfolioData[index]) {
+            const rawVal = String(val).replace(/[^0-9-]/g, '');
+            workingPortfolioData[index][4] = rawVal ? parseInt(rawVal, 10) : 0;
+        }
         calculateExpectedTotal();
     };
 
@@ -1014,7 +1033,8 @@
             const inputEl = document.getElementById(`pf-edit-amt-${i}`);
             let amount = 0;
             if (inputEl) {
-                amount = inputEl.value ? parseInt(inputEl.value, 10) : 0;
+                const rawVal = String(inputEl.value).replace(/[^0-9-]/g, '');
+                amount = rawVal ? parseInt(rawVal, 10) : 0;
             } else {
                 amount = parseInt(String(workingPortfolioData[i][4] || '0').replace(/[^0-9-]/g, ''), 10) || 0;
             }
@@ -1050,7 +1070,8 @@
             if(workingPortfolioData[i].length < 5) continue;
             const inputEl = document.getElementById(`pf-edit-amt-${i}`);
             if (inputEl) {
-                workingPortfolioData[i][4] = inputEl.value ? parseInt(inputEl.value, 10) : 0;
+                const rawVal = String(inputEl.value).replace(/[^0-9-]/g, '');
+                workingPortfolioData[i][4] = rawVal ? parseInt(rawVal, 10) : 0;
             }
         }
 
