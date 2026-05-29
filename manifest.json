@@ -1,0 +1,18 @@
+{
+  "name": "스마트 가계부 V2",
+  "short_name": "가계부",
+  "description": "API 연동형 스마트 개인 가계부 및 자산 포트폴리오 트래커",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F9FAFB",
+  "theme_color": "#4F46E5",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

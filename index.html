@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>스마트 가계부 V2 - 실서버 연동</title>
+    
+    <!-- PWA 및 네이티브 앱 메타 태그 -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="스마트 가계부">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes spin-slow { 100% { transform: rotate(360deg); } }
+        .animate-spin-slow { animation: spin-slow 1s linear infinite; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        
+        @keyframes slideInUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .toast-enter { animation: slideInUp 0.3s ease-out forwards; }
+        
+        /* 아코디언 애니메이션 */
+        .accordion-content { transition: max-height 0.3s ease-out, opacity 0.3s ease-out; max-height: 0; opacity: 0; overflow: hidden; }
+        .accordion-content.open { max-height: 500px; opacity: 1; }
+        .accordion-icon { transition: transform 0.3s ease; }
+        .accordion-icon.rotate { transform: rotate(180deg); }
+
+        /* 모달 오버레이 */
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); }
+    </style>
+</head>
+<body class="bg-gray-50 flex h-[100dvh] overflow-hidden text-gray-800">
+
+    <!-- 데스크탑 사이드바 -->
+    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col justify-between hidden md:flex z-10 shrink-0">
+        <div>
+            <div class="h-20 flex items-center px-8 border-b border-gray-100">
+                <div class="flex items-center gap-2 text-indigo-600">
+                    <i class="fas fa-wallet text-2xl"></i>
+                    <span class="text-xl font-bold tracking-tight">스마트 가계부</span>
+                    <span class="text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-bold ml-1">V2</span>
+                </div>
+            </div>
+            <nav class="p-4 space-y-1 mt-4">
+                <a href="#" data-target="dashboard-view" class="nav-link flex items-center gap-3 px-4 py-3 text-indigo-600 bg-indigo-50 rounded-xl font-medium transition-all">
+                    <i class="fas fa-chart-pie w-5 text-center"></i> 대시보드
+                </a>
+                <a href="#" data-target="portfolio-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
+                    <i class="fas fa-briefcase w-5 text-center"></i> 포트폴리오
+                </a>
+                <a href="#" data-target="stats-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
+                    <i class="fas fa-money-bill-transfer w-5 text-center"></i> 현금 흐름
+                </a>
+                <a href="#" data-target="asset-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
+                    <i class="fas fa-chart-area w-5 text-center"></i> 장기 자산 추이
+                </a>
+            </nav>
+        </div>
+        
+        <div class="p-4 border-t border-gray-100">
+            <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 overflow-hidden">
+                <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shadow-sm shrink-0">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-bold text-gray-900 truncate">나의 가계부</p>
+                    <p class="text-xs text-indigo-600 font-medium flex items-center gap-1" id="sidebar-sync-status">
+                        <i class="fas fa-bolt text-[10px]"></i> 캐시 데이터 로드됨
+                    </p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="flex-1 flex flex-col overflow-hidden relative min-w-0">
+        <!-- 상단 헤더 -->
+        <header class="h-16 md:h-20 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-20 shrink-0">
+            <div class="flex items-center gap-2 md:gap-3 min-w-0">
+                <h2 class="text-lg md:text-xl font-bold text-gray-800 flex items-center gap-1 md:gap-3 shrink-0">
+                    <button id="btn-prev-month" class="p-2 text-gray-400 hover:text-indigo-600 transition-colors disabled:opacity-30"><i class="fas fa-chevron-left text-sm"></i></button>
+                    <span id="display-month" class="w-[90px] md:w-auto text-center truncate">월 로딩중</span>
+                    <button id="btn-next-month" class="p-2 text-gray-400 hover:text-indigo-600 transition-colors disabled:opacity-30"><i class="fas fa-chevron-right text-sm"></i></button>
+                </h2>
+                <span id="display-period" class="hidden md:inline-block text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-md truncate">날짜 계산중</span>
+            </div>
+            <div class="flex items-center gap-2 md:gap-3 shrink-0">
+                <span id="sync-status" class="hidden md:inline-block text-xs text-indigo-500 font-medium mr-2 max-w-[150px] truncate">백그라운드 동기화 중...</span>
+                <button id="btn-sync" class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors shadow-sm flex justify-center items-center" title="데이터 갱신">
+                    <i class="fas fa-sync-alt" id="sync-icon"></i>
+                </button>
+                <button onclick="document.getElementById('settings-modal').classList.remove('hidden')" class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors shadow-sm flex justify-center items-center" title="설정">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <button id="btn-open-original" class="px-3 py-2 md:px-4 md:py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 flex items-center gap-2 shrink-0">
+                    <i class="fas fa-external-link-alt"></i> <span class="hidden md:inline">원본</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- 스크롤 가능한 뷰 영역 -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-36 md:pb-8 scrollbar-hide relative pb-safe">
+            
+            <!-- 1. 대시보드 뷰 -->
+            <div id="dashboard-view" class="view-section block max-w-6xl mx-auto">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+                    <!-- 총 자산 -->
+                    <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl p-5 md:p-6 text-white shadow-lg shadow-indigo-200 relative overflow-hidden flex flex-col justify-between">
+                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white opacity-10 rounded-full pointer-events-none"></div>
+                        <div>
+                            <p class="text-indigo-100 font-medium text-sm md:text-base mb-1">현재 총 자산</p>
+                            <h3 class="text-2xl md:text-3xl font-bold mb-2 truncate" id="card-asset">0원</h3>
+                        </div>
+                        <div class="border-t border-indigo-400/50 pt-3 mt-2 flex justify-between items-end relative z-10">
+                            <div class="min-w-0 flex-1 pr-2">
+                                <p class="text-[10px] md:text-xs text-indigo-100 mb-0.5">해당 월 잉여 자금</p>
+                                <p class="text-base md:text-lg font-bold text-white truncate" id="card-total">0원</p>
+                            </div>
+                            <p class="text-[10px] md:text-xs text-indigo-100 flex items-center gap-1 mb-1 whitespace-nowrap shrink-0" id="card-budget-status"><i class="fas fa-check-circle"></i> 흑자</p>
+                        </div>
+                    </div>
+                    <!-- 이번 달 수입 -->
+                    <div class="bg-white rounded-2xl p-5 md:p-6 border border-gray-100 shadow-sm flex flex-col justify-center min-w-0">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center shrink-0"><i class="fas fa-arrow-down"></i></div>
+                            <p class="text-gray-500 font-medium text-sm md:text-base truncate">해당 월 수입</p>
+                        </div>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-800 truncate" id="card-income">0원</h3>
+                    </div>
+                    <!-- 이번 달 지출 -->
+                    <div class="bg-white rounded-2xl p-5 md:p-6 border border-gray-100 shadow-sm flex flex-col justify-center min-w-0">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center shrink-0"><i class="fas fa-arrow-up"></i></div>
+                            <p class="text-gray-500 font-medium text-sm md:text-base truncate">해당 월 지출</p>
+                        </div>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-800 truncate" id="card-expense">0원</h3>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-8">
+                    <!-- 자산 흐름 -->
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-w-0">
+                        <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
+                            <h3 class="text-base md:text-lg font-bold text-gray-800 truncate" id="dashboard-asset-title">자산 흐름</h3>
+                            <span class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full whitespace-nowrap" id="dashboard-asset-diff"><i class="fas fa-arrow-up"></i> 계산중</span>
+                        </div>
+                        <div class="flex-1 relative h-56 md:h-64 w-full">
+                            <canvas id="dashboardAssetChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- 대시보드 내 포트폴리오 구성 비율 요약 차트 -->
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-w-0">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-base md:text-lg font-bold text-gray-800 truncate">해당 월 자산 구성</h3>
+                            <button onclick="switchView('portfolio-view')" class="text-xs text-indigo-500 hover:text-indigo-700">상세보기 &gt;</button>
+                        </div>
+                        <div class="flex-1 relative h-56 md:h-64 w-full">
+                            <canvas id="dashPortfolioChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 포트폴리오 뷰 -->
+            <div id="portfolio-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- 좌측: 자산 요약 및 차트 -->
+                    <div class="lg:col-span-1 flex flex-col gap-6">
+                        <div class="bg-gray-800 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+                            <div class="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-white opacity-5 rounded-full pointer-events-none"></div>
+                            <p class="text-gray-300 font-medium text-sm mb-1">총 순자산 (Net Worth)</p>
+                            <h3 class="text-3xl font-bold mb-4" id="pf-networth">0원</h3>
+                            <div class="space-y-2 text-sm border-t border-gray-700 pt-4">
+                                <div class="flex justify-between text-gray-300"><span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-blue-400"></div>현금+안전</span> <span id="pf-safe-sum">0원</span></div>
+                                <div class="flex justify-between text-gray-300"><span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-purple-400"></div>투자</span> <span id="pf-invest-sum">0원</span></div>
+                                <div class="flex justify-between text-red-300"><span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-red-400"></div>부채 (-)</span> <span id="pf-debt-sum">0원</span></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                            <h3 class="text-base font-bold text-gray-800 mb-4">자산 구성 비율</h3>
+                            <div class="relative h-64 md:h-72 w-full">
+                                <canvas id="portfolioChart"></canvas>
+                            </div>
+                            <p class="text-xs text-gray-400 text-center mt-4">* 부채를 제외한 보유 자산 기준</p>
+                        </div>
+                    </div>
+
+                    <!-- 우측: 계좌 리스트 (아코디언) -->
+                    <div class="lg:col-span-2 bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                        <!-- 💡 헤더 업데이트: 포트폴리오 금액 수정 버튼 추가 -->
+                        <div class="flex justify-between items-center mb-6 flex-wrap gap-2">
+                            <h3 class="text-lg font-bold text-gray-800">상세 계좌 및 투자 내역</h3>
+                            <div class="flex items-center gap-2">
+                                <button onclick="openPortfolioEditModal()" class="text-xs text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition whitespace-nowrap shrink-0">
+                                    <i class="fas fa-edit mr-1"></i>금액 수정
+                                </button>
+                                <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded font-bold" id="portfolio-month-badge">계산중</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 과거 데이터 조회 시 덮이는 레이어 (스냅샷 뷰어) -->
+                        <div id="portfolio-past-notice" class="hidden flex-1 flex flex-col items-center justify-center py-12 text-center">
+                            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mb-4 text-2xl">
+                                <i class="fas fa-history"></i>
+                            </div>
+                            <h4 class="text-lg font-bold text-gray-700 mb-2">과거 스냅샷 뷰어</h4>
+                            <p class="text-sm text-gray-500 max-w-xs mx-auto" id="portfolio-past-notice-text">
+                                상세 포트폴리오는 '현재 달' 기준으로만 갱신/관리됩니다. 과거는 총액 비율만 표시됩니다.
+                            </p>
+                            <button onclick="document.getElementById('btn-next-month').disabled ? null : currentMonthKey = Object.keys(monthlyDB).sort().pop(); updateNavigationButtons(); renderDashboard(); renderPortfolio();" class="mt-4 text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-4 py-2 rounded-full transition-colors">
+                                현재 포트폴리오 보기 &rarr;
+                            </button>
+                        </div>
+
+                        <div class="space-y-4" id="portfolio-accordion-wrapper">
+                            <!-- JS에서 동적으로 생성 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 현금 흐름 뷰 -->
+            <div id="stats-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
+                <div id="stats-main-content" class="flex flex-col w-full">
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 mb-6 min-w-0">
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="min-w-0">
+                                <h3 class="text-base md:text-lg font-bold text-gray-800 truncate">월별 수입/지출 추세</h3>
+                                <p class="text-xs md:text-sm text-gray-500 truncate">누적된 수입, 지출, 순수익 흐름입니다.</p>
+                            </div>
+                            <button onclick="toggleManageView(true)" class="text-xs md:text-sm text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition whitespace-nowrap shrink-0">
+                                <i class="fas fa-list-ul mr-1"></i>상세 내역
+                            </button>
+                        </div>
+                        <div class="relative h-64 md:h-72 w-full">
+                            <canvas id="monthlyTrendChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8">
+                        <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-w-0">
+                            <h4 class="text-sm md:text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                <i class="fas fa-chart-pie text-indigo-500"></i> 해당 월 지출 카테고리
+                            </h4>
+                            <div class="flex-1 relative h-56 md:h-64 w-full">
+                                <canvas id="expenseChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 min-w-0">
+                            <h4 class="text-sm md:text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                <i class="fas fa-robot text-amber-400"></i> AI 현금 흐름 분석
+                            </h4>
+                            <div id="ai-comments-container" class="space-y-4 text-xs md:text-sm text-gray-600 bg-gray-50 p-5 rounded-xl border border-gray-100 scrollbar-hide">
+                                <!-- JS 생성 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 내역 관리 화면 -->
+                <div id="stats-manage-content" class="hidden flex-col w-full">
+                    <div class="mb-4">
+                        <button onclick="toggleManageView(false)" class="text-xs md:text-sm text-gray-500 hover:text-gray-800 transition flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm w-fit">
+                            <i class="fas fa-arrow-left"></i> 현금 흐름 뷰로 돌아가기
+                        </button>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden mb-8 min-w-0">
+                        <div class="px-4 md:px-6 py-4 md:py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <h3 class="text-base md:text-lg font-bold text-gray-800 truncate" id="manage-title">전체 거래 내역</h3>
+                            <div class="flex items-center gap-3">
+                                <button id="btn-sort-tx" class="text-xs md:text-sm text-gray-500 hover:text-gray-800 transition-colors flex items-center gap-1">
+                                    <i class="fas fa-sort-amount-up"></i> <span id="sort-tx-text">과거순</span>
+                                </button>
+                                <span class="text-xs md:text-sm text-gray-500 bg-white px-3 py-1 border border-gray-200 rounded-full shrink-0" id="manage-count">총 0건</span>
+                            </div>
+                        </div>
+                        <div class="flex-1 overflow-x-auto overflow-y-auto scrollbar-hide">
+                            <table class="w-full text-left border-collapse min-w-[600px]">
+                                <thead class="sticky top-0 bg-white shadow-sm z-10">
+                                    <tr class="border-b border-gray-100 text-xs md:text-sm text-gray-500 bg-gray-50">
+                                        <th class="px-4 md:px-6 py-3 font-medium whitespace-nowrap">일시</th>
+                                        <th class="px-4 md:px-6 py-3 font-medium whitespace-nowrap">유형</th>
+                                        <th class="px-4 md:px-6 py-3 font-medium">내역 및 분류</th>
+                                        <th class="px-4 md:px-6 py-3 font-medium whitespace-nowrap">결제수단</th>
+                                        <th class="px-4 md:px-6 py-3 font-medium text-right whitespace-nowrap">금액</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="manageTransactionList" class="text-xs md:text-sm divide-y divide-gray-50"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. 장기 자산 뷰 -->
+            <div id="asset-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-indigo-500 min-w-0">
+                        <p class="text-xs md:text-sm font-medium text-gray-500 mb-1 truncate">총 자산 증가액 (초기 대비)</p>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-800 truncate" id="asset-total-growth">+0원</h3>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-emerald-500 min-w-0">
+                        <p class="text-xs md:text-sm font-medium text-gray-500 mb-1 truncate">월 평균 자산 증가속도</p>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-800 truncate" id="asset-avg-growth">+0원/월</h3>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500 min-w-0">
+                        <div class="flex justify-between items-end mb-1">
+                            <p class="text-xs md:text-sm font-medium text-gray-500 truncate">올해 목표 달성률 <span class="text-[10px] text-gray-400 font-normal ml-1 hidden lg:inline">(2.5억 기준)</span></p>
+                            <p class="text-[10px] md:text-xs font-bold text-gray-700 whitespace-nowrap shrink-0">목표 2.5억</p>
+                        </div>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-800" id="asset-goal-percent">0%</h3>
+                        <div class="w-full bg-gray-100 rounded-full h-2 mt-2 overflow-hidden">
+                            <div class="h-full bg-amber-500 transition-all duration-1000 ease-out" id="asset-goal-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col mb-8 min-w-0">
+                    <div class="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-3 md:gap-4 mb-6">
+                        <h3 class="text-base md:text-lg font-bold text-gray-800">장기 자산 추이</h3>
+                        <div class="flex items-center">
+                            <select id="asset-year-filter" class="bg-gray-50 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm">
+                                <option value="all">전체 기간</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex-1 relative min-h-[300px] md:min-h-[400px] w-full">
+                        <canvas id="fullAssetChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 스페이서 -->
+            <div class="h-32 md:h-12 w-full shrink-0"></div>
+
+        </div> <!-- End of scroll area -->
+        
+        <!-- 💡 [수정] FAB (플로팅 액션 버튼): 기본적으로 숨김 처리 (현금 흐름 탭에서만 보임) -->
+        <button id="fab-add-tx" onclick="openTxModal()" class="hidden absolute bottom-24 md:bottom-12 right-6 md:right-10 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-300 flex items-center justify-center text-2xl hover:bg-indigo-700 hover:scale-105 transition-all z-40">
+            <i class="fas fa-plus"></i>
+        </button>
+        
+    </main>
+
+    <!-- 모바일 전용 하단 탭 네비게이션 -->
+    <nav class="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around items-center h-[68px] z-50 pb-safe px-1">
+        <a href="#" data-target="dashboard-view" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full text-indigo-600 transition-colors">
+            <i class="fas fa-chart-pie text-lg mb-1"></i>
+            <span class="text-[9px] font-medium">대시보드</span>
+        </a>
+        <a href="#" data-target="portfolio-view" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 transition-colors">
+            <i class="fas fa-briefcase text-lg mb-1"></i>
+            <span class="text-[9px] font-medium">포트폴리오</span>
+        </a>
+        <a href="#" data-target="stats-view" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 transition-colors">
+            <i class="fas fa-money-bill-transfer text-lg mb-1"></i>
+            <span class="text-[9px] font-medium">현금 흐름</span>
+        </a>
+        <a href="#" data-target="asset-view" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 transition-colors">
+            <i class="fas fa-chart-area text-lg mb-1"></i>
+            <span class="text-[9px] font-medium">자산</span>
+        </a>
+    </nav>
+
+    <!-- API 설정 모달 -->
+    <div id="settings-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center modal-overlay p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-full">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-cog text-gray-500 mr-2"></i>API 연동 설정</h3>
+                <button onclick="closeSettings()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-5">
+                <div class="text-sm text-gray-600 bg-indigo-50 p-4 rounded-xl border border-indigo-100 leading-relaxed">
+                    Google Apps Script로 배포된 <strong>Web App URL</strong>을 입력하세요. 이 URL을 통해 시트의 모든 데이터를 안전하게 동기화합니다.
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Apps Script Web App URL</label>
+                    <input type="text" id="input-url-webapp" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="https://script.google.com/macros/s/...">
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+                <button onclick="closeSettings()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
+                <button onclick="saveSettings()" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm shadow-indigo-200">저장 및 동기화</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 거래 내역 추가 모달 -->
+    <div id="tx-modal" class="fixed inset-0 z-[100] hidden flex flex-col justify-end md:justify-center items-center modal-overlay md:p-4">
+        <div class="bg-white md:rounded-2xl rounded-t-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] md:max-h-full">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 sticky top-0 z-10">
+                <h3 class="text-lg font-bold text-gray-800">새 거래내역 작성</h3>
+                <button onclick="closeTxModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-xs font-bold text-gray-700 mb-1">날짜</label><input type="date" id="tx-date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 mb-1">시간</label><input type="time" id="tx-time" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">유형</label>
+                        <select id="tx-type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                            <option value="지출">지출</option><option value="수입">수입</option><option value="이체">이체</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">분류</label>
+                        <select id="tx-category" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                            <option value="식비">식비</option><option value="생활">생활</option><option value="주거">주거</option>
+                            <option value="통신">통신</option><option value="교통">교통</option><option value="쇼핑">쇼핑</option>
+                            <option value="급여">급여</option><option value="미분류">미분류</option>
+                        </select>
+                    </div>
+                </div>
+                <div><label class="block text-xs font-bold text-gray-700 mb-1">금액</label><input type="number" id="tx-amount" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-lg font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0"></div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-xs font-bold text-gray-700 mb-1">내용 (사용처)</label><input type="text" id="tx-memo" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="예: 스타벅스"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 mb-1">결제수단</label><input type="text" id="tx-method" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="예: 토스뱅크"></div>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 pb-safe">
+                <button onclick="closeTxModal()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
+                <button id="btn-submit-tx" onclick="submitTransaction()" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm flex items-center gap-2">
+                    <i class="fas fa-check"></i> 저장하기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 💡 [신규] 포트폴리오 금액 수정 모달 -->
+    <div id="pf-edit-modal" class="fixed inset-0 z-[100] hidden flex flex-col justify-end md:justify-center items-center modal-overlay md:p-4">
+        <div class="bg-white md:rounded-2xl rounded-t-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] md:max-h-full">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 sticky top-0 z-10">
+                <h3 class="text-lg font-bold text-gray-800">포트폴리오 금액 업데이트</h3>
+                <button onclick="closePortfolioEditModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4" id="pf-edit-list">
+                <!-- JS에서 기존 포트폴리오 데이터를 인풋창으로 렌더링 -->
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 pb-safe">
+                <button onclick="closePortfolioEditModal()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
+                <button id="btn-submit-pf" onclick="submitPortfolio()" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm flex items-center gap-2">
+                    <i class="fas fa-check"></i> 시트에 덮어쓰기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Message Container -->
+    <div id="toast-container" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[90%] md:w-auto max-w-sm"></div>
+
+<script>
+    // PWA ServiceWorker 등록
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(registration => console.log('PWA ServiceWorker 등록 성공'))
+                .catch(error => console.log('PWA ServiceWorker 등록 실패:', error));
+        });
+    }
+
+    // ==========================================
+    // UI 유틸리티
+    // ==========================================
+    function showToast(message, type = 'info', duration = 3000) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        const iconColor = type === 'error' ? 'text-red-400' : (type === 'warning' ? 'text-amber-400' : 'text-indigo-400');
+        const icon = type === 'error' ? 'fa-exclamation-circle' : (type === 'warning' ? 'fa-bolt' : 'fa-check-circle');
+        
+        toast.className = 'bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 toast-enter pointer-events-auto break-keep';
+        toast.innerHTML = `<i class="fas ${icon} ${iconColor} shrink-0"></i> <span>${message}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(100%)';
+            toast.style.transition = 'all 0.3s ease-out';
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
+
+    // ==========================================
+    // 설정 및 캐싱 (Local Storage) 관리
+    // ==========================================
+    let userUrls = { webapp: '' };
+    const DEFAULT_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxcjdGkhb0f4jGzF8OySSNdo8vHUaUdjRi-cJLzhx6ya30dPXaSuuZbEp7yj0rNX-PZwA/exec';
+    const GOOGLE_SHEET_EDIT_URL = 'https://docs.google.com/spreadsheets/d/1pFBp0zYmr1AFykD-a6k44HQicnmS4JtSFIpd_E4gkBU/edit?usp=drive_link';
+    const CACHE_KEY = 'smartbook_v2_data_cache';
+
+    function loadSettings() {
+        const saved = localStorage.getItem('smartbook_v2_api_url');
+        if (saved) {
+            userUrls = JSON.parse(saved);
+        } else {
+            userUrls.webapp = DEFAULT_WEBAPP_URL;
+            localStorage.setItem('smartbook_v2_api_url', JSON.stringify(userUrls));
+        }
+        document.getElementById('input-url-webapp').value = userUrls.webapp;
+    }
+
+    function saveSettings() {
+        userUrls.webapp = document.getElementById('input-url-webapp').value.trim();
+        localStorage.setItem('smartbook_v2_api_url', JSON.stringify(userUrls));
+        closeSettings();
+        fetchSheetData(false);
+    }
+
+    function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
+    document.getElementById('btn-open-original').addEventListener('click', () => { window.open(GOOGLE_SHEET_EDIT_URL, '_blank'); });
+
+    // ==========================================
+    // 전역 상태 변수 및 모의(Demo) 데이터
+    // ==========================================
+    let monthlyDB = {};
+    let currentMonthKey = ''; 
+    let currentAssetFilter = 'all'; 
+    let txSortOrder = 'asc'; 
+    const myCharts = {}; 
+
+    let dynamicAssetHistory = { labels: [], data: [] };
+    let dynamicAssetSnapshots = {};
+    let dynamicPortfolioData = null; 
+    let rawPortfolioData = []; // 💡 [신규] 포트폴리오 수정을 위해 전체 2D 배열 원본 저장
+
+    const MOCK_DATA = {
+        tx: [
+            ["날짜","시간","타입","대분류","소분류","내용","금액","화폐","결제수단","메모"],
+            ["2026-05-26","20:04","지출","생활","생필품","(주)아성다이소","-3000","KRW","토스뱅크","데모 데이터"],
+            ["2026-05-26","19:36","지출","식비","미분류","외식비","-51000","KRW","토스뱅크","데모 데이터"],
+            ["2026-05-26","14:15","지출","고정비","관리비","아파트 관리비","-176330","KRW","LOCA","데모 데이터"],
+            ["2026-05-26","12:02","수입","기타수입","미분류","환급금","7860","KRW","월급통장","데모 데이터"],
+            ["2026-04-10","10:00","수입","급여","급여","회사 월급","3500000","KRW","월급통장","데모 데이터"]
+        ],
+        asset: [
+            ["Year","Month","총자산(순자산)","현금성자산","안전자산","투자자산","부채"],
+            ["2025","12월","158636723","","","",""],
+            ["2026","01월","162474609","","","",""],
+            ["2026","04월","171563254","500000","15000000","20000000","-10000000"],
+            ["2026","05월","172322447","1000000","30000000","77000000","-65000000"]
+        ],
+        portfolio: [
+            ["대분류 (Drop-down)","계좌/자산명 (Text)","통화/형태 (Text)","만기일 (Date/Text)","금액 (Number)"],
+            ["현금 자산","생활비통장(데모)","KRW","","500000"],
+            ["현금 자산","월급통장(데모)","KRW","","500000"],
+            ["안전 자산","청년 주택드림 청약통장","KRW","","1500000"],
+            ["투자 자산","국내 주식","KRW","","45000000"],
+            ["투자 자산","해외 주식/ETF","USD","","32000000"],
+            ["부채","신용 대출","KRW","","-65000000"]
+        ]
+    };
+
+    const PAYDAYS = {
+        '2025-10': '2025-10-24', '2025-11': '2025-11-25', '2025-12': '2025-12-24', 
+        '2026-01': '2026-01-23', '2026-02': '2026-02-25', '2026-03': '2026-03-25', 
+        '2026-04': '2026-04-24', '2026-05': '2026-05-22', '2026-06': '2026-06-25', 
+        '2026-07': '2026-07-24', '2026-08': '2026-08-25', '2026-09': '2026-09-23', 
+        '2026-10': '2026-10-23', '2026-11': '2026-11-25', '2026-12': '2026-12-24', 
+        '2027-01': '2027-01-25'
+    };
+
+    function getPayday(year, month) {
+        const key = `${year}-${String(month).padStart(2, '0')}`;
+        if (PAYDAYS[key]) return PAYDAYS[key];
+        let d = 25; let date = new Date(year, month - 1, d);
+        if (date.getDay() === 6) d = 24; else if (date.getDay() === 0) d = 23;
+        return `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+
+    function getMonthKeyAndPeriod(dateStr) {
+        const parts = dateStr.split('-');
+        const y = parseInt(parts[0], 10); const m = parseInt(parts[1], 10);
+        const currentPaydayStr = getPayday(y, m);
+        let accountY, accountM, prevPaydayStr, nextPaydayStr;
+
+        if (dateStr >= currentPaydayStr) {
+            accountY = m === 12 ? y + 1 : y; accountM = m === 12 ? 1 : m + 1;
+            prevPaydayStr = currentPaydayStr; nextPaydayStr = getPayday(accountY, accountM);
+        } else {
+            accountY = y; accountM = m;
+            prevPaydayStr = getPayday(m === 1 ? y - 1 : y, m === 1 ? 12 : m - 1); nextPaydayStr = currentPaydayStr;
+        }
+
+        const monthKey = `${accountY}-${String(accountM).padStart(2, '0')}`;
+        const prevParts = prevPaydayStr.split('-'); const nextParts = nextPaydayStr.split('-');
+        const nDate = new Date(parseInt(nextParts[0], 10), parseInt(nextParts[1], 10) - 1, parseInt(nextParts[2], 10));
+        nDate.setDate(nDate.getDate() - 1); 
+        const periodStr = `${parseInt(prevParts[1],10)}/${parseInt(prevParts[2],10)} ~ ${nDate.getMonth() + 1}/${nDate.getDate()}`;
+        return { monthKey, periodStr, title: `${accountY}년 ${accountM}월` };
+    }
+
+    // ==========================================
+    // 데이터 파서
+    // ==========================================
+    function parseTxData(rows) {
+        monthlyDB = {}; 
+        if (!rows || rows.length < 2) return;
+        
+        rows.slice(1).forEach(row => {
+            if (!row[0]) return;
+            
+            let dateStr = String(row[0]).replace(/[\.\/]/g, '-').replace(/\s/g, ''); 
+            if(dateStr.endsWith('-')) dateStr = dateStr.slice(0, -1); 
+            const dateArr = dateStr.split('-');
+            if(dateArr.length >= 3) dateStr = `${dateArr[0]}-${dateArr[1].padStart(2, '0')}-${dateArr[2].padStart(2, '0')}`;
+            else return; 
+
+            const time = row[1] || ''; const type = row[2] || '';
+            const cat = row[3] || '미분류'; const subcat = row[4] || '미분류';
+            const memo = row[5] || '';
+            const amount = parseInt(String(row[6] || '0').replace(/[^0-9-]/g, ''), 10);
+            if (isNaN(amount)) return;
+            let method = row.length > 8 ? row[8] : (row[7] || ''); 
+
+            const tx = { date: dateStr, time, type, cat, subcat, memo, amount, method };
+            const { monthKey, title, periodStr } = getMonthKeyAndPeriod(dateStr);
+            
+            if (!monthlyDB[monthKey]) monthlyDB[monthKey] = { title: title, periodStr: periodStr, transactions: [] };
+            monthlyDB[monthKey].transactions.push(tx);
+        });
+
+        const keys = Object.keys(monthlyDB).sort();
+        if (keys.length > 0) {
+            if (!currentMonthKey || !monthlyDB[currentMonthKey]) currentMonthKey = keys[keys.length - 1]; 
+        }
+    }
+
+    function parseAssetData(rows) {
+        dynamicAssetHistory = { labels: [], data: [] };
+        dynamicAssetSnapshots = {};
+        if (!rows || rows.length < 2) return;
+        
+        rows.slice(1).forEach(row => {
+            if (row.length < 3) return;
+
+            const yearStr = String(row[0]).replace(/[^0-9]/g, '');
+            const monthStr = String(row[1]).replace(/[^0-9]/g, '');
+            if (!yearStr || !monthStr) return; 
+
+            const shortYear = yearStr.length === 4 ? yearStr.substring(2, 4) : yearStr;
+            const label = `${shortYear}.${monthStr.padStart(2, '0')}`;
+
+            const parseAmount = (val) => {
+                const cleaned = String(val).replace(/[^0-9-]/g, '');
+                return cleaned === '' ? null : parseInt(cleaned, 10);
+            };
+
+            const total = parseAmount(row[2]);
+            if (total === null) return; 
+
+            const cash = parseAmount(row[3] || '') || 0; 
+            const safe = parseAmount(row[4] || '') || 0; 
+            const invest = parseAmount(row[5] || '') || 0; 
+            const debt = parseAmount(row[6] || '') || 0; 
+
+            dynamicAssetHistory.labels.push(label);
+            dynamicAssetHistory.data.push(total);
+            dynamicAssetSnapshots[label] = { total, cash, safe, invest, debt };
+        });
+
+        updateYearFilterOptions();
+    }
+
+    function updateYearFilterOptions() {
+        const filterSelect = document.getElementById('asset-year-filter');
+        if (!filterSelect) return;
+        const uniqueYears = [...new Set(dynamicAssetHistory.labels.map(l => l.substring(0, 2)))].sort();
+        let optionsHtml = `<option value="all">전체 기간</option>`;
+        uniqueYears.reverse().forEach(y => { optionsHtml += `<option value="${y}">20${y}년</option>`; });
+        filterSelect.innerHTML = optionsHtml;
+        currentAssetFilter = 'all'; 
+    }
+
+    function parsePortfolioData(rows) {
+        rawPortfolioData = rows || []; // 원본 배열 저장 (수정 및 서버전송 목적)
+        dynamicPortfolioData = {};
+        let hasData = false;
+
+        if (!rows || rows.length < 2) {
+            dynamicPortfolioData = null;
+            return;
+        }
+
+        const fallbackColors = [
+            { c: 'text-blue-500', b: 'bg-blue-50' }, { c: 'text-green-500', b: 'bg-green-50' },
+            { c: 'text-purple-500', b: 'bg-purple-50' }, { c: 'text-amber-500', b: 'bg-amber-50' },
+            { c: 'text-pink-500', b: 'bg-pink-50' }, { c: 'text-indigo-500', b: 'bg-indigo-50' }
+        ];
+        let colorIdx = 0;
+
+        rows.slice(1).forEach(row => {
+            if (row.length < 5) return; 
+            const group = row[0] || '미분류'; 
+            const name = row[1];
+            const amountStr = String(row[4] || '0').replace(/[^0-9-]/g, '');
+            const amount = parseInt(amountStr, 10);
+            
+            if (isNaN(amount) || !name) return;
+
+            const isDebt = group.includes('부채') || group.includes('대출');
+
+            if (!dynamicPortfolioData[group]) {
+                const isDebtColor = isDebt ? { c: 'text-red-500', b: 'bg-red-50' } : fallbackColors[colorIdx % fallbackColors.length];
+                dynamicPortfolioData[group] = { color: isDebtColor.c, bg: isDebtColor.b, isDebt: isDebt, items: [] };
+                if(!isDebt) colorIdx++;
+            }
+            dynamicPortfolioData[group].items.push({ name, amount: isDebt && amount > 0 ? -amount : amount });
+            hasData = true;
+        });
+
+        if(!hasData) dynamicPortfolioData = null;
+    }
+
+    // ==========================================
+    // Phase 1: 로딩 0초 매커니즘 (캐시)
+    // ==========================================
+    function loadCachedData() {
+        const cachedStr = localStorage.getItem(CACHE_KEY);
+        if (cachedStr) {
+            try {
+                const data = JSON.parse(cachedStr);
+                parseTxData(data.tx);
+                parseAssetData(data.asset);
+                parsePortfolioData(data.portfolio);
+                
+                updateNavigationButtons();
+                renderDashboard();
+                renderPortfolio();
+                return true; 
+            } catch (e) {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    // ==========================================
+    // Fetch 데이터 (GET & Background Sync)
+    // ==========================================
+    async function fetchSheetData(isAutoSync = true) {
+        const syncIcon = document.getElementById('sync-icon');
+        const syncStatus = document.getElementById('sync-status');
+        const sidebarSync = document.getElementById('sidebar-sync-status');
+        
+        const hasCache = isAutoSync ? loadCachedData() : false;
+        
+        if(syncIcon) syncIcon.classList.add('animate-spin-slow');
+        if(syncStatus) { 
+            syncStatus.textContent = hasCache ? '백그라운드 동기화 중...' : '데이터 불러오는 중...'; 
+            syncStatus.classList.remove('hidden'); 
+            syncStatus.className = "hidden md:inline-block text-xs text-indigo-400 font-medium mr-2 max-w-[150px] truncate animate-pulse";
+        }
+        
+        try {
+            if (!userUrls.webapp) throw new Error('URL_MISSING');
+
+            const response = await fetch(userUrls.webapp, { method: 'GET', redirect: 'follow' });
+            if (!response.ok) throw new Error(`HTTP 오류 ${response.status}`);
+            
+            const data = await response.json();
+            if (typeof data === 'string' && data.includes('<html')) throw new Error('CORS_AUTH_ERROR');
+            if (data.status === 'error') throw new Error(data.message || '서버 내부 오류');
+
+            localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+
+            parseTxData(data.tx);
+            parseAssetData(data.asset);
+            parsePortfolioData(data.portfolio);
+            
+            updateNavigationButtons();
+            renderDashboard();
+            renderPortfolio();
+
+            const now = new Date();
+            const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+            if(syncStatus) { 
+                syncStatus.textContent = `최신 갱신: ${timeStr}`; 
+                syncStatus.className = "hidden md:inline-block text-xs text-gray-400 font-medium mr-2 max-w-[150px] truncate";
+            }
+            if(sidebarSync) sidebarSync.innerHTML = `<i class="fas fa-check-circle text-[10px]"></i> 실시간 동기화됨`;
+            
+            if(!isAutoSync) showToast('최신 데이터가 동기화되었습니다.', 'info');
+
+        } catch (error) {
+            console.warn("API 연동 실패 사유:", error.message);
+            if (hasCache) {
+                if(syncStatus) {
+                    syncStatus.textContent = '오프라인 (캐시 뷰)';
+                    syncStatus.className = "hidden md:inline-block text-xs text-amber-500 font-medium mr-2 max-w-[150px] truncate";
+                }
+                if(sidebarSync) sidebarSync.innerHTML = `<i class="fas fa-bolt text-[10px] text-amber-500"></i> 오프라인 모드`;
+                showToast(`인터넷 연결 불안정: 캐시된 데이터를 표시합니다.`, 'warning', 4000);
+            } else {
+                parseTxData(MOCK_DATA.tx);
+                parseAssetData(MOCK_DATA.asset);
+                parsePortfolioData(MOCK_DATA.portfolio);
+                updateNavigationButtons();
+                renderDashboard();
+                renderPortfolio();
+
+                if(syncStatus) {
+                    syncStatus.textContent = '데모 모드';
+                    syncStatus.className = "hidden md:inline-block text-xs text-amber-500 font-medium mr-2 max-w-[150px] truncate";
+                }
+                if(sidebarSync) sidebarSync.innerHTML = `<i class="fas fa-eye text-[10px] text-amber-500"></i> 데모 데이터 뷰`;
+                if(error.message === 'URL_MISSING') showToast('URL이 없어 데모 데이터로 실행됩니다.', 'info');
+                else showToast(`연결 실패: 데모 데이터가 로드됩니다.`, 'error');
+            }
+        } finally {
+            if(syncIcon) syncIcon.classList.remove('animate-spin-slow');
+        }
+    }
+
+    // ==========================================
+    // Phase 2: 거래 내역(Tx) 추가 모달 및 전송
+    // ==========================================
+    function openTxModal() {
+        const now = new Date();
+        document.getElementById('tx-date').value = now.toISOString().split('T')[0];
+        document.getElementById('tx-time').value = now.toTimeString().split(':')[0] + ':' + now.toTimeString().split(':')[1];
+        document.getElementById('tx-amount').value = '';
+        document.getElementById('tx-memo').value = '';
+        document.getElementById('tx-modal').classList.remove('hidden');
+    }
+
+    function closeTxModal() {
+        document.getElementById('tx-modal').classList.add('hidden');
+    }
+
+    async function submitTransaction() {
+        const date = document.getElementById('tx-date').value;
+        const time = document.getElementById('tx-time').value;
+        const type = document.getElementById('tx-type').value;
+        const cat = document.getElementById('tx-category').value;
+        let amount = document.getElementById('tx-amount').value;
+        const memo = document.getElementById('tx-memo').value;
+        const method = document.getElementById('tx-method').value;
+
+        if(!amount || isNaN(amount)) return showToast('올바른 금액을 입력하세요.', 'error');
+        
+        const formattedAmount = type === '지출' ? `-${Math.abs(amount)}` : `${Math.abs(amount)}`;
+        const rowData = [date, time, type, cat, '미분류', memo, formattedAmount, 'KRW', method, '앱에서 작성'];
+        
+        const btn = document.getElementById('btn-submit-tx');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 저장중...';
+        btn.disabled = true;
+
+        try {
+            if (!userUrls.webapp) throw new Error('API URL이 설정되지 않았습니다.');
+
+            const response = await fetch(userUrls.webapp, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'addTransaction', data: rowData })
+            });
+
+            const result = await response.json();
+            if(result.status === 'success') {
+                showToast(result.message || '저장 성공!', 'info');
+                closeTxModal();
+                fetchSheetData(false); 
+            } else {
+                throw new Error(result.message || '저장 실패');
+            }
+        } catch(error) {
+            console.error("전송 에러:", error);
+            showToast(error.message, 'error');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    // ==========================================
+    // 💡 [신규] Phase 2: 포트폴리오(Portfolio) 금액 수정 모달 및 전송
+    // ==========================================
+    function openPortfolioEditModal() {
+        if (!rawPortfolioData || rawPortfolioData.length < 2) {
+            return showToast('수정할 포트폴리오 데이터가 없습니다.', 'error');
+        }
+        
+        const container = document.getElementById('pf-edit-list');
+        container.innerHTML = '';
+        
+        // 원본 배열에서 첫 줄(헤더)은 건너뛰고 값 입력창 생성
+        for (let i = 1; i < rawPortfolioData.length; i++) {
+            const row = rawPortfolioData[i];
+            if(row.length < 5) continue; // 데이터 형태가 맞지 않는 줄 스킵
+            
+            const group = row[0] || '미분류';
+            const name = row[1];
+            if(!name) continue;
+
+            const amountStr = String(row[4] || '0').replace(/[^0-9-]/g, '');
+            
+            const itemHtml = `
+                <div class="flex flex-col gap-1 pb-3 border-b border-gray-50">
+                    <label class="text-xs font-bold text-gray-500 truncate">${group} > <span class="text-gray-800">${name}</span></label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="pf-amount-${i}" value="${amountStr}" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <span class="text-sm text-gray-500 font-medium">원</span>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', itemHtml);
+        }
+        document.getElementById('pf-edit-modal').classList.remove('hidden');
+    }
+
+    function closePortfolioEditModal() {
+        document.getElementById('pf-edit-modal').classList.add('hidden');
+    }
+
+    async function submitPortfolio() {
+        // 원본 배열 깊은 복사 후 사용자가 수정한 금액만 갱신
+        const updatedData = JSON.parse(JSON.stringify(rawPortfolioData));
+        for (let i = 1; i < updatedData.length; i++) {
+            if(updatedData[i].length < 5) continue;
+            const inputEl = document.getElementById(`pf-amount-${i}`);
+            if (inputEl) {
+                updatedData[i][4] = inputEl.value ? parseInt(inputEl.value, 10) : 0;
+            }
+        }
+
+        const btn = document.getElementById('btn-submit-pf');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 저장중...';
+        btn.disabled = true;
+
+        try {
+            if (!userUrls.webapp) throw new Error('API URL이 설정되지 않았습니다.');
+
+            const response = await fetch(userUrls.webapp, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'updatePortfolio', data: updatedData })
+            });
+
+            const result = await response.json();
+            if(result.status === 'success') {
+                showToast('포트폴리오가 수정되었습니다.', 'info');
+                closePortfolioEditModal();
+                fetchSheetData(false); // UI 다시 그리기
+            } else {
+                throw new Error(result.message || '저장 실패');
+            }
+        } catch(error) {
+            console.error("전송 에러:", error);
+            showToast(error.message, 'error');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    // ==========================================
+    // 기타 UI 이벤트 바인딩 
+    // ==========================================
+    document.getElementById('btn-sync').addEventListener('click', () => fetchSheetData(false));
+
+    document.getElementById('btn-sort-tx').addEventListener('click', () => {
+        txSortOrder = txSortOrder === 'desc' ? 'asc' : 'desc';
+        const sortIcon = document.querySelector('#btn-sort-tx i');
+        const sortText = document.getElementById('sort-tx-text');
+        if (txSortOrder === 'desc') {
+            sortIcon.className = 'fas fa-sort-amount-down'; sortText.textContent = '최신순';
+        } else {
+            sortIcon.className = 'fas fa-sort-amount-up'; sortText.textContent = '과거순';
+        }
+        renderDashboard(); 
+    });
+
+    function toggleManageView(show) {
+        const main = document.getElementById('stats-main-content');
+        const manage = document.getElementById('stats-manage-content');
+        if (!main || !manage) return;
+        if (show) {
+            main.classList.add('hidden'); main.classList.remove('flex');
+            manage.classList.remove('hidden'); manage.classList.add('flex');
+        } else {
+            main.classList.remove('hidden'); main.classList.add('flex');
+            manage.classList.add('hidden'); manage.classList.remove('flex');
+        }
+    }
+
+    const views = {
+        'dashboard-view': document.getElementById('dashboard-view'), 'portfolio-view': document.getElementById('portfolio-view'),
+        'stats-view': document.getElementById('stats-view'), 'asset-view': document.getElementById('asset-view')
+    };
+
+    function switchView(targetId) {
+        document.querySelectorAll('.nav-link').forEach(nav => {
+            if(nav.getAttribute('data-target') === targetId) { nav.classList.add('text-indigo-600', 'bg-indigo-50'); nav.classList.remove('text-gray-600', 'hover:bg-gray-50'); }
+            else { nav.classList.remove('text-indigo-600', 'bg-indigo-50'); nav.classList.add('text-gray-600', 'hover:bg-gray-50'); }
+        });
+        document.querySelectorAll('.mobile-nav-link').forEach(nav => {
+            if(nav.getAttribute('data-target') === targetId) { nav.classList.add('text-indigo-600'); nav.classList.remove('text-gray-400', 'hover:text-gray-600'); }
+            else { nav.classList.remove('text-indigo-600'); nav.classList.add('text-gray-400', 'hover:text-gray-600'); }
+        });
+
+        Object.values(views).forEach(v => { if(v) v.classList.add('hidden'); });
+        if(views[targetId]) views[targetId].classList.remove('hidden');
+        
+        // 💡 [수정] FAB 표시 제어: '현금 흐름(stats-view)' 탭에서만 보이게 함
+        const fab = document.getElementById('fab-add-tx');
+        if(fab) {
+            if(targetId === 'stats-view') fab.classList.remove('hidden');
+            else fab.classList.add('hidden');
+        }
+        
+        if (targetId === 'stats-view') toggleManageView(false);
+        setTimeout(() => { renderDashboard(); renderPortfolio(); }, 20); 
+    }
+
+    document.querySelectorAll('.nav-link, .mobile-nav-link').forEach(link => {
+        link.addEventListener('click', (e) => { e.preventDefault(); switchView(e.currentTarget.getAttribute('data-target')); });
+    });
+
+    document.getElementById('asset-year-filter')?.addEventListener('change', (e) => {
+        currentAssetFilter = e.target.value; renderDashboard();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (document.getElementById('settings-modal').classList.contains('hidden') === false) return; 
+        if (document.getElementById('tx-modal').classList.contains('hidden') === false) return; 
+        if (document.getElementById('pf-edit-modal').classList.contains('hidden') === false) return;
+        
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            const navLinks = Array.from(document.querySelectorAll('.nav-link'));
+            const activeIndex = navLinks.findIndex(link => link.classList.contains('bg-indigo-50'));
+            if (activeIndex !== -1) {
+                let nextIndex = activeIndex;
+                if (e.key === 'ArrowUp' && activeIndex > 0) nextIndex--;
+                if (e.key === 'ArrowDown' && activeIndex < navLinks.length - 1) nextIndex++;
+                if (nextIndex !== activeIndex) { e.preventDefault(); switchView(navLinks[nextIndex].getAttribute('data-target')); }
+            }
+        }
+        if (e.key === 'ArrowLeft' && !document.getElementById('btn-prev-month').disabled) document.getElementById('btn-prev-month').click();
+        else if (e.key === 'ArrowRight' && !document.getElementById('btn-next-month').disabled) document.getElementById('btn-next-month').click();
+    });
+
+    function updateNavigationButtons() {
+        const keys = Object.keys(monthlyDB).sort();
+        const idx = keys.indexOf(currentMonthKey);
+        const btnPrev = document.getElementById('btn-prev-month');
+        const btnNext = document.getElementById('btn-next-month');
+        btnPrev.disabled = idx <= 0; btnNext.disabled = idx === -1 || idx >= keys.length - 1;
+    }
+
+    document.getElementById('btn-prev-month').addEventListener('click', () => {
+        const keys = Object.keys(monthlyDB).sort(); const idx = keys.indexOf(currentMonthKey);
+        if (idx > 0) { currentMonthKey = keys[idx - 1]; updateNavigationButtons(); renderDashboard(); renderPortfolio(); }
+    });
+
+    document.getElementById('btn-next-month').addEventListener('click', () => {
+        const keys = Object.keys(monthlyDB).sort(); const idx = keys.indexOf(currentMonthKey);
+        if (idx !== -1 && idx < keys.length - 1) { currentMonthKey = keys[idx + 1]; updateNavigationButtons(); renderDashboard(); renderPortfolio(); }
+    });
+
+    window.toggleAccordion = function(btn) {
+        const content = btn.nextElementSibling; const icon = btn.querySelector('.accordion-icon');
+        content.classList.toggle('open'); icon.classList.toggle('rotate');
+    };
+
+    // ==========================================
+    // 렌더링 로직
+    // ==========================================
+    function renderPortfolio() {
+        if(!currentMonthKey) return;
+        const shortYear = currentMonthKey.substring(2, 4); const shortMonth = currentMonthKey.substring(5, 7); 
+        const targetLabel = `${shortYear}.${shortMonth}`;
+        
+        const keys = Object.keys(monthlyDB).sort();
+        const isLatestMonth = currentMonthKey === keys[keys.length - 1]; 
+        const snapshot = dynamicAssetSnapshots[targetLabel];
+        
+        let totalCashAndSafe = 0, totalInvest = 0, totalDebt = 0;
+        let chartLabels = [], chartData = [], chartColors = [];
+
+        document.getElementById('portfolio-month-badge').textContent = isLatestMonth ? '현재 포트폴리오 (최신)' : `${targetLabel} 스냅샷`;
+
+        const wrapper = document.getElementById('portfolio-accordion-wrapper');
+        const notice = document.getElementById('portfolio-past-notice');
+
+        if (isLatestMonth && dynamicPortfolioData) {
+            wrapper.classList.remove('hidden'); notice.classList.add('hidden'); wrapper.innerHTML = ''; 
+            Object.entries(dynamicPortfolioData).forEach(([groupName, groupData]) => {
+                const sum = groupData.items.reduce((acc, curr) => acc + curr.amount, 0);
+                
+                if (groupData.isDebt) totalDebt += sum;
+                else if (groupName.includes('투자')) totalInvest += sum;
+                else totalCashAndSafe += sum;
+
+                if (!groupData.isDebt && sum > 0) {
+                    chartLabels.push(groupName); chartData.push(sum);
+                    chartColors.push(groupName.includes('투자') ? '#A855F7' : (groupName.includes('안전') ? '#10B981' : '#3B82F6'));
+                }
+
+                const isDebt = groupData.isDebt;
+                // 💡 아코디언이 닫혀있도록 'open' 클래스 제거
+                const itemHtml = `
+                <div class="border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+                    <button class="w-full flex justify-between items-center p-4 bg-gray-50 hover:bg-gray-100 transition-colors" onclick="toggleAccordion(this)">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full ${groupData.bg} ${groupData.color} flex items-center justify-center text-sm">
+                                <i class="fas ${isDebt ? 'fa-credit-card' : (groupName.includes('투자') ? 'fa-chart-line' : (groupName.includes('안전') ? 'fa-lock' : 'fa-coins'))}"></i>
+                            </div>
+                            <span class="font-bold text-gray-800 text-sm md:text-base">${groupName}</span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="font-bold ${isDebt ? 'text-red-500' : 'text-gray-800'} text-sm md:text-base">${sum.toLocaleString()}원</span>
+                            <i class="fas fa-chevron-down text-gray-400 accordion-icon text-sm"></i>
+                        </div>
+                    </button>
+                    <div class="accordion-content bg-white">
+                        <div class="p-4 space-y-3 border-t border-gray-100">
+                            ${groupData.items.length > 0 ? groupData.items.map(item => `
+                                <div class="flex justify-between items-center text-sm">
+                                    <span class="text-gray-600 flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-gray-300"></div>${item.name}</span>
+                                    <span class="font-medium ${item.amount < 0 ? 'text-red-500' : 'text-gray-700'}">${item.amount.toLocaleString()}원</span>
+                                </div>
+                            `).join('') : '<p class="text-sm text-gray-400 text-center py-2">등록된 내역이 없습니다.</p>'}
+                        </div>
+                    </div>
+                </div>`;
+                wrapper.insertAdjacentHTML('beforeend', itemHtml);
+            });
+        } else if (snapshot) {
+            wrapper.classList.add('hidden'); notice.classList.remove('hidden');
+            totalCashAndSafe = snapshot.cash + snapshot.safe; totalInvest = snapshot.invest; totalDebt = snapshot.debt;
+            
+            if(totalCashAndSafe > 0) { chartLabels.push('현금/안전 자산'); chartData.push(totalCashAndSafe); chartColors.push('#3B82F6'); }
+            if(totalInvest > 0) { chartLabels.push('투자 자산'); chartData.push(totalInvest); chartColors.push('#A855F7'); }
+        } else {
+            wrapper.classList.add('hidden'); notice.classList.remove('hidden');
+            document.getElementById('portfolio-past-notice-text').textContent = `해당 월의 자산 구성 스냅샷 데이터가 존재하지 않습니다.`;
+        }
+
+        document.getElementById('pf-networth').textContent = (totalCashAndSafe + totalInvest + totalDebt).toLocaleString() + '원';
+        document.getElementById('pf-safe-sum').textContent = totalCashAndSafe.toLocaleString() + '원';
+        document.getElementById('pf-invest-sum').textContent = totalInvest.toLocaleString() + '원';
+        document.getElementById('pf-debt-sum').textContent = totalDebt.toLocaleString() + '원';
+
+        ['portfolio', 'dashPortfolio'].forEach(key => { if(myCharts[key]) myCharts[key].destroy(); });
+        const renderDoughnut = (ctxId, chartKey, isMini = false) => {
+            const ctx = document.getElementById(ctxId);
+            if (ctx && chartData.length > 0) {
+                myCharts[chartKey] = new Chart(ctx, {
+                    type: 'doughnut', data: { labels: chartLabels, datasets: [{ data: chartData, backgroundColor: chartColors, borderWidth: 0, hoverOffset: 4 }] },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { boxWidth: isMini ? 8 : 10, font: { size: isMini ? 10 : 11, color: '#4B5563' } } }, tooltip: { callbacks: { label: function(c) { return ' ' + c.raw.toLocaleString() + '원'; } } } } }
+                });
+            }
+        };
+        renderDoughnut('portfolioChart', 'portfolio', false);
+        renderDoughnut('dashPortfolioChart', 'dashPortfolio', true);
+    }
+
+    function generateAIComments(currentTxData, categoryTotals, title, currentMonthKey) {
+        const container = document.getElementById('ai-comments-container');
+        if (!container) return;
+        
+        let html = `<div class="font-bold text-gray-700 mb-2 border-b border-gray-200 pb-2">${title} 분석 결과</div>`;
+        
+        const keys = Object.keys(monthlyDB).sort();
+        const currIdx = keys.indexOf(currentMonthKey);
+        const pastKeys = keys.slice(Math.max(0, currIdx - 3), currIdx);
+        
+        let pastTotals = {};
+        pastKeys.forEach(k => {
+            monthlyDB[k].transactions.forEach(t => {
+                if (t.type === '지출' && t.cat !== '상환' && t.cat !== '고정비') {
+                    pastTotals[t.cat] = (pastTotals[t.cat] || 0) + Math.abs(t.amount);
+                }
+            });
+        });
+        
+        let pastAvgs = {};
+        let monthsCount = pastKeys.length;
+        if (monthsCount > 0) {
+            Object.keys(pastTotals).forEach(cat => pastAvgs[cat] = pastTotals[cat] / monthsCount);
+        }
+
+        let anomalyCat = null; let maxDiff = 0; let anomalyAvg = 0; let anomalyCurr = 0;
+        Object.entries(categoryTotals).forEach(([cat, amt]) => {
+            if (cat === '상환' || cat === '미분류' || cat === '고정비') return;
+            const avg = pastAvgs[cat] || 0;
+            const diff = amt - avg;
+            if (diff >= 50000 && amt >= avg * 1.3 && diff > maxDiff) {
+                anomalyCat = cat; maxDiff = diff; anomalyAvg = avg; anomalyCurr = amt;
+            }
+        });
+
+        if (anomalyCat) {
+            html += `<p class="flex gap-3 items-start mb-3"><i class="fas fa-exclamation-triangle text-amber-500 mt-1 shrink-0"></i> <span>최근 평균 대비 <strong>${anomalyCat}</strong> 카테고리의 지출이 크게 늘었습니다. <br><span class="text-xs text-gray-500">(과거 평균: ${Math.round(anomalyAvg).toLocaleString()}원 ➔ 이번 달: <strong class="text-amber-600">${anomalyCurr.toLocaleString()}원</strong>) 특이사항을 점검해보세요.</span></span></p>`;
+        } else {
+            html += `<p class="flex gap-3 items-start mb-3"><i class="fas fa-check-circle text-emerald-500 mt-1 shrink-0"></i> <span>이번 달은 과거 평균과 비교해 크게 튀는 지출 카테고리가 없이 안정적입니다.</span></p>`;
+        }
+
+        const expenses = currentTxData.filter(t => t.type === '지출' && t.cat !== '상환' && t.cat !== '고정비');
+        if (expenses.length > 0) {
+            expenses.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+            const topTx = expenses[0];
+            if (Math.abs(topTx.amount) >= 100000) { 
+                html += `<p class="flex gap-3 items-start"><i class="fas fa-search-dollar text-indigo-500 mt-1 shrink-0"></i> <span>특이 지출건 확인: <strong>${topTx.memo}</strong>에 <strong class="text-indigo-600">${Math.abs(topTx.amount).toLocaleString()}원</strong>이 결제되었습니다.</span></p>`;
+            }
+        }
+
+        if (monthsCount === 0 && expenses.length === 0) html += '<p class="text-sm text-gray-500 py-4">지출 내역이 충분하지 않아 분석할 수 없습니다.</p>';
+        container.innerHTML = html;
+    }
+
+    function renderDashboard() {
+        if(!currentMonthKey || !monthlyDB[currentMonthKey]) return;
+        const db = monthlyDB[currentMonthKey];
+        
+        const shortYear = currentMonthKey.substring(2, 4); const shortMonth = currentMonthKey.substring(5, 7); 
+        const targetLabel = `${shortYear}.${shortMonth}`;
+        
+        const monthIdx = dynamicAssetHistory.labels.indexOf(targetLabel);
+        if (monthIdx !== -1) {
+            db.asset = dynamicAssetHistory.data[monthIdx];
+            db.prevAsset = monthIdx > 0 ? dynamicAssetHistory.data[monthIdx - 1] : 0;
+            db.monthIndex = monthIdx;
+        } else {
+            db.monthIndex = dynamicAssetHistory.data.length - 1; 
+            db.asset = db.monthIndex >= 0 ? dynamicAssetHistory.data[db.monthIndex] : 0;
+            db.prevAsset = db.monthIndex > 0 ? dynamicAssetHistory.data[db.monthIndex - 1] : 0;
+        }
+
+        const txData = db.transactions;
+        document.getElementById('display-month').textContent = db.title;
+        document.getElementById('display-period').textContent = db.periodStr;
+        document.getElementById('manage-title').textContent = `${db.title} 거래 내역`;
+
+        let totalIncome = 0; let totalExpense = 0; let categoryTotals = {};
+        const manageList = document.getElementById('manageTransactionList');
+        if (manageList) manageList.innerHTML = '';
+
+        const getBadgeStyle = (type) => {
+            if(type === '수입') return 'bg-blue-100 text-blue-700';
+            if(type === '지출') return 'bg-red-100 text-red-700';
+            return 'bg-gray-100 text-gray-700';
+        };
+
+        const sortedTxData = [...txData].sort((a, b) => {
+            const dateTimeA = `${a.date} ${a.time || '00:00'}`;
+            const dateTimeB = `${b.date} ${b.time || '00:00'}`;
+            if (txSortOrder === 'desc') return dateTimeB.localeCompare(dateTimeA); 
+            return dateTimeA.localeCompare(dateTimeB); 
+        });
+
+        sortedTxData.forEach((item) => {
+            if (item.type === '수입') totalIncome += item.amount;
+            else if (item.type === '지출') {
+                const absAmount = Math.abs(item.amount); totalExpense += absAmount;
+                const category = item.cat || '미분류'; categoryTotals[category] = (categoryTotals[category] || 0) + absAmount;
+            }
+            const colorClass = item.type === '수입' ? 'text-blue-600' : (item.type === '지출' ? 'text-red-600' : 'text-gray-600');
+            const sign = item.amount > 0 ? '+' : '';
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-gray-50/80 transition-colors';
+            tr.innerHTML = `
+                <td class="px-4 md:px-6 py-3 whitespace-nowrap text-gray-500">${item.date} <span class="hidden md:inline text-xs text-gray-400 ml-1">${item.time}</span></td>
+                <td class="px-4 md:px-6 py-3 whitespace-nowrap"><span class="px-2 py-1 rounded-md text-[10px] md:text-xs font-bold ${getBadgeStyle(item.type)}">${item.type}</span></td>
+                <td class="px-4 md:px-6 py-3 min-w-[150px]"><div class="font-medium text-gray-800 truncate">${item.memo}</div><div class="text-[10px] md:text-xs text-gray-400 mt-0.5">${item.cat || '미분류'} > ${item.subcat}</div></td>
+                <td class="px-4 md:px-6 py-3 whitespace-nowrap text-gray-500 text-[10px] md:text-sm truncate max-w-[100px]">${item.method}</td>
+                <td class="px-4 md:px-6 py-3 whitespace-nowrap text-right font-bold ${colorClass}">${sign}${item.amount.toLocaleString()}원</td>`;
+            if (manageList) manageList.appendChild(tr);
+        });
+
+        const currentBalance = totalIncome - totalExpense;
+        if (document.getElementById('card-income')) document.getElementById('card-income').textContent = `+${totalIncome.toLocaleString()}원`;
+        if (document.getElementById('card-expense')) document.getElementById('card-expense').textContent = `-${totalExpense.toLocaleString()}원`;
+        if (document.getElementById('card-total')) document.getElementById('card-total').textContent = `${currentBalance.toLocaleString()}원`;
+        if (document.getElementById('card-asset')) document.getElementById('card-asset').textContent = `${db.asset.toLocaleString()}원`;
+        if (document.getElementById('manage-count')) document.getElementById('manage-count').textContent = `총 ${txData.length}건`;
+
+        const budgetStatus = document.getElementById('card-budget-status');
+        if (budgetStatus) {
+            if (currentBalance >= 0) {
+                budgetStatus.innerHTML = '<i class="fas fa-check-circle"></i> 흑자';
+                budgetStatus.className = 'text-[10px] md:text-xs text-indigo-100 flex items-center gap-1 mb-1 whitespace-nowrap shrink-0';
+            } else {
+                budgetStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i> 적자';
+                budgetStatus.className = 'text-[10px] md:text-xs text-red-200 flex items-center gap-1 mb-1 whitespace-nowrap shrink-0';
+            }
+        }
+
+        generateAIComments(txData, categoryTotals, db.title, currentMonthKey);
+
+        ['expense', 'monthlyTrend', 'dashAsset', 'fullAsset'].forEach(key => { if(myCharts[key]) myCharts[key].destroy(); });
+
+        const getCategoryColor = (category, index) => {
+            const fixedColors = { '상환': '#D1D5DB', '식비': '#F87171', '생활': '#FBBF24', '주거': '#34D399', '통신': '#60A5FA', '교통': '#A78BFA', '쇼핑': '#F472B6', '의료/건강': '#10B981', '문화/여가': '#F59E0B', '교육': '#3B82F6', '경조/선물': '#EF4444', '고정비': '#818CF8', '미분류': '#9CA3AF' };
+            if (fixedColors[category]) return fixedColors[category];
+            const fallbackColors = ['#4F46E5', '#2DD4BF', '#FBBF24', '#FB7185', '#C084FC', '#38BDF8', '#A3E635'];
+            return fallbackColors[index % fallbackColors.length];
+        };
+        
+        const predefinedOrder = ['식비', '생활', '주거', '통신', '교통', '쇼핑', '의료/건강', '문화/여가', '교육', '경조/선물', '고정비', '미분류', '상환'];
+        const categoryLabels = Object.keys(categoryTotals).sort((a, b) => {
+            if (a === '상환') return 1; if (b === '상환') return -1;
+            let idxA = predefinedOrder.indexOf(a); let idxB = predefinedOrder.indexOf(b);
+            if (idxA === -1) idxA = 99; if (idxB === -1) idxB = 99;
+            return idxA - idxB;
+        });
+        
+        const categoryData = categoryLabels.map(cat => categoryTotals[cat]);
+        const bgColors = categoryLabels.map((cat, idx) => getCategoryColor(cat, idx));
+
+        const ctxExp = document.getElementById('expenseChart');
+        if (ctxExp && categoryLabels.length > 0) {
+            myCharts['expense'] = new Chart(ctxExp, {
+                type: 'doughnut', data: { labels: categoryLabels, datasets: [{ data: categoryData, backgroundColor: bgColors, borderWidth: 0, hoverOffset: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } }, tooltip: { callbacks: { label: function(c) { return ' ' + c.raw.toLocaleString() + '원'; } } } } }
+            });
+        }
+
+        const trendLabels = []; const incomeData = []; const expenseData = []; const netData = [];
+        Object.keys(monthlyDB).sort().forEach(key => { 
+            const monthDb = monthlyDB[key];
+            trendLabels.push(key.replace('20', '').replace('-', '.')); 
+            let mInc = 0, mExp = 0;
+            monthDb.transactions.forEach(t => { if(t.type === '수입') mInc += t.amount; else if(t.type === '지출') mExp += Math.abs(t.amount); });
+            incomeData.push(mInc); expenseData.push(mExp); netData.push(mInc - mExp);
+        });
+
+        const trendCtx = document.getElementById('monthlyTrendChart');
+        if (trendCtx) {
+            myCharts['monthlyTrend'] = new Chart(trendCtx, {
+                type: 'bar',
+                data: { labels: trendLabels, datasets: [{ type: 'line', label: '순수익', data: netData, borderColor: '#F59E0B', backgroundColor: '#F59E0B', borderWidth: 2, pointRadius: 3, fill: false, tension: 0.3, yAxisID: 'y' }, { type: 'bar', label: '수입', data: incomeData, backgroundColor: 'rgba(59, 130, 246, 0.8)', borderRadius: 4, yAxisID: 'y' }, { type: 'bar', label: '지출', data: expenseData, backgroundColor: 'rgba(239, 68, 68, 0.8)', borderRadius: 4, yAxisID: 'y' }] },
+                options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { beginAtZero: true, grid: { borderDash: [5, 5] }, ticks: { font: { size: 10 }, callback: function(value) { return Math.floor(value / 10000).toLocaleString() + '만'; } } } }, plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 6, font: { size: 10 } } }, tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + c.raw.toLocaleString() + '원'; } } } } }
+            });
+        }
+
+        if (diffEl = document.getElementById('dashboard-asset-diff')) {
+            if (db.asset === 0) {
+                diffEl.innerHTML = `<i class="fas fa-minus"></i> 데이터 없음`;
+                diffEl.className = "text-[10px] md:text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full whitespace-nowrap";
+            } else {
+                const monthDiff = db.asset - db.prevAsset;
+                if (monthDiff >= 0) { diffEl.innerHTML = `<i class="fas fa-arrow-up"></i> 전월대비 +${monthDiff.toLocaleString()}원`; diffEl.className = "text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full whitespace-nowrap"; }
+                else { diffEl.innerHTML = `<i class="fas fa-arrow-down"></i> 전월대비 ${monthDiff.toLocaleString()}원`; diffEl.className = "text-[10px] md:text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full whitespace-nowrap"; }
+            }
+        }
+
+        const firstAsset = dynamicAssetHistory.data[0] || 0; 
+        const startIdx = dynamicAssetHistory.labels.indexOf('25.12');
+        const start2026Asset = startIdx !== -1 ? dynamicAssetHistory.data[startIdx] : (dynamicAssetHistory.data[0] || 0);
+        const targetGoalAsset = 250000000; 
+
+        const safeMonthIndex = db.monthIndex > 0 ? db.monthIndex : 1; 
+        const totalAssetGrowth = db.asset > 0 ? (db.asset - firstAsset) : 0;
+        const avgMonthlyGrowth = totalAssetGrowth / safeMonthIndex; 
+        
+        let goalPercentage = 0;
+        if (db.asset > 0 && targetGoalAsset > start2026Asset) {
+            goalPercentage = (((db.asset - start2026Asset) / (targetGoalAsset - start2026Asset)) * 100).toFixed(1);
+        }
+
+        if(document.getElementById('asset-total-growth')) document.getElementById('asset-total-growth').innerHTML = `<span class="text-indigo-600">${totalAssetGrowth >= 0 ? '+' : ''}${totalAssetGrowth.toLocaleString()}</span>원`;
+        if(document.getElementById('asset-avg-growth')) document.getElementById('asset-avg-growth').innerHTML = `<span class="text-emerald-600">${avgMonthlyGrowth >= 0 ? '+' : ''}${Math.round(avgMonthlyGrowth).toLocaleString()}</span>원/월`;
+        if(document.getElementById('asset-goal-percent')) document.getElementById('asset-goal-percent').innerHTML = `<span class="text-amber-500">${goalPercentage}</span>%`;
+        if(document.getElementById('asset-goal-bar')) {
+            document.getElementById('asset-goal-bar').style.width = '0%'; setTimeout(() => { document.getElementById('asset-goal-bar').style.width = `${goalPercentage}%`; }, 100);
+        }
+
+        const currentYear = currentMonthKey.split('-')[0]; const currentShortYear = currentYear.substring(2); 
+        if (document.getElementById('dashboard-asset-title')) document.getElementById('dashboard-asset-title').textContent = `${currentYear}년 자산 흐름`;
+
+        const dynamicYearLabels = []; const dynamicYearData = [];
+        for (let i = 1; i <= 12; i++) {
+            dynamicYearLabels.push(`${i}월`);
+            let findIdx = dynamicAssetHistory.labels.indexOf(`${currentShortYear}.${String(i).padStart(2, '0')}`);
+            if (findIdx !== -1) dynamicYearData.push(dynamicAssetHistory.data[findIdx]);
+            else dynamicYearData.push(null); 
+        }
+
+        let allLabels = [...dynamicAssetHistory.labels];
+        let allData = [...dynamicAssetHistory.data];
+        const maxYearNum = parseInt(currentShortYear, 10);
+
+        if (allLabels.length > 0) {
+            const lastLabel = allLabels[allLabels.length - 1]; 
+            const [lastYStr, lastMStr] = lastLabel.split('.');
+            const lastY = parseInt(lastYStr, 10);
+            const lastM = parseInt(lastMStr, 10);
+
+            if (lastY <= maxYearNum) {
+                for (let y = lastY; y <= maxYearNum; y++) {
+                    let startMonth = (y === lastY) ? lastM + 1 : 1;
+                    for (let m = startMonth; m <= 12; m++) {
+                        allLabels.push(`${y}.${String(m).padStart(2, '0')}`);
+                        allData.push(null);
+                    }
+                }
+            }
+        }
+
+        let finalLabels = []; let finalData = [];
+        if (currentAssetFilter === 'all') { 
+            finalLabels = allLabels; 
+            finalData = allData; 
+        } else {
+            allLabels.forEach((label, index) => {
+                if (label.startsWith(currentAssetFilter + '.')) { 
+                    finalLabels.push(label); 
+                    finalData.push(allData[index]); 
+                }
+            });
+        }
+
+        const createLineChart = (id, labels, data) => {
+            const el = document.getElementById(id); if (!el) return null;
+            const goalData = labels.map(() => targetGoalAsset);
+            return new Chart(el, {
+                type: 'line',
+                data: { labels: labels, datasets: [{ label: '내 총 자산', data: data, spanGaps: false, borderColor: '#4F46E5', backgroundColor: function(context) { const chartArea = context.chart.chartArea; if (!chartArea) return null; const gradient = context.chart.ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom); gradient.addColorStop(0, 'rgba(79, 70, 229, 0.4)'); gradient.addColorStop(1, 'rgba(79, 70, 229, 0.0)'); return gradient; }, borderWidth: 2, pointBackgroundColor: '#fff', pointBorderColor: '#4F46E5', pointBorderWidth: 2, pointRadius: 3, fill: true, tension: 0.4, order: 1 }, { label: '목표 자산 (2.5억)', data: goalData, borderColor: '#F59E0B', borderWidth: 2, borderDash: [5, 5], pointRadius: 0, fill: false, order: 2 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { font: { size: 10 }, callback: function(value) { return Math.floor(value / 10000).toLocaleString() + '만'; } }, grid: { borderDash: [5, 5] } }, x: { grid: { display: false }, ticks: { font: { size: 10 } } } }, plugins: { legend: { display: true, position: 'bottom', labels: { usePointStyle: true, boxWidth: 6, font: { size: 10 } } }, tooltip: { callbacks: { label: function(context) { return ' ' + context.dataset.label + ': ' + context.raw.toLocaleString() + '원'; } } } } }
+            });
+        };
+
+        myCharts['dashAsset'] = createLineChart('dashboardAssetChart', dynamicYearLabels, dynamicYearData);
+        myCharts['fullAsset'] = createLineChart('fullAssetChart', finalLabels, finalData);
+    }
+
+    // 앱 초기화 
+    window.addEventListener('DOMContentLoaded', () => {
+        loadSettings();
+        fetchSheetData(true); 
+    });
+
+</script>
+</body>
+</html>
