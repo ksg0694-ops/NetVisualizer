@@ -207,6 +207,9 @@
                                 <div class="flex justify-between text-gray-300"><span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-blue-400"></div>현금+안전</span> <span id="pf-safe-sum">0원</span></div>
                                 <div class="flex justify-between text-gray-300"><span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-purple-400"></div>투자</span> <span id="pf-invest-sum">0원</span></div>
                                 <div class="flex justify-between text-red-300"><span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-red-400"></div>부채 (-)</span> <span id="pf-debt-sum">0원</span></div>
+                                <div class="border-t border-gray-700 pt-2 mt-2"></div>
+                                <div class="flex justify-between text-emerald-300 font-bold"><span class="flex items-center gap-2"><i class="fas fa-coins text-xs"></i>즉시 가용 자산</span> <span id="pf-liquid-sum">0원</span></div>
+                                <div class="flex justify-between text-gray-400 text-[11px]"><span class="flex items-center gap-2"><i class="fas fa-lock text-[10px]"></i>묶인 돈 (만기 등)</span> <span id="pf-tied-sum">0원</span></div>
                             </div>
                         </div>
 
@@ -216,6 +219,24 @@
                                 <canvas id="portfolioChart"></canvas>
                             </div>
                             <p class="text-xs text-gray-400 text-center mt-4">* 부채를 제외한 보유 자산 기준</p>
+                        </div>
+
+                        <!-- 레버리지 효율 분석 -->
+                        <div class="bg-gradient-to-br from-slate-800 to-gray-900 p-5 rounded-2xl shadow-sm border border-gray-700 flex flex-col text-white mt-2">
+                            <h3 class="text-sm font-bold text-gray-300 mb-3 flex items-center gap-2"><i class="fas fa-balance-scale"></i> 레버리지(대출) 효율 분석</h3>
+                            <div class="grid grid-cols-2 gap-4 text-center">
+                                <div class="bg-gray-800 rounded-xl p-3 border border-gray-700 flex flex-col justify-center">
+                                    <p class="text-[10px] text-gray-400 mb-1">예상 연 이자 (4% 가정)</p>
+                                    <h4 class="text-sm font-bold text-blue-400" id="pf-loan-interest">0원</h4>
+                                </div>
+                                <div class="bg-gray-800 rounded-xl p-3 border border-gray-700 flex flex-col justify-center">
+                                    <p class="text-[10px] text-gray-400 mb-1">투자 수익 (연 6% 가정)</p>
+                                    <h4 class="text-sm font-bold text-red-400" id="pf-invest-return">0원</h4>
+                                </div>
+                            </div>
+                            <div class="mt-3 text-center border-t border-gray-700 pt-3" id="pf-leverage-result">
+                                <span class="text-[10px] font-bold text-gray-400">계산중...</span>
+                            </div>
                         </div>
                     </div>
 
@@ -369,17 +390,53 @@
                     <button onclick="switchView('portfolio-view')" class="text-gray-500 hover:text-gray-800 transition-colors p-2 -ml-2">
                         <i class="fas fa-arrow-left text-lg"></i>
                     </button>
-                    <h2 class="text-xl font-bold text-gray-800 ml-2">투자 자산 상세</h2>
+                    <h2 class="text-xl font-bold text-gray-800 ml-2">투자 성과 및 전략 분석</h2>
                 </div>
                 
-                <div class="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden mb-6 min-h-[120px] flex flex-col justify-center items-start">
-                    <div class="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-white opacity-10 rounded-full pointer-events-none"></div>
-                    <p class="text-indigo-100 font-medium text-sm mb-1">총 투자 자산</p>
-                    <h3 class="text-2xl font-bold" id="invest-detail-total">0원</h3>
+                <!-- 상단: 3대 핵심 지표 요약 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6">
+                    <div class="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl p-5 text-white shadow-sm relative overflow-hidden flex flex-col justify-center min-h-[140px]">
+                        <div class="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-white opacity-10 rounded-full pointer-events-none"></div>
+                        <p class="text-indigo-100 font-medium text-xs mb-1">총 투자 자산 (평가금액)</p>
+                        <h3 class="text-2xl font-bold mb-2" id="invest-detail-total">0원</h3>
+                        <div class="flex items-center gap-2 border-t border-purple-500/50 pt-2">
+                            <span class="text-[10px] text-purple-200">가상 추정 수익</span>
+                            <span class="text-sm font-bold text-red-300" id="invest-detail-profit">+0원 (0%)</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-center min-h-[140px]">
+                        <div class="flex justify-between items-start mb-2">
+                            <p class="text-xs font-bold text-gray-500">MDD 방어 상태 (현금 비중)</p>
+                            <i class="fas fa-shield-alt text-emerald-400"></i>
+                        </div>
+                        <div class="flex items-end gap-2 mb-3">
+                            <h3 class="text-2xl font-bold text-gray-800" id="invest-mdd-ratio">0%</h3>
+                            <span class="text-[10px] font-medium text-gray-400 mb-1" id="invest-mdd-status">안정적</span>
+                        </div>
+                        <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                            <div class="h-full bg-emerald-400 transition-all" id="invest-mdd-bar" style="width: 0%"></div>
+                        </div>
+                        <p class="text-[9px] text-gray-400 mt-2">* 폭락장에 대비한 예비 현금/달러 비율</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center min-h-[140px] gap-4">
+                        <div class="flex-1 flex flex-col justify-center">
+                            <p class="text-xs font-bold text-gray-500 mb-2">투자 전략별 비중</p>
+                            <div class="space-y-1" id="invest-strategy-legend">
+                                <!-- JS -->
+                            </div>
+                        </div>
+                        <div class="w-24 h-24 relative shrink-0">
+                            <canvas id="investStrategyChart"></canvas>
+                        </div>
+                    </div>
                 </div>
-                
-                <div id="invest-detail-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- 상세 카드들이 여기에 렌더링됨 -->
+
+                <!-- 중단: 개별 종목 성과 리스트 -->
+                <h3 class="text-base font-bold text-gray-800 mb-3 flex items-center gap-2"><i class="fas fa-list-ul text-indigo-500"></i> 투자 전략별 종목 상세 (2단 아코디언)</h3>
+                <div id="invest-detail-list" class="flex flex-col gap-0 mb-6">
+                    <!-- 상세 2단 아코디언이 여기에 렌더링됨 -->
                 </div>
             </div>
 
@@ -389,69 +446,114 @@
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
                     <div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden flex flex-col justify-center">
                         <div class="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-white opacity-10 rounded-full pointer-events-none"></div>
-                        <p class="text-indigo-100 font-medium text-sm mb-1">청약 자금 준비도 (현금+안전)</p>
-                        <div class="flex items-end gap-2 mb-3">
-                            <h3 class="text-3xl font-bold" id="re-current-asset">0원</h3>
-                            <span class="text-sm font-medium text-indigo-200 mb-1">/ 목표 8억</span>
-                        </div>
-                        <div class="w-full bg-indigo-900/50 rounded-full h-3 overflow-hidden">
-                            <div class="h-full bg-emerald-400 transition-all duration-1000 ease-out relative" id="re-progress-bar" style="width: 0%">
-                                <div class="absolute inset-0 bg-white/20" style="animation: shimmer 2s infinite"></div>
+                        <p class="text-indigo-100 font-medium text-sm mb-1">청약 자금 준비도 (모은 돈 + 예상 대출)</p>
+                        <div class="flex justify-between items-end mb-3">
+                            <div class="flex items-end gap-2">
+                                <h3 class="text-3xl font-bold" id="re-total-ready">0원</h3>
+                                <span class="text-sm font-medium text-indigo-200 mb-1">/ 목표 6억</span>
                             </div>
                         </div>
-                        <p class="text-right text-xs font-bold mt-2 text-emerald-300" id="re-progress-text">0% 달성</p>
+                        <!-- 다중 세그먼트 프로그레스 바 -->
+                        <div class="w-full bg-indigo-900/50 rounded-full h-5 overflow-hidden flex relative">
+                            <!-- 모은 돈 -->
+                            <div class="h-full bg-emerald-400 transition-all duration-1000 ease-out flex items-center justify-center text-[10px] font-bold text-emerald-900 overflow-hidden whitespace-nowrap px-1" id="re-progress-saved" style="width: 0%">
+                            </div>
+                            <!-- 대출 -->
+                            <div class="h-full bg-amber-400 transition-all duration-1000 ease-out flex items-center justify-center text-[10px] font-bold text-amber-900 overflow-hidden whitespace-nowrap px-1" id="re-progress-loan" style="width: 0%">
+                                주담대
+                            </div>
+                        </div>
+                        <div class="flex justify-between mt-2">
+                            <div class="flex flex-col">
+                                <p class="text-xs font-bold text-emerald-300" id="re-saved-text">모은돈 0원</p>
+                                <p class="text-[10px] text-indigo-200/70 mt-0.5">* 대출 가정: DSR 40% (주담대금리 6%)</p>
+                            </div>
+                            <p class="text-xs font-bold text-indigo-200" id="re-progress-text">0% 달성</p>
+                        </div>
                     </div>
                     
-                    <div class="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden flex flex-col justify-center">
-                        <div class="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-white opacity-10 rounded-full pointer-events-none"></div>
-                        <p class="text-blue-100 font-medium text-sm mb-1">예상 대출 가능 금액 (현재 자산의 50% 가정)</p>
-                        <div class="flex items-end gap-2 mb-3">
-                            <h3 class="text-3xl font-bold" id="re-expected-loan">0원</h3>
+                    <div class="bg-gray-50 rounded-2xl p-4 md:p-6 shadow-sm border border-gray-200 flex flex-col justify-center h-full text-xs text-gray-700 leading-relaxed">
+                        <div class="w-full">
+                            <p class="font-bold text-indigo-700 mb-2 border-b border-gray-200 pb-1 text-sm md:text-base">■ 청약</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pl-1 mt-2">
+                                <div>
+                                    <p class="font-bold text-emerald-700 text-xs md:text-sm mb-1.5">[공공분양]</p>
+                                    <ul class="list-none pl-1 space-y-2.5 text-[11px] md:text-xs text-gray-600">
+                                        <li>
+                                            <span class="font-bold text-gray-800">일반공급</span>
+                                            <ul class="pl-3 mt-1 space-y-1">
+                                                <li>가점제(80%) / <span class="text-indigo-600 font-bold bg-indigo-50 inline-block px-1.5 py-0.5 rounded">추첨제(20%) <i class="fas fa-check-circle text-[10px] ml-0.5"></i></span></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <span class="font-bold text-gray-800">특별공급</span>
+                                            <ul class="pl-3 mt-1">
+                                                <li class="text-gray-400">자격미달</li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-emerald-700 text-xs md:text-sm mb-1.5">[민간분양]</p>
+                                    <ul class="list-none pl-1 space-y-2.5 text-[11px] md:text-xs text-gray-600">
+                                        <li>
+                                            <span class="font-bold text-gray-800">■ 일반공급 (50%)</span>
+                                            <ul class="pl-3 mt-1">
+                                                <li>가점제 / <span class="text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.5 rounded">추첨제 <i class="fas fa-check-circle text-[10px] ml-0.5"></i></span></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <span class="font-bold text-gray-800">■ 특별공급</span>
+                                            <ul class="pl-3 mt-1">
+                                                <li><span class="text-indigo-600 font-bold bg-indigo-50 inline-block px-1.5 py-0.5 rounded leading-relaxed">생애최초(9%) <i class="fas fa-check-circle text-[10px] ml-0.5"></i></span> : 미혼1인 59㎡ 지원가능</li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
-                        <p class="text-sm font-medium text-blue-100 border-t border-blue-400/50 pt-2 mt-1">총 가용 자금(내 돈 + 대출): <span class="font-bold text-white text-lg ml-1" id="re-total-available">0원</span></p>
                     </div>
                 </div>
-
-                <!-- 하단: 요약 및 지도 -->
+                <!-- 하단: 그리드 뷰 (일정 1 : 지도 2) -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 flex-1">
-                    <div class="lg:col-span-1 bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 flex flex-col">
-                        <h4 class="text-base font-bold text-gray-800 mb-4 flex items-center gap-2"><i class="fas fa-city text-indigo-500"></i> 주요 3기 신도시 요약</h4>
-                        <div class="grid grid-cols-1 gap-3 overflow-y-auto pr-2 pb-2">
-                            <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col justify-center gap-1">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[10px] font-bold bg-blue-100 text-blue-600 px-2 py-0.5 rounded">분양 예정</span>
-                                    <h5 class="font-bold text-gray-800">하남 교산</h5>
+                    <!-- 주요 단지 분양 일정 (3기 신도시 통합) -->
+                    <div class="lg:col-span-1 bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 flex flex-col min-h-[350px]">
+                        <h4 class="text-sm md:text-base font-bold text-gray-800 mb-4 flex items-center gap-2"><i class="fas fa-calendar-alt text-emerald-500"></i> 주요 분양 일정</h4>
+                        <div class="flex-1 overflow-y-auto max-h-[350px] pr-1 pl-2">
+                            <div class="relative pl-4 border-l-2 border-gray-100 space-y-5 py-2">
+                                <div class="relative">
+                                    <div class="absolute -left-[21px] w-2.5 h-2.5 bg-indigo-500 rounded-full ring-2 ring-white"></div>
+                                    <p class="text-[10px] font-bold text-indigo-600 mb-0.5">26년 하반기</p>
+                                    <h5 class="font-bold text-gray-800 text-xs flex items-center gap-1.5 flex-wrap">하남 교산 (A2) <span class="bg-blue-100 text-blue-600 px-1 py-0.5 text-[8px] rounded font-bold">3기 신도시</span></h5>
+                                    <p class="text-[10px] text-gray-500 mt-0.5">7~8억 / 공공분양</p>
                                 </div>
-                                <p class="text-sm font-bold text-indigo-600 text-right mt-1">약 7~8억</p>
-                            </div>
-                            <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col justify-center gap-1">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[10px] font-bold bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded">건설 중</span>
-                                    <h5 class="font-bold text-gray-800">남양주 왕숙</h5>
+                                <div class="relative">
+                                    <div class="absolute -left-[21px] w-2.5 h-2.5 bg-indigo-500 rounded-full ring-2 ring-white"></div>
+                                    <p class="text-[10px] font-bold text-indigo-600 mb-0.5">26년 10월</p>
+                                    <h5 class="font-bold text-gray-800 text-xs flex items-center gap-1.5 flex-wrap">남양주 왕숙 <span class="bg-blue-100 text-blue-600 px-1 py-0.5 text-[8px] rounded font-bold">3기 신도시</span></h5>
+                                    <p class="text-[10px] text-gray-500 mt-0.5">6~7억 / 가점40 추첨60</p>
                                 </div>
-                                <p class="text-sm font-bold text-indigo-600 text-right mt-1">약 6~7억</p>
-                            </div>
-                            <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col justify-center gap-1">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[10px] font-bold bg-gray-200 text-gray-600 px-2 py-0.5 rounded">계획 단계</span>
-                                    <h5 class="font-bold text-gray-800">고양 창릉</h5>
+                                <div class="relative">
+                                    <div class="absolute -left-[21px] w-2.5 h-2.5 bg-purple-500 rounded-full ring-2 ring-white"></div>
+                                    <p class="text-[10px] font-bold text-purple-600 mb-0.5">27년 상반기</p>
+                                    <h5 class="font-bold text-gray-800 text-xs flex items-center gap-1.5 flex-wrap">과천 주암지구</h5>
+                                    <p class="text-[10px] text-gray-500 mt-0.5">9억↑ / 민간분양</p>
                                 </div>
-                                <p class="text-sm font-bold text-indigo-600 text-right mt-1">약 8~9억</p>
-                            </div>
-                            <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col justify-center gap-1">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[10px] font-bold bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded">분양 완료</span>
-                                    <h5 class="font-bold text-gray-800">인천 계양</h5>
+                                <div class="relative">
+                                    <div class="absolute -left-[21px] w-2.5 h-2.5 bg-gray-300 rounded-full ring-2 ring-white"></div>
+                                    <p class="text-[10px] font-bold text-gray-500 mb-0.5">계획 단계</p>
+                                    <h5 class="font-bold text-gray-800 text-xs flex items-center gap-1.5 flex-wrap">고양 창릉 사전청약 <span class="bg-blue-100 text-blue-600 px-1 py-0.5 text-[8px] rounded font-bold">3기 신도시</span></h5>
+                                    <p class="text-[10px] text-gray-500 mt-0.5">8~9억 / 미정</p>
                                 </div>
-                                <p class="text-sm font-bold text-indigo-600 text-right mt-1">약 5~6억</p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="lg:col-span-2 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-h-[300px]">
-                        <h3 class="text-base font-bold text-gray-800 mb-3 flex justify-between items-center">
+                    <!-- 지도 -->
+                    <div class="lg:col-span-2 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-h-[350px]">
+                        <h3 class="text-sm md:text-base font-bold text-gray-800 mb-3 flex justify-between items-center">
                             <span>수도권 주요 청약 지도</span>
-                            <button onclick="if(window.reMap) window.reMap.setView([37.5665, 126.9780], 10)" class="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded hover:bg-indigo-100 transition">서울 중심 보기</button>
+                            <button onclick="if(window.reMap) window.reMap.setView([37.5665, 126.9780], 10)" class="text-[9px] md:text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded hover:bg-indigo-100 transition">서울 중심 보기</button>
                         </h3>
                         <div id="realestate-map" class="w-full flex-1 rounded-xl border border-gray-200 z-0 relative" style="min-height: 250px;"></div>
                     </div>
@@ -753,8 +855,8 @@
             const time = row[1] || ''; const type = row[2] || '';
             const cat = row[3] || '미분류'; const subcat = row[4] || '미분류';
             const memo = row[5] || '';
-            const amount = parseInt(String(row[6] || '0').replace(/[^0-9-]/g, ''), 10);
-            if (isNaN(amount)) return;
+            const amount = Math.round(parseFloat(String(row[6] || '0').replace(/[^0-9.-]/g, ''))) || 0;
+            if (isNaN(amount) || amount === 0) return;
             let method = row.length > 8 ? row[8] : (row[7] || ''); 
 
             const tx = { date: dateStr, time, type, cat, subcat, memo, amount, method };
@@ -1036,7 +1138,7 @@
         for (let i = 1; i < rawPortfolioData.length; i++) {
             if (rawPortfolioData[i].length < 5) continue;
             const group = rawPortfolioData[i][0] || '';
-            const amount = parseInt(String(rawPortfolioData[i][4] || '0').replace(/[^0-9-]/g, ''), 10) || 0;
+            const amount = Math.round(parseFloat(String(rawPortfolioData[i][4] || '0').replace(/[^0-9.-]/g, ''))) || 0;
             if (group !== '부채') originalNetWorthForDiff += amount;
         }
 
@@ -1074,8 +1176,8 @@
             `;
 
             items.forEach(item => {
-                const amountStr = String(item.amount || '0').replace(/[^0-9-]/g, '');
-                const formattedAmount = amountStr ? parseInt(amountStr, 10).toLocaleString() : '0';
+                const amountStr = String(item.amount || '0').replace(/[^0-9.-]/g, '');
+                const formattedAmount = amountStr ? Math.round(parseFloat(amountStr)).toLocaleString() : '0';
                 cardHtml += `
                     <div class="flex flex-col gap-1 relative group">
                         <div class="flex justify-between items-center mb-0.5">
@@ -1125,9 +1227,9 @@
     };
 
     window.formatNumberInput = function(el) {
-        let val = String(el.value).replace(/[^0-9-]/g, '');
+        let val = String(el.value).replace(/[^0-9.-]/g, '');
         if (val) {
-            el.value = parseInt(val, 10).toLocaleString();
+            el.value = Math.round(parseFloat(val)).toLocaleString();
         } else {
             el.value = '';
         }
@@ -1135,8 +1237,8 @@
 
     window.updatePortfolioAmount = function(index, val) {
         if(workingPortfolioData[index]) {
-            const rawVal = String(val).replace(/[^0-9-]/g, '');
-            workingPortfolioData[index][4] = rawVal ? parseInt(rawVal, 10) : 0;
+            const rawVal = String(val).replace(/[^0-9.-]/g, '');
+            workingPortfolioData[index][4] = rawVal ? Math.round(parseFloat(rawVal)) : 0;
         }
         calculateExpectedTotal();
     };
@@ -1150,10 +1252,10 @@
             const inputEl = document.getElementById(`pf-edit-amt-${i}`);
             let amount = 0;
             if (inputEl) {
-                const rawVal = String(inputEl.value).replace(/[^0-9-]/g, '');
-                amount = rawVal ? parseInt(rawVal, 10) : 0;
+                const rawVal = String(inputEl.value).replace(/[^0-9.-]/g, '');
+                amount = rawVal ? Math.round(parseFloat(rawVal)) : 0;
             } else {
-                amount = parseInt(String(workingPortfolioData[i][4] || '0').replace(/[^0-9-]/g, ''), 10) || 0;
+                amount = Math.round(parseFloat(String(workingPortfolioData[i][4] || '0').replace(/[^0-9.-]/g, ''))) || 0;
             }
             if (group !== '부채') expectedNetWorth += amount;
         }
@@ -1187,8 +1289,8 @@
             if(workingPortfolioData[i].length < 5) continue;
             const inputEl = document.getElementById(`pf-edit-amt-${i}`);
             if (inputEl) {
-                const rawVal = String(inputEl.value).replace(/[^0-9-]/g, '');
-                workingPortfolioData[i][4] = rawVal ? parseInt(rawVal, 10) : 0;
+                const rawVal = String(inputEl.value).replace(/[^0-9.-]/g, '');
+                workingPortfolioData[i][4] = rawVal ? Math.round(parseFloat(rawVal)) : 0;
             }
         }
 
@@ -1349,6 +1451,7 @@
         const snapshot = dynamicAssetSnapshots[targetLabel];
         
         let totalCashAndSafe = 0, totalInvest = 0, totalDebt = 0;
+        let totalLiquid = 0, totalTied = 0;
         let chartLabels = [], chartData = [], chartColors = [];
 
         document.getElementById('portfolio-month-badge').textContent = isLatestMonth ? '현재 포트폴리오 (최신)' : `${targetLabel} 스냅샷`;
@@ -1364,6 +1467,16 @@
                 if (groupData.isDebt) totalDebt += sum;
                 else if (groupName.includes('투자')) totalInvest += sum;
                 else totalCashAndSafe += sum;
+
+                groupData.items.forEach(item => {
+                    if (!groupData.isDebt) {
+                        if (item.maturity || groupName.includes('부동산') || groupName.includes('보증금')) {
+                            totalTied += item.amount;
+                        } else {
+                            totalLiquid += item.amount;
+                        }
+                    }
+                });
 
                 if (!groupData.isDebt && sum > 0) {
                     chartLabels.push(groupName); chartData.push(sum);
@@ -1423,6 +1536,28 @@
         document.getElementById('pf-invest-sum').textContent = totalInvest.toLocaleString() + '원';
         document.getElementById('pf-debt-sum').textContent = totalDebt.toLocaleString() + '원';
 
+        if(document.getElementById('pf-liquid-sum')) {
+            document.getElementById('pf-liquid-sum').textContent = totalLiquid.toLocaleString() + '원';
+            document.getElementById('pf-tied-sum').textContent = totalTied.toLocaleString() + '원';
+        }
+
+        if (document.getElementById('pf-loan-interest')) {
+            const annualInterest = Math.abs(totalDebt) * 0.04; 
+            const expectedReturn = totalInvest * 0.06; 
+            
+            document.getElementById('pf-loan-interest').textContent = annualInterest.toLocaleString() + '원';
+            document.getElementById('pf-invest-return').textContent = expectedReturn.toLocaleString() + '원';
+            
+            const resEl = document.getElementById('pf-leverage-result');
+            if (Math.abs(totalDebt) === 0) {
+                resEl.innerHTML = `<span class="text-[10px] font-bold text-gray-400 bg-gray-800 px-2 py-1 rounded border border-gray-600">현재 대출 없음</span>`;
+            } else if (expectedReturn >= annualInterest) {
+                resEl.innerHTML = `<span class="text-[11px] font-bold text-red-400 bg-red-400/10 px-2 py-1 rounded border border-red-400/20"><i class="fas fa-check-circle"></i> 대출 이자를 넘어선 수익 창출 중!</span>`;
+            } else {
+                resEl.innerHTML = `<span class="text-[11px] font-bold text-blue-400 bg-blue-400/10 px-2 py-1 rounded border border-blue-400/20"><i class="fas fa-exclamation-triangle"></i> 이자 부담이 더 큽니다</span>`;
+            }
+        }
+
         ['portfolio', 'dashPortfolio'].forEach(key => { if(myCharts[key]) myCharts[key].destroy(); });
         const renderDoughnut = (ctxId, chartKey, isMini = false) => {
             const ctx = document.getElementById(ctxId);
@@ -1440,33 +1575,200 @@
     }
 
     function renderInvestDetail(groupName) {
+        try {
         const groupData = dynamicPortfolioData[groupName];
         if (!groupData) return;
         
+        // 1. 총 자산 및 가상 수익률 계산
         const total = groupData.items.reduce((acc, curr) => acc + curr.amount, 0);
         document.getElementById('invest-detail-total').textContent = total.toLocaleString() + '원';
         
+        // 💡 [Mock Data] 종목별 가상 수익률(%) 부여 (종목명 길이나 글자에 따라 결정)
+        let totalProfit = 0;
+        let totalCost = 0;
+        const processedItems = groupData.items.map(item => {
+            const name = item.name || "";
+            const hash = name.length + (name.charCodeAt(0) || 0);
+            let mockYieldPercent = (hash % 40) - 15; // -15% ~ +25%
+            if (isNaN(mockYieldPercent)) mockYieldPercent = 0;
+            
+            // 배당주/지수추종/성장주 태그 부여
+            let strategy = "성장/개별주";
+            let sColor = "text-blue-600 bg-blue-100 border-blue-200";
+            if (name.includes("배당") || name.includes("리츠") || name.includes("맥쿼리")) {
+                strategy = "배당주";
+                sColor = "text-amber-600 bg-amber-100 border-amber-200";
+                mockYieldPercent = Math.max(0, mockYieldPercent % 10); // 배당주는 변동성 낮춤
+            } else if (name.includes("ETF") || name.includes("지수") || name.toLowerCase().includes("sp")) {
+                strategy = "지수추종";
+                sColor = "text-emerald-600 bg-emerald-100 border-emerald-200";
+                mockYieldPercent = Math.max(5, mockYieldPercent); // 지수는 우상향 가정
+            }
+
+            const estimatedCost = Math.round(item.amount / (1 + mockYieldPercent / 100));
+            const profitAmt = item.amount - estimatedCost;
+            totalProfit += profitAmt;
+            totalCost += estimatedCost;
+            
+            return { ...item, mockYieldPercent, profitAmt, strategy, sColor };
+        });
+
+        const totalYieldPercent = totalCost > 0 ? ((totalProfit / totalCost) * 100).toFixed(1) : 0;
+        const profitEl = document.getElementById('invest-detail-profit');
+        if (totalProfit >= 0) {
+            profitEl.textContent = `+${totalProfit.toLocaleString()}원 (+${totalYieldPercent}%)`;
+            profitEl.className = "text-sm font-bold text-red-300";
+        } else {
+            profitEl.textContent = `${totalProfit.toLocaleString()}원 (${totalYieldPercent}%)`;
+            profitEl.className = "text-sm font-bold text-blue-300";
+        }
+
+        // 2. MDD 방어 상태 (현금 비중)
+        let cashTotal = 0;
+        let allTotal = 0;
+        Object.values(dynamicPortfolioData).forEach(g => {
+            const gTotal = g.items.reduce((acc, curr) => acc + curr.amount, 0);
+            allTotal += gTotal;
+            if (g.items.some(i => {
+                const type = i.type || "";
+                return type.includes('예적금') || type.includes('현금');
+            })) {
+                cashTotal += gTotal;
+            }
+        });
+        const cashRatio = allTotal > 0 ? (cashTotal / allTotal) * 100 : 0;
+        document.getElementById('invest-mdd-ratio').textContent = cashRatio.toFixed(1) + '%';
+        document.getElementById('invest-mdd-bar').style.width = Math.min(100, cashRatio) + '%';
+        const mddStatus = document.getElementById('invest-mdd-status');
+        if (cashRatio >= 20) { mddStatus.textContent = "매우 안정 (위기 대응 가능)"; mddStatus.className = "text-[10px] font-bold text-emerald-500 mb-1"; }
+        else if (cashRatio >= 10) { mddStatus.textContent = "보통 (적정 방어력)"; mddStatus.className = "text-[10px] font-bold text-yellow-500 mb-1"; }
+        else { mddStatus.textContent = "위험 (현금 부족)"; mddStatus.className = "text-[10px] font-bold text-red-500 mb-1"; }
+
+        // 3. 종목 상세 카드 렌더링 (2단 아코디언 UI)
         const listContainer = document.getElementById('invest-detail-list');
-        listContainer.innerHTML = groupData.items.map(item => `
-            <div class="bg-white border border-gray-100 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 rounded-full bg-purple-400"></div>
-                        <h4 class="font-bold text-gray-800 text-base">${item.name}</h4>
+        
+        // 전략별로 데이터 그룹핑
+        const groupedItems = { "배당주": [], "지수추종": [], "성장/개별주": [] };
+        processedItems.forEach(item => { if (groupedItems[item.strategy]) groupedItems[item.strategy].push(item); });
+        
+        let htmlContent = "";
+        let globalIdx = 0;
+        
+        Object.keys(groupedItems).forEach((strat, stratIdx) => {
+            const items = groupedItems[strat];
+            if (items.length === 0) return;
+            
+            const stratTotal = items.reduce((acc, curr) => acc + curr.amount, 0);
+            const stratProfit = items.reduce((acc, curr) => acc + curr.profitAmt, 0);
+            const stratCost = items.reduce((acc, curr) => acc + (curr.amount - curr.profitAmt), 0);
+            const stratYield = stratCost > 0 ? ((stratProfit / stratCost) * 100).toFixed(1) : 0;
+            const stratColor = stratProfit >= 0 ? 'text-red-500' : 'text-blue-500';
+            
+            htmlContent += `
+            <div class="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col overflow-hidden mb-3">
+                <!-- 1st Level Accordion Header (Strategy) -->
+                <button onclick="document.getElementById('strat-${stratIdx}').classList.toggle('hidden')" class="w-full p-4 flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition-colors focus:outline-none text-left">
+                    <div class="flex-1">
+                        <h4 class="font-bold text-gray-800 text-sm leading-tight">${strat} <span class="text-xs font-normal text-gray-500 ml-1">(${items.length}종목)</span></h4>
                     </div>
+                    <div class="text-right flex items-center gap-3 shrink-0">
+                        <div>
+                            <p class="font-bold text-gray-800 text-sm">${stratTotal.toLocaleString()}원</p>
+                            <p class="font-bold ${stratColor} text-xs text-right">${stratProfit >= 0 ? '+' : ''}${stratYield}%</p>
+                        </div>
+                        <i class="fas fa-chevron-down text-gray-400 text-xs ml-1"></i>
+                    </div>
+                </button>
+                <!-- 1st Level Accordion Body -->
+                <div id="strat-${stratIdx}" class="hidden p-3 bg-white border-t border-gray-200 flex flex-col gap-2">
+                    ${items.map(item => {
+                        globalIdx++;
+                        const pColor = item.profitAmt >= 0 ? 'text-red-500' : 'text-blue-500';
+                        const statusBadge = item.mockYieldPercent >= 15 ? `<span class="bg-red-100 text-red-600 px-1.5 py-0.5 rounded text-[9px] font-bold border border-red-200">수익 실현 고려</span>` : 
+                                           (item.mockYieldPercent <= -10 ? `<span class="bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded text-[9px] font-bold border border-blue-200">물타기/관망</span>` : 
+                                           `<span class="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-[9px] font-bold border border-gray-200">홀딩</span>`);
+                        
+                        return `
+                        <div class="bg-white border border-gray-100 rounded-lg flex flex-col overflow-hidden hover:border-indigo-300 transition-colors">
+                            <!-- 2nd Level Accordion Header (Stock) -->
+                            <button onclick="document.getElementById('acc-${globalIdx}').classList.toggle('hidden')" class="w-full p-3 flex justify-between items-center hover:bg-gray-50 transition-colors focus:outline-none text-left">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        ${statusBadge}
+                                    </div>
+                                    <h4 class="font-bold text-gray-800 text-sm leading-tight">${item.name}</h4>
+                                </div>
+                                <div class="text-right flex items-center gap-3 shrink-0">
+                                    <div>
+                                        <p class="font-bold text-gray-800 text-sm">${item.amount.toLocaleString()}원</p>
+                                        <p class="font-bold ${pColor} text-xs text-right">${item.mockYieldPercent >= 0 ? '+' : ''}${item.mockYieldPercent.toFixed(1)}%</p>
+                                    </div>
+                                    <i class="fas fa-chevron-down text-gray-300 text-xs ml-1"></i>
+                                </div>
+                            </button>
+                            <!-- 2nd Level Accordion Body (Hidden by default) -->
+                            <div id="acc-${globalIdx}" class="hidden p-3 border-t border-gray-100 bg-gray-50/50">
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    <div class="bg-white p-2 rounded-md border border-gray-100 shadow-sm">
+                                        <p class="text-[10px] font-bold text-gray-400 mb-1"><i class="fas fa-chart-pie text-indigo-400 mr-1"></i>보유 수량</p>
+                                        <p class="font-bold text-gray-800 text-xs">${item.shares ? item.shares.toLocaleString() + '주' : '<span class="text-xs text-gray-400">데이터 없음</span>'}</p>
+                                    </div>
+                                    <div class="bg-white p-2 rounded-md border border-gray-100 shadow-sm">
+                                        <p class="text-[10px] font-bold text-gray-400 mb-1"><i class="fas fa-coins text-amber-400 mr-1"></i>추정 평단가</p>
+                                        <p class="font-bold text-gray-800 text-xs">${item.shares ? Math.floor(item.amount / item.shares / (1 + item.mockYieldPercent/100)).toLocaleString() + '원' : '<span class="text-xs text-gray-400">데이터 없음</span>'}</p>
+                                    </div>
+                                    <div class="bg-white p-2 rounded-md border border-gray-100 shadow-sm">
+                                        <p class="text-[10px] font-bold text-gray-400 mb-1"><i class="fas fa-arrow-trend-up text-red-400 mr-1"></i>가상 수익금</p>
+                                        <p class="font-bold ${pColor} text-xs">${item.profitAmt >= 0 ? '+' : ''}${item.profitAmt.toLocaleString()}원</p>
+                                    </div>
+                                    <div class="bg-white p-2 rounded-md border border-gray-100 shadow-sm">
+                                        <p class="text-[10px] font-bold text-gray-400 mb-1"><i class="fas fa-wallet text-emerald-400 mr-1"></i>평가 금액</p>
+                                        <p class="font-bold text-gray-800 text-xs">${item.amount.toLocaleString()}원</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('')}
                 </div>
-                <div class="flex justify-between items-end border-t border-gray-50 pt-3">
-                    <div>
-                        ${item.shares ? `<p class="text-xs text-gray-400 font-medium mb-1">보유 수량: <span class="text-gray-600">${item.shares.toLocaleString()}주</span></p>
-                        <p class="text-xs text-gray-400 font-medium">1주당 단가: <span class="text-gray-600">${Math.floor(item.amount / item.shares).toLocaleString()}원</span></p>` : `<p class="text-xs text-gray-400">상세 수량 정보 없음</p>`}
-                    </div>
-                    <div class="text-right">
-                        <p class="text-[10px] text-gray-400 mb-0.5">평가 금액</p>
-                        <p class="font-bold text-purple-600 text-lg">${item.amount.toLocaleString()}원</p>
-                    </div>
+            </div>`;
+        });
+        
+        listContainer.innerHTML = htmlContent;
+
+        // 4. 전략별 비중 차트 및 레전드 렌더링
+        let strategyTotals = { "배당주": 0, "지수추종": 0, "성장/개별주": 0 };
+        processedItems.forEach(item => { strategyTotals[item.strategy] += item.amount; });
+        
+        const sColors = { "배당주": "#f59e0b", "지수추종": "#10b981", "성장/개별주": "#3b82f6" };
+        const sLabels = Object.keys(strategyTotals);
+        const sData = Object.values(strategyTotals);
+        
+        const legendContainer = document.getElementById('invest-strategy-legend');
+        legendContainer.innerHTML = sLabels.map((lbl, i) => {
+            const pct = total > 0 ? ((sData[i] / total) * 100).toFixed(1) : 0;
+            return `<div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5">
+                    <div class="w-2 h-2 rounded-full" style="background-color: ${sColors[lbl]}"></div>
+                    <span class="text-[10px] text-gray-600">${lbl}</span>
                 </div>
-            </div>
-        `).join('');
+                <span class="text-[10px] font-bold text-gray-800">${pct}%</span>
+            </div>`;
+        }).join('');
+
+        const ctxStrategy = document.getElementById('investStrategyChart');
+        if (window.investStrategyChartInstance) window.investStrategyChartInstance.destroy();
+        window.investStrategyChartInstance = new Chart(ctxStrategy, {
+            type: 'doughnut',
+            data: {
+                labels: sLabels,
+                datasets: [{ data: sData, backgroundColor: sLabels.map(l => sColors[l]), borderWidth: 0 }]
+            },
+            options: { cutout: '75%', plugins: { legend: { display: false }, tooltip: { enabled: true } }, maintainAspectRatio: false }
+        });
+        } catch (e) {
+            alert("Error in renderInvestDetail: " + e.message + "\n" + e.stack);
+            console.error(e);
+        }
     }
 
     function generateAIComments(currentTxData, categoryTotals, title, currentMonthKey) {
@@ -1768,24 +2070,41 @@
         let cashAndSafe = 0;
         if (dynamicPortfolioData) {
             Object.entries(dynamicPortfolioData).forEach(([groupName, groupData]) => {
-                if (!groupData.isDebt && (groupName.includes('현금') || groupName.includes('안전'))) {
-                    cashAndSafe += groupData.items.reduce((acc, curr) => acc + curr.amount, 0);
+                const sum = groupData.items.reduce((acc, curr) => acc + curr.amount, 0);
+                if (groupData.isDebt) {
+                    cashAndSafe += sum; // 부채 (음수)
+                } else if (groupName.includes('투자')) {
+                    cashAndSafe += (sum * 0.9); // 투자자산 * 0.9
+                } else {
+                    cashAndSafe += sum; // 안전자산(현금) 및 기타
                 }
             });
         }
         
-        const targetBudget = 800000000;
-        const progress = Math.min(100, (cashAndSafe / targetBudget) * 100);
+        const targetBudget = 600000000; // 6억
+        const expectedLoan = 300000000; // 3억 고정
+        const totalReady = cashAndSafe + expectedLoan;
         
-        document.getElementById('re-current-asset').textContent = cashAndSafe.toLocaleString() + '원';
-        document.getElementById('re-progress-bar').style.width = progress + '%';
-        document.getElementById('re-progress-text').textContent = progress.toFixed(1) + '% 달성';
+        const savedPct = (cashAndSafe / targetBudget) * 100;
+        const loanPct = (expectedLoan / targetBudget) * 100;
+        const totalPct = Math.min(100, savedPct + loanPct);
+        
+        const readyEl = document.getElementById('re-total-ready');
+        if (readyEl) {
+            readyEl.textContent = totalReady.toLocaleString() + '원';
+            
+            document.getElementById('re-progress-saved').style.width = Math.min(100, savedPct) + '%';
+            document.getElementById('re-progress-saved').textContent = savedPct > 5 ? '모은돈' : '';
+            
+            document.getElementById('re-progress-loan').style.width = Math.min(100 - savedPct, loanPct) + '%';
+            
+            document.getElementById('re-saved-text').textContent = '모은돈: ' + cashAndSafe.toLocaleString() + '원';
+            document.getElementById('re-progress-text').textContent = '총 ' + totalPct.toFixed(1) + '% 달성';
+        }
         
         if(document.getElementById('re-expected-loan')) {
-            const expectedLoan = cashAndSafe * 0.5; // 50% 가정
-            const totalAvailable = cashAndSafe + expectedLoan;
             document.getElementById('re-expected-loan').textContent = expectedLoan.toLocaleString() + '원';
-            document.getElementById('re-total-available').textContent = totalAvailable.toLocaleString() + '원';
+            document.getElementById('re-total-available').textContent = totalReady.toLocaleString() + '원';
         }
     }
 
