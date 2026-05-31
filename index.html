@@ -15,6 +15,8 @@
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Chart.js -->
@@ -626,19 +628,15 @@
     // ==========================================
     // 설정 및 캐싱 (Local Storage) 관리
     // ==========================================
-    let userUrls = { webapp: '' };
-    const DEFAULT_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxcjdGkhb0f4jGzF8OySSNdo8vHUaUdjRi-cJLzhx6ya30dPXaSuuZbEp7yj0rNX-PZwA/exec';
+    let userUrls = { 
+        webapp: 'https://djwqcewsochlesjcouoi.supabase.co', 
+        supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqd3FjZXdzb2NobGVzamNvdW9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyMDQwMjYsImV4cCI6MjA5NTc4MDAyNn0.BaKElHEW0x0q82I38kSkpd4nQbGAJVnT-LNYwLlHZMk' 
+    };
+    const DEFAULT_WEBAPP_URL = userUrls.webapp;
     const GOOGLE_SHEET_EDIT_URL = 'https://docs.google.com/spreadsheets/d/1pFBp0zYmr1AFykD-a6k44HQicnmS4JtSFIpd_E4gkBU/edit?usp=drive_link';
     const CACHE_KEY = 'smartbook_v2_data_cache';
 
     function loadSettings() {
-        const saved = localStorage.getItem('smartbook_v2_api_url');
-        if (saved) {
-            userUrls = JSON.parse(saved);
-        } else {
-            userUrls.webapp = DEFAULT_WEBAPP_URL;
-            localStorage.setItem('smartbook_v2_api_url', JSON.stringify(userUrls));
-        }
         document.getElementById('input-url-webapp').value = userUrls.webapp;
     }
 
@@ -900,14 +898,29 @@
         }
         
         try {
-            if (!userUrls.webapp) throw new Error('URL_MISSING');
+            if (!userUrls.webapp || !userUrls.supabaseKey) throw new Error('URL_MISSING');
 
-            const response = await fetch(userUrls.webapp, { method: 'GET', redirect: 'follow' });
-            if (!response.ok) throw new Error(`HTTP 오류 ${response.status}`);
+            const _supabase = supabase.createClient(userUrls.webapp, userUrls.supabaseKey);
+            const [txRes, assetRes, pfRes] = await Promise.all([
+                _supabase.from('transactions').select('*').order('date', { ascending: true }),
+                _supabase.from('assets').select('*').order('year', { ascending: true }).order('month', { ascending: true }),
+                _supabase.from('portfolios').select('*')
+            ]);
             
-            const data = await response.json();
-            if (typeof data === 'string' && data.includes('<html')) throw new Error('CORS_AUTH_ERROR');
-            if (data.status === 'error') throw new Error(data.message || '서버 내부 오류');
+            if (txRes.error) throw txRes.error;
+            if (assetRes.error) throw assetRes.error;
+            if (pfRes.error) throw pfRes.error;
+
+            const txFormat = [["날짜","시간","타입","대분류","소분류","내용","금액","화폐","결제수단","메모"]];
+            txRes.data.forEach(r => txFormat.push([r.date, r.time||'', r.type, r.category, r.subcategory, r.memo, String(r.amount), r.currency, r.method, '']));
+
+            const assetFormat = [["Year","Month","총자산(순자산)","현금성자산","안전자산","투자자산","부채"]];
+            assetRes.data.forEach(r => assetFormat.push([String(r.year), `${String(r.month).padStart(2,'0')}월`, String(r.total_asset), String(r.cash), String(r.safe), String(r.invest), String(r.debt)]));
+
+            const pfFormat = [["대분류 (Drop-down)","계좌/자산명 (Text)","통화/형태 (Text)","만기일 (Date/Text)","금액 (Number)", "주식수"]];
+            pfRes.data.forEach(r => pfFormat.push([r.group_name, r.name, r.currency, r.maturity||'', String(r.amount), r.shares ? String(r.shares) : '']));
+            
+            const data = { tx: txFormat, asset: assetFormat, portfolio: pfFormat };
 
             localStorage.setItem(CACHE_KEY, JSON.stringify(data));
 
@@ -987,7 +1000,6 @@
         if(!amount || isNaN(amount)) return showToast('올바른 금액을 입력하세요.', 'error');
         
         const formattedAmount = type === '지출' ? `-${Math.abs(amount)}` : `${Math.abs(amount)}`;
-        const rowData = [date, time, type, cat, '미분류', memo, formattedAmount, 'KRW', method, '앱에서 작성'];
         
         const btn = document.getElementById('btn-submit-tx');
         const originalText = btn.innerHTML;
@@ -995,22 +1007,29 @@
         btn.disabled = true;
 
         try {
-            if (!userUrls.webapp) throw new Error('API URL이 설정되지 않았습니다.');
+            if (!userUrls.webapp || !userUrls.supabaseKey) throw new Error('API URL이 설정되지 않았습니다.');
 
-            const response = await fetch(userUrls.webapp, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'addTransaction', data: rowData })
-            });
+            const _supabase = supabase.createClient(userUrls.webapp, userUrls.supabaseKey);
+            let timeVal = time;
+            if (timeVal && timeVal.split(':').length === 2) timeVal += ':00'; // Make HH:MM into HH:MM:SS
 
-            const result = await response.json();
-            if(result.status === 'success') {
-                showToast(result.message || '저장 성공!', 'info');
-                closeTxModal();
-                fetchSheetData(false); 
-            } else {
-                throw new Error(result.message || '저장 실패');
-            }
+            const { error } = await _supabase.from('transactions').insert([{
+                date: date,
+                time: timeVal || null,
+                type: type,
+                category: cat,
+                subcategory: '미분류',
+                memo: memo,
+                amount: parseInt(formattedAmount, 10),
+                currency: 'KRW',
+                method: method
+            }]);
+
+            if (error) throw error;
+            
+            showToast('저장 성공!', 'info');
+            closeTxModal();
+            fetchSheetData(false); 
         } catch(error) {
             console.error("전송 에러:", error);
             showToast(error.message, 'error');
@@ -1198,22 +1217,31 @@
         btn.disabled = true;
 
         try {
-            if (!userUrls.webapp) throw new Error('API URL이 설정되지 않았습니다.');
+            if (!userUrls.webapp || !userUrls.supabaseKey) throw new Error('API URL이 설정되지 않았습니다.');
 
-            const response = await fetch(userUrls.webapp, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'updatePortfolio', data: workingPortfolioData })
-            });
-
-            const result = await response.json();
-            if(result.status === 'success') {
-                showToast('포트폴리오가 성공적으로 저장되었습니다.', 'info');
-                closePortfolioEditModal();
-                fetchSheetData(false); // UI 다시 그리기
-            } else {
-                throw new Error(result.message || '저장 실패');
+            const _supabase = supabase.createClient(userUrls.webapp, userUrls.supabaseKey);
+            const pfInsertData = [];
+            for (let i = 1; i < workingPortfolioData.length; i++) {
+                if(workingPortfolioData[i].length < 5) continue;
+                pfInsertData.push({
+                    group_name: workingPortfolioData[i][0] || '미분류',
+                    name: workingPortfolioData[i][1],
+                    currency: workingPortfolioData[i][2] || 'KRW',
+                    maturity: workingPortfolioData[i][3] || '',
+                    amount: parseInt(workingPortfolioData[i][4] || 0, 10),
+                    shares: workingPortfolioData[i][5] ? parseFloat(workingPortfolioData[i][5]) : null
+                });
             }
+
+            // Clear table and reinsert
+            await _supabase.from('portfolios').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            const { error } = await _supabase.from('portfolios').insert(pfInsertData);
+            
+            if(error) throw error;
+            
+            showToast('포트폴리오가 성공적으로 저장되었습니다.', 'info');
+            closePortfolioEditModal();
+            fetchSheetData(false); // UI 다시 그리기
         } catch(error) {
             console.error("전송 에러:", error);
             showToast(error.message, 'error');

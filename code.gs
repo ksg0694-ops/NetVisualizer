@@ -1,138 +1,77 @@
 /**
- * 스마트 가계부 V2 - 백엔드 API (Phase 2: Write 엔진 장착)
+ * 스마트 가계부 V2 - Supabase 주간 백업 스크립트
+ * 
+ * 이제 메인 DB가 Supabase로 이전되었습니다.
+ * 이 스크립트는 Apps Script의 Time-Driven Trigger를 통해 매주 주기적으로
+ * Supabase의 데이터를 Google Sheets로 백업해오는 역할을 합니다.
  */
 
 const SHEET_TX = "수입지출 내역";      
 const SHEET_ASSET = "자산추이내역";   
 const SHEET_PORTFOLIO = "포트폴리오"; 
 
+const SUPABASE_URL = 'https://djwqcewsochlesjcouoi.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqd3FjZXdzb2NobGVzamNvdW9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyMDQwMjYsImV4cCI6MjA5NTc4MDAyNn0.BaKElHEW0x0q82I38kSkpd4nQbGAJVnT-LNYwLlHZMk';
+
 function doGet(e) {
+  const result = {
+    status: "migrated",
+    message: "메인 데이터베이스가 Supabase로 성공적으로 마이그레이션 되었습니다. 이 URL은 더 이상 데이터를 서빙하지 않습니다."
+  };
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doBackup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const result = {};
-
-  try {
-    result.tx = getSheetData(ss, SHEET_TX);
-    result.asset = getSheetData(ss, SHEET_ASSET);
-    result.portfolio = getSheetData(ss, SHEET_PORTFOLIO);
-    result.status = "success";
-  } catch (error) {
-    result.status = "error";
-    result.message = error.toString();
-  }
-
-  return ContentService.createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-// 💡 데이터 읽기(GET) 유틸리티 함수
-function getSheetData(ss, sheetName) {
-  const sheet = ss.getSheetByName(sheetName);
-  if (!sheet) return [];
-  const range = sheet.getDataRange();
-  const values = range.getValues();
-  return values;
-}
-
-// 💡 [신규] POST 요청(데이터 쓰기) 처리 엔진
-function doPost(e) {
-  // 1. LockService 적용: 동시 접속/입력 시 데이터 꼬임 방지 (최대 3초 대기)
-  const lock = LockService.getScriptLock();
-  lock.waitLock(3000); 
-
-  const result = { status: "success" };
-
-  try {
-    const requestData = JSON.parse(e.postData.contents);
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-
-    // Action 1: 새로운 수입/지출 내역 추가
-    if (requestData.action === "addTransaction") {
-      const sheet = ss.getSheetByName(SHEET_TX);
-      if (!sheet) throw new Error("수입지출 내역 시트를 찾을 수 없습니다.");
-      
-      // 전달받은 1차원 배열 데이터를 시트의 맨 아래에 추가
-      // 규격: ["날짜", "시간", "타입", "대분류", "소분류", "내용", "금액", "화폐", "결제수단", "메모"]
-      sheet.appendRow(requestData.data);
-      result.message = "거래 내역이 성공적으로 기록되었습니다.";
-    } 
-    // Action 2: 포트폴리오 덮어쓰기 (현재 상태 중심)
-    else if (requestData.action === "updatePortfolio") {
-      let sheet = ss.getSheetByName(SHEET_PORTFOLIO);
-      if (!sheet) sheet = ss.insertSheet(SHEET_PORTFOLIO);
-
-      sheet.clearContents();
-      const newData = requestData.data;
-      if (newData && newData.length > 0) {
-        sheet.getRange(1, 1, newData.length, newData[0].length).setValues(newData);
-      }
-      result.message = "포트폴리오가 동기화되었습니다.";
-    } 
-    else {
-      throw new Error("알 수 없는 Action 요청입니다.");
-    }
-
-  } catch (error) {
-    result.status = "error";
-    result.message = error.toString();
-  } finally {
-    // 2. 작업 완료 후 반드시 Lock 해제
-    lock.releaseLock();
-  }
-
-  // 💡 CORS 이슈를 피하기 위해 JSON 규격으로 반환
-  return ContentService.createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-// 💡 [테스트용 함수] Apps Script 편집기 상단에서 '실행' 버튼을 눌러 시트에 잘 써지는지 확인하려면, 
-// 상단 함수 선택창에서 'doPost'가 아닌 'testDoPost'를 선택하고 [▶ 실행]을 누르세요.
-function testDoPost() {
-  // 웹에서 날아오는 실제 데이터를 흉내낸 가짜 이벤트 객체(Mock)
-  const mockEvent = {
-    postData: {
-      contents: JSON.stringify({
-        action: "addTransaction",
-        data: ["2026-05-28", "12:00", "수입", "테스트", "미분류", "정상작동 테스트", "10000", "KRW", "테스트통장", "테스트입니다"]
-      })
-    }
+  const headers = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": "Bearer " + SUPABASE_KEY,
+    "Content-Type": "application/json"
   };
   
-  // doPost 함수 강제 호출 및 결과 로그 출력
-  const result = doPost(mockEvent);
-  Logger.log("테스트 성공 여부: " + result.getContent());
-}
-
-/**
- * 💡 [신규] 네이버 금융 실시간 주가 가져오기 (GOOGLEFINANCE 대체용)
- * 구글 시트에서 =GET_NAVER_PRICE("종목코드") 와 같이 사용합니다.
- * 예시: =GET_NAVER_PRICE("360200") * F2
- */
-function GET_NAVER_PRICE(code) {
-  if (!code) return "코드 입력 오류";
-  
+  // 1. Transactions 백업
   try {
-    var url = "https://polling.finance.naver.com/api/realtime?query=SERVICE_ITEM:" + code;
-    var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-    
-    if (response.getResponseCode() !== 200) {
-      return "접속 오류";
+    const txRes = UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/transactions?select=*&order=date.desc", { headers, muteHttpExceptions: true });
+    const txData = JSON.parse(txRes.getContentText());
+    const txSheet = ss.getSheetByName(SHEET_TX);
+    if (txSheet && Array.isArray(txData)) {
+      txSheet.clearContents();
+      const txFormat = [["날짜","시간","타입","대분류","소분류","내용","금액","화폐","결제수단","메모"]];
+      txData.forEach(r => txFormat.push([r.date, r.time||'', r.type, r.category, r.subcategory, r.memo, String(r.amount), r.currency, r.method, '']));
+      txSheet.getRange(1, 1, txFormat.length, txFormat[0].length).setValues(txFormat);
     }
-    
-    var jsonText = response.getContentText();
-    var data = JSON.parse(jsonText);
-    
-    if (data && data.resultCode === "success" && data.result && data.result.areas) {
-      var areas = data.result.areas;
-      if (areas.length > 0 && areas[0].datas && areas[0].datas.length > 0) {
-        var nv = areas[0].datas[0].nv;
-        if (nv) {
-          return parseInt(nv, 10);
-        }
-      }
+  } catch (e) {
+    console.error("Transactions 백업 실패:", e);
+  }
+
+  // 2. Portfolios 백업
+  try {
+    const pfRes = UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/portfolios?select=*", { headers, muteHttpExceptions: true });
+    const pfData = JSON.parse(pfRes.getContentText());
+    let pfSheet = ss.getSheetByName(SHEET_PORTFOLIO);
+    if (pfSheet && Array.isArray(pfData)) {
+      pfSheet.clearContents();
+      const pfFormat = [["대분류 (Drop-down)","계좌/자산명 (Text)","통화/형태 (Text)","만기일 (Date/Text)","금액 (Number)", "주식수"]];
+      pfData.forEach(r => pfFormat.push([r.group_name, r.name, r.currency, r.maturity||'', String(r.amount), r.shares ? String(r.shares) : '']));
+      pfSheet.getRange(1, 1, pfFormat.length, pfFormat[0].length).setValues(pfFormat);
     }
-    
-    return "가격 정보 없음";
-  } catch(e) {
-    return "요청 실패: " + e.message;
+  } catch (e) {
+    console.error("Portfolios 백업 실패:", e);
+  }
+
+  // 3. Assets 백업
+  try {
+    const assetRes = UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/assets?select=*&order=year.asc,month.asc", { headers, muteHttpExceptions: true });
+    const assetData = JSON.parse(assetRes.getContentText());
+    const assetSheet = ss.getSheetByName(SHEET_ASSET);
+    if (assetSheet && Array.isArray(assetData)) {
+      assetSheet.clearContents();
+      const assetFormat = [["Year","Month","총자산(순자산)","현금성자산","안전자산","투자자산","부채"]];
+      assetData.forEach(r => assetFormat.push([String(r.year), `${String(r.month).padStart(2,'0')}월`, String(r.total_asset), String(r.cash), String(r.safe), String(r.invest), String(r.debt)]));
+      assetSheet.getRange(1, 1, assetFormat.length, assetFormat[0].length).setValues(assetFormat);
+    }
+  } catch (e) {
+    console.error("Assets 백업 실패:", e);
   }
 }
