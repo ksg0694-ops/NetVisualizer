@@ -1736,18 +1736,10 @@
                             </button>
                             <!-- 2nd Level Accordion Body (Hidden by default) -->
                             <div id="acc-${globalIdx}" class="hidden p-3 border-t border-gray-100 bg-gray-50/50">
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div class="grid grid-cols-2 gap-3">
                                     <div class="bg-white p-2 rounded-md border border-gray-100 shadow-sm">
                                         <p class="text-[10px] font-bold text-gray-400 mb-1"><i class="fas fa-chart-pie text-indigo-400 mr-1"></i>보유 수량</p>
                                         <p class="font-bold text-gray-800 text-xs">${item.shares ? item.shares.toLocaleString() + '주' : '<span class="text-xs text-gray-400">데이터 없음</span>'}</p>
-                                    </div>
-                                    <div class="bg-white p-2 rounded-md border border-gray-100 shadow-sm">
-                                        <p class="text-[10px] font-bold text-gray-400 mb-1"><i class="fas fa-coins text-amber-400 mr-1"></i>추정 평단가</p>
-                                        <p class="font-bold text-gray-800 text-xs">${item.shares ? Math.floor(item.amount / item.shares / (1 + item.mockYieldPercent/100)).toLocaleString() + '원' : '<span class="text-xs text-gray-400">데이터 없음</span>'}</p>
-                                    </div>
-                                    <div class="bg-white p-2 rounded-md border border-gray-100 shadow-sm">
-                                        <p class="text-[10px] font-bold text-gray-400 mb-1"><i class="fas fa-arrow-trend-up text-red-400 mr-1"></i>가상 수익금</p>
-                                        <p class="font-bold ${pColor} text-xs">${item.profitAmt >= 0 ? '+' : ''}${item.profitAmt.toLocaleString()}원</p>
                                     </div>
                                     <div class="bg-white p-2 rounded-md border border-gray-100 shadow-sm">
                                         <p class="text-[10px] font-bold text-gray-400 mb-1"><i class="fas fa-wallet text-emerald-400 mr-1"></i>평가 금액</p>
