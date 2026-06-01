@@ -58,10 +58,9 @@
                 <div class="flex items-center gap-2 text-indigo-600">
                     <i class="fas fa-wallet text-2xl"></i>
                     <span class="text-xl font-bold tracking-tight">스마트 가계부</span>
-                    <span class="text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-bold ml-1">V2</span>
                 </div>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    <i class="fas fa-info-circle"></i>업데이트: 포트폴리오 폼 개편 (5/29)
+                    version 1.03.01
                 </div>
             </div>
             <nav class="p-4 space-y-1 mt-4">
@@ -117,9 +116,6 @@
                 </button>
                 <button onclick="document.getElementById('settings-modal').classList.remove('hidden')" class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors shadow-sm flex justify-center items-center" title="설정">
                     <i class="fas fa-cog"></i>
-                </button>
-                <button id="btn-open-original" class="px-3 py-2 md:px-4 md:py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 flex items-center gap-2 shrink-0">
-                    <i class="fas fa-external-link-alt"></i> <span class="hidden md:inline">원본</span>
                 </button>
             </div>
         </header>
@@ -384,6 +380,86 @@
                         <canvas id="fullAssetChart"></canvas>
                     </div>
                 </div>
+
+                <!-- [신규] Finance Roadmap -->
+                <div class="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col mb-8 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-indigo-50 opacity-50 rounded-full pointer-events-none"></div>
+                    <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-2 flex items-center gap-2"><i class="fas fa-route text-indigo-500"></i> Finance Roadmap</h3>
+                    <p class="text-xs md:text-sm text-gray-500 mb-8 z-10 relative">목표 자산(30억) 달성을 위한 라이프사이클 마일스톤입니다.</p>
+                    
+                    <div class="relative pl-6 md:pl-8 border-l-2 border-indigo-100 space-y-8 py-2 z-10" id="roadmap-container">
+                        <!-- Phase 1 -->
+                        <div class="relative transition-all duration-300" id="roadmap-p1">
+                            <div class="absolute -left-[33px] md:-left-[41px] w-4 h-4 md:w-5 md:h-5 rounded-full ring-4 ring-white bg-gray-200" id="roadmap-p1-dot"></div>
+                            <div class="bg-gray-50 rounded-xl p-4 md:p-5 border border-gray-100 shadow-sm" id="roadmap-p1-card">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <p class="text-[10px] font-bold text-indigo-500 mb-1">Phase 1</p>
+                                        <h4 class="font-bold text-gray-800 text-sm md:text-base">전세 자금 확보</h4>
+                                    </div>
+                                    <span class="text-xs font-bold text-gray-800 bg-white px-2 py-1 rounded border border-gray-200">목표: 1.45억</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mb-3">자본금 8,000만 + 대출 6,500만</p>
+                                <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                    <div class="h-full bg-indigo-500 transition-all duration-1000" id="roadmap-p1-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Phase 2 -->
+                        <div class="relative transition-all duration-300" id="roadmap-p2">
+                            <div class="absolute -left-[33px] md:-left-[41px] w-4 h-4 md:w-5 md:h-5 rounded-full ring-4 ring-white bg-gray-200" id="roadmap-p2-dot"></div>
+                            <div class="bg-gray-50 rounded-xl p-4 md:p-5 border border-gray-100 shadow-sm" id="roadmap-p2-card">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <p class="text-[10px] font-bold text-indigo-500 mb-1">Phase 2</p>
+                                        <h4 class="font-bold text-gray-800 text-sm md:text-base">부동산 청약 자금</h4>
+                                    </div>
+                                    <span class="text-xs font-bold text-gray-800 bg-white px-2 py-1 rounded border border-gray-200">목표: 8억</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mb-3">자본금 5억 + 대출 3억</p>
+                                <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                    <div class="h-full bg-indigo-500 transition-all duration-1000" id="roadmap-p2-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Phase 3 -->
+                        <div class="relative transition-all duration-300" id="roadmap-p3">
+                            <div class="absolute -left-[33px] md:-left-[41px] w-4 h-4 md:w-5 md:h-5 rounded-full ring-4 ring-white bg-gray-200" id="roadmap-p3-dot"></div>
+                            <div class="bg-gray-50 rounded-xl p-4 md:p-5 border border-gray-100 shadow-sm" id="roadmap-p3-card">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <p class="text-[10px] font-bold text-purple-500 mb-1">Phase 3</p>
+                                        <h4 class="font-bold text-gray-800 text-sm md:text-base">부수 자산 (차량/취미)</h4>
+                                    </div>
+                                    <span class="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded border border-purple-100">Asset Cycling Needed</span>
+                                </div>
+                                <ul class="text-xs text-gray-500 space-y-1 pl-1">
+                                    <li>• 목표: 자동차 3,000만 등</li>
+                                    <li>• 조건: 연평균 소득 1억 2,000만 달성</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Phase 4 -->
+                        <div class="relative transition-all duration-300" id="roadmap-p4">
+                            <div class="absolute -left-[33px] md:-left-[41px] w-4 h-4 md:w-5 md:h-5 rounded-full ring-4 ring-white bg-gray-200" id="roadmap-p4-dot"></div>
+                            <div class="bg-gray-50 rounded-xl p-4 md:p-5 border border-gray-100 shadow-sm" id="roadmap-p4-card">
+                                <div class="flex justify-between items-center mb-1">
+                                    <div>
+                                        <p class="text-[10px] font-bold text-emerald-500 mb-1">Phase 4 (Final)</p>
+                                        <h4 class="font-bold text-gray-800 text-sm md:text-base">경제적 자유 달성 🚀</h4>
+                                    </div>
+                                    <span class="text-sm font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded border border-emerald-100">최종 목표: 30억</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-1.5 mt-3 overflow-hidden">
+                                    <div class="h-full bg-emerald-400 transition-all duration-1000" id="roadmap-p4-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- 5. 투자자산 상세 뷰 (Sub-page) -->
@@ -452,7 +528,7 @@
                         <div class="flex justify-between items-end mb-3">
                             <div class="flex items-end gap-2">
                                 <h3 class="text-3xl font-bold" id="re-total-ready">0원</h3>
-                                <span class="text-sm font-medium text-indigo-200 mb-1">/ 목표 6억</span>
+                                <span class="text-sm font-medium text-indigo-200 mb-1">/ 목표 8억</span>
                             </div>
                         </div>
                         <!-- 다중 세그먼트 프로그레스 바 -->
@@ -598,25 +674,45 @@
         </a>
     </nav>
 
-    <!-- API 설정 모달 -->
+    <!-- 시스템 설정 모달 -->
     <div id="settings-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center modal-overlay p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-full">
             <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-cog text-gray-500 mr-2"></i>API 연동 설정</h3>
+                <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-cog text-gray-500 mr-2"></i>시스템 링크 및 설정</h3>
                 <button onclick="closeSettings()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-lg"></i></button>
             </div>
             <div class="p-6 overflow-y-auto space-y-5">
                 <div class="text-sm text-gray-600 bg-indigo-50 p-4 rounded-xl border border-indigo-100 leading-relaxed">
-                    Google Apps Script로 배포된 <strong>Web App URL</strong>을 입력하세요. 이 URL을 통해 시트의 모든 데이터를 안전하게 동기화합니다.
+                    <strong>데이터베이스 및 백업 관리</strong><br>
+                    이곳에서 메인 DB(Supabase) 및 백업 스토리지(Google Sheets)에 바로 접근할 수 있습니다.
                 </div>
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Apps Script Web App URL</label>
-                    <input type="text" id="input-url-webapp" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="https://script.google.com/macros/s/...">
+                
+                <div class="flex flex-col gap-3 mt-4">
+                    <a href="https://supabase.com/dashboard/project/djwqcewsochlesjcouoi/editor" target="_blank" class="flex items-center justify-between p-4 border border-emerald-200 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-emerald-200 text-emerald-700 flex items-center justify-center text-lg"><i class="fas fa-database"></i></div>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Supabase 메인 DB</h4>
+                                <p class="text-xs text-gray-500">대용량 CSV 업로드 및 실시간 데이터 관리</p>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right text-emerald-400"></i>
+                    </a>
+
+                    <a href="https://docs.google.com/spreadsheets/d/1pFBp0zYmr1AFykD-a6k44HQicnmS4JtSFIpd_E4gkBU/edit?usp=drive_link" target="_blank" class="flex items-center justify-between p-4 border border-blue-200 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-blue-200 text-blue-700 flex items-center justify-center text-lg"><i class="fas fa-file-excel"></i></div>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Google Sheets 백업본</h4>
+                                <p class="text-xs text-gray-500">매주 자동 백업되는 읽기 전용 스프레드시트</p>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right text-blue-400"></i>
+                    </a>
                 </div>
             </div>
             <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
-                <button onclick="closeSettings()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
-                <button onclick="saveSettings()" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm shadow-indigo-200">저장 및 동기화</button>
+                <button onclick="closeSettings()" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm shadow-indigo-200">닫기</button>
             </div>
         </div>
     </div>
@@ -739,18 +835,15 @@
     const CACHE_KEY = 'smartbook_v2_data_cache';
 
     function loadSettings() {
-        document.getElementById('input-url-webapp').value = userUrls.webapp;
+        // 설정 로드 로직 제거됨 (URL 하드코딩 사용)
     }
 
     function saveSettings() {
-        userUrls.webapp = document.getElementById('input-url-webapp').value.trim();
-        localStorage.setItem('smartbook_v2_api_url', JSON.stringify(userUrls));
-        closeSettings();
-        fetchSheetData(false);
+        // 설정 저장 로직 제거됨
     }
 
     function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
-    document.getElementById('btn-open-original').addEventListener('click', () => { window.open(GOOGLE_SHEET_EDIT_URL, '_blank'); });
+    // 원본 버튼 제거됨
 
     // ==========================================
     // 전역 상태 변수 및 모의(Demo) 데이터
@@ -1611,44 +1704,25 @@
         const total = groupData.items.reduce((acc, curr) => acc + curr.amount, 0);
         document.getElementById('invest-detail-total').textContent = total.toLocaleString() + '원';
         
-        // 💡 [Mock Data] 종목별 가상 수익률(%) 부여 (종목명 길이나 글자에 따라 결정)
-        let totalProfit = 0;
-        let totalCost = 0;
+        // 종목별 전략 태그 부여
         const processedItems = groupData.items.map(item => {
             const name = item.name || "";
-            const hash = name.length + (name.charCodeAt(0) || 0);
-            let mockYieldPercent = (hash % 40) - 15; // -15% ~ +25%
-            if (isNaN(mockYieldPercent)) mockYieldPercent = 0;
             
             // 배당주/지수추종/성장주 태그 부여
             let strategy = "성장/개별주";
-            let sColor = "text-blue-600 bg-blue-100 border-blue-200";
             if (name.includes("배당") || name.includes("리츠") || name.includes("맥쿼리")) {
                 strategy = "배당주";
-                sColor = "text-amber-600 bg-amber-100 border-amber-200";
-                mockYieldPercent = Math.max(0, mockYieldPercent % 10); // 배당주는 변동성 낮춤
             } else if (name.includes("ETF") || name.includes("지수") || name.toLowerCase().includes("sp")) {
                 strategy = "지수추종";
-                sColor = "text-emerald-600 bg-emerald-100 border-emerald-200";
-                mockYieldPercent = Math.max(5, mockYieldPercent); // 지수는 우상향 가정
             }
 
-            const estimatedCost = Math.round(item.amount / (1 + mockYieldPercent / 100));
-            const profitAmt = item.amount - estimatedCost;
-            totalProfit += profitAmt;
-            totalCost += estimatedCost;
-            
-            return { ...item, mockYieldPercent, profitAmt, strategy, sColor };
+            return { ...item, strategy };
         });
 
-        const totalYieldPercent = totalCost > 0 ? ((totalProfit / totalCost) * 100).toFixed(1) : 0;
+        // 수익률 엘리먼트 초기화 (추후 백엔드에서 실데이터 연동 시 구현)
         const profitEl = document.getElementById('invest-detail-profit');
-        if (totalProfit >= 0) {
-            profitEl.textContent = `+${totalProfit.toLocaleString()}원 (+${totalYieldPercent}%)`;
-            profitEl.className = "text-sm font-bold text-red-300";
-        } else {
-            profitEl.textContent = `${totalProfit.toLocaleString()}원 (${totalYieldPercent}%)`;
-            profitEl.className = "text-sm font-bold text-blue-300";
+        if (profitEl) {
+            profitEl.textContent = "";
         }
 
         // 2. MDD 방어 상태 (현금 비중)
@@ -1687,10 +1761,6 @@
             if (items.length === 0) return;
             
             const stratTotal = items.reduce((acc, curr) => acc + curr.amount, 0);
-            const stratProfit = items.reduce((acc, curr) => acc + curr.profitAmt, 0);
-            const stratCost = items.reduce((acc, curr) => acc + (curr.amount - curr.profitAmt), 0);
-            const stratYield = stratCost > 0 ? ((stratProfit / stratCost) * 100).toFixed(1) : 0;
-            const stratColor = stratProfit >= 0 ? 'text-red-500' : 'text-blue-500';
             
             htmlContent += `
             <div class="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col overflow-hidden mb-3">
@@ -1702,7 +1772,6 @@
                     <div class="text-right flex items-center gap-3 shrink-0">
                         <div>
                             <p class="font-bold text-gray-800 text-sm">${stratTotal.toLocaleString()}원</p>
-                            <p class="font-bold ${stratColor} text-xs text-right">${stratProfit >= 0 ? '+' : ''}${stratYield}%</p>
                         </div>
                         <i class="fas fa-chevron-down text-gray-400 text-xs ml-1"></i>
                     </div>
@@ -1711,25 +1780,17 @@
                 <div id="strat-${stratIdx}" class="hidden p-3 bg-white border-t border-gray-200 flex flex-col gap-2">
                     ${items.map(item => {
                         globalIdx++;
-                        const pColor = item.profitAmt >= 0 ? 'text-red-500' : 'text-blue-500';
-                        const statusBadge = item.mockYieldPercent >= 15 ? `<span class="bg-red-100 text-red-600 px-1.5 py-0.5 rounded text-[9px] font-bold border border-red-200">수익 실현 고려</span>` : 
-                                           (item.mockYieldPercent <= -10 ? `<span class="bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded text-[9px] font-bold border border-blue-200">물타기/관망</span>` : 
-                                           `<span class="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-[9px] font-bold border border-gray-200">홀딩</span>`);
                         
                         return `
                         <div class="bg-white border border-gray-100 rounded-lg flex flex-col overflow-hidden hover:border-indigo-300 transition-colors">
                             <!-- 2nd Level Accordion Header (Stock) -->
                             <button onclick="document.getElementById('acc-${globalIdx}').classList.toggle('hidden')" class="w-full p-3 flex justify-between items-center hover:bg-gray-50 transition-colors focus:outline-none text-left">
                                 <div class="flex-1">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        ${statusBadge}
-                                    </div>
                                     <h4 class="font-bold text-gray-800 text-sm leading-tight">${item.name}</h4>
                                 </div>
                                 <div class="text-right flex items-center gap-3 shrink-0">
                                     <div>
                                         <p class="font-bold text-gray-800 text-sm">${item.amount.toLocaleString()}원</p>
-                                        <p class="font-bold ${pColor} text-xs text-right">${item.mockYieldPercent >= 0 ? '+' : ''}${item.mockYieldPercent.toFixed(1)}%</p>
                                     </div>
                                     <i class="fas fa-chevron-down text-gray-300 text-xs ml-1"></i>
                                 </div>
@@ -2059,6 +2120,81 @@
 
         myCharts['dashAsset'] = createLineChart('dashboardAssetChart', dynamicYearLabels, dynamicYearData);
         myCharts['fullAsset'] = createLineChart('fullAssetChart', finalLabels, finalData);
+        
+        if (typeof updateFinanceRoadmap === 'function') updateFinanceRoadmap(db.asset);
+    }
+    
+    function updateFinanceRoadmap(currentAsset) {
+        if (!document.getElementById('roadmap-container')) return;
+
+        const p1Target = 145000000;
+        const p2Target = 800000000;
+        const p4Target = 3000000000;
+        
+        let p1Pct = Math.min(100, Math.max(0, (currentAsset / p1Target) * 100));
+        let p2Pct = Math.min(100, Math.max(0, (currentAsset / p2Target) * 100));
+        let p4Pct = Math.min(100, Math.max(0, (currentAsset / p4Target) * 100));
+
+        // Update bars
+        if (document.getElementById('roadmap-p1-bar')) document.getElementById('roadmap-p1-bar').style.width = p1Pct + '%';
+        if (document.getElementById('roadmap-p2-bar')) document.getElementById('roadmap-p2-bar').style.width = p2Pct + '%';
+        if (document.getElementById('roadmap-p4-bar')) document.getElementById('roadmap-p4-bar').style.width = p4Pct + '%';
+
+        // Styling helpers
+        const setComplete = (idx, isComplete) => {
+            const dot = document.getElementById(`roadmap-p${idx}-dot`);
+            const card = document.getElementById(`roadmap-p${idx}-card`);
+            if (!dot || !card) return;
+            if (isComplete) {
+                dot.className = "absolute -left-[33px] md:-left-[41px] w-4 h-4 md:w-5 md:h-5 rounded-full ring-4 ring-white bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]";
+                card.className = "bg-white rounded-xl p-4 md:p-5 border-2 border-indigo-200 shadow-md";
+            } else {
+                dot.className = "absolute -left-[33px] md:-left-[41px] w-4 h-4 md:w-5 md:h-5 rounded-full ring-4 ring-white bg-gray-200";
+                card.className = "bg-gray-50 rounded-xl p-4 md:p-5 border border-gray-100 shadow-sm";
+            }
+        };
+
+        const setActive = (idx) => {
+            const dot = document.getElementById(`roadmap-p${idx}-dot`);
+            const card = document.getElementById(`roadmap-p${idx}-card`);
+            if (!dot || !card) return;
+            dot.className = "absolute -left-[33px] md:-left-[41px] w-4 h-4 md:w-5 md:h-5 rounded-full ring-4 ring-white bg-indigo-400 animate-pulse";
+            card.className = "bg-white rounded-xl p-4 md:p-5 border-2 border-indigo-400 shadow-lg transform scale-[1.02] transition-transform";
+        };
+
+        // Reset
+        for(let i=1; i<=4; i++) { if(i!==3) setComplete(i, false); }
+        const dot3 = document.getElementById(`roadmap-p3-dot`);
+        const card3 = document.getElementById(`roadmap-p3-card`);
+        if (dot3 && card3) {
+            dot3.className = "absolute -left-[33px] md:-left-[41px] w-4 h-4 md:w-5 md:h-5 rounded-full ring-4 ring-white bg-gray-200";
+            card3.className = "bg-gray-50 rounded-xl p-4 md:p-5 border border-gray-100 shadow-sm";
+        }
+
+        if (currentAsset >= p4Target) {
+            setComplete(1, true); setComplete(2, true); setComplete(4, true);
+            if (dot3 && card3) {
+                dot3.className = "absolute -left-[33px] md:-left-[41px] w-4 h-4 md:w-5 md:h-5 rounded-full ring-4 ring-white bg-purple-500";
+                card3.className = "bg-white rounded-xl p-4 md:p-5 border-2 border-purple-200 shadow-md";
+            }
+            const dot4 = document.getElementById(`roadmap-p4-dot`);
+            const card4 = document.getElementById(`roadmap-p4-card`);
+            if (dot4 && card4) {
+                dot4.className = "absolute -left-[33px] md:-left-[41px] w-4 h-4 md:w-5 md:h-5 rounded-full ring-4 ring-white bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.6)]";
+                card4.className = "bg-white rounded-xl p-4 md:p-5 border-2 border-emerald-400 shadow-lg";
+            }
+        } else if (currentAsset >= p2Target) {
+            setComplete(1, true); setComplete(2, true);
+            if (dot3 && card3) {
+                dot3.className = "absolute -left-[33px] md:-left-[41px] w-4 h-4 md:w-5 md:h-5 rounded-full ring-4 ring-white bg-purple-500 animate-pulse";
+                card3.className = "bg-white rounded-xl p-4 md:p-5 border-2 border-purple-400 shadow-lg transform scale-[1.02] transition-transform";
+            }
+        } else if (currentAsset >= p1Target) {
+            setComplete(1, true);
+            setActive(2);
+        } else {
+            setActive(1);
+        }
     }
 
     function renderRealEstate() {
@@ -2101,7 +2237,7 @@
             });
         }
         
-        const targetBudget = 600000000; // 6억
+        const targetBudget = 800000000; // 8억
         const expectedLoan = 300000000; // 3억 고정
         const totalReady = cashAndSafe + expectedLoan;
         

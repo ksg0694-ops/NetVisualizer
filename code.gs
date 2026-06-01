@@ -22,6 +22,30 @@ function doGet(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+function fetchAllFromSupabase(endpoint, headers) {
+  let allData = [];
+  let offset = 0;
+  const limit = 1000;
+  
+  while (true) {
+    const url = SUPABASE_URL + endpoint + (endpoint.includes('?') ? '&' : '?') + 'limit=' + limit + '&offset=' + offset;
+    const res = UrlFetchApp.fetch(url, { headers: headers, muteHttpExceptions: true });
+    const chunk = JSON.parse(res.getContentText());
+    
+    if (Array.isArray(chunk)) {
+      allData = allData.concat(chunk);
+      if (chunk.length < limit) {
+        break; // 가져올 데이터가 더 이상 없으면 루프 종료
+      }
+      offset += limit;
+    } else {
+      console.error("Supabase API 에러:", chunk);
+      break;
+    }
+  }
+  return allData;
+}
+
 function doBackup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const headers = {
@@ -30,10 +54,9 @@ function doBackup() {
     "Content-Type": "application/json"
   };
   
-  // 1. Transactions 백업
+  // 1. Transactions 백업 (Pagination 적용)
   try {
-    const txRes = UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/transactions?select=*&order=date.desc", { headers, muteHttpExceptions: true });
-    const txData = JSON.parse(txRes.getContentText());
+    const txData = fetchAllFromSupabase("/rest/v1/transactions?select=*&order=date.desc", headers);
     const txSheet = ss.getSheetByName(SHEET_TX);
     if (txSheet && Array.isArray(txData)) {
       txSheet.clearContents();
@@ -45,10 +68,9 @@ function doBackup() {
     console.error("Transactions 백업 실패:", e);
   }
 
-  // 2. Portfolios 백업
+  // 2. Portfolios 백업 (Pagination 적용)
   try {
-    const pfRes = UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/portfolios?select=*", { headers, muteHttpExceptions: true });
-    const pfData = JSON.parse(pfRes.getContentText());
+    const pfData = fetchAllFromSupabase("/rest/v1/portfolios?select=*", headers);
     let pfSheet = ss.getSheetByName(SHEET_PORTFOLIO);
     if (pfSheet && Array.isArray(pfData)) {
       pfSheet.clearContents();
@@ -60,10 +82,9 @@ function doBackup() {
     console.error("Portfolios 백업 실패:", e);
   }
 
-  // 3. Assets 백업
+  // 3. Assets 백업 (Pagination 적용)
   try {
-    const assetRes = UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/assets?select=*&order=year.asc,month.asc", { headers, muteHttpExceptions: true });
-    const assetData = JSON.parse(assetRes.getContentText());
+    const assetData = fetchAllFromSupabase("/rest/v1/assets?select=*&order=year.asc,month.asc", headers);
     const assetSheet = ss.getSheetByName(SHEET_ASSET);
     if (assetSheet && Array.isArray(assetData)) {
       assetSheet.clearContents();
