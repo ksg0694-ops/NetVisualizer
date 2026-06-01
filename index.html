@@ -281,9 +281,14 @@
                                 <h3 class="text-base md:text-lg font-bold text-gray-800 truncate">월별 수입/지출 추세</h3>
                                 <p class="text-xs md:text-sm text-gray-500 truncate">누적된 수입, 지출, 순수익 흐름입니다.</p>
                             </div>
-                            <button onclick="toggleManageView(true)" class="text-xs md:text-sm text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition whitespace-nowrap shrink-0">
-                                <i class="fas fa-list-ul mr-1"></i>상세 내역
-                            </button>
+                            <div class="flex gap-2 shrink-0">
+                                <button onclick="toggleAddonView()" class="text-xs md:text-sm text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition whitespace-nowrap">
+                                    <i class="fas fa-puzzle-piece mr-1"></i>부가 기능
+                                </button>
+                                <button onclick="toggleManageView(true)" class="text-xs md:text-sm text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition whitespace-nowrap">
+                                    <i class="fas fa-list-ul mr-1"></i>상세 내역
+                                </button>
+                            </div>
                         </div>
                         <div class="relative h-64 md:h-72 w-full">
                             <canvas id="monthlyTrendChart"></canvas>
@@ -339,6 +344,37 @@
                                 </thead>
                                 <tbody id="manageTransactionList" class="text-xs md:text-sm divide-y divide-gray-50"></tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 부가기능 (Add-on) 화면 -->
+                <div id="stats-addon-content" class="hidden flex-col w-full">
+                    <div class="mb-4">
+                        <button onclick="toggleManageView(false)" class="text-xs md:text-sm text-gray-500 hover:text-gray-800 transition flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm w-fit">
+                            <i class="fas fa-arrow-left"></i> 현금 흐름 뷰로 돌아가기
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-8">
+                        <!-- 카드 관리 -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden min-w-0">
+                            <div class="px-4 md:px-6 py-4 md:py-5 border-b border-gray-100 flex justify-between items-center bg-indigo-50/30">
+                                <h3 class="text-base md:text-lg font-bold text-gray-800 flex items-center gap-2"><i class="fas fa-credit-card text-indigo-500"></i> 카드 (Cards)</h3>
+                            </div>
+                            <div class="p-4 md:p-6 flex flex-col gap-4" id="addon-cards-list">
+                                <!-- Cards injected here via JS -->
+                            </div>
+                        </div>
+
+                        <!-- 보험 관리 -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden min-w-0">
+                            <div class="px-4 md:px-6 py-4 md:py-5 border-b border-gray-100 flex justify-between items-center bg-emerald-50/30">
+                                <h3 class="text-base md:text-lg font-bold text-gray-800 flex items-center gap-2"><i class="fas fa-shield-alt text-emerald-500"></i> 보험 (Insurance)</h3>
+                            </div>
+                            <div class="p-4 md:p-6 flex flex-col gap-4" id="addon-insurance-list">
+                                <!-- Insurances injected here via JS -->
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -860,6 +896,8 @@
     let rawPortfolioData = []; 
     let workingPortfolioData = []; // 💡 [신규] 포트폴리오 편집 모달용 상태 (항목 추가/삭제/수정용)
     let originalNetWorthForDiff = 0; // 💡 [신규] 변경된 차액을 계산하기 위한 기준값
+    let addonCards = [];
+    let addonInsurances = [];
 
     const MOCK_DATA = {
         tx: [
@@ -1096,15 +1134,20 @@
             if (!userUrls.webapp || !userUrls.supabaseKey) throw new Error('URL_MISSING');
 
             const _supabase = supabase.createClient(userUrls.webapp, userUrls.supabaseKey);
-            const [txRes, assetRes, pfRes] = await Promise.all([
+            const [txRes, assetRes, pfRes, cardsRes, insurancesRes] = await Promise.all([
                 _supabase.from('transactions').select('*').order('date', { ascending: true }),
                 _supabase.from('assets').select('*').order('year', { ascending: true }).order('month', { ascending: true }),
-                _supabase.from('portfolios').select('*')
+                _supabase.from('portfolios').select('*'),
+                _supabase.from('cards').select('*'),
+                _supabase.from('insurances').select('*')
             ]);
             
             if (txRes.error) throw txRes.error;
             if (assetRes.error) throw assetRes.error;
             if (pfRes.error) throw pfRes.error;
+            
+            addonCards = cardsRes.data || [];
+            addonInsurances = insurancesRes.data || [];
 
             const txFormat = [["날짜","시간","타입","대분류","소분류","내용","금액","화폐","결제수단","메모"]];
             txRes.data.forEach(r => txFormat.push([r.date, r.time||'', r.type, r.category, r.subcategory, r.memo, String(r.amount), r.currency, r.method, '']));
@@ -1126,6 +1169,7 @@
             updateNavigationButtons();
             renderDashboard();
             renderPortfolio();
+            if (typeof renderAddons === 'function') renderAddons();
 
             const now = new Date();
             const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -1466,13 +1510,116 @@
     function toggleManageView(show) {
         const main = document.getElementById('stats-main-content');
         const manage = document.getElementById('stats-manage-content');
+        const addon = document.getElementById('stats-addon-content');
         if (!main || !manage) return;
         if (show) {
             main.classList.add('hidden'); main.classList.remove('flex');
+            if(addon) { addon.classList.add('hidden'); addon.classList.remove('flex'); }
             manage.classList.remove('hidden'); manage.classList.add('flex');
         } else {
-            main.classList.remove('hidden'); main.classList.add('flex');
             manage.classList.add('hidden'); manage.classList.remove('flex');
+            if(addon) { addon.classList.add('hidden'); addon.classList.remove('flex'); }
+            main.classList.remove('hidden'); main.classList.add('flex');
+        }
+    }
+
+    function toggleAddonView() {
+        const main = document.getElementById('stats-main-content');
+        const manage = document.getElementById('stats-manage-content');
+        const addon = document.getElementById('stats-addon-content');
+        if(main) { main.classList.add('hidden'); main.classList.remove('flex'); }
+        if(manage) { manage.classList.add('hidden'); manage.classList.remove('flex'); }
+        if(addon) { addon.classList.remove('hidden'); addon.classList.add('flex'); }
+    }
+
+    function renderAddons() {
+        const cardsContainer = document.getElementById('addon-cards-list');
+        const insContainer = document.getElementById('addon-insurance-list');
+        
+        const imgMap = {
+            'LOCA 365 카드': 'https://d1c5n4ri2guedi.cloudfront.net/card/2330/card_img/24131/2330card.png',
+            '토스뱅크 오렌지밀크': 'https://d1c5n4ri2guedi.cloudfront.net/card/2732/card_img/37974/2732card_1.png',
+            '토스뱅크하나카드wide': 'https://d1c5n4ri2guedi.cloudfront.net/card/2732/card_img/37974/2732card_1.png',
+            '토스뱅크 하나카드 Wide': 'https://d1c5n4ri2guedi.cloudfront.net/card/2732/card_img/37974/2732card_1.png',
+            'LG패밀리 S-Choice체크': 'https://d1c5n4ri2guedi.cloudfront.net/card/296/card_img/20519/296card.gif'
+        };
+        
+        if (cardsContainer) {
+            cardsContainer.innerHTML = addonCards.map(c => `
+                <div class="bg-gray-50 border border-gray-100 rounded-xl p-4 shadow-sm flex flex-col relative overflow-hidden">
+                    ${c.purpose ? `<span class="absolute top-0 right-0 bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded-bl-lg">${c.purpose}</span>` : ''}
+                    <div class="flex items-center gap-3 mb-2">
+                        ${c.image_data 
+                            ? `<img src="${c.image_data}" alt="${c.name}" class="h-10 w-16 object-cover rounded-md shadow-sm border border-gray-200 shrink-0">`
+                            : (imgMap[c.name] 
+                                ? `<img src="${imgMap[c.name]}" alt="${c.name}" class="h-10 w-16 object-cover rounded-md shadow-sm border border-gray-200 shrink-0">`
+                                : `<div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-indigo-500 font-bold text-lg shrink-0"><i class="fas fa-credit-card"></i></div>`)
+                        }
+                        <div class="overflow-hidden">
+                            <h4 class="text-sm font-bold text-gray-800 truncate">${c.name}</h4>
+                            <p class="text-[10px] text-gray-500 truncate">${c.bank}</p>
+                        </div>
+                    </div>
+                    <div class="mt-2 grid grid-cols-2 gap-2 text-xs">
+                        <div class="bg-white p-2 rounded border border-gray-100">
+                            <span class="text-gray-400 block mb-0.5 text-[10px]">목표실적</span>
+                            <span class="font-bold text-gray-700">${c.target_amt ? c.target_amt.toLocaleString() + '원' : '없음'}</span>
+                        </div>
+                        <div class="bg-white p-2 rounded border border-gray-100">
+                            <span class="text-gray-400 block mb-0.5 text-[10px]">연회비</span>
+                            <span class="font-bold text-gray-700">${c.annual_fee ? c.annual_fee.toLocaleString() + '원' : '없음'}</span>
+                        </div>
+                    </div>
+                    ${(c.prt_ideal || c.prt_real) ? `
+                    <div class="mt-2 flex gap-2 text-[10px]">
+                        ${c.prt_ideal ? `<span class="bg-indigo-50 text-indigo-600 px-2 py-1 rounded">Ideal 피킹률: <b>${c.prt_ideal}</b></span>` : ''}
+                        ${c.prt_real ? `<span class="bg-emerald-50 text-emerald-600 px-2 py-1 rounded">Real 피킹률: <b>${c.prt_real}</b></span>` : ''}
+                    </div>` : ''}
+                </div>
+            `).join('');
+        }
+        
+        if (insContainer) {
+            const now = new Date();
+            insContainer.innerHTML = addonInsurances.map(ins => {
+                const startDate = new Date(ins.start_date);
+                const endDate = new Date(ins.end_date);
+                const totalMonths = (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth());
+                let elapsedMonths = (now.getFullYear() - startDate.getFullYear()) * 12 + (now.getMonth() - startDate.getMonth());
+                if (elapsedMonths < 0) elapsedMonths = 0;
+                if (elapsedMonths > totalMonths) elapsedMonths = totalMonths;
+                const progressPct = totalMonths > 0 ? (elapsedMonths / totalMonths * 100).toFixed(1) : 0;
+                
+                return `
+                <div class="bg-gray-50 border border-gray-100 rounded-xl p-4 shadow-sm flex flex-col relative">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <span class="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded mb-1 inline-block">${ins.category}</span>
+                            <h4 class="text-sm font-bold text-gray-800 leading-tight">${ins.description}</h4>
+                            <p class="text-[10px] text-gray-500 mt-0.5">${ins.company}</p>
+                        </div>
+                        <div class="text-right shrink-0 ml-2">
+                            <p class="text-xs font-bold text-gray-800">${ins.monthly_payment.toLocaleString()}원<span class="text-[10px] text-gray-400 font-normal">/월</span></p>
+                            <p class="text-[10px] text-gray-500 mt-0.5">매월 ${ins.pay_day}일</p>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="flex justify-between text-[10px] mb-1">
+                            <span class="text-gray-500">${ins.start_date.substring(2,7).replace('-','.')} ~ ${ins.end_date.substring(2,7).replace('-','.')}</span>
+                            <span class="font-bold text-emerald-600">${progressPct}% 납입</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                            <div class="bg-emerald-400 h-full rounded-full transition-all duration-1000" style="width: 0%" onload="this.style.width='${progressPct}%'" data-width="${progressPct}%"></div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+            
+            setTimeout(() => {
+                const bars = insContainer.querySelectorAll('[data-width]');
+                bars.forEach(b => b.style.width = b.getAttribute('data-width'));
+            }, 100);
         }
     }
 
