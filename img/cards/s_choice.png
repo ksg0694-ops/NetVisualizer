@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport"
+	content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="format-detection" content="telephone=no">
+<title>신한카드 모바일 웹</title>
+<link rel="stylesheet" href="/pconts/css/common.css?ver=20" media="all" />
+<link rel="stylesheet" href="/pconts/css/contents.css?ver=20" media="all" />
+<link rel="stylesheet" href="/pconts/css/member.css?ver=20" media="all" />
+<link rel="stylesheet" href="/pconts/css/mypage.css?ver=20" media="all" />
+<link rel="stylesheet" href="/pconts/css/card.css?ver=20" media="all" />
+<link rel="stylesheet" href="/pconts/css/finance.css?ver=20" media="all" />
+<link rel="stylesheet" href="/pconts/css/benefit.css?ver=20" media="all" />
+<link rel="stylesheet" href="/pconts/css/customer.css?ver=20" media="all" />
+<link rel="stylesheet" href="/pconts/css/topsclub.css?ver=20" media="all" />
+<link rel="stylesheet" href="/pconts/css/main.css?ver=20" media="all" />
+<link rel="stylesheet" href="/pconts/css/interval.css?ver=20" media="all" />
+</head>
+<body>
+    <!-- skipNavi -->
+    <div id="skipNavi">
+        <a href="#contents">본문 바로가기</a>
+    </div>
+    <!-- //skipNavi -->
+    <!-- wrap -->
+    <div id="wrap">
+        <!-- header -->
+        <!-- //header -->
+
+        <!-- container -->
+        <div id="container">
+            <!-- contents -->
+            <section class="contents complete_page type_error">
+                <div class="ly_inner">
+
+                    <!-- 에러메세지 -->
+                    <div class="complete_body ani_ico img04">
+                        <p class="title">요청하신 페이지를 <i class="tbm"></i> 찾을 수 없습니다.</p>
+                        <p class="sub_title gap40_20">잘못된 경로로 접근하였거나, <i class="tbm"></i>사용할 수 없는 웹사이트 주소입니다.</p>
+                        <div class="btn_wrap align_c">
+                        	<a href="/pconts/html/main.html">
+                            	<button type="button" class="btn default blue"><span>홈페이지 메인으로 이동</span></button>
+                            </a>
+                        </div>
+                    </div>
+                    <!--// 에러메세지 -->
+
+                </div>
+                <!-- //ly_inner -->
+            </section>
+            <!-- //contents -->
+        </div>
+        <!-- //container -->
+
+        <!-- footer -->
+        <!-- //footer -->
+    </div>
+    <!-- //wrap -->
+</body>
+
+</html>

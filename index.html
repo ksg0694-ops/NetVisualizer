@@ -899,32 +899,6 @@
     let addonCards = [];
     let addonInsurances = [];
 
-    const MOCK_DATA = {
-        tx: [
-            ["날짜","시간","타입","대분류","소분류","내용","금액","화폐","결제수단","메모"],
-            ["2026-05-26","20:04","지출","생활","생필품","(주)아성다이소","-3000","KRW","토스뱅크","데모 데이터"],
-            ["2026-05-26","19:36","지출","식비","미분류","외식비","-51000","KRW","토스뱅크","데모 데이터"],
-            ["2026-05-26","14:15","지출","고정비","관리비","아파트 관리비","-176330","KRW","LOCA","데모 데이터"],
-            ["2026-05-26","12:02","수입","기타수입","미분류","환급금","7860","KRW","월급통장","데모 데이터"],
-            ["2026-04-10","10:00","수입","급여","급여","회사 월급","3500000","KRW","월급통장","데모 데이터"]
-        ],
-        asset: [
-            ["Year","Month","총자산(순자산)","현금성자산","안전자산","투자자산","부채"],
-            ["2025","12월","158636723","","","",""],
-            ["2026","01월","162474609","","","",""],
-            ["2026","04월","171563254","500000","15000000","20000000","-10000000"],
-            ["2026","05월","172322447","1000000","30000000","77000000","-65000000"]
-        ],
-        portfolio: [
-            ["대분류 (Drop-down)","계좌/자산명 (Text)","통화/형태 (Text)","만기일 (Date/Text)","금액 (Number)", "주식수"],
-            ["현금 자산","생활비통장(데모)","KRW","","500000"],
-            ["현금 자산","월급통장(데모)","KRW","","500000"],
-            ["안전 자산","청년 주택드림 청약통장","KRW","2028-12-31","1500000"],
-            ["투자 자산","국내 주식","KRW","","45000000", "100"],
-            ["투자 자산","해외 주식/ETF","USD","","32000000", "50"],
-            ["부채","신용 대출","KRW","","-65000000"]
-        ]
-    };
 
     const PAYDAYS = {
         '2025-10': '2025-10-24', '2025-11': '2025-11-25', '2025-12': '2025-12-24', 
@@ -1191,20 +1165,17 @@
                 if(sidebarSync) sidebarSync.innerHTML = `<i class="fas fa-bolt text-[10px] text-amber-500"></i> 오프라인 모드`;
                 showToast(`인터넷 연결 불안정: 캐시된 데이터를 표시합니다.`, 'warning', 4000);
             } else {
-                parseTxData(MOCK_DATA.tx);
-                parseAssetData(MOCK_DATA.asset);
-                parsePortfolioData(MOCK_DATA.portfolio);
                 updateNavigationButtons();
                 renderDashboard();
                 renderPortfolio();
 
                 if(syncStatus) {
-                    syncStatus.textContent = '데모 모드';
-                    syncStatus.className = "hidden md:inline-block text-xs text-amber-500 font-medium mr-2 max-w-[150px] truncate";
+                    syncStatus.textContent = '데이터 없음';
+                    syncStatus.className = "hidden md:inline-block text-xs text-red-500 font-medium mr-2 max-w-[150px] truncate";
                 }
-                if(sidebarSync) sidebarSync.innerHTML = `<i class="fas fa-eye text-[10px] text-amber-500"></i> 데모 데이터 뷰`;
-                if(error.message === 'URL_MISSING') showToast('URL이 없어 데모 데이터로 실행됩니다.', 'info');
-                else showToast(`연결 실패: 데모 데이터가 로드됩니다.`, 'error');
+                if(sidebarSync) sidebarSync.innerHTML = `<i class="fas fa-exclamation-triangle text-[10px] text-red-500"></i> 데이터 없음`;
+                if(error.message === 'URL_MISSING') showToast('설정에서 Supabase URL과 Key를 입력해주세요.', 'info');
+                else showToast(`연결 실패: 표시할 데이터가 없습니다.`, 'error');
             }
         } finally {
             if(syncIcon) syncIcon.classList.remove('animate-spin-slow');
@@ -1536,14 +1507,6 @@
         const cardsContainer = document.getElementById('addon-cards-list');
         const insContainer = document.getElementById('addon-insurance-list');
         
-        const imgMap = {
-            'LOCA 365 카드': 'https://d1c5n4ri2guedi.cloudfront.net/card/2330/card_img/24131/2330card.png',
-            '토스뱅크 오렌지밀크': 'https://d1c5n4ri2guedi.cloudfront.net/card/2732/card_img/37974/2732card_1.png',
-            '토스뱅크하나카드wide': 'https://d1c5n4ri2guedi.cloudfront.net/card/2732/card_img/37974/2732card_1.png',
-            '토스뱅크 하나카드 Wide': 'https://d1c5n4ri2guedi.cloudfront.net/card/2732/card_img/37974/2732card_1.png',
-            'LG패밀리 S-Choice체크': 'https://d1c5n4ri2guedi.cloudfront.net/card/296/card_img/20519/296card.gif'
-        };
-        
         if (cardsContainer) {
             cardsContainer.innerHTML = addonCards.map(c => `
                 <div class="bg-gray-50 border border-gray-100 rounded-xl p-4 shadow-sm flex flex-col relative overflow-hidden">
@@ -1551,9 +1514,7 @@
                     <div class="flex items-center gap-3 mb-2">
                         ${c.image_data 
                             ? `<img src="${c.image_data}" alt="${c.name}" class="h-10 w-16 object-cover rounded-md shadow-sm border border-gray-200 shrink-0">`
-                            : (imgMap[c.name] 
-                                ? `<img src="${imgMap[c.name]}" alt="${c.name}" class="h-10 w-16 object-cover rounded-md shadow-sm border border-gray-200 shrink-0">`
-                                : `<div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-indigo-500 font-bold text-lg shrink-0"><i class="fas fa-credit-card"></i></div>`)
+                            : `<div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-indigo-500 font-bold text-lg shrink-0"><i class="fas fa-credit-card"></i></div>`
                         }
                         <div class="overflow-hidden">
                             <h4 class="text-sm font-bold text-gray-800 truncate">${c.name}</h4>
