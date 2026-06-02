@@ -1,6 +1,6 @@
 {
-  "name": "스마트 가계부 V2",
-  "short_name": "가계부",
+  "name": "NetVisualizer",
+  "short_name": "NetVisualizer",
   "description": "API 연동형 스마트 개인 가계부 및 자산 포트폴리오 트래커",
   "start_url": "./index.html",
   "display": "standalone",
@@ -9,7 +9,7 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/5501/5501360.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
