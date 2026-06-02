@@ -1688,8 +1688,13 @@
         let totalLiquid = 0, totalTied = 0;
         let chartLabels = [], chartData = [], chartColors = [];
 
-        document.getElementById('portfolio-month-badge').textContent = isLatestMonth ? '현재 포트폴리오 (최신)' : `${targetLabel} 스냅샷`;
-
+        const badge = document.getElementById('portfolio-month-badge');
+        if (isLatestMonth) {
+            badge.classList.add('hidden');
+        } else {
+            badge.classList.remove('hidden');
+            badge.textContent = `${targetLabel} 스냅샷`;
+        }
         const wrapper = document.getElementById('portfolio-accordion-wrapper');
         const notice = document.getElementById('portfolio-past-notice');
 
