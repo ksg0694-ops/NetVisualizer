@@ -1,1 +1,10 @@
-¹èÆ÷ID.txt
+ï¿½ï¿½ï¿½ï¿½ID.txt
+
+# bkit-codex
+.bkit-codex/
+
+# Supabase local secrets
+supabase/.temp/
+supabase/functions/.env
+supabase/functions/.env.*
+!supabase/functions/.env.example

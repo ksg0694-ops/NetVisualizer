@@ -1,0 +1,4 @@
+project_id = "netvisualizer"
+
+[functions.sync-market-prices]
+verify_jwt = true

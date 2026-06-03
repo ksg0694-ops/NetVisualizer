@@ -1,8 +1,10 @@
-const CACHE_NAME = 'smartbook-v2-app-cache-v1';
+const CACHE_NAME = 'smartbook-v2-app-cache-v2';
 const urlsToCache = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './sw.js',
+  './img/cards/s_choice.png'
 ];
 
 // 설치 시 캐싱
@@ -34,8 +36,14 @@ self.addEventListener('activate', event => {
 
 // 네트워크 요청 가로채기 (Network First, fallback to Cache)
 self.addEventListener('fetch', event => {
-  // API 요청(Web App URL 등)은 캐싱하지 않고 무조건 네트워크로 보냄
-  if (event.request.url.includes('script.google.com') || event.request.method === 'POST') {
+  const requestUrl = new URL(event.request.url);
+
+  // API 요청은 캐싱하지 않고 무조건 네트워크로 보냄
+  if (
+    requestUrl.hostname.endsWith('supabase.co') ||
+    event.request.url.includes('script.google.com') ||
+    event.request.method !== 'GET'
+  ) {
     return; 
   }
 
