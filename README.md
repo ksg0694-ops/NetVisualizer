@@ -205,7 +205,9 @@ npx http-server -p 8080
 - Quant 기능: ticker, 매입가, 수량, 통화, 전략 태그가 필요하므로 구조를 먼저 만들고 데이터 품질은 후속 보강합니다.
 - 자산유형 자동분류: 포트폴리오 계산을 돕는 내부 메타데이터로 유지하되, 화면의 핵심 기능으로 앞세우지는 않습니다.
 
-현재 `codex/quant-engine` 브랜치에서 Quant 구조를 확장 중입니다. Supabase `portfolios` 테이블에는 `asset_type`, `instrument_type`, `ticker`, `risk_bucket`, `classification_source`, `classification_updated_at`, `strategy_tag`, `avg_buy_price` 컬럼이 추가되어 있습니다. `quant_strategy_rules` 테이블에는 전략별 목표비중과 리밸런싱 밴드를 저장하고, `portfolio_market_prices` 테이블에는 ticker별 최신 현재가를 저장합니다. `portfolio_price_history` 테이블에는 날짜별 가격 이력을 저장합니다. `quant_rebalance_signals` 테이블에는 전략별 현재비중, 목표비중, 리밸런싱 필요액, 데이터 준비도 스냅샷을 저장합니다. 기존 40개 row는 자산분류와 전략 태그 기준으로 backfill했고, 보유 주식/ETF 23개 row는 ticker를 채웠습니다. 화면 정렬은 현금, 안전, 투자, 연금, 부채, 기타 순서입니다.
+`codex/realtime-db-sync` 브랜치에서 실시간 DB 업데이트 작업을 시작했습니다. 첫 범위는 완전 자동 계좌 연동이 아니라 CSV/엑셀 import staging, 중복 방지, sync run 기록입니다. 관련 문서는 `docs/03-analysis/realtime-db-sync-feasibility.md`, SQL 초안은 `docs/03-analysis/realtime-db-sync-schema.sql`, 진행 현황은 `docs/04-report/realtime-db-sync-progress.md`에 있습니다.
+
+현재 main에 반영된 Quant 구조는 다음과 같습니다. Supabase `portfolios` 테이블에는 `asset_type`, `instrument_type`, `ticker`, `risk_bucket`, `classification_source`, `classification_updated_at`, `strategy_tag`, `avg_buy_price` 컬럼이 추가되어 있습니다. `quant_strategy_rules` 테이블에는 전략별 목표비중과 리밸런싱 밴드를 저장하고, `portfolio_market_prices` 테이블에는 ticker별 최신 현재가를 저장합니다. `portfolio_price_history` 테이블에는 날짜별 가격 이력을 저장합니다. `quant_rebalance_signals` 테이블에는 전략별 현재비중, 목표비중, 리밸런싱 필요액, 데이터 준비도 스냅샷을 저장합니다. 기존 40개 row는 자산분류와 전략 태그 기준으로 backfill했고, 보유 주식/ETF 23개 row는 ticker를 채웠습니다. 화면 정렬은 현금, 안전, 투자, 연금, 부채, 기타 순서입니다.
 
 상세 내용은 `docs/03-analysis/fintech-expansion-feasibility.md`에 정리했습니다. Supabase 컬럼 승격 SQL 초안은 `docs/03-analysis/asset-classification-supabase-migration.sql`, `docs/03-analysis/portfolio-quant-metadata-migration.sql`, `docs/03-analysis/quant-strategy-rules-migration.sql`, `docs/03-analysis/portfolio-market-prices-migration.sql`, `docs/03-analysis/portfolio-price-history-migration.sql`, `docs/03-analysis/quant-rebalance-signals-migration.sql`에 있습니다.
 

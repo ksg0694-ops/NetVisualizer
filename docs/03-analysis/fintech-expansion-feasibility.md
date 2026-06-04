@@ -21,7 +21,7 @@
 | --- | --- | --- |
 | 자산유형 자동분류 | `codex/asset-classification` | 기존 포트폴리오 데이터 손상 없이 분류 컬럼 추가, 수동 override 가능 |
 | Quant 기능 | `codex/quant-engine` | 수익률/매입가/현재가 계산 검증, 외부 시세 API 장애 fallback |
-| 실시간 DB 업데이트 | `codex/account-sync` | 인증정보 서버 보관, 수동 동의 흐름, 읽기 전용 동기화부터 검증 |
+| 실시간 DB 업데이트 | `codex/realtime-db-sync` | 인증정보 서버 보관, 수동 동의 흐름, 읽기 전용 동기화부터 검증 |
 
 ## 1. 실시간 DB 업데이트
 
@@ -51,6 +51,16 @@
 - 계좌명/카드명/메모가 누락되어도 안전하게 저장되는지
 - 동기화 실패 시 기존 데이터가 유지되는지
 - API 토큰 만료 시 사용자가 다시 연결할 수 있는지
+
+### 1차 착수 결과
+
+2026-06-05에 `codex/realtime-db-sync` 브랜치에서 실시간 DB 업데이트 작업을 시작했다.
+
+- 공식 후보는 금융결제원 오픈뱅킹/오픈API, 금융보안원 마이데이터 통합인증, KIS Open API로 분리했다.
+- 첫 구현 범위는 완전 자동 계좌 연동이 아니라 CSV/엑셀 import staging과 중복 방지 구조로 정했다.
+- `docs/03-analysis/realtime-db-sync-feasibility.md`에 데이터 흐름, 보안 원칙, 공식 후보, RLS 선결 조건을 정리했다.
+- `docs/03-analysis/realtime-db-sync-schema.sql`에 `account_sync_sources`, `account_sync_runs`, `transaction_import_candidates` 초안을 작성했다.
+- 원격 Supabase에는 아직 적용하지 않았다. RLS/Auth 정책 없이 자동 금융 데이터 수집을 활성화하지 않는다.
 
 ## 2. Quant 기능
 
@@ -286,4 +296,4 @@ Backfill 결과:
 | 2 | 자산유형/종목 데이터 보강 | 구조가 잡힌 뒤 ticker, 평균단가, 분류 정확도를 채워 넣으면 된다. |
 | 3 | 실시간 DB 업데이트 | 사용자 가치가 크지만 인증/보안/운영 부담이 가장 크다. |
 
-첫 개발 브랜치는 `codex/asset-classification`으로 진행했고, 시세 이력/수익률 엔진 확장은 `codex/quant-engine` 브랜치에서 분리해 진행 중이다.
+첫 개발 브랜치는 `codex/asset-classification`으로 진행했고, 시세 이력/수익률 엔진 확장은 `codex/quant-engine` 브랜치에서 main에 반영했다. 실시간 DB 업데이트는 `codex/realtime-db-sync` 브랜치에서 분리해 진행 중이다.
