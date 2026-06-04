@@ -19,7 +19,7 @@ Reduce manual Supabase edits by introducing a safe import/sync path for transact
 | Security boundary | Done | No browser-stored financial secrets, no raw account numbers, no unofficial scraping. |
 | Schema draft | Done | Draft tables for sync sources, sync runs, and transaction import candidates. |
 | Remote DB migration | Not started | SQL is intentionally not applied yet. |
-| Import UI | Not started | Next implementation phase. |
+| Import UI | Done | Browser CSV/TSV preview, validation, duplicate filtering, and confirmed insert into `transactions`. |
 | Official API integration | Deferred | Requires consent/auth/provider setup and RLS policy review. |
 
 ## Stage Progress
@@ -28,11 +28,20 @@ Reduce manual Supabase edits by introducing a safe import/sync path for transact
 | --- | --- | --- |
 | 1 | Feasibility and provider boundary | Done |
 | 2 | Import/sync schema draft | Done |
-| 3 | CSV/Excel import parser and preview | Next |
-| 4 | Confirmed import into `transactions` | Pending |
+| 3 | CSV/TSV import parser and preview | Done |
+| 4 | Confirmed import into `transactions` | Done |
 | 5 | Sync run audit UI | Pending |
 | 6 | Read-only official API dry-run | Deferred |
 | 7 | Scheduled sync | Deferred |
+
+## Implemented In This Branch
+
+- Added a transaction import entry point in the cash-flow tab and transaction detail view.
+- Added a CSV/TSV import modal with file selection, default payment method, summary counts, and preview table.
+- Normalizes common Korean/English transaction columns: date, time, type, category, subcategory, memo, amount, withdrawal, deposit, payment amount, currency, and method.
+- Infers income/expense/transfer and normalizes signs before saving.
+- Filters duplicates against already loaded transactions and duplicates within the selected file.
+- Inserts only `ready` rows into Supabase `transactions`, then merges the returned rows into the local cache and refreshes the current dashboard.
 
 ## Safety Rules
 
@@ -45,11 +54,10 @@ Reduce manual Supabase edits by introducing a safe import/sync path for transact
 
 ## Next Actions
 
-1. Build a CSV/Excel import preview path in the SPA.
-2. Normalize rows into `transaction_import_candidates` shape.
-3. Generate a stable `dedupe_key`.
-4. Let the user confirm selected rows before inserting into `transactions`.
-5. Only after that, decide whether KFTC Open Banking or another official provider is worth a read-only PoC.
+1. Manually test the import flow with one small bank/card CSV export.
+2. Decide whether to apply the draft staging/audit SQL or keep the current no-new-table browser import path.
+3. Add a sync run audit UI only after the import flow is stable.
+4. Only after that, decide whether KFTC Open Banking or another official provider is worth a read-only PoC.
 
 ## Known Security Advisory
 

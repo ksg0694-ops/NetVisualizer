@@ -1,5 +1,16 @@
 # NetVisualizer
 
+## 2026-06-05 Realtime DB Sync Update
+
+`codex/realtime-db-sync` branch now includes the first practical import path for reducing manual Supabase edits.
+
+- Cash-flow tab has a `가져오기` action for CSV/TSV transaction files.
+- The import modal previews rows before saving and shows ready, duplicate, and invalid counts.
+- Common bank/card columns are normalized: date, time, type, category, memo, amount, withdrawal, deposit, payment amount, currency, and method.
+- Duplicate detection runs against already loaded transactions and within the selected file.
+- Only ready rows are inserted into the existing Supabase `transactions` table; no remote schema migration has been applied yet.
+- Official banking API sync remains deferred until Auth/RLS and secret handling are designed.
+
 개인 가계부, 자산 포트폴리오, 카드/보험, 부동산 청약 준비 상태를 한 화면에서 확인하는 HTML 기반 PWA입니다. 현재 저장소 기준으로는 별도 프론트엔드 빌드 도구 없이 `index.html` 하나가 화면, 상태, Supabase 연동, 차트 렌더링, 입력 폼 처리를 모두 담당합니다.
 
 이 문서는 2026-06-03 기준 `C:\Users\ksg06\Documents\NetVisualizer` 코드 조사 결과를 바탕으로 현재 프로세스, 확인된 문제점, Load 저감 방향, 테스트 관점을 정리한 것입니다.
