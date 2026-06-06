@@ -65,22 +65,46 @@
                     version 1.03.01
                 </div>
             </div>
-            <nav class="p-4 space-y-1 mt-4">
-                <a href="#" data-target="dashboard-view" class="nav-link flex items-center gap-3 px-4 py-3 text-indigo-600 bg-indigo-50 rounded-xl font-medium transition-all">
-                    <i class="fas fa-chart-pie w-5 text-center"></i> 대시보드
-                </a>
-                <a href="#" data-target="portfolio-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
-                    <i class="fas fa-briefcase w-5 text-center"></i> 포트폴리오
-                </a>
-                <a href="#" data-target="stats-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
-                    <i class="fas fa-money-bill-transfer w-5 text-center"></i> 현금 흐름
-                </a>
-                <a href="#" data-target="asset-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
-                    <i class="fas fa-chart-area w-5 text-center"></i> 장기 자산 추이
-                </a>
-                <a href="#" data-target="realestate-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
-                    <i class="fas fa-home w-5 text-center"></i> 부동산
-                </a>
+            <nav class="p-4 space-y-5 mt-4">
+                <div>
+                    <p class="px-3 mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Goal</p>
+                    <div class="space-y-1">
+                        <button type="button" class="w-full flex items-center justify-between gap-3 px-4 py-3 text-indigo-700 bg-indigo-50 rounded-xl font-semibold border border-indigo-100">
+                            <span class="flex items-center gap-3"><i class="fas fa-coins w-5 text-center"></i> Finance</span>
+                            <span class="text-[9px] font-bold bg-white text-indigo-500 px-2 py-0.5 rounded-full">ACTIVE</span>
+                        </button>
+                        <button type="button" disabled class="w-full flex items-center gap-3 px-4 py-2.5 text-gray-300 rounded-xl font-medium cursor-not-allowed">
+                            <i class="fas fa-id-badge w-5 text-center"></i> Career
+                        </button>
+                        <button type="button" disabled class="w-full flex items-center gap-3 px-4 py-2.5 text-gray-300 rounded-xl font-medium cursor-not-allowed">
+                            <i class="fas fa-folder-open w-5 text-center"></i> Project
+                        </button>
+                        <button type="button" disabled class="w-full flex items-center gap-3 px-4 py-2.5 text-gray-300 rounded-xl font-medium cursor-not-allowed">
+                            <i class="fas fa-heart-pulse w-5 text-center"></i> Health
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="px-3 mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Finance Tools</p>
+                    <div class="space-y-1">
+                        <a href="#" data-target="dashboard-view" class="nav-link flex items-center gap-3 px-4 py-3 text-indigo-600 bg-indigo-50 rounded-xl font-medium transition-all">
+                            <i class="fas fa-chart-pie w-5 text-center"></i> 요약
+                        </a>
+                        <a href="#" data-target="portfolio-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
+                            <i class="fas fa-briefcase w-5 text-center"></i> 포트폴리오
+                        </a>
+                        <a href="#" data-target="stats-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
+                            <i class="fas fa-money-bill-transfer w-5 text-center"></i> 현금 흐름
+                        </a>
+                        <a href="#" data-target="asset-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
+                            <i class="fas fa-chart-area w-5 text-center"></i> 장기 자산
+                        </a>
+                        <a href="#" data-target="realestate-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
+                            <i class="fas fa-home w-5 text-center"></i> 부동산
+                        </a>
+                    </div>
+                </div>
             </nav>
         </div>
         
@@ -124,6 +148,22 @@
 
         <!-- 스크롤 가능한 뷰 영역 -->
         <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-36 md:pb-8 scrollbar-hide relative pb-safe">
+            <div class="md:hidden max-w-6xl mx-auto mb-4">
+                <div class="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                    <button type="button" class="shrink-0 flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-sm">
+                        <i class="fas fa-coins"></i> Finance
+                    </button>
+                    <button type="button" disabled class="shrink-0 flex items-center gap-2 bg-white text-gray-300 border border-gray-100 px-3 py-2 rounded-xl text-xs font-bold">
+                        <i class="fas fa-id-badge"></i> Career
+                    </button>
+                    <button type="button" disabled class="shrink-0 flex items-center gap-2 bg-white text-gray-300 border border-gray-100 px-3 py-2 rounded-xl text-xs font-bold">
+                        <i class="fas fa-folder-open"></i> Project
+                    </button>
+                    <button type="button" disabled class="shrink-0 flex items-center gap-2 bg-white text-gray-300 border border-gray-100 px-3 py-2 rounded-xl text-xs font-bold">
+                        <i class="fas fa-heart-pulse"></i> Health
+                    </button>
+                </div>
+            </div>
             
             <!-- 1. 대시보드 뷰 -->
             <div id="dashboard-view" class="view-section block max-w-6xl mx-auto">
@@ -367,38 +407,55 @@
 
             <!-- 4. 장기 자산 뷰 -->
             <div id="asset-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6">
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-indigo-500 min-w-0">
-                        <p class="text-xs md:text-sm font-medium text-gray-500 mb-1 truncate">총 자산 증가액 (초기 대비)</p>
-                        <h3 class="text-xl md:text-2xl font-bold text-gray-800 truncate" id="asset-total-growth">+0원</h3>
+                <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Finance Goal</p>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">장기 자산 성장</h3>
+                        <p class="text-xs md:text-sm text-gray-500 mt-1">자산 성장 속도와 2.5억 목표 진행률을 함께 봅니다.</p>
                     </div>
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-emerald-500 min-w-0">
-                        <p class="text-xs md:text-sm font-medium text-gray-500 mb-1 truncate">월 평균 자산 증가속도</p>
-                        <h3 class="text-xl md:text-2xl font-bold text-gray-800 truncate" id="asset-avg-growth">+0원/월</h3>
-                    </div>
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500 min-w-0">
-                        <div class="flex justify-between items-end mb-1">
-                            <p class="text-xs md:text-sm font-medium text-gray-500 truncate">올해 목표 달성률 <span class="text-[10px] text-gray-400 font-normal ml-1 hidden lg:inline">(2.5억 기준)</span></p>
-                            <p class="text-[10px] md:text-xs font-bold text-gray-700 whitespace-nowrap shrink-0">목표 2.5억</p>
-                        </div>
-                        <h3 class="text-xl md:text-2xl font-bold text-gray-800" id="asset-goal-percent">0%</h3>
-                        <div class="w-full bg-gray-100 rounded-full h-2 mt-2 overflow-hidden">
-                            <div class="h-full bg-amber-500 transition-all duration-1000 ease-out" id="asset-goal-bar" style="width: 0%"></div>
-                        </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] md:text-xs font-bold text-amber-600 bg-amber-50 border border-amber-100 px-3 py-2 rounded-xl whitespace-nowrap">목표 2.5억</span>
+                        <select id="asset-year-filter" class="bg-white text-sm font-medium text-gray-700 border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm">
+                            <option value="all">전체 기간</option>
+                        </select>
                     </div>
                 </div>
 
-                <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col mb-8 min-w-0">
-                    <div class="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-3 md:gap-4 mb-6">
-                        <h3 class="text-base md:text-lg font-bold text-gray-800">장기 자산 추이</h3>
-                        <div class="flex items-center">
-                            <select id="asset-year-filter" class="bg-gray-50 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm">
-                                <option value="all">전체 기간</option>
-                            </select>
+                <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_360px] gap-4 md:gap-6 mb-8">
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 min-w-0">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-5">
+                            <div>
+                                <h4 class="text-base md:text-lg font-bold text-gray-800">자산 추세</h4>
+                                <p class="text-xs text-gray-500 mt-0.5">연도 필터와 목표선을 함께 표시합니다.</p>
+                            </div>
+                            <span class="text-[10px] md:text-xs text-gray-500 bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-xl w-fit">단위: 원</span>
+                        </div>
+                        <div class="relative min-h-[340px] md:min-h-[460px] w-full">
+                            <canvas id="fullAssetChart"></canvas>
                         </div>
                     </div>
-                    <div class="flex-1 relative min-h-[300px] md:min-h-[400px] w-full">
-                        <canvas id="fullAssetChart"></canvas>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-1 gap-4">
+                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500 min-w-0">
+                            <div class="flex justify-between items-end mb-1">
+                                <p class="text-xs md:text-sm font-medium text-gray-500 truncate">목표 달성률</p>
+                                <p class="text-[10px] md:text-xs font-bold text-gray-700 whitespace-nowrap shrink-0">2.5억</p>
+                            </div>
+                            <h3 class="text-xl md:text-2xl font-bold text-gray-800" id="asset-goal-percent">0%</h3>
+                            <div class="w-full bg-gray-100 rounded-full h-2 mt-3 overflow-hidden">
+                                <div class="h-full bg-amber-500 transition-all duration-1000 ease-out" id="asset-goal-bar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-indigo-500 min-w-0">
+                            <p class="text-xs md:text-sm font-medium text-gray-500 mb-1 truncate">총 자산 증가액</p>
+                            <h3 class="text-xl md:text-2xl font-bold text-gray-800 truncate" id="asset-total-growth">+0원</h3>
+                            <p class="text-[10px] text-gray-400 mt-2">초기 기록 대비</p>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-emerald-500 min-w-0">
+                            <p class="text-xs md:text-sm font-medium text-gray-500 mb-1 truncate">월 평균 증가속도</p>
+                            <h3 class="text-xl md:text-2xl font-bold text-gray-800 truncate" id="asset-avg-growth">+0원/월</h3>
+                            <p class="text-[10px] text-gray-400 mt-2">전체 기록 평균</p>
+                        </div>
                     </div>
                 </div>
 
@@ -778,7 +835,7 @@
     <nav class="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around items-center h-[68px] z-50 pb-safe px-1">
         <a href="#" data-target="dashboard-view" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full text-indigo-600 transition-colors">
             <i class="fas fa-chart-pie text-lg mb-1"></i>
-            <span class="text-[9px] font-medium">대시보드</span>
+            <span class="text-[9px] font-medium">요약</span>
         </a>
         <a href="#" data-target="portfolio-view" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 transition-colors">
             <i class="fas fa-briefcase text-lg mb-1"></i>
@@ -786,11 +843,11 @@
         </a>
         <a href="#" data-target="stats-view" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 transition-colors">
             <i class="fas fa-money-bill-transfer text-lg mb-1"></i>
-            <span class="text-[9px] font-medium">현금 흐름</span>
+            <span class="text-[9px] font-medium">현금</span>
         </a>
         <a href="#" data-target="asset-view" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 transition-colors">
             <i class="fas fa-chart-area text-lg mb-1"></i>
-            <span class="text-[9px] font-medium">자산</span>
+            <span class="text-[9px] font-medium">장기자산</span>
         </a>
         <a href="#" data-target="realestate-view" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 transition-colors">
             <i class="fas fa-home text-lg mb-1"></i>

@@ -17,8 +17,12 @@
 
 `codex/asset-trend-redesign` branch starts the redesign from the long-term asset trend screen.
 
+- Navigation now has two levels: Goal first, then Finance tools.
+- Finance is the active goal. Career, Project, and Health are visible placeholders for later expansion.
+- Finance tools are grouped as Summary, Portfolio, Cash Flow, Long-Term Asset, and Real Estate.
 - Asset trend model logic now lives in `js/features/assetTrend.js`.
 - `index.html` keeps DOM and Chart.js rendering for now, but calls `AssetTrendFeature.createModel()` for metrics and chart series.
+- The long-term asset screen is now arranged as a Finance goal workspace: chart on the left, goal/growth KPIs on the right, roadmap below.
 - Slice design notes: `docs/02-design/asset-trend-redesign-slice.md`.
 
 개인 가계부, 자산 포트폴리오, 카드/보험, 부동산 청약 준비 상태를 한 화면에서 확인하는 HTML 기반 PWA입니다. 현재 저장소 기준으로는 별도 프론트엔드 빌드 도구 없이 `index.html` 하나가 화면, 상태, Supabase 연동, 차트 렌더링, 입력 폼 처리를 모두 담당합니다.

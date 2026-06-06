@@ -7,7 +7,7 @@ Branch: `codex/asset-trend-redesign`
 
 This document maps the current NetVisualizer structure before any architecture redesign. It describes what exists today, not the desired future shape.
 
-The current app is a static PWA built around one large `index.html` file. Most UI, state, Supabase reads/writes, parsing, chart rendering, transaction import, portfolio editing, real-estate views, and Quant workflows are implemented in that single file. The main exception is the Supabase Edge Function for market price sync. The first redesign slice now extracts long-term asset trend model logic into `js/features/assetTrend.js`.
+The current app is a static PWA built around one large `index.html` file. Most UI, state, Supabase reads/writes, parsing, chart rendering, transaction import, portfolio editing, real-estate views, and Quant workflows are implemented in that single file. The main exception is the Supabase Edge Function for market price sync. The first redesign slice now extracts long-term asset trend model logic into `js/features/assetTrend.js` and starts a visible two-level workspace layout.
 
 ## File-Level Map
 
@@ -44,6 +44,25 @@ flowchart LR
 
     Index --> OpenStreetMap["Leaflet + OpenStreetMap Tiles"]
 ```
+
+## Current Navigation Shape
+
+The app is moving away from one flat tab list. The first visible step keeps all existing Finance screens but places them under a Goal layer.
+
+```mermaid
+flowchart TD
+    AppShell["App shell"] --> GoalLayer["Goal layer\nFinance active"]
+    GoalLayer --> FutureGoals["Career / Project / Health\nvisible placeholders"]
+    GoalLayer --> FinanceTools["Finance tool layer"]
+
+    FinanceTools --> Summary["Summary\nformerly Dashboard"]
+    FinanceTools --> Portfolio["Portfolio"]
+    FinanceTools --> CashFlow["Cash Flow"]
+    FinanceTools --> AssetTrend["Long-Term Asset"]
+    FinanceTools --> RealEstate["Real Estate"]
+```
+
+Current limitation: only Finance is interactive. The other goal buttons are intentionally disabled placeholders until their data model and tool sets are designed.
 
 ## Current SPA Internal Shape
 
