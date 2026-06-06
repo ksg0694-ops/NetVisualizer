@@ -83,6 +83,23 @@ flowchart LR
 
 This keeps KPI calculation in `index.html` for now. The next architecture step should move Finance summary KPI definitions into a small domain module before adding non-Finance goals.
 
+## Current Time Scope
+
+The app is starting to separate time scope by tool.
+
+```mermaid
+flowchart TD
+    LatestState["Latest available month/state"] --> Summary["Summary KPIs"]
+    LatestState --> Portfolio["Portfolio"]
+    LatestState --> AssetTrend["Long-Term Asset"]
+    LatestState --> RealEstate["Real Estate"]
+
+    CashFlowMonth["cashFlowMonthKey"] --> CashFlow["Cash Flow\nmonthly exploration"]
+    CashFlowMonth --> MonthControls["Prev / Next month controls\ninside Cash Flow only"]
+```
+
+Implementation note: `currentMonthKey` still exists for compatibility with existing renderers. `cashFlowMonthKey` remembers the Cash Flow tool's selected month, while non-Cash-Flow tools reset to the latest available month when opened.
+
 ## Current SPA Internal Shape
 
 These are logical areas inside `index.html`; they are not separate modules yet.

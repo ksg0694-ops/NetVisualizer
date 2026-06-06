@@ -128,12 +128,10 @@
         <!-- 상단 헤더 -->
         <header class="h-16 md:h-20 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-20 shrink-0">
             <div class="flex items-center gap-2 md:gap-3 min-w-0">
-                <h2 class="text-lg md:text-xl font-bold text-gray-800 flex items-center gap-1 md:gap-3 shrink-0">
-                    <button id="btn-prev-month" class="p-2 text-gray-400 hover:text-indigo-600 transition-colors disabled:opacity-30"><i class="fas fa-chevron-left text-sm"></i></button>
-                    <span id="display-month" class="w-[90px] md:w-auto text-center truncate">월 로딩중</span>
-                    <button id="btn-next-month" class="p-2 text-gray-400 hover:text-indigo-600 transition-colors disabled:opacity-30"><i class="fas fa-chevron-right text-sm"></i></button>
-                </h2>
-                <span id="display-period" class="hidden md:inline-block text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-md truncate">날짜 계산중</span>
+                <div class="min-w-0">
+                    <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider">Finance Goal</p>
+                    <h2 class="text-lg md:text-xl font-bold text-gray-800 truncate">NetVisualizer</h2>
+                </div>
             </div>
             <div class="flex items-center gap-2 md:gap-3 shrink-0">
                 <span id="sync-status" class="hidden md:inline-block text-xs text-indigo-500 font-medium mr-2 max-w-[150px] truncate">백그라운드 동기화 중...</span>
@@ -342,6 +340,26 @@
 
             <!-- 3. 현금 흐름 뷰 -->
             <div id="stats-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
+                <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Finance Tool</p>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">현금 흐름</h2>
+                        <p class="text-xs md:text-sm text-gray-500 mt-1">이 화면에서만 월별 수입, 지출, 거래 내역을 탐색합니다.</p>
+                    </div>
+                    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-2 md:p-3 flex flex-col md:flex-row md:items-center gap-2 md:gap-3 w-full lg:w-auto">
+                        <div class="flex items-center justify-between md:justify-center gap-2">
+                            <button id="btn-prev-month" class="w-9 h-9 rounded-xl text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-30" title="이전 월">
+                                <i class="fas fa-chevron-left text-sm"></i>
+                            </button>
+                            <span id="display-month" class="min-w-[92px] text-center text-sm md:text-base font-bold text-gray-800 truncate">월 로딩중</span>
+                            <button id="btn-next-month" class="w-9 h-9 rounded-xl text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-30" title="다음 월">
+                                <i class="fas fa-chevron-right text-sm"></i>
+                            </button>
+                        </div>
+                        <span id="display-period" class="text-center text-xs font-medium text-gray-500 bg-gray-100 px-3 py-2 rounded-xl truncate">날짜 계산중</span>
+                    </div>
+                </div>
+
                 <div id="stats-main-content" class="flex flex-col w-full">
                     <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 mb-6 min-w-0">
                         <div class="flex justify-between items-center mb-4">
@@ -1143,6 +1161,7 @@
     // ==========================================
     let monthlyDB = {};
     let currentMonthKey = ''; 
+    let cashFlowMonthKey = '';
     let currentAssetFilter = 'all'; 
     let txSortOrder = 'asc'; 
     const myCharts = {}; 
@@ -1373,6 +1392,24 @@
 
     function getMonthKeys() {
         return sortedMonthKeys;
+    }
+
+    function getLatestMonthKey() {
+        const keys = getMonthKeys();
+        return keys.length > 0 ? keys[keys.length - 1] : '';
+    }
+
+    function useMonthScopeForView(targetId) {
+        const latestMonthKey = getLatestMonthKey();
+        if (!latestMonthKey) return;
+
+        if (targetId === 'stats-view') {
+            cashFlowMonthKey = cashFlowMonthKey || currentMonthKey || latestMonthKey;
+            currentMonthKey = cashFlowMonthKey;
+            return;
+        }
+
+        currentMonthKey = latestMonthKey;
     }
 
     function getSupabaseClient() {
@@ -1743,6 +1780,7 @@
         sortedMonthKeys = Object.keys(monthlyDB).sort();
         if (sortedMonthKeys.length > 0) {
             if (!currentMonthKey || !monthlyDB[currentMonthKey]) currentMonthKey = sortedMonthKeys[sortedMonthKeys.length - 1];
+            if (!cashFlowMonthKey || !monthlyDB[cashFlowMonthKey]) cashFlowMonthKey = currentMonthKey;
         }
     }
 
@@ -1989,6 +2027,7 @@
                 mergeTransactionRowsIntoCache(insertedRows);
                 const { monthKey } = getMonthKeyAndPeriod(date);
                 currentMonthKey = monthKey;
+                cashFlowMonthKey = monthKey;
                 renderSections({ dashboard: true, portfolio: true });
             } else {
                 await fetchSheetData(false, ['transactions']);
@@ -2498,7 +2537,10 @@
                 mergeTransactionRowsIntoCache(insertedRows);
                 const sortedRows = insertedRows.slice().sort((a, b) => `${a.date} ${a.time || '00:00'}`.localeCompare(`${b.date} ${b.time || '00:00'}`));
                 const newest = sortedRows[sortedRows.length - 1];
-                if (newest?.date) currentMonthKey = getMonthKeyAndPeriod(newest.date).monthKey;
+                if (newest?.date) {
+                    currentMonthKey = getMonthKeyAndPeriod(newest.date).monthKey;
+                    cashFlowMonthKey = currentMonthKey;
+                }
                 renderSections({ dashboard: true, portfolio: true });
                 toggleManageView(true);
             } else {
@@ -3002,6 +3044,7 @@
     };
 
     function switchView(targetId) {
+        useMonthScopeForView(targetId);
         activeViewId = targetId;
         document.querySelectorAll('.nav-link').forEach(nav => {
             if(nav.getAttribute('data-target') === targetId) { nav.classList.add('text-indigo-600', 'bg-indigo-50'); nav.classList.remove('text-gray-600', 'hover:bg-gray-50'); }
@@ -3059,8 +3102,10 @@
                 if (nextIndex !== activeIndex) { e.preventDefault(); switchView(navLinks[nextIndex].getAttribute('data-target')); }
             }
         }
-        if (e.key === 'ArrowLeft' && !document.getElementById('btn-prev-month').disabled) document.getElementById('btn-prev-month').click();
-        else if (e.key === 'ArrowRight' && !document.getElementById('btn-next-month').disabled) document.getElementById('btn-next-month').click();
+        const prevMonthButton = document.getElementById('btn-prev-month');
+        const nextMonthButton = document.getElementById('btn-next-month');
+        if (activeViewId === 'stats-view' && e.key === 'ArrowLeft' && prevMonthButton && !prevMonthButton.disabled) prevMonthButton.click();
+        else if (activeViewId === 'stats-view' && e.key === 'ArrowRight' && nextMonthButton && !nextMonthButton.disabled) nextMonthButton.click();
     });
 
     function updateNavigationButtons() {
@@ -3068,17 +3113,18 @@
         const idx = keys.indexOf(currentMonthKey);
         const btnPrev = document.getElementById('btn-prev-month');
         const btnNext = document.getElementById('btn-next-month');
+        if (!btnPrev || !btnNext) return;
         btnPrev.disabled = idx <= 0; btnNext.disabled = idx === -1 || idx >= keys.length - 1;
     }
 
-    document.getElementById('btn-prev-month').addEventListener('click', () => {
+    document.getElementById('btn-prev-month')?.addEventListener('click', () => {
         const keys = getMonthKeys(); const idx = keys.indexOf(currentMonthKey);
-        if (idx > 0) { currentMonthKey = keys[idx - 1]; renderSections({ dashboard: true, portfolio: true, realEstate: activeViewId === 'realestate-view' }); }
+        if (idx > 0) { currentMonthKey = keys[idx - 1]; cashFlowMonthKey = currentMonthKey; renderSections({ dashboard: true }); }
     });
 
-    document.getElementById('btn-next-month').addEventListener('click', () => {
+    document.getElementById('btn-next-month')?.addEventListener('click', () => {
         const keys = getMonthKeys(); const idx = keys.indexOf(currentMonthKey);
-        if (idx !== -1 && idx < keys.length - 1) { currentMonthKey = keys[idx + 1]; renderSections({ dashboard: true, portfolio: true, realEstate: activeViewId === 'realestate-view' }); }
+        if (idx !== -1 && idx < keys.length - 1) { currentMonthKey = keys[idx + 1]; cashFlowMonthKey = currentMonthKey; renderSections({ dashboard: true }); }
     });
 
     window.toggleAccordion = function(btn) {
