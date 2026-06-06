@@ -21,6 +21,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS (Excel import) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -1317,7 +1319,7 @@
             <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 sticky top-0 z-10">
                 <div>
                     <h3 class="text-lg font-bold text-gray-800">거래내역 가져오기</h3>
-                    <p class="text-xs text-gray-500 mt-0.5">CSV/TSV 파일을 확인한 뒤 선택 가능한 행만 저장합니다.</p>
+                    <p class="text-xs text-gray-500 mt-0.5">CSV/TSV/XLSX 파일을 확인한 뒤 선택 가능한 행만 저장합니다.</p>
                 </div>
                 <button onclick="closeTxImportModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-lg"></i></button>
             </div>
@@ -1325,7 +1327,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-[1fr_220px] gap-3">
                     <div>
                         <label class="block text-xs font-bold text-gray-700 mb-1">파일</label>
-                        <input type="file" id="tx-import-file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-white">
+                        <input type="file" id="tx-import-file" accept=".csv,.tsv,.txt,.xlsx,.xls,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-white">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-700 mb-1">기본 결제수단</label>
@@ -1336,6 +1338,7 @@
                 <div class="bg-sky-50 border border-sky-100 rounded-xl p-4 text-xs md:text-sm text-sky-800 leading-relaxed">
                     <strong>인식 컬럼</strong>
                     <span class="text-sky-700">날짜, 시간, 유형, 대분류, 소분류, 내용/메모, 금액, 출금액, 입금액, 결제금액, 통화, 결제수단</span>
+                    <div class="mt-1 text-[11px] text-sky-700">뱅크샐러드 엑셀은 2번째 시트 또는 가계부 내역 시트를 자동으로 읽습니다.</div>
                 </div>
 
                 <div id="tx-import-summary" class="text-sm text-gray-500 bg-gray-50 border border-gray-100 rounded-xl p-4">
@@ -1487,6 +1490,7 @@
     let txImportCandidates = [];
     let txImportStats = { total: 0, ready: 0, duplicate: 0, invalid: 0 };
     let txImportRawRows = null;
+    let txImportSourceMeta = null;
     let txImportAuditRuns = [];
 
     const SUPABASE_COLUMNS = {
@@ -2337,12 +2341,13 @@
     }
 
     // ==========================================
-    // Phase 3: 거래 내역 CSV/TSV 가져오기
+    // Phase 3: 거래 내역 CSV/TSV/XLSX 가져오기
     // ==========================================
     function openTxImportModal() {
         txImportCandidates = [];
         txImportStats = { total: 0, ready: 0, duplicate: 0, invalid: 0 };
         txImportRawRows = null;
+        txImportSourceMeta = null;
 
         const fileInput = document.getElementById('tx-import-file');
         const sourceInput = document.getElementById('tx-import-source');
@@ -2500,6 +2505,105 @@
         return rows;
     }
 
+    function isSpreadsheetImportFile(file) {
+        const name = String(file?.name || '').toLowerCase();
+        const type = String(file?.type || '').toLowerCase();
+        if (/\.(csv|tsv|txt)$/.test(name)) return false;
+        return /\.(xlsx|xls)$/.test(name)
+            || type.includes('spreadsheetml')
+            || type === 'application/vnd.ms-excel';
+    }
+
+    function normalizeSpreadsheetImportCell(value) {
+        if (value instanceof Date && !Number.isNaN(value.getTime())) {
+            const year = value.getFullYear();
+            const month = String(value.getMonth() + 1).padStart(2, '0');
+            const day = String(value.getDate()).padStart(2, '0');
+            const hour = String(value.getHours()).padStart(2, '0');
+            const minute = String(value.getMinutes()).padStart(2, '0');
+            const second = String(value.getSeconds()).padStart(2, '0');
+
+            if (year < 1901) return `${hour}:${minute}:${second}`;
+            const date = `${year}-${month}-${day}`;
+            return `${hour}:${minute}:${second}` === '00:00:00' ? date : `${date} ${hour}:${minute}:${second}`;
+        }
+
+        return String(value ?? '').replace(/\s+/g, ' ').trim();
+    }
+
+    function normalizeSpreadsheetImportRows(rows) {
+        return (rows || []).map(row => {
+            const cells = (Array.isArray(row) ? row : [row]).map(normalizeSpreadsheetImportCell);
+            while (cells.length && !cells[cells.length - 1]) cells.pop();
+            return cells;
+        }).filter(row => row.some(cell => String(cell).trim() !== ''));
+    }
+
+    function getImportHeaderScore(row) {
+        const expectedHeaders = new Set(['date', 'time', 'type', 'category', 'subcategory', 'memo', 'amount', 'withdrawal', 'deposit', 'expenseAmount', 'currency', 'method']);
+        return (row || []).reduce((score, cell) => {
+            const normalized = normalizeImportHeader(cell);
+            return score + (expectedHeaders.has(normalized) ? 1 : 0);
+        }, 0);
+    }
+
+    function findImportHeaderRowIndex(rows) {
+        return (rows || []).findIndex(row => getImportHeaderScore(row) >= 3);
+    }
+
+    function readSpreadsheetSheetRows(workbook, sheetName) {
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, {
+            header: 1,
+            raw: false,
+            defval: '',
+            dateNF: 'yyyy-mm-dd'
+        });
+        return normalizeSpreadsheetImportRows(rows);
+    }
+
+    async function parseSpreadsheetImportFile(file) {
+        if (!window.XLSX) {
+            throw new Error('엑셀 파서가 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.');
+        }
+
+        const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+        const sheetNames = workbook.SheetNames || [];
+        if (!sheetNames.length) throw new Error('엑셀 파일에서 시트를 찾지 못했습니다.');
+
+        const candidates = sheetNames.map((sheetName, index) => {
+            const rows = readSpreadsheetSheetRows(workbook, sheetName);
+            const headerIndex = findImportHeaderRowIndex(rows);
+            const headerScore = headerIndex >= 0 ? getImportHeaderScore(rows[headerIndex]) : 0;
+            const nameScore = /가계부|거래|내역/i.test(sheetName) ? 3 : 0;
+            const secondSheetScore = index === 1 ? 2 : 0;
+            return {
+                sheetName,
+                rows,
+                headerIndex,
+                score: headerScore * 10 + nameScore + secondSheetScore
+            };
+        });
+
+        const selected = candidates
+            .filter(candidate => candidate.rows.length > 1)
+            .sort((a, b) => b.score - a.score)[0];
+
+        if (!selected) throw new Error('가져올 거래 행을 찾지 못했습니다.');
+
+        const headerIndex = selected.headerIndex >= 0 ? selected.headerIndex : 0;
+        const rows = selected.rows.slice(headerIndex);
+        txImportSourceMeta = { kind: 'xlsx', sheetName: selected.sheetName };
+        return rows;
+    }
+
+    async function parseTextImportFile(file) {
+        const text = await file.text();
+        const delimiter = detectDelimitedImportDelimiter(text);
+        txImportSourceMeta = { kind: delimiter === '\t' ? 'tsv' : 'csv', sheetName: '' };
+        return parseDelimitedImportText(text, delimiter);
+    }
+
     function normalizeImportHeader(header) {
         const key = String(header || '')
             .trim()
@@ -2564,7 +2668,7 @@
         const raw = String(value ?? '').trim();
         if (!raw) return null;
 
-        const colonMatch = raw.match(/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
+        const colonMatch = raw.match(/(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
         if (colonMatch) {
             const hour = Number(colonMatch[1]);
             const minute = Number(colonMatch[2]);
@@ -2732,19 +2836,21 @@
     async function handleTxImportFile(file) {
         if (!file) {
             txImportRawRows = null;
+            txImportSourceMeta = null;
             rebuildTxImportCandidates();
             return;
         }
 
         try {
-            const text = await file.text();
-            const delimiter = detectDelimitedImportDelimiter(text);
-            const rows = parseDelimitedImportText(text, delimiter);
+            const rows = isSpreadsheetImportFile(file)
+                ? await parseSpreadsheetImportFile(file)
+                : await parseTextImportFile(file);
             if (rows.length < 2) throw new Error('가져올 거래 행을 찾지 못했습니다.');
             txImportRawRows = rows;
             rebuildTxImportCandidates();
         } catch (error) {
             txImportRawRows = null;
+            txImportSourceMeta = null;
             txImportCandidates = [];
             txImportStats = { total: 0, ready: 0, duplicate: 0, invalid: 0 };
             renderTxImportPreview();
@@ -2774,8 +2880,12 @@
 
         const visibleRows = txImportCandidates.slice(0, 80);
         const hiddenCount = Math.max(txImportCandidates.length - visibleRows.length, 0);
+        const sourceBadge = txImportSourceMeta?.kind
+            ? `<span class="px-2 py-1 rounded-md bg-sky-100 text-sky-700 font-bold">${escapeHtml(txImportSourceMeta.kind.toUpperCase())}${txImportSourceMeta.sheetName ? ` · ${escapeHtml(txImportSourceMeta.sheetName)}` : ''}</span>`
+            : '';
         summary.innerHTML = `
             <div class="flex flex-wrap gap-2 items-center">
+                ${sourceBadge}
                 <span class="font-bold text-gray-700">총 ${txImportStats.total.toLocaleString()}건</span>
                 <span class="px-2 py-1 rounded-md bg-emerald-100 text-emerald-700 font-bold">저장 가능 ${txImportStats.ready.toLocaleString()}건</span>
                 <span class="px-2 py-1 rounded-md bg-amber-100 text-amber-700 font-bold">중복 ${txImportStats.duplicate.toLocaleString()}건</span>
