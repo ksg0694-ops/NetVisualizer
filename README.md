@@ -18,7 +18,7 @@
 `codex/asset-trend-redesign` branch starts the redesign from the long-term asset trend screen.
 
 - Navigation now has two levels: Goal first, then Finance tools.
-- Finance is the active goal. Career, Project, and Health are visible placeholders for later expansion.
+- Finance, Career, Project, and Health are selectable Goal cockpits. Career/Project/Health currently provide draft KPI structures and next-action areas before data tables are added.
 - Finance opens a Goal cockpit with asset goal progress, housing funding readiness, year-to-date surplus, and year-to-date surplus rate.
 - The Finance cockpit and Finance tool screens follow a consistent visual structure: time-scope badges, decision cards, one primary visual, and detail/action cards.
 - Finance tools are grouped as Portfolio, Cash Flow, Long-Term Asset, and Real Estate.

@@ -69,17 +69,16 @@
                 <div>
                     <p class="px-3 mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Goal</p>
                     <div class="space-y-1">
-                        <button type="button" onclick="switchView('dashboard-view')" class="w-full flex items-center justify-between gap-3 px-4 py-3 text-indigo-700 bg-indigo-50 rounded-xl font-semibold border border-indigo-100">
-                            <span class="flex items-center gap-3"><i class="fas fa-coins w-5 text-center"></i> Finance</span>
-                            <span class="text-[9px] font-bold bg-white text-indigo-500 px-2 py-0.5 rounded-full">ACTIVE</span>
+                        <button type="button" data-target="dashboard-view" onclick="switchView('dashboard-view')" class="goal-link w-full flex items-center gap-3 px-4 py-3 text-indigo-700 bg-indigo-50 rounded-xl font-semibold border border-indigo-100 transition-all">
+                            <i class="fas fa-coins w-5 text-center"></i> Finance
                         </button>
-                        <button type="button" disabled class="w-full flex items-center gap-3 px-4 py-2.5 text-gray-300 rounded-xl font-medium cursor-not-allowed">
+                        <button type="button" data-target="career-view" onclick="switchView('career-view')" class="goal-link w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
                             <i class="fas fa-id-badge w-5 text-center"></i> Career
                         </button>
-                        <button type="button" disabled class="w-full flex items-center gap-3 px-4 py-2.5 text-gray-300 rounded-xl font-medium cursor-not-allowed">
+                        <button type="button" data-target="project-view" onclick="switchView('project-view')" class="goal-link w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
                             <i class="fas fa-folder-open w-5 text-center"></i> Project
                         </button>
-                        <button type="button" disabled class="w-full flex items-center gap-3 px-4 py-2.5 text-gray-300 rounded-xl font-medium cursor-not-allowed">
+                        <button type="button" data-target="health-view" onclick="switchView('health-view')" class="goal-link w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
                             <i class="fas fa-heart-pulse w-5 text-center"></i> Health
                         </button>
                     </div>
@@ -126,8 +125,8 @@
         <header class="h-16 md:h-20 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-20 shrink-0">
             <div class="flex items-center gap-2 md:gap-3 min-w-0">
                 <div class="min-w-0">
-                    <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider">Finance Goal</p>
-                    <h2 class="text-lg md:text-xl font-bold text-gray-800 truncate">NetVisualizer</h2>
+                    <p id="app-context-label" class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider">Finance Goal</p>
+                    <h2 id="app-context-title" class="text-lg md:text-xl font-bold text-gray-800 truncate">Finance Cockpit</h2>
                 </div>
             </div>
             <div class="flex items-center gap-2 md:gap-3 shrink-0">
@@ -145,16 +144,16 @@
         <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-36 md:pb-8 scrollbar-hide relative pb-safe">
             <div class="md:hidden max-w-6xl mx-auto mb-4">
                 <div class="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-                    <button type="button" onclick="switchView('dashboard-view')" class="shrink-0 flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-sm">
+                    <button type="button" data-target="dashboard-view" onclick="switchView('dashboard-view')" class="mobile-goal-link shrink-0 flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-sm border border-indigo-600">
                         <i class="fas fa-coins"></i> Finance
                     </button>
-                    <button type="button" disabled class="shrink-0 flex items-center gap-2 bg-white text-gray-300 border border-gray-100 px-3 py-2 rounded-xl text-xs font-bold">
+                    <button type="button" data-target="career-view" onclick="switchView('career-view')" class="mobile-goal-link shrink-0 flex items-center gap-2 bg-white text-gray-500 border border-gray-100 px-3 py-2 rounded-xl text-xs font-bold">
                         <i class="fas fa-id-badge"></i> Career
                     </button>
-                    <button type="button" disabled class="shrink-0 flex items-center gap-2 bg-white text-gray-300 border border-gray-100 px-3 py-2 rounded-xl text-xs font-bold">
+                    <button type="button" data-target="project-view" onclick="switchView('project-view')" class="mobile-goal-link shrink-0 flex items-center gap-2 bg-white text-gray-500 border border-gray-100 px-3 py-2 rounded-xl text-xs font-bold">
                         <i class="fas fa-folder-open"></i> Project
                     </button>
-                    <button type="button" disabled class="shrink-0 flex items-center gap-2 bg-white text-gray-300 border border-gray-100 px-3 py-2 rounded-xl text-xs font-bold">
+                    <button type="button" data-target="health-view" onclick="switchView('health-view')" class="mobile-goal-link shrink-0 flex items-center gap-2 bg-white text-gray-500 border border-gray-100 px-3 py-2 rounded-xl text-xs font-bold">
                         <i class="fas fa-heart-pulse"></i> Health
                     </button>
                 </div>
@@ -280,6 +279,266 @@
                         <h4 class="text-sm font-bold text-gray-800 mb-1">청약 준비 확인</h4>
                         <p class="text-xs text-gray-500 leading-relaxed">자금 준비율과 주요 분양 일정을 점검합니다.</p>
                     </button>
+                </div>
+            </div>
+
+            <!-- 1-2. Career Goal -->
+            <div id="career-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
+                <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Career Goal</p>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">Career Cockpit</h2>
+                        <p class="text-xs md:text-sm text-gray-500 mt-1">직무 성장, 보상, 네트워크, 포트폴리오 신호를 한 화면에서 관리합니다.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">초안 구조</span>
+                        <span class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-xl whitespace-nowrap">분기 점검</span>
+                    </div>
+                </div>
+
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <h3 class="text-sm md:text-base font-bold text-gray-800">Decision Cards</h3>
+                    <span class="text-[10px] md:text-xs text-gray-400">성장 / 보상 / 신뢰 자산</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5 mb-8">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-indigo-500 min-w-0">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">핵심 역량 스택</p>
+                            <i class="fas fa-layer-group text-indigo-400"></i>
+                        </div>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">4개</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">현재 업무, 데이터, 자동화, 커뮤니케이션</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-emerald-500 min-w-0">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">보상 성장 준비도</p>
+                            <i class="fas fa-arrow-trend-up text-emerald-400"></i>
+                        </div>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">정의 필요</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">연봉, 직무 레벨, 이직 기준값 연결 예정</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500 min-w-0">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">외부 신뢰 자산</p>
+                            <i class="fas fa-certificate text-amber-400"></i>
+                        </div>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">0건</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">문서, 발표, 자격, 추천 기록</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-sky-500 min-w-0">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">다음 의사결정</p>
+                            <i class="fas fa-compass text-sky-400"></i>
+                        </div>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">Q 단위</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">분기별 목표와 회고를 기준으로 판단</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_360px] gap-4 md:gap-6 mb-8">
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 min-w-0">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Primary Visual</p>
+                        <h3 class="text-base md:text-lg font-bold text-gray-800 mb-4">Career Growth Map</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                            <div class="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4 min-h-[130px]">
+                                <p class="text-[10px] font-bold text-indigo-500 mb-2">01</p>
+                                <h4 class="text-sm font-bold text-gray-800 mb-1">현재 역할</h4>
+                                <p class="text-xs text-gray-500 leading-relaxed">업무 책임과 강점을 기록합니다.</p>
+                            </div>
+                            <div class="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4 min-h-[130px]">
+                                <p class="text-[10px] font-bold text-emerald-500 mb-2">02</p>
+                                <h4 class="text-sm font-bold text-gray-800 mb-1">성장 스택</h4>
+                                <p class="text-xs text-gray-500 leading-relaxed">기술, 도메인, 커뮤니케이션을 묶습니다.</p>
+                            </div>
+                            <div class="rounded-2xl border border-amber-100 bg-amber-50/60 p-4 min-h-[130px]">
+                                <p class="text-[10px] font-bold text-amber-500 mb-2">03</p>
+                                <h4 class="text-sm font-bold text-gray-800 mb-1">증거 수집</h4>
+                                <p class="text-xs text-gray-500 leading-relaxed">성과, 산출물, 피드백을 누적합니다.</p>
+                            </div>
+                            <div class="rounded-2xl border border-sky-100 bg-sky-50/60 p-4 min-h-[130px]">
+                                <p class="text-[10px] font-bold text-sky-500 mb-2">04</p>
+                                <h4 class="text-sm font-bold text-gray-800 mb-1">선택 기준</h4>
+                                <p class="text-xs text-gray-500 leading-relaxed">승진, 이직, 학습 투자 기준을 정합니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Next Actions</p>
+                        <div class="space-y-3">
+                            <div class="flex gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                                <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><i class="fas fa-pen"></i></div>
+                                <div><h4 class="text-sm font-bold text-gray-800">성과 로그</h4><p class="text-xs text-gray-500">월별 업무 성과 기록 테이블 연결</p></div>
+                            </div>
+                            <div class="flex gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                                <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><i class="fas fa-scale-balanced"></i></div>
+                                <div><h4 class="text-sm font-bold text-gray-800">보상 기준</h4><p class="text-xs text-gray-500">연봉/직무 레벨 목표값 정의</p></div>
+                            </div>
+                            <div class="flex gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                                <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><i class="fas fa-folder-open"></i></div>
+                                <div><h4 class="text-sm font-bold text-gray-800">포트폴리오</h4><p class="text-xs text-gray-500">외부 공개 가능한 산출물 정리</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1-3. Project Goal -->
+            <div id="project-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
+                <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Project Goal</p>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">Project Cockpit</h2>
+                        <p class="text-xs md:text-sm text-gray-500 mt-1">개인 프로젝트의 진행, 출시, 유지보수, 학습 산출물을 관리합니다.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">운영 초안</span>
+                        <span class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-xl whitespace-nowrap">Kanban 기준</span>
+                    </div>
+                </div>
+
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <h3 class="text-sm md:text-base font-bold text-gray-800">Decision Cards</h3>
+                    <span class="text-[10px] md:text-xs text-gray-400">진행 / 출시 / 유지보수</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5 mb-8">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-indigo-500 min-w-0">
+                        <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">진행 중 프로젝트</p>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">1개</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">NetVisualizer</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-emerald-500 min-w-0">
+                        <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">출시 후보</p>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">0개</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">배포 체크리스트 연결 예정</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500 min-w-0">
+                        <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">막힌 항목</p>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">정의 필요</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">이슈/PR 연결 후보</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-sky-500 min-w-0">
+                        <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">학습 산출물</p>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">0건</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">회고/문서/데모 링크</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_360px] gap-4 md:gap-6 mb-8">
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 min-w-0">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Primary Visual</p>
+                        <h3 class="text-base md:text-lg font-bold text-gray-800 mb-4">Project Pipeline</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                            <div class="rounded-2xl border border-gray-100 bg-gray-50 p-4 min-h-[150px]">
+                                <h4 class="text-xs font-bold text-gray-500 mb-3">Backlog</h4>
+                                <div class="rounded-xl bg-white border border-gray-100 p-3 text-xs text-gray-600">기능 후보 / 아이디어</div>
+                            </div>
+                            <div class="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4 min-h-[150px]">
+                                <h4 class="text-xs font-bold text-indigo-500 mb-3">Build</h4>
+                                <div class="rounded-xl bg-white border border-indigo-100 p-3 text-xs text-gray-700 font-semibold">NetVisualizer 구조 재설계</div>
+                            </div>
+                            <div class="rounded-2xl border border-amber-100 bg-amber-50/60 p-4 min-h-[150px]">
+                                <h4 class="text-xs font-bold text-amber-500 mb-3">Review</h4>
+                                <div class="rounded-xl bg-white border border-amber-100 p-3 text-xs text-gray-600">테스트 / UI 확인</div>
+                            </div>
+                            <div class="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4 min-h-[150px]">
+                                <h4 class="text-xs font-bold text-emerald-500 mb-3">Ship</h4>
+                                <div class="rounded-xl bg-white border border-emerald-100 p-3 text-xs text-gray-600">GitHub Pages / 릴리즈</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Next Actions</p>
+                        <div class="space-y-3">
+                            <div class="flex gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                                <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><i class="fas fa-table-list"></i></div>
+                                <div><h4 class="text-sm font-bold text-gray-800">프로젝트 DB</h4><p class="text-xs text-gray-500">프로젝트/이슈/마일스톤 테이블 설계</p></div>
+                            </div>
+                            <div class="flex gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                                <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><i class="fas fa-rocket"></i></div>
+                                <div><h4 class="text-sm font-bold text-gray-800">출시 기준</h4><p class="text-xs text-gray-500">배포, 문서, 백업 체크리스트 정의</p></div>
+                            </div>
+                            <div class="flex gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                                <div class="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center shrink-0"><i class="fas fa-chart-line"></i></div>
+                                <div><h4 class="text-sm font-bold text-gray-800">성과 지표</h4><p class="text-xs text-gray-500">사용 빈도, 자동화 시간 절감 추적</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1-4. Health Goal -->
+            <div id="health-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
+                <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Health Goal</p>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">Health Cockpit</h2>
+                        <p class="text-xs md:text-sm text-gray-500 mt-1">수면, 운동, 컨디션, 검진 루틴을 장기 목표와 함께 관리합니다.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">생활 루틴</span>
+                        <span class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-xl whitespace-nowrap">주간 점검</span>
+                    </div>
+                </div>
+
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <h3 class="text-sm md:text-base font-bold text-gray-800">Decision Cards</h3>
+                    <span class="text-[10px] md:text-xs text-gray-400">수면 / 운동 / 회복</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5 mb-8">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-indigo-500 min-w-0">
+                        <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">수면 목표</p>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">정의 필요</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">시간, 취침/기상, 질 점수</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-emerald-500 min-w-0">
+                        <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">운동 빈도</p>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">주 0회</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">근력, 유산소, 스트레칭 분리 예정</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500 min-w-0">
+                        <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">컨디션 로그</p>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">0건</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">피로, 통증, 집중도 기록</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-sky-500 min-w-0">
+                        <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">검진 / 치료</p>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">대기</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">검진 주기와 예약 관리 후보</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_360px] gap-4 md:gap-6 mb-8">
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 min-w-0">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Primary Visual</p>
+                        <h3 class="text-base md:text-lg font-bold text-gray-800 mb-4">Weekly Health Rhythm</h3>
+                        <div class="grid grid-cols-7 gap-2">
+                            <div class="rounded-xl bg-indigo-50 border border-indigo-100 p-3 text-center"><p class="text-[10px] font-bold text-indigo-500">MON</p><i class="fas fa-moon text-indigo-300 mt-3"></i></div>
+                            <div class="rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-center"><p class="text-[10px] font-bold text-emerald-500">TUE</p><i class="fas fa-dumbbell text-emerald-300 mt-3"></i></div>
+                            <div class="rounded-xl bg-gray-50 border border-gray-100 p-3 text-center"><p class="text-[10px] font-bold text-gray-500">WED</p><i class="fas fa-leaf text-gray-300 mt-3"></i></div>
+                            <div class="rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-center"><p class="text-[10px] font-bold text-emerald-500">THU</p><i class="fas fa-person-running text-emerald-300 mt-3"></i></div>
+                            <div class="rounded-xl bg-indigo-50 border border-indigo-100 p-3 text-center"><p class="text-[10px] font-bold text-indigo-500">FRI</p><i class="fas fa-bed text-indigo-300 mt-3"></i></div>
+                            <div class="rounded-xl bg-amber-50 border border-amber-100 p-3 text-center"><p class="text-[10px] font-bold text-amber-500">SAT</p><i class="fas fa-heart-pulse text-amber-300 mt-3"></i></div>
+                            <div class="rounded-xl bg-sky-50 border border-sky-100 p-3 text-center"><p class="text-[10px] font-bold text-sky-500">SUN</p><i class="fas fa-clipboard-check text-sky-300 mt-3"></i></div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-4">주간 루틴은 실제 건강 데이터 테이블이 생기면 자동 계산으로 전환합니다.</p>
+                    </div>
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Next Actions</p>
+                        <div class="space-y-3">
+                            <div class="flex gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                                <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><i class="fas fa-moon"></i></div>
+                                <div><h4 class="text-sm font-bold text-gray-800">수면 로그</h4><p class="text-xs text-gray-500">수면 시간과 질 점수 기록 구조</p></div>
+                            </div>
+                            <div class="flex gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                                <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><i class="fas fa-dumbbell"></i></div>
+                                <div><h4 class="text-sm font-bold text-gray-800">운동 기록</h4><p class="text-xs text-gray-500">운동 종류, 시간, 강도 기록</p></div>
+                            </div>
+                            <div class="flex gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                                <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><i class="fas fa-notes-medical"></i></div>
+                                <div><h4 class="text-sm font-bold text-gray-800">검진 관리</h4><p class="text-xs text-gray-500">검진 주기와 병원 기록 연결</p></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -3075,13 +3334,63 @@
 
     const views = {
         'dashboard-view': document.getElementById('dashboard-view'), 'portfolio-view': document.getElementById('portfolio-view'),
+        'career-view': document.getElementById('career-view'), 'project-view': document.getElementById('project-view'),
+        'health-view': document.getElementById('health-view'),
         'stats-view': document.getElementById('stats-view'), 'asset-view': document.getElementById('asset-view'),
         'realestate-view': document.getElementById('realestate-view'), 'invest-detail-view': document.getElementById('invest-detail-view')
     };
 
+    const viewContextMeta = {
+        'dashboard-view': { label: 'Finance Goal', title: 'Finance Cockpit' },
+        'career-view': { label: 'Career Goal', title: 'Career Cockpit' },
+        'project-view': { label: 'Project Goal', title: 'Project Cockpit' },
+        'health-view': { label: 'Health Goal', title: 'Health Cockpit' },
+        'portfolio-view': { label: 'Finance Tool', title: '포트폴리오' },
+        'stats-view': { label: 'Finance Tool', title: '현금 흐름' },
+        'asset-view': { label: 'Finance Tool', title: '장기 자산' },
+        'realestate-view': { label: 'Finance Tool', title: '부동산 / 청약' },
+        'invest-detail-view': { label: 'Finance Tool', title: '투자 상세' }
+    };
+
+    function updateAppContext(targetId) {
+        const meta = viewContextMeta[targetId] || viewContextMeta['dashboard-view'];
+        const labelEl = document.getElementById('app-context-label');
+        const titleEl = document.getElementById('app-context-title');
+        if (labelEl) labelEl.textContent = meta.label;
+        if (titleEl) titleEl.textContent = meta.title;
+    }
+
+    function updateGoalNavigation(targetId) {
+        const financeToolViews = new Set(['portfolio-view', 'stats-view', 'asset-view', 'realestate-view', 'invest-detail-view']);
+        const activeGoalTarget = financeToolViews.has(targetId) ? 'dashboard-view' : targetId;
+        document.querySelectorAll('.goal-link').forEach(nav => {
+            const isActive = nav.getAttribute('data-target') === activeGoalTarget;
+            nav.classList.toggle('text-indigo-700', isActive);
+            nav.classList.toggle('bg-indigo-50', isActive);
+            nav.classList.toggle('font-semibold', isActive);
+            nav.classList.toggle('border', isActive);
+            nav.classList.toggle('border-indigo-100', isActive);
+            nav.classList.toggle('text-gray-600', !isActive);
+            nav.classList.toggle('hover:bg-gray-50', !isActive);
+            nav.classList.toggle('font-medium', !isActive);
+        });
+        document.querySelectorAll('.mobile-goal-link').forEach(nav => {
+            const isActive = nav.getAttribute('data-target') === activeGoalTarget;
+            nav.classList.toggle('bg-indigo-600', isActive);
+            nav.classList.toggle('text-white', isActive);
+            nav.classList.toggle('border-indigo-600', isActive);
+            nav.classList.toggle('shadow-sm', isActive);
+            nav.classList.toggle('bg-white', !isActive);
+            nav.classList.toggle('text-gray-500', !isActive);
+            nav.classList.toggle('border-gray-100', !isActive);
+        });
+    }
+
     function switchView(targetId) {
         useMonthScopeForView(targetId);
         activeViewId = targetId;
+        updateAppContext(targetId);
+        updateGoalNavigation(targetId);
         document.querySelectorAll('.nav-link').forEach(nav => {
             if(nav.getAttribute('data-target') === targetId) { nav.classList.add('text-indigo-600', 'bg-indigo-50'); nav.classList.remove('text-gray-600', 'hover:bg-gray-50'); }
             else { nav.classList.remove('text-indigo-600', 'bg-indigo-50'); nav.classList.add('text-gray-600', 'hover:bg-gray-50'); }

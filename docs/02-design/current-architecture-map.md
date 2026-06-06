@@ -85,6 +85,11 @@ Visual structure:
 
 ```mermaid
 flowchart TD
+    GoalNav["Goal navigation"] --> FinanceGoal["Finance Cockpit"]
+    GoalNav --> CareerGoal["Career Cockpit"]
+    GoalNav --> ProjectGoal["Project Cockpit"]
+    GoalNav --> HealthGoal["Health Cockpit"]
+
     Header["Goal title + time-scope badges"] --> DecisionCards["Decision Cards\nasset goal, housing readiness,\nyear surplus, surplus rate"]
     DecisionCards --> PrimaryVisual["Primary Visual\nasset-flow chart"]
     PrimaryVisual --> NextActions["Next Actions\nportfolio, cash flow, real estate"]
@@ -99,7 +104,7 @@ flowchart TD
     ToolVisual --> ToolDetail["Detail / Action\nlists, edit buttons, schedule, roadmap"]
 ```
 
-This keeps KPI calculation in `index.html` for now. The next architecture step should move Finance summary KPI definitions into a small domain module before adding non-Finance goals.
+This keeps KPI calculation in `index.html` for now. The next architecture step should move Finance summary KPI definitions and future Career/Project/Health goal metrics into small domain modules.
 
 ## Current Time Scope
 
