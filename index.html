@@ -226,7 +226,10 @@
                             <i class="fas fa-wallet text-emerald-400"></i>
                         </div>
                         <h3 class="text-xl md:text-2xl font-bold text-gray-900 truncate" id="finance-kpi-cashflow">0원</h3>
-                        <p class="text-[10px] md:text-xs text-gray-400 mt-1 truncate" id="finance-kpi-cashflow-meta">올해 수입 0원 · 지출 0원</p>
+                        <div class="text-[10px] md:text-xs text-gray-400 mt-2 space-y-0.5" id="finance-kpi-cashflow-meta">
+                            <div class="flex justify-between gap-2"><span>수입</span><span class="font-semibold text-gray-500">0원</span></div>
+                            <div class="flex justify-between gap-2"><span>지출</span><span class="font-semibold text-gray-500">0원</span></div>
+                        </div>
                     </div>
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-sky-500 min-w-0">
                         <div class="flex items-center justify-between gap-3 mb-3">
@@ -234,7 +237,10 @@
                             <i class="fas fa-piggy-bank text-sky-400"></i>
                         </div>
                         <h3 class="text-xl md:text-2xl font-bold text-gray-900" id="finance-kpi-saving-rate">0%</h3>
-                        <p class="text-[10px] md:text-xs text-gray-400 mt-1 truncate" id="finance-kpi-saving-meta">올해 잉여 0원 / 수입 0원</p>
+                        <div class="text-[10px] md:text-xs text-gray-400 mt-2 space-y-0.5" id="finance-kpi-saving-meta">
+                            <div class="flex justify-between gap-2"><span>잉여</span><span class="font-semibold text-gray-500">0원</span></div>
+                            <div class="flex justify-between gap-2"><span>수입</span><span class="font-semibold text-gray-500">0원</span></div>
+                        </div>
                         <div class="w-full bg-gray-100 rounded-full h-2 mt-3 overflow-hidden">
                             <div class="h-full bg-sky-500 transition-all duration-700 ease-out" id="finance-kpi-saving-bar" style="width: 0%"></div>
                         </div>
@@ -4260,12 +4266,18 @@
 
         const cashflowClass = currentBalance >= 0 ? 'text-emerald-600' : 'text-red-500';
         setHtml('finance-kpi-cashflow', `<span class="${cashflowClass}">${formatSignedWon(currentBalance)}</span>`);
-        setText('finance-kpi-cashflow-meta', `${periodLabel} 수입 ${formatWon(totalIncome)} · 지출 ${formatWon(totalExpense)}`);
+        setHtml('finance-kpi-cashflow-meta', `
+            <div class="flex justify-between gap-2"><span>${periodLabel} 수입</span><span class="font-semibold text-gray-500">${formatWon(totalIncome)}</span></div>
+            <div class="flex justify-between gap-2"><span>${periodLabel} 지출</span><span class="font-semibold text-gray-500">${formatWon(totalExpense)}</span></div>
+        `);
 
         const savingRate = totalIncome > 0 ? (currentBalance / totalIncome) * 100 : 0;
         const savingClass = savingRate >= 0 ? 'text-sky-600' : 'text-red-500';
         setHtml('finance-kpi-saving-rate', `<span class="${savingClass}">${savingRate.toFixed(1)}</span>%`);
-        setText('finance-kpi-saving-meta', `${periodLabel} 잉여 ${formatSignedWon(currentBalance)} / 수입 ${formatWon(totalIncome)}`);
+        setHtml('finance-kpi-saving-meta', `
+            <div class="flex justify-between gap-2"><span>${periodLabel} 잉여</span><span class="font-semibold text-gray-500">${formatSignedWon(currentBalance)}</span></div>
+            <div class="flex justify-between gap-2"><span>${periodLabel} 수입</span><span class="font-semibold text-gray-500">${formatWon(totalIncome)}</span></div>
+        `);
         setProgressBar('finance-kpi-saving-bar', savingRate);
     }
 
