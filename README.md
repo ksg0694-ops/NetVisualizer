@@ -9,6 +9,7 @@
 - Common bank/card columns are normalized: date, time, type, category, memo, amount, withdrawal, deposit, payment amount, currency, and method.
 - Duplicate detection runs against already loaded transactions and within the selected file.
 - Only ready rows are inserted into the existing Supabase `transactions` table; no remote schema migration has been applied yet.
+- Recent import run summaries are stored locally, without raw transaction rows.
 - Official banking API sync remains deferred until Auth/RLS and secret handling are designed.
 
 개인 가계부, 자산 포트폴리오, 카드/보험, 부동산 청약 준비 상태를 한 화면에서 확인하는 HTML 기반 PWA입니다. 현재 저장소 기준으로는 별도 프론트엔드 빌드 도구 없이 `index.html` 하나가 화면, 상태, Supabase 연동, 차트 렌더링, 입력 폼 처리를 모두 담당합니다.

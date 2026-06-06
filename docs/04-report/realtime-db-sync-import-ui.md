@@ -33,6 +33,7 @@ flowchart LR
 - Filters duplicate rows against the currently loaded app data.
 - Filters duplicate rows inside the same import file.
 - Inserts only rows marked `저장 가능`.
+- Records recent import run summaries locally without storing raw transaction rows.
 
 ## Duplicate Key
 
@@ -46,7 +47,7 @@ This is intentionally simple because the current implementation avoids storing r
 
 ## Limitations
 
-- Import audit history is not persisted yet.
+- Import audit history is currently local-only and not shared across browsers/devices.
 - The drafted staging tables in `docs/03-analysis/realtime-db-sync-schema.sql` have not been applied.
 - CSV formats vary by institution, so the first real file should be tested with a small export.
 - RLS is still disabled on current public Supabase tables, so automatic provider sync remains blocked until Auth/RLS policy design is complete.

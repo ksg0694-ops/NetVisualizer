@@ -1,6 +1,6 @@
 # Realtime DB Sync Progress
 
-Last updated: 2026-06-05
+Last updated: 2026-06-06
 
 ## Goal
 
@@ -20,6 +20,7 @@ Reduce manual Supabase edits by introducing a safe import/sync path for transact
 | Schema draft | Done | Draft tables for sync sources, sync runs, and transaction import candidates. |
 | Remote DB migration | Not started | SQL is intentionally not applied yet. |
 | Import UI | Done | Browser CSV/TSV preview, validation, duplicate filtering, and confirmed insert into `transactions`. |
+| Import audit UI | Done | Local-only import run history is shown in the import modal. No transaction raw rows are stored. |
 | Official API integration | Deferred | Requires consent/auth/provider setup and RLS policy review. |
 
 ## Stage Progress
@@ -30,7 +31,7 @@ Reduce manual Supabase edits by introducing a safe import/sync path for transact
 | 2 | Import/sync schema draft | Done |
 | 3 | CSV/TSV import parser and preview | Done |
 | 4 | Confirmed import into `transactions` | Done |
-| 5 | Sync run audit UI | Pending |
+| 5 | Sync run audit UI | Done, local-only |
 | 6 | Read-only official API dry-run | Deferred |
 | 7 | Scheduled sync | Deferred |
 
@@ -42,6 +43,7 @@ Reduce manual Supabase edits by introducing a safe import/sync path for transact
 - Infers income/expense/transfer and normalizes signs before saving.
 - Filters duplicates against already loaded transactions and duplicates within the selected file.
 - Inserts only `ready` rows into Supabase `transactions`, then merges the returned rows into the local cache and refreshes the current dashboard.
+- Records recent import run summaries in localStorage: file name, status, total rows, inserted rows, duplicate rows, invalid rows, and short error message if failed.
 
 ## Safety Rules
 
@@ -51,12 +53,13 @@ Reduce manual Supabase edits by introducing a safe import/sync path for transact
 - Do not call transfer, order, trade, or execution APIs.
 - Do not enable scheduled sync before manual import is stable.
 - Do not apply remote schema changes until RLS/Auth implications are reviewed.
+- Do not store imported raw transaction rows in local audit history.
 
 ## Next Actions
 
 1. Manually test the import flow with one small bank/card CSV export.
-2. Decide whether to apply the draft staging/audit SQL or keep the current no-new-table browser import path.
-3. Add a sync run audit UI only after the import flow is stable.
+2. Decide whether the local audit history is enough or whether to apply the draft staging/audit SQL.
+3. Start the architecture redesign after the import path is tested with a real file.
 4. Only after that, decide whether KFTC Open Banking or another official provider is worth a read-only PoC.
 
 ## Known Security Advisory

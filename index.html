@@ -913,6 +913,10 @@
                     가져올 파일을 선택해주세요.
                 </div>
 
+                <div id="tx-import-audit" class="hidden bg-white border border-gray-100 rounded-xl p-4">
+                    <!-- 최근 import 실행 이력 -->
+                </div>
+
                 <div class="border border-gray-100 rounded-xl overflow-hidden">
                     <div class="overflow-x-auto max-h-[42vh] scrollbar-hide">
                         <table class="w-full text-left border-collapse min-w-[780px]">
@@ -1013,6 +1017,7 @@
     const DEFAULT_WEBAPP_URL = userUrls.webapp;
     const GOOGLE_SHEET_EDIT_URL = 'https://docs.google.com/spreadsheets/d/1pFBp0zYmr1AFykD-a6k44HQicnmS4JtSFIpd_E4gkBU/edit?usp=drive_link';
     const CACHE_KEY = 'smartbook_v2_data_cache';
+    const IMPORT_AUDIT_KEY = 'smartbook_v2_tx_import_runs';
 
     function loadSettings() {
         // 설정 로드 로직 제거됨 (URL 하드코딩 사용)
@@ -1052,6 +1057,7 @@
     let txImportCandidates = [];
     let txImportStats = { total: 0, ready: 0, duplicate: 0, invalid: 0 };
     let txImportRawRows = null;
+    let txImportAuditRuns = [];
 
     const SUPABASE_COLUMNS = {
         transactions: 'date,time,type,category,subcategory,memo,amount,currency,method',
@@ -1880,12 +1886,113 @@
         if (fileInput) fileInput.value = '';
         if (sourceInput) sourceInput.value = '';
 
+        loadTxImportAuditRuns();
         renderTxImportPreview();
+        renderTxImportAudit();
         document.getElementById('tx-import-modal').classList.remove('hidden');
     }
 
     function closeTxImportModal() {
         document.getElementById('tx-import-modal').classList.add('hidden');
+    }
+
+    function loadTxImportAuditRuns() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(IMPORT_AUDIT_KEY) || '[]');
+            txImportAuditRuns = Array.isArray(parsed) ? parsed.slice(0, 20) : [];
+        } catch (error) {
+            txImportAuditRuns = [];
+        }
+    }
+
+    function persistTxImportAuditRuns() {
+        try {
+            localStorage.setItem(IMPORT_AUDIT_KEY, JSON.stringify(txImportAuditRuns.slice(0, 20)));
+        } catch (error) {
+            console.warn('import audit 저장 실패:', error.message);
+        }
+    }
+
+    function getCurrentTxImportFileName() {
+        const fileInput = document.getElementById('tx-import-file');
+        return normalizeImportText(fileInput?.files?.[0]?.name, '파일명 없음');
+    }
+
+    function recordTxImportAuditRun({ status, insertedCount = 0, message = '' } = {}) {
+        const run = {
+            id: `local-${Date.now()}`,
+            createdAt: new Date().toISOString(),
+            fileName: getCurrentTxImportFileName(),
+            status: status || 'success',
+            total: txImportStats.total,
+            ready: txImportStats.ready,
+            duplicate: txImportStats.duplicate,
+            invalid: txImportStats.invalid,
+            inserted: insertedCount,
+            message: normalizeImportText(message)
+        };
+
+        txImportAuditRuns = [run, ...txImportAuditRuns].slice(0, 20);
+        persistTxImportAuditRuns();
+        renderTxImportAudit();
+    }
+
+    function formatTxImportAuditTime(isoString) {
+        const date = new Date(isoString);
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleString('ko-KR', {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function getTxImportAuditStatusMeta(status) {
+        if (status === 'success') return { label: '성공', className: 'bg-emerald-100 text-emerald-700' };
+        return { label: '실패', className: 'bg-red-100 text-red-700' };
+    }
+
+    function renderTxImportAudit() {
+        const container = document.getElementById('tx-import-audit');
+        if (!container) return;
+
+        if (!txImportAuditRuns.length) {
+            container.classList.add('hidden');
+            container.innerHTML = '';
+            return;
+        }
+
+        container.classList.remove('hidden');
+        const recentRuns = txImportAuditRuns.slice(0, 5);
+        container.innerHTML = `
+            <div class="flex items-center justify-between gap-3 mb-3">
+                <h4 class="text-sm font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-history text-sky-500"></i> 최근 가져오기 기록
+                </h4>
+                <span class="text-[10px] text-gray-400 bg-gray-50 border border-gray-100 px-2 py-1 rounded">local</span>
+            </div>
+            <div class="space-y-2">
+                ${recentRuns.map(run => {
+                    const meta = getTxImportAuditStatusMeta(run.status);
+                    return `
+                        <div class="flex items-center justify-between gap-3 text-xs border border-gray-100 rounded-lg px-3 py-2 bg-gray-50/60">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${meta.className}">${meta.label}</span>
+                                    <span class="font-bold text-gray-700 truncate">${escapeHtml(run.fileName)}</span>
+                                </div>
+                                <p class="text-[10px] text-gray-500 truncate">
+                                    총 ${Number(run.total || 0).toLocaleString()}건 · 저장 ${Number(run.inserted || 0).toLocaleString()}건 · 중복 ${Number(run.duplicate || 0).toLocaleString()}건 · 오류 ${Number(run.invalid || 0).toLocaleString()}건
+                                    ${run.message ? ` · ${escapeHtml(run.message)}` : ''}
+                                </p>
+                            </div>
+                            <span class="text-[10px] text-gray-400 whitespace-nowrap">${escapeHtml(formatTxImportAuditTime(run.createdAt))}</span>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
     }
 
     function detectDelimitedImportDelimiter(text) {
@@ -2254,6 +2361,7 @@
 
             if (error) throw error;
 
+            recordTxImportAuditRun({ status: 'success', insertedCount: readyRows.length });
             showToast(`${readyRows.length.toLocaleString()}건을 저장했습니다.`, 'info');
             closeTxImportModal();
 
@@ -2269,6 +2377,7 @@
             }
         } catch(error) {
             console.error("가져오기 에러:", error);
+            recordTxImportAuditRun({ status: 'failed', insertedCount: 0, message: error.message });
             showToast(error.message, 'error');
         } finally {
             btn.innerHTML = originalText;
