@@ -289,7 +289,7 @@
                     <div>
                         <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Finance Tool</p>
                         <h2 class="text-xl md:text-2xl font-bold text-gray-900">포트폴리오</h2>
-                        <p class="text-xs md:text-sm text-gray-500 mt-1">현재 보유자산, 유동성, 레버리지 상태를 한 번에 점검합니다.</p>
+                        <p class="text-xs md:text-sm text-gray-500 mt-1">현재 보유자산, 구성, 유동성 상태를 한 번에 점검합니다.</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">최신 보유 기준</span>
@@ -323,24 +323,6 @@
                             <p class="text-xs text-gray-400 text-center mt-4">* 부채를 제외한 보유 자산 기준</p>
                         </div>
 
-                        <!-- 레버리지 효율 분석 -->
-                        <div class="bg-gradient-to-br from-slate-800 to-gray-900 p-5 rounded-2xl shadow-sm border border-gray-700 flex flex-col text-white mt-2">
-                            <p class="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Risk Check</p>
-                            <h3 class="text-sm font-bold text-gray-300 mb-3 flex items-center gap-2"><i class="fas fa-balance-scale"></i> 레버리지(대출) 효율 분석</h3>
-                            <div class="grid grid-cols-2 gap-4 text-center">
-                                <div class="bg-gray-800 rounded-xl p-3 border border-gray-700 flex flex-col justify-center">
-                                    <p class="text-[10px] text-gray-400 mb-1">예상 연 이자 (실질 2.76% 반영)</p>
-                                    <h4 class="text-sm font-bold text-blue-400" id="pf-loan-interest">0원</h4>
-                                </div>
-                                <div class="bg-gray-800 rounded-xl p-3 border border-gray-700 flex flex-col justify-center">
-                                    <p class="text-[10px] text-gray-400 mb-1">투자 수익 (세후 실질수익 반영)</p>
-                                    <h4 class="text-sm font-bold text-red-400" id="pf-invest-return">0원</h4>
-                                </div>
-                            </div>
-                            <div class="mt-3 text-center border-t border-gray-700 pt-3" id="pf-leverage-result">
-                                <span class="text-[10px] font-bold text-gray-400">계산중...</span>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- 우측: 계좌 리스트 (아코디언) -->
@@ -3824,46 +3806,6 @@
         if(document.getElementById('pf-liquid-sum')) {
             document.getElementById('pf-liquid-sum').textContent = totalLiquid.toLocaleString() + '원';
             document.getElementById('pf-tied-sum').textContent = totalTied.toLocaleString() + '원';
-        }
-
-        if (document.getElementById('pf-loan-interest')) {
-            const annualInterest = Math.abs(totalDebt) * 0.02761; // 💡 2.0% + (4.881% - 2.0%) * 26.4% = 2.761%
-            let expectedReturn = 0;
-            let totalInvestKrw = 0;
-            let totalInvestUsd = 0;
-
-            if (rawPortfolioData && rawPortfolioData.length > 1) {
-                rawPortfolioData.slice(1).forEach(row => {
-                    const grp = row[0] || '';
-                    if (grp.includes('투자')) {
-                        const amt = Math.round(parseFloat(String(row[4] || '0').replace(/[^0-9.-]/g, ''))) || 0;
-                        const currency = String(row[2] || 'KRW').toUpperCase();
-                        if (currency.includes('USD')) {
-                            totalInvestUsd += amt;
-                            expectedReturn += amt * 0.0350 * 0.846; // 외화 발행어음 3.50% (이자소득세 15.4% 공제)
-                        } else {
-                            totalInvestKrw += amt;
-                            expectedReturn += amt * 0.0235 * 0.846; // 원화 발행어음 2.35% (이자소득세 15.4% 공제)
-                        }
-                    }
-                });
-            } else {
-                expectedReturn = totalInvest * 0.0235 * 0.846; // fallback
-            }
-            
-            document.getElementById('pf-loan-interest').textContent = Math.round(annualInterest).toLocaleString() + '원';
-            document.getElementById('pf-invest-return').textContent = Math.round(expectedReturn).toLocaleString() + '원';
-            
-            const resEl = document.getElementById('pf-leverage-result');
-            if (Math.abs(totalDebt) === 0) {
-                resEl.innerHTML = `<span class="text-[10px] font-bold text-gray-400 bg-gray-800 px-2 py-1 rounded border border-gray-600">현재 대출 없음</span>`;
-            } else if (expectedReturn >= annualInterest) {
-                const diff = expectedReturn - annualInterest;
-                resEl.innerHTML = `<span class="text-[11px] font-bold text-red-400 bg-red-400/10 px-2 py-1 rounded border border-red-400/20"><i class="fas fa-check-circle"></i> 순이자마진(NIM) +${Math.round(diff).toLocaleString()}원</span>`;
-            } else {
-                const diff = annualInterest - expectedReturn;
-                resEl.innerHTML = `<span class="text-[11px] font-bold text-blue-400 bg-blue-400/10 px-2 py-1 rounded border border-blue-400/20"><i class="fas fa-exclamation-triangle"></i> 이자비용 발생 -${Math.round(diff).toLocaleString()}원</span>`;
-            }
         }
 
         const renderDoughnut = (ctxId, chartKey, isMini = false) => {
