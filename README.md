@@ -4,6 +4,7 @@
 
 `codex/realtime-db-sync` branch now includes the first practical import path for reducing manual Supabase edits.
 
+- Current architecture map before redesign: `docs/02-design/current-architecture-map.md`.
 - Cash-flow tab has a `가져오기` action for CSV/TSV transaction files.
 - The import modal previews rows before saving and shows ready, duplicate, and invalid counts.
 - Common bank/card columns are normalized: date, time, type, category, memo, amount, withdrawal, deposit, payment amount, currency, and method.
