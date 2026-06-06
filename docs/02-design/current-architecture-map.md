@@ -90,6 +90,15 @@ flowchart TD
     PrimaryVisual --> NextActions["Next Actions\nportfolio, cash flow, real estate"]
 ```
 
+Tool screens reuse the same reading order so each tool starts with scope, then decision cards, then the main visual or detail/action area.
+
+```mermaid
+flowchart TD
+    ToolHeader["Tool title + scope badges"] --> ToolDecision["Decision Cards\nsummary numbers and readiness checks"]
+    ToolDecision --> ToolVisual["Primary Visual\nchart, map, or trend"]
+    ToolVisual --> ToolDetail["Detail / Action\nlists, edit buttons, schedule, roadmap"]
+```
+
 This keeps KPI calculation in `index.html` for now. The next architecture step should move Finance summary KPI definitions into a small domain module before adding non-Finance goals.
 
 ## Current Time Scope

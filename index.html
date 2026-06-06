@@ -285,12 +285,24 @@
 
             <!-- 2. 포트폴리오 뷰 -->
             <div id="portfolio-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
+                <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Finance Tool</p>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">포트폴리오</h2>
+                        <p class="text-xs md:text-sm text-gray-500 mt-1">현재 보유자산, 유동성, 레버리지 상태를 한 번에 점검합니다.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">최신 보유 기준</span>
+                        <span class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-xl whitespace-nowrap">유동성 점검</span>
+                    </div>
+                </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                     <!-- 좌측: 자산 요약 및 차트 -->
                     <div class="lg:col-span-1 flex flex-col gap-6">
                         <div class="bg-gray-800 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
                             <div class="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-white opacity-5 rounded-full pointer-events-none"></div>
                             <p class="text-gray-300 font-medium text-sm mb-1">총 순자산 (Net Worth)</p>
+                            <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Decision Cards</p>
                             <h3 class="text-3xl font-bold mb-4" id="pf-networth">0원</h3>
                             <div class="space-y-2 text-sm border-t border-gray-700 pt-4">
                                 <div class="flex justify-between text-gray-300"><span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-blue-400"></div>현금+안전</span> <span id="pf-safe-sum">0원</span></div>
@@ -304,6 +316,7 @@
 
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
                             <h3 class="text-base font-bold text-gray-800 mb-4">자산 구성 비율</h3>
+                            <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Primary Visual</p>
                             <div class="relative h-64 md:h-72 w-full">
                                 <canvas id="portfolioChart"></canvas>
                             </div>
@@ -312,6 +325,7 @@
 
                         <!-- 레버리지 효율 분석 -->
                         <div class="bg-gradient-to-br from-slate-800 to-gray-900 p-5 rounded-2xl shadow-sm border border-gray-700 flex flex-col text-white mt-2">
+                            <p class="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Risk Check</p>
                             <h3 class="text-sm font-bold text-gray-300 mb-3 flex items-center gap-2"><i class="fas fa-balance-scale"></i> 레버리지(대출) 효율 분석</h3>
                             <div class="grid grid-cols-2 gap-4 text-center">
                                 <div class="bg-gray-800 rounded-xl p-3 border border-gray-700 flex flex-col justify-center">
@@ -331,6 +345,7 @@
 
                     <!-- 우측: 계좌 리스트 (아코디언) -->
                     <div class="lg:col-span-2 bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Detail / Action</p>
                         <!-- 💡 헤더 업데이트: 포트폴리오 금액 수정 버튼 추가 -->
                         <div class="flex justify-between items-center mb-6 flex-wrap gap-2">
                             <h3 class="text-lg font-bold text-gray-800">상세 계좌 및 투자 내역</h3>
@@ -386,6 +401,10 @@
                 </div>
 
                 <div id="stats-main-content" class="flex flex-col w-full">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <h3 class="text-sm md:text-base font-bold text-gray-800">선택 월 요약</h3>
+                        <span class="text-[10px] md:text-xs font-bold text-gray-500 bg-white border border-gray-100 px-3 py-1.5 rounded-xl shadow-sm">Decision Cards</span>
+                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 mb-6">
                         <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-blue-500 min-w-0">
                             <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">선택 월 수입</p>
@@ -402,6 +421,7 @@
                     </div>
 
                     <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 mb-8 min-w-0">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Primary Visual</p>
                         <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-5 gap-3">
                             <div class="min-w-0">
                                 <h3 class="text-base md:text-lg font-bold text-gray-800 truncate">전체 월 흐름</h3>
@@ -498,11 +518,12 @@
             <div id="asset-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
                 <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
                     <div>
-                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Finance Goal</p>
+                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Finance Tool</p>
                         <h3 class="text-xl md:text-2xl font-bold text-gray-900">장기 자산 성장</h3>
                         <p class="text-xs md:text-sm text-gray-500 mt-1">자산 성장 속도와 2.5억 목표 진행률을 함께 봅니다.</p>
                     </div>
                     <div class="flex items-center gap-2">
+                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">장기 추세</span>
                         <span class="text-[10px] md:text-xs font-bold text-amber-600 bg-amber-50 border border-amber-100 px-3 py-2 rounded-xl whitespace-nowrap">목표 2.5억</span>
                         <select id="asset-year-filter" class="bg-white text-sm font-medium text-gray-700 border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm">
                             <option value="all">전체 기간</option>
@@ -512,6 +533,7 @@
 
                 <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_360px] gap-4 md:gap-6 mb-8">
                     <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 min-w-0">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Primary Visual</p>
                         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-5">
                             <div>
                                 <h4 class="text-base md:text-lg font-bold text-gray-800">자산 추세</h4>
@@ -525,6 +547,10 @@
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-1 gap-4">
+                        <div class="sm:col-span-3 xl:col-span-1 flex items-center justify-between gap-3">
+                            <h3 class="text-sm md:text-base font-bold text-gray-800">Decision Cards</h3>
+                            <span class="text-[10px] md:text-xs font-bold text-gray-500 bg-white border border-gray-100 px-3 py-1.5 rounded-xl shadow-sm">목표 / 속도</span>
+                        </div>
                         <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500 min-w-0">
                             <div class="flex justify-between items-end mb-1">
                                 <p class="text-xs md:text-sm font-medium text-gray-500 truncate">목표 달성률</p>
@@ -552,6 +578,7 @@
                 <!-- [신규] Finance Roadmap -->
                 <div class="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col mb-8 relative overflow-hidden">
                     <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-indigo-50 opacity-50 rounded-full pointer-events-none"></div>
+                    <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 z-10 relative">Next Actions</p>
                     <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-2 flex items-center gap-2"><i class="fas fa-route text-indigo-500"></i> Finance Roadmap</h3>
                     <p class="text-xs md:text-sm text-gray-500 mb-8 z-10 relative">목표 자산(30억) 달성을 위한 라이프사이클 마일스톤입니다.</p>
                     
@@ -732,7 +759,22 @@
 
             <!-- 6. 부동산 탭 -->
             <div id="realestate-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col h-full">
+                <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Finance Tool</p>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">부동산 / 청약</h2>
+                        <p class="text-xs md:text-sm text-gray-500 mt-1">전세 계약, 청약 자금, 2026년 주요 분양 위치를 함께 확인합니다.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">현재 준비도</span>
+                        <span class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-xl whitespace-nowrap">2026 일정</span>
+                    </div>
+                </div>
                 <!-- 상단: 전세 현황 및 자금 준비도 -->
+                <div class="flex items-center justify-between gap-3 mb-3">
+                    <h3 class="text-sm md:text-base font-bold text-gray-800">청약 준비 요약</h3>
+                    <span class="text-[10px] md:text-xs font-bold text-gray-500 bg-white border border-gray-100 px-3 py-1.5 rounded-xl shadow-sm">Decision Cards</span>
+                </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
                     <!-- 전세 현황 카드 -->
                     <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-5 md:p-6 text-white shadow-lg relative overflow-hidden flex flex-col justify-center">
@@ -800,6 +842,7 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 flex-1">
                     <!-- 주요 단지 분양 일정 (3기 신도시 통합) -->
                     <div class="lg:col-span-1 bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 flex flex-col min-h-[350px]">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Schedule / Detail</p>
                         <div class="mb-4">
                             <h4 class="text-sm md:text-base font-bold text-gray-800 flex items-center gap-2"><i class="fas fa-calendar-alt text-emerald-500"></i> 2026년 주요 분양 일정</h4>
                             <p class="text-[10px] text-gray-400 mt-1">고양창릉 S2~S4: 6월 예정, 접수일은 공고 후 확정</p>
@@ -899,6 +942,7 @@
 
                     <!-- 지도 -->
                     <div class="lg:col-span-2 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-h-[350px]">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Primary Visual</p>
                         <h3 class="text-sm md:text-base font-bold text-gray-800 mb-3 flex justify-between items-center">
                             <span>수도권 주요 청약 지도</span>
                             <button onclick="if(window.reMap) window.reMap.setView([37.5665, 126.9780], 10)" class="text-[9px] md:text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded hover:bg-indigo-100 transition">서울 중심 보기</button>

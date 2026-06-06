@@ -20,7 +20,7 @@
 - Navigation now has two levels: Goal first, then Finance tools.
 - Finance is the active goal. Career, Project, and Health are visible placeholders for later expansion.
 - Finance opens a Goal cockpit with asset goal progress, housing funding readiness, year-to-date surplus, and year-to-date surplus rate.
-- The Finance cockpit follows a consistent visual structure: time-scope badges, decision cards, one primary asset-flow visual, and next-action cards.
+- The Finance cockpit and Finance tool screens follow a consistent visual structure: time-scope badges, decision cards, one primary visual, and detail/action cards.
 - Finance tools are grouped as Portfolio, Cash Flow, Long-Term Asset, and Real Estate.
 - Month navigation is scoped to Cash Flow; the Finance cockpit, Portfolio, Long-Term Asset, and Real Estate default back to the latest available month/state.
 - Cash Flow now focuses on selected-month totals plus the full monthly income/expense/surplus trend; fixed-saving bars, AI cash-flow comments, and category doughnut cards were removed.
