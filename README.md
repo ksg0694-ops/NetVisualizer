@@ -19,9 +19,9 @@
 
 - Navigation now has two levels: Goal first, then Finance tools.
 - Finance is the active goal. Career, Project, and Health are visible placeholders for later expansion.
-- Finance tools are grouped as Summary, Portfolio, Cash Flow, Long-Term Asset, and Real Estate.
-- Summary now works as a Finance KPI cockpit with asset goal progress, housing funding readiness, year-to-date surplus, and year-to-date surplus rate.
-- Month navigation is scoped to Cash Flow; Summary, Portfolio, Long-Term Asset, and Real Estate default back to the latest available month/state.
+- Finance opens a Goal cockpit with asset goal progress, housing funding readiness, year-to-date surplus, and year-to-date surplus rate.
+- Finance tools are grouped as Portfolio, Cash Flow, Long-Term Asset, and Real Estate.
+- Month navigation is scoped to Cash Flow; the Finance cockpit, Portfolio, Long-Term Asset, and Real Estate default back to the latest available month/state.
 - Cash Flow now focuses on selected-month totals plus the full monthly income/expense/surplus trend; fixed-saving bars, AI cash-flow comments, and category doughnut cards were removed.
 - Asset trend model logic now lives in `js/features/assetTrend.js`.
 - `index.html` keeps DOM and Chart.js rendering for now, but calls `AssetTrendFeature.createModel()` for metrics and chart series.

@@ -53,9 +53,9 @@ The app is moving away from one flat tab list. The first visible step keeps all 
 flowchart TD
     AppShell["App shell"] --> GoalLayer["Goal layer\nFinance active"]
     GoalLayer --> FutureGoals["Career / Project / Health\nvisible placeholders"]
+    GoalLayer --> FinanceCockpit["Finance Goal cockpit\nformerly Summary"]
     GoalLayer --> FinanceTools["Finance tool layer"]
 
-    FinanceTools --> Summary["Summary\nformerly Dashboard"]
     FinanceTools --> Portfolio["Portfolio"]
     FinanceTools --> CashFlow["Cash Flow"]
     FinanceTools --> AssetTrend["Long-Term Asset"]
@@ -64,16 +64,16 @@ flowchart TD
 
 Current limitation: only Finance is interactive. The other goal buttons are intentionally disabled placeholders until their data model and tool sets are designed.
 
-## Finance Summary KPIs
+## Finance Goal Cockpit KPIs
 
-The Summary screen is now the first Finance-level cockpit rather than only a chart landing page.
+The Finance Goal screen is the first Finance-level cockpit rather than a separate tool tab.
 
 ```mermaid
 flowchart LR
-    FinanceSummary["Finance Summary"] --> AssetGoal["Asset goal progress\ncurrent asset / 250M KRW"]
-    FinanceSummary --> HousingFunding["Housing funding readiness\nready amount / 800M KRW"]
-    FinanceSummary --> YearSurplus["Year-to-date surplus\nyear income - year expense"]
-    FinanceSummary --> SurplusRate["Year-to-date surplus rate\nyear surplus / year income"]
+    FinanceGoal["Finance Goal cockpit"] --> AssetGoal["Asset goal progress\ncurrent asset / 250M KRW"]
+    FinanceGoal --> HousingFunding["Housing funding readiness\nready amount / 800M KRW"]
+    FinanceGoal --> YearSurplus["Year-to-date surplus\nyear income - year expense"]
+    FinanceGoal --> SurplusRate["Year-to-date surplus rate\nyear surplus / year income"]
 
     AssetGoal --> AssetTrendModel["AssetTrendFeature.createModel()"]
     HousingFunding --> RealEstateFunding["getRealEstateFundingStatus()"]
@@ -89,7 +89,7 @@ The app is starting to separate time scope by tool.
 
 ```mermaid
 flowchart TD
-    LatestState["Latest available month/state"] --> Summary["Summary KPIs"]
+    LatestState["Latest available month/state"] --> FinanceGoal["Finance Goal cockpit"]
     LatestState --> Portfolio["Portfolio"]
     LatestState --> AssetTrend["Long-Term Asset"]
     LatestState --> RealEstate["Real Estate"]

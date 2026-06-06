@@ -69,7 +69,7 @@
                 <div>
                     <p class="px-3 mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Goal</p>
                     <div class="space-y-1">
-                        <button type="button" class="w-full flex items-center justify-between gap-3 px-4 py-3 text-indigo-700 bg-indigo-50 rounded-xl font-semibold border border-indigo-100">
+                        <button type="button" onclick="switchView('dashboard-view')" class="w-full flex items-center justify-between gap-3 px-4 py-3 text-indigo-700 bg-indigo-50 rounded-xl font-semibold border border-indigo-100">
                             <span class="flex items-center gap-3"><i class="fas fa-coins w-5 text-center"></i> Finance</span>
                             <span class="text-[9px] font-bold bg-white text-indigo-500 px-2 py-0.5 rounded-full">ACTIVE</span>
                         </button>
@@ -88,9 +88,6 @@
                 <div>
                     <p class="px-3 mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Finance Tools</p>
                     <div class="space-y-1">
-                        <a href="#" data-target="dashboard-view" class="nav-link flex items-center gap-3 px-4 py-3 text-indigo-600 bg-indigo-50 rounded-xl font-medium transition-all">
-                            <i class="fas fa-chart-pie w-5 text-center"></i> 요약
-                        </a>
                         <a href="#" data-target="portfolio-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
                             <i class="fas fa-briefcase w-5 text-center"></i> 포트폴리오
                         </a>
@@ -148,7 +145,7 @@
         <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-36 md:pb-8 scrollbar-hide relative pb-safe">
             <div class="md:hidden max-w-6xl mx-auto mb-4">
                 <div class="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-                    <button type="button" class="shrink-0 flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-sm">
+                    <button type="button" onclick="switchView('dashboard-view')" class="shrink-0 flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-sm">
                         <i class="fas fa-coins"></i> Finance
                     </button>
                     <button type="button" disabled class="shrink-0 flex items-center gap-2 bg-white text-gray-300 border border-gray-100 px-3 py-2 rounded-xl text-xs font-bold">
@@ -166,9 +163,9 @@
             <!-- 1. 대시보드 뷰 -->
             <div id="dashboard-view" class="view-section block max-w-6xl mx-auto">
                 <div class="mb-5 md:mb-6">
-                    <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Finance Summary</p>
-                    <h2 class="text-xl md:text-2xl font-bold text-gray-900">핵심 KPI</h2>
-                    <p class="text-xs md:text-sm text-gray-500 mt-1">목표자산, 청약 준비, 현금흐름, 저축률을 한 번에 확인합니다.</p>
+                    <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Finance Goal</p>
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-900">Finance Cockpit</h2>
+                    <p class="text-xs md:text-sm text-gray-500 mt-1">목표자산, 청약 준비, 올해 잉여 흐름을 한 번에 확인합니다.</p>
                 </div>
 
                 <div class="mb-4 md:mb-5">
@@ -897,10 +894,6 @@
 
     <!-- 모바일 전용 하단 탭 네비게이션 -->
     <nav class="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around items-center h-[68px] z-50 pb-safe px-1">
-        <a href="#" data-target="dashboard-view" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full text-indigo-600 transition-colors">
-            <i class="fas fa-chart-pie text-lg mb-1"></i>
-            <span class="text-[9px] font-medium">요약</span>
-        </a>
         <a href="#" data-target="portfolio-view" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 transition-colors">
             <i class="fas fa-briefcase text-lg mb-1"></i>
             <span class="text-[9px] font-medium">포트폴리오</span>
