@@ -167,8 +167,13 @@
             
             <!-- 1. 대시보드 뷰 -->
             <div id="dashboard-view" class="view-section block max-w-6xl mx-auto">
-                <div class="mb-6 md:mb-8">
-                    <!-- 총 자산 (축소됨) -->
+                <div class="mb-5 md:mb-6">
+                    <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Finance Summary</p>
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-900">핵심 KPI</h2>
+                    <p class="text-xs md:text-sm text-gray-500 mt-1">목표자산, 청약 준비, 현금흐름, 저축률을 한 번에 확인합니다.</p>
+                </div>
+
+                <div class="mb-4 md:mb-5">
                     <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl p-4 md:p-5 text-white shadow-lg shadow-indigo-200 relative overflow-hidden flex flex-col justify-between">
                         <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white opacity-10 rounded-full pointer-events-none"></div>
                         <div class="flex justify-between items-center relative z-10">
@@ -183,6 +188,50 @@
                                     <p class="text-[10px] md:text-xs text-indigo-100 flex items-center gap-1 whitespace-nowrap shrink-0" id="card-budget-status"><i class="fas fa-check-circle"></i> 흑자</p>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5 mb-8">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500 min-w-0">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">목표자산 달성률</p>
+                            <i class="fas fa-bullseye text-amber-400"></i>
+                        </div>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900" id="finance-kpi-asset-progress">0%</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1 truncate" id="finance-kpi-asset-meta">0원 / 250,000,000원</p>
+                        <div class="w-full bg-gray-100 rounded-full h-2 mt-3 overflow-hidden">
+                            <div class="h-full bg-amber-500 transition-all duration-700 ease-out" id="finance-kpi-asset-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-indigo-500 min-w-0">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">청약 준비율</p>
+                            <i class="fas fa-home text-indigo-400"></i>
+                        </div>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900" id="finance-kpi-funding-progress">0%</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1 truncate" id="finance-kpi-funding-meta">0원 / 800,000,000원</p>
+                        <div class="w-full bg-gray-100 rounded-full h-2 mt-3 overflow-hidden">
+                            <div class="h-full bg-indigo-500 transition-all duration-700 ease-out" id="finance-kpi-funding-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-emerald-500 min-w-0">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">월 잉여자금</p>
+                            <i class="fas fa-wallet text-emerald-400"></i>
+                        </div>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900 truncate" id="finance-kpi-cashflow">0원</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1 truncate" id="finance-kpi-cashflow-meta">수입 0원 · 지출 0원</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-sky-500 min-w-0">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">저축률</p>
+                            <i class="fas fa-piggy-bank text-sky-400"></i>
+                        </div>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900" id="finance-kpi-saving-rate">0%</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1 truncate" id="finance-kpi-saving-meta">잉여 0원 + 고정저축 0원</p>
+                        <div class="w-full bg-gray-100 rounded-full h-2 mt-3 overflow-hidden">
+                            <div class="h-full bg-sky-500 transition-all duration-700 ease-out" id="finance-kpi-saving-bar" style="width: 0%"></div>
                         </div>
                     </div>
                 </div>
@@ -1437,6 +1486,27 @@
         const number = Number(value);
         if (!Number.isFinite(number)) return '미입력';
         return `${number > 0 ? '+' : ''}${formatWon(number)}`;
+    }
+
+    function isFixedSavingTransaction(tx) {
+        const category = String(tx?.cat || '');
+        const subcategory = String(tx?.subcat || '');
+        const memo = String(tx?.memo || '');
+        const amount = Math.abs(Number(tx?.amount || 0));
+        return tx?.type === '이체' && (
+            category.includes('청년') ||
+            subcategory.includes('청년') ||
+            memo.includes('청년') ||
+            (memo.includes('월급통장') && amount === 100000)
+        );
+    }
+
+    function setProgressBar(id, percentage) {
+        const bar = document.getElementById(id);
+        if (!bar) return;
+        const safePercentage = Math.max(0, Math.min(100, Number(percentage) || 0));
+        bar.style.width = '0%';
+        setTimeout(() => { bar.style.width = `${safePercentage}%`; }, 100);
     }
 
     function getOrderedStrategyKeys(sourceMap = {}) {
@@ -4163,6 +4233,42 @@
         renderAssetTrendSummary(model);
         renderAssetTrendCharts(model);
         if (typeof updateFinanceRoadmap === 'function') updateFinanceRoadmap(model.currentAsset);
+        return model;
+    }
+
+    function renderFinanceSummaryKpis({ assetModel, totalIncome, totalExpense, currentBalance, fixedSaving }) {
+        const setText = (id, text) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        };
+        const setHtml = (id, html) => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        };
+
+        const assetPct = Number(assetModel?.goalPercentage || 0);
+        const currentAsset = Number(assetModel?.currentAsset || 0);
+        const targetAsset = Number(assetModel?.targetGoalAsset || 250000000);
+        setHtml('finance-kpi-asset-progress', `<span class="text-amber-500">${assetPct.toFixed(1)}</span>%`);
+        setText('finance-kpi-asset-meta', `${formatWon(currentAsset)} / ${formatWon(targetAsset)}`);
+        setProgressBar('finance-kpi-asset-bar', assetPct);
+
+        const fundingStatus = getRealEstateFundingStatus();
+        const fundingPct = Number(fundingStatus.totalPct || 0);
+        setHtml('finance-kpi-funding-progress', `<span class="text-indigo-500">${fundingPct.toFixed(1)}</span>%`);
+        setText('finance-kpi-funding-meta', `${formatWon(fundingStatus.totalReady)} / ${formatWon(fundingStatus.targetBudget)}`);
+        setProgressBar('finance-kpi-funding-bar', fundingPct);
+
+        const cashflowClass = currentBalance >= 0 ? 'text-emerald-600' : 'text-red-500';
+        setHtml('finance-kpi-cashflow', `<span class="${cashflowClass}">${formatSignedWon(currentBalance)}</span>`);
+        setText('finance-kpi-cashflow-meta', `수입 ${formatWon(totalIncome)} · 지출 ${formatWon(totalExpense)}`);
+
+        const savingAmount = currentBalance + fixedSaving;
+        const savingRate = totalIncome > 0 ? (savingAmount / totalIncome) * 100 : 0;
+        const savingClass = savingRate >= 0 ? 'text-sky-600' : 'text-red-500';
+        setHtml('finance-kpi-saving-rate', `<span class="${savingClass}">${savingRate.toFixed(1)}</span>%`);
+        setText('finance-kpi-saving-meta', `잉여 ${formatSignedWon(currentBalance)} + 고정저축 ${formatWon(fixedSaving)}`);
+        setProgressBar('finance-kpi-saving-bar', savingRate);
     }
 
     function renderDashboard() {
@@ -4188,7 +4294,7 @@
         document.getElementById('display-period').textContent = db.periodStr;
         document.getElementById('manage-title').textContent = `${db.title} 거래 내역`;
 
-        let totalIncome = 0; let totalExpense = 0; let categoryTotals = {};
+        let totalIncome = 0; let totalExpense = 0; let currentFixedSaving = 0; let categoryTotals = {};
         const manageList = document.getElementById('manageTransactionList');
         if (manageList) manageList.innerHTML = '';
 
@@ -4206,6 +4312,7 @@
         });
 
         sortedTxData.forEach((item) => {
+            if (isFixedSavingTransaction(item)) currentFixedSaving += Math.abs(Number(item.amount || 0));
             if (item.type === '수입') totalIncome += item.amount;
             else if (item.type === '지출') {
                 const absAmount = Math.abs(item.amount); totalExpense += absAmount;
@@ -4279,7 +4386,7 @@
             trendLabels.push(key.replace('20', '').replace('-', '.')); 
             let mInc = 0, mExp = 0, mSav = 0;
             monthDb.transactions.forEach(t => { 
-                const isSaving = t.type === '이체' && (t.cat.includes('청년') || t.subcat.includes('청년') || t.memo.includes('청년') || (t.memo.includes('월급통장') && Math.abs(t.amount) === 100000));
+                const isSaving = isFixedSavingTransaction(t);
                 if (isSaving) mSav += Math.abs(t.amount);
                 else if (t.type === '수입') mInc += t.amount; 
                 else if (t.type === '지출') mExp += Math.abs(t.amount); 
@@ -4303,7 +4410,14 @@
             });
         }
 
-        renderAssetTrend(db);
+        const assetModel = renderAssetTrend(db);
+        renderFinanceSummaryKpis({
+            assetModel,
+            totalIncome,
+            totalExpense,
+            currentBalance,
+            fixedSaving: currentFixedSaving
+        });
     }
     
     function updateFinanceRoadmap(currentAsset) {

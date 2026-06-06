@@ -64,6 +64,25 @@ flowchart TD
 
 Current limitation: only Finance is interactive. The other goal buttons are intentionally disabled placeholders until their data model and tool sets are designed.
 
+## Finance Summary KPIs
+
+The Summary screen is now the first Finance-level cockpit rather than only a chart landing page.
+
+```mermaid
+flowchart LR
+    FinanceSummary["Finance Summary"] --> AssetGoal["Asset goal progress\ncurrent asset / 250M KRW"]
+    FinanceSummary --> HousingFunding["Housing funding readiness\nready amount / 800M KRW"]
+    FinanceSummary --> MonthlySurplus["Monthly surplus\nincome - expense"]
+    FinanceSummary --> SavingRate["Saving rate\n(monthly surplus + fixed saving transfers) / income"]
+
+    AssetGoal --> AssetTrendModel["AssetTrendFeature.createModel()"]
+    HousingFunding --> RealEstateFunding["getRealEstateFundingStatus()"]
+    MonthlySurplus --> MonthlyDB["monthlyDB transactions"]
+    SavingRate --> FixedSavingRule["isFixedSavingTransaction()"]
+```
+
+This keeps KPI calculation in `index.html` for now. The next architecture step should move Finance summary KPI definitions into a small domain module before adding non-Finance goals.
+
 ## Current SPA Internal Shape
 
 These are logical areas inside `index.html`; they are not separate modules yet.

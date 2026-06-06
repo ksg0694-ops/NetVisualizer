@@ -20,6 +20,7 @@
 - Navigation now has two levels: Goal first, then Finance tools.
 - Finance is the active goal. Career, Project, and Health are visible placeholders for later expansion.
 - Finance tools are grouped as Summary, Portfolio, Cash Flow, Long-Term Asset, and Real Estate.
+- Summary now works as a Finance KPI cockpit with asset goal progress, housing funding readiness, monthly surplus, and saving rate.
 - Asset trend model logic now lives in `js/features/assetTrend.js`.
 - `index.html` keeps DOM and Chart.js rendering for now, but calls `AssetTrendFeature.createModel()` for metrics and chart series.
 - The long-term asset screen is now arranged as a Finance goal workspace: chart on the left, goal/growth KPIs on the right, roadmap below.
