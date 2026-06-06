@@ -72,13 +72,13 @@ The Summary screen is now the first Finance-level cockpit rather than only a cha
 flowchart LR
     FinanceSummary["Finance Summary"] --> AssetGoal["Asset goal progress\ncurrent asset / 250M KRW"]
     FinanceSummary --> HousingFunding["Housing funding readiness\nready amount / 800M KRW"]
-    FinanceSummary --> MonthlySurplus["Monthly surplus\nincome - expense"]
-    FinanceSummary --> SavingRate["Monthly surplus rate\nmonthly surplus / income"]
+    FinanceSummary --> YearSurplus["Year-to-date surplus\nyear income - year expense"]
+    FinanceSummary --> SurplusRate["Year-to-date surplus rate\nyear surplus / year income"]
 
     AssetGoal --> AssetTrendModel["AssetTrendFeature.createModel()"]
     HousingFunding --> RealEstateFunding["getRealEstateFundingStatus()"]
-    MonthlySurplus --> MonthlyDB["monthlyDB transactions"]
-    SavingRate --> MonthlyDB
+    YearSurplus --> MonthlyDB["monthlyDB transactions"]
+    SurplusRate --> MonthlyDB
 ```
 
 This keeps KPI calculation in `index.html` for now. The next architecture step should move Finance summary KPI definitions into a small domain module before adding non-Finance goals.

@@ -180,7 +180,7 @@
                                 <h3 class="text-xl md:text-3xl font-bold truncate" id="card-asset">0원</h3>
                             </div>
                             <div class="text-right border-l border-indigo-400/50 pl-4">
-                                <p class="text-[10px] md:text-xs text-indigo-100 mb-0.5">해당 월 잉여 자금</p>
+                                <p class="text-[10px] md:text-xs text-indigo-100 mb-0.5">올해 잉여 자금</p>
                                 <div class="flex items-center justify-end gap-2">
                                     <h3 class="text-base md:text-xl font-bold text-white truncate" id="card-total">0원</h3>
                                     <p class="text-[10px] md:text-xs text-indigo-100 flex items-center gap-1 whitespace-nowrap shrink-0" id="card-budget-status"><i class="fas fa-check-circle"></i> 흑자</p>
@@ -215,19 +215,19 @@
                     </div>
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-emerald-500 min-w-0">
                         <div class="flex items-center justify-between gap-3 mb-3">
-                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">월 잉여자금</p>
+                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">올해 잉여자금</p>
                             <i class="fas fa-wallet text-emerald-400"></i>
                         </div>
                         <h3 class="text-xl md:text-2xl font-bold text-gray-900 truncate" id="finance-kpi-cashflow">0원</h3>
-                        <p class="text-[10px] md:text-xs text-gray-400 mt-1 truncate" id="finance-kpi-cashflow-meta">수입 0원 · 지출 0원</p>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1 truncate" id="finance-kpi-cashflow-meta">올해 수입 0원 · 지출 0원</p>
                     </div>
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-sky-500 min-w-0">
                         <div class="flex items-center justify-between gap-3 mb-3">
-                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">월 잉여율</p>
+                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">올해 잉여율</p>
                             <i class="fas fa-piggy-bank text-sky-400"></i>
                         </div>
                         <h3 class="text-xl md:text-2xl font-bold text-gray-900" id="finance-kpi-saving-rate">0%</h3>
-                        <p class="text-[10px] md:text-xs text-gray-400 mt-1 truncate" id="finance-kpi-saving-meta">잉여 0원 / 수입 0원</p>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1 truncate" id="finance-kpi-saving-meta">올해 잉여 0원 / 수입 0원</p>
                         <div class="w-full bg-gray-100 rounded-full h-2 mt-3 overflow-hidden">
                             <div class="h-full bg-sky-500 transition-all duration-700 ease-out" id="finance-kpi-saving-bar" style="width: 0%"></div>
                         </div>
@@ -4218,7 +4218,7 @@
         return model;
     }
 
-    function renderFinanceSummaryKpis({ assetModel, totalIncome, totalExpense, currentBalance }) {
+    function renderFinanceSummaryKpis({ assetModel, totalIncome, totalExpense, currentBalance, periodLabel = '올해' }) {
         const setText = (id, text) => {
             const el = document.getElementById(id);
             if (el) el.textContent = text;
@@ -4243,12 +4243,12 @@
 
         const cashflowClass = currentBalance >= 0 ? 'text-emerald-600' : 'text-red-500';
         setHtml('finance-kpi-cashflow', `<span class="${cashflowClass}">${formatSignedWon(currentBalance)}</span>`);
-        setText('finance-kpi-cashflow-meta', `수입 ${formatWon(totalIncome)} · 지출 ${formatWon(totalExpense)}`);
+        setText('finance-kpi-cashflow-meta', `${periodLabel} 수입 ${formatWon(totalIncome)} · 지출 ${formatWon(totalExpense)}`);
 
         const savingRate = totalIncome > 0 ? (currentBalance / totalIncome) * 100 : 0;
         const savingClass = savingRate >= 0 ? 'text-sky-600' : 'text-red-500';
         setHtml('finance-kpi-saving-rate', `<span class="${savingClass}">${savingRate.toFixed(1)}</span>%`);
-        setText('finance-kpi-saving-meta', `잉여 ${formatSignedWon(currentBalance)} / 수입 ${formatWon(totalIncome)}`);
+        setText('finance-kpi-saving-meta', `${periodLabel} 잉여 ${formatSignedWon(currentBalance)} / 수입 ${formatWon(totalIncome)}`);
         setProgressBar('finance-kpi-saving-bar', savingRate);
     }
 
@@ -4277,12 +4277,24 @@
         }, { totalIncome: 0, totalExpense: 0 });
     }
 
+    function getYearToDateCashFlowStats(referenceMonthKey) {
+        const year = String(referenceMonthKey || getLatestMonthKey()).slice(0, 4);
+        return getMonthKeys()
+            .filter(key => key.startsWith(`${year}-`))
+            .reduce((acc, key) => {
+                const stats = getCashFlowStats(monthlyDB[key]?.transactions || []);
+                acc.totalIncome += stats.totalIncome;
+                acc.totalExpense += stats.totalExpense;
+                return acc;
+            }, { year, totalIncome: 0, totalExpense: 0 });
+    }
+
     function renderFinanceSummary() {
         if(!currentMonthKey || !monthlyDB[currentMonthKey]) return;
         const db = monthlyDB[currentMonthKey];
         applyAssetStateForMonth(db, currentMonthKey);
 
-        const { totalIncome, totalExpense } = getCashFlowStats(db.transactions);
+        const { year, totalIncome, totalExpense } = getYearToDateCashFlowStats(currentMonthKey);
         const currentBalance = totalIncome - totalExpense;
 
         if (document.getElementById('card-total')) document.getElementById('card-total').textContent = `${currentBalance.toLocaleString()}원`;
@@ -4300,7 +4312,7 @@
         }
 
         const assetModel = renderAssetTrend(db);
-        renderFinanceSummaryKpis({ assetModel, totalIncome, totalExpense, currentBalance });
+        renderFinanceSummaryKpis({ assetModel, totalIncome, totalExpense, currentBalance, periodLabel: `${year}년` });
     }
 
     function renderCashFlow() {
