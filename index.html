@@ -162,10 +162,16 @@
             
             <!-- 1. 대시보드 뷰 -->
             <div id="dashboard-view" class="view-section block max-w-6xl mx-auto">
-                <div class="mb-5 md:mb-6">
-                    <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Finance Goal</p>
-                    <h2 class="text-xl md:text-2xl font-bold text-gray-900">Finance Cockpit</h2>
-                    <p class="text-xs md:text-sm text-gray-500 mt-1">목표자산, 청약 준비, 올해 잉여 흐름을 한 번에 확인합니다.</p>
+                <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
+                    <div>
+                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Finance Goal</p>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">Finance Cockpit</h2>
+                        <p class="text-xs md:text-sm text-gray-500 mt-1">목표자산, 청약 준비, 올해 잉여 흐름을 한 번에 확인합니다.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-xl">최신 상태</span>
+                        <span id="finance-period-badge" class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-xl">올해 누적</span>
+                    </div>
                 </div>
 
                 <div class="mb-4 md:mb-5">
@@ -187,6 +193,10 @@
                     </div>
                 </div>
 
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <h3 class="text-sm md:text-base font-bold text-gray-800">Decision Cards</h3>
+                    <span class="text-[10px] md:text-xs text-gray-400">판단에 필요한 핵심 지표</span>
+                </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5 mb-8">
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500 min-w-0">
                         <div class="flex items-center justify-between gap-3 mb-3">
@@ -231,27 +241,39 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-8">
-                    <!-- 자산 흐름 -->
-                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-w-0">
-                        <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
+                <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-w-0 mb-8">
+                    <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-5 gap-2">
+                        <div>
+                            <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Primary Visual</p>
                             <h3 class="text-base md:text-lg font-bold text-gray-800 truncate" id="dashboard-asset-title">자산 흐름</h3>
-                            <span class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full whitespace-nowrap" id="dashboard-asset-diff"><i class="fas fa-arrow-up"></i> 계산중</span>
                         </div>
-                        <div class="flex-1 relative h-72 md:h-64 w-full">
-                            <canvas id="dashboardAssetChart"></canvas>
-                        </div>
+                        <span class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl whitespace-nowrap w-fit" id="dashboard-asset-diff"><i class="fas fa-arrow-up"></i> 계산중</span>
                     </div>
-                    <!-- 대시보드 내 포트폴리오 구성 비율 요약 차트 -->
-                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-w-0">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-base md:text-lg font-bold text-gray-800 truncate">해당 월 자산 구성</h3>
-                            <button onclick="switchView('portfolio-view')" class="text-xs text-indigo-500 hover:text-indigo-700">상세보기 &gt;</button>
-                        </div>
-                        <div class="flex-1 relative h-40 md:h-64 w-full">
-                            <canvas id="dashPortfolioChart"></canvas>
-                        </div>
+                    <div class="relative h-[340px] md:h-[420px] w-full">
+                        <canvas id="dashboardAssetChart"></canvas>
                     </div>
+                </div>
+
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <h3 class="text-sm md:text-base font-bold text-gray-800">Next Actions</h3>
+                    <span class="text-[10px] md:text-xs text-gray-400">바로 점검할 작업</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 mb-8">
+                    <button onclick="switchView('portfolio-view')" class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 text-left hover:border-indigo-200 hover:shadow-md transition-all">
+                        <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3"><i class="fas fa-briefcase"></i></div>
+                        <h4 class="text-sm font-bold text-gray-800 mb-1">포트폴리오 점검</h4>
+                        <p class="text-xs text-gray-500 leading-relaxed">현재 보유 비중과 부채/현금 상태를 확인합니다.</p>
+                    </button>
+                    <button onclick="switchView('stats-view')" class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 text-left hover:border-emerald-200 hover:shadow-md transition-all">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3"><i class="fas fa-money-bill-transfer"></i></div>
+                        <h4 class="text-sm font-bold text-gray-800 mb-1">현금 흐름 확인</h4>
+                        <p class="text-xs text-gray-500 leading-relaxed">선택 월 거래와 전체 월 흐름을 비교합니다.</p>
+                    </button>
+                    <button onclick="switchView('realestate-view')" class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 text-left hover:border-amber-200 hover:shadow-md transition-all">
+                        <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3"><i class="fas fa-home"></i></div>
+                        <h4 class="text-sm font-bold text-gray-800 mb-1">청약 준비 확인</h4>
+                        <p class="text-xs text-gray-500 leading-relaxed">자금 준비율과 주요 분양 일정을 점검합니다.</p>
+                    </button>
                 </div>
             </div>
 
@@ -4220,6 +4242,8 @@
             const el = document.getElementById(id);
             if (el) el.innerHTML = html;
         };
+
+        setText('finance-period-badge', `${periodLabel} 누적`);
 
         const assetPct = Number(assetModel?.goalPercentage || 0);
         const currentAsset = Number(assetModel?.currentAsset || 0);

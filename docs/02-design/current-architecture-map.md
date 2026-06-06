@@ -81,6 +81,15 @@ flowchart LR
     SurplusRate --> MonthlyDB
 ```
 
+Visual structure:
+
+```mermaid
+flowchart TD
+    Header["Goal title + time-scope badges"] --> DecisionCards["Decision Cards\nasset goal, housing readiness,\nyear surplus, surplus rate"]
+    DecisionCards --> PrimaryVisual["Primary Visual\nasset-flow chart"]
+    PrimaryVisual --> NextActions["Next Actions\nportfolio, cash flow, real estate"]
+```
+
 This keeps KPI calculation in `index.html` for now. The next architecture step should move Finance summary KPI definitions into a small domain module before adding non-Finance goals.
 
 ## Current Time Scope
