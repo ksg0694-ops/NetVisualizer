@@ -223,11 +223,11 @@
                     </div>
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-sky-500 min-w-0">
                         <div class="flex items-center justify-between gap-3 mb-3">
-                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">저축률</p>
+                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">월 잉여율</p>
                             <i class="fas fa-piggy-bank text-sky-400"></i>
                         </div>
                         <h3 class="text-xl md:text-2xl font-bold text-gray-900" id="finance-kpi-saving-rate">0%</h3>
-                        <p class="text-[10px] md:text-xs text-gray-400 mt-1 truncate" id="finance-kpi-saving-meta">잉여 0원 + 고정저축 0원</p>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1 truncate" id="finance-kpi-saving-meta">잉여 0원 / 수입 0원</p>
                         <div class="w-full bg-gray-100 rounded-full h-2 mt-3 overflow-hidden">
                             <div class="h-full bg-sky-500 transition-all duration-700 ease-out" id="finance-kpi-saving-bar" style="width: 0%"></div>
                         </div>
@@ -326,7 +326,7 @@
                             <p class="text-sm text-gray-500 max-w-xs mx-auto" id="portfolio-past-notice-text">
                                 상세 포트폴리오는 '현재 달' 기준으로만 갱신/관리됩니다. 과거는 총액 비율만 표시됩니다.
                             </p>
-                            <button onclick="if(!document.getElementById('btn-next-month').disabled){ const keys = getMonthKeys(); currentMonthKey = keys[keys.length - 1]; renderSections({ dashboard: true, portfolio: true }); }" class="mt-4 text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-4 py-2 rounded-full transition-colors">
+                            <button onclick="if(!document.getElementById('btn-next-month').disabled){ const keys = getMonthKeys(); currentMonthKey = keys[keys.length - 1]; renderSections({ financeSummary: true, portfolio: true }); }" class="mt-4 text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-4 py-2 rounded-full transition-colors">
                                 현재 포트폴리오 보기 &rarr;
                             </button>
                         </div>
@@ -361,13 +361,28 @@
                 </div>
 
                 <div id="stats-main-content" class="flex flex-col w-full">
-                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 mb-6 min-w-0">
-                        <div class="flex justify-between items-center mb-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 mb-6">
+                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-blue-500 min-w-0">
+                            <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">선택 월 수입</p>
+                            <h3 class="text-xl md:text-2xl font-bold text-blue-600 truncate" id="cashflow-selected-income">0원</h3>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-red-500 min-w-0">
+                            <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">선택 월 지출</p>
+                            <h3 class="text-xl md:text-2xl font-bold text-red-500 truncate" id="cashflow-selected-expense">0원</h3>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-emerald-500 min-w-0">
+                            <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">선택 월 잉여</p>
+                            <h3 class="text-xl md:text-2xl font-bold text-emerald-600 truncate" id="cashflow-selected-net">0원</h3>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 mb-8 min-w-0">
+                        <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-5 gap-3">
                             <div class="min-w-0">
-                                <h3 class="text-base md:text-lg font-bold text-gray-800 truncate">월별 수입/지출 추세</h3>
-                                <p class="text-xs md:text-sm text-gray-500 truncate">누적된 수입, 지출, 순수익 흐름입니다.</p>
+                                <h3 class="text-base md:text-lg font-bold text-gray-800 truncate">전체 월 흐름</h3>
+                                <p class="text-xs md:text-sm text-gray-500 truncate">모든 월의 수입, 지출, 잉여자금 흐름입니다.</p>
                             </div>
-                            <div class="flex gap-2 shrink-0">
+                            <div class="flex flex-wrap gap-2 shrink-0">
                                 <button onclick="openTxImportModal()" class="text-xs md:text-sm text-sky-600 bg-sky-50 px-3 py-1.5 rounded-lg hover:bg-sky-100 transition whitespace-nowrap">
                                     <i class="fas fa-file-import mr-1"></i>가져오기
                                 </button>
@@ -379,26 +394,8 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="relative h-64 md:h-72 w-full">
+                        <div class="relative h-[360px] md:h-[420px] w-full">
                             <canvas id="monthlyTrendChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8">
-                        <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-w-0">
-                            <h4 class="text-sm md:text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                <i class="fas fa-chart-pie text-indigo-500"></i> 해당 월 지출 카테고리
-                            </h4>
-                            <div class="flex-1 relative h-72 md:h-64 w-full">
-                                <canvas id="expenseChart"></canvas>
-                            </div>
-                        </div>
-                        <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 min-w-0">
-                            <h4 class="text-sm md:text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                <i class="fas fa-robot text-amber-400"></i> AI 현금 흐름 분석
-                            </h4>
-                            <div id="ai-comments-container" class="space-y-4 text-xs md:text-sm text-gray-600 bg-gray-50 p-5 rounded-xl border border-gray-100 scrollbar-hide">
-                                <!-- JS 생성 -->
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -1525,19 +1522,6 @@
         return `${number > 0 ? '+' : ''}${formatWon(number)}`;
     }
 
-    function isFixedSavingTransaction(tx) {
-        const category = String(tx?.cat || '');
-        const subcategory = String(tx?.subcat || '');
-        const memo = String(tx?.memo || '');
-        const amount = Math.abs(Number(tx?.amount || 0));
-        return tx?.type === '이체' && (
-            category.includes('청년') ||
-            subcategory.includes('청년') ||
-            memo.includes('청년') ||
-            (memo.includes('월급통장') && amount === 100000)
-        );
-    }
-
     function setProgressBar(id, percentage) {
         const bar = document.getElementById(id);
         if (!bar) return;
@@ -1580,9 +1564,14 @@
         parseMarketPrices(dataCache.marketPrices);
     }
 
-    function renderSections({ dashboard = false, portfolio = false, addons = false, realEstate = false, investDetail = false } = {}) {
+    function renderSections({ dashboard = false, financeSummary = false, cashFlow = false, portfolio = false, addons = false, realEstate = false, investDetail = false } = {}) {
         updateNavigationButtons();
-        if (dashboard) renderDashboard();
+        if (dashboard || financeSummary) {
+            renderFinanceSummary();
+        }
+        if (dashboard || cashFlow) {
+            renderCashFlow();
+        }
         if (portfolio) renderPortfolio();
         if (addons && typeof renderAddons === 'function') renderAddons();
         if (realEstate && typeof renderRealEstate === 'function') renderRealEstate();
@@ -2928,7 +2917,7 @@
         } else {
             sortIcon.className = 'fas fa-sort-amount-up'; sortText.textContent = '과거순';
         }
-        renderDashboard(); 
+        renderCashFlow();
     });
 
     function toggleManageView(show) {
@@ -3071,9 +3060,10 @@
         if (targetId === 'stats-view') toggleManageView(false);
 
         setTimeout(() => {
-            if (targetId === 'dashboard-view') renderSections({ dashboard: true, portfolio: true });
+            if (targetId === 'dashboard-view') renderSections({ financeSummary: true, portfolio: true });
             else if (targetId === 'portfolio-view') renderSections({ portfolio: true });
-            else if (targetId === 'stats-view' || targetId === 'asset-view') renderSections({ dashboard: true });
+            else if (targetId === 'stats-view') renderSections({ cashFlow: true });
+            else if (targetId === 'asset-view') renderSections({ financeSummary: true });
             else if (targetId === 'realestate-view') renderSections({ realEstate: true });
         }, 20);
     }
@@ -3083,7 +3073,7 @@
     });
 
     document.getElementById('asset-year-filter')?.addEventListener('change', (e) => {
-        currentAssetFilter = e.target.value; renderDashboard();
+        currentAssetFilter = e.target.value; renderFinanceSummary();
     });
 
     document.addEventListener('keydown', (e) => {
@@ -3119,12 +3109,12 @@
 
     document.getElementById('btn-prev-month')?.addEventListener('click', () => {
         const keys = getMonthKeys(); const idx = keys.indexOf(currentMonthKey);
-        if (idx > 0) { currentMonthKey = keys[idx - 1]; cashFlowMonthKey = currentMonthKey; renderSections({ dashboard: true }); }
+        if (idx > 0) { currentMonthKey = keys[idx - 1]; cashFlowMonthKey = currentMonthKey; renderSections({ cashFlow: true }); }
     });
 
     document.getElementById('btn-next-month')?.addEventListener('click', () => {
         const keys = getMonthKeys(); const idx = keys.indexOf(currentMonthKey);
-        if (idx !== -1 && idx < keys.length - 1) { currentMonthKey = keys[idx + 1]; cashFlowMonthKey = currentMonthKey; renderSections({ dashboard: true }); }
+        if (idx !== -1 && idx < keys.length - 1) { currentMonthKey = keys[idx + 1]; cashFlowMonthKey = currentMonthKey; renderSections({ cashFlow: true }); }
     });
 
     window.toggleAccordion = function(btn) {
@@ -4087,60 +4077,6 @@
         }
     }
 
-    function generateAIComments(currentTxData, categoryTotals, title, currentMonthKey) {
-        const container = document.getElementById('ai-comments-container');
-        if (!container) return;
-        
-        let html = `<div class="font-bold text-gray-700 mb-2 border-b border-gray-200 pb-2">${escapeHtml(title)} 분석 결과</div>`;
-        
-        const keys = getMonthKeys();
-        const currIdx = keys.indexOf(currentMonthKey);
-        const pastKeys = keys.slice(Math.max(0, currIdx - 3), currIdx);
-        
-        let pastTotals = {};
-        pastKeys.forEach(k => {
-            monthlyDB[k].transactions.forEach(t => {
-                if (t.type === '지출' && t.cat !== '상환' && t.cat !== '고정비') {
-                    pastTotals[t.cat] = (pastTotals[t.cat] || 0) + Math.abs(t.amount);
-                }
-            });
-        });
-        
-        let pastAvgs = {};
-        let monthsCount = pastKeys.length;
-        if (monthsCount > 0) {
-            Object.keys(pastTotals).forEach(cat => pastAvgs[cat] = pastTotals[cat] / monthsCount);
-        }
-
-        let anomalyCat = null; let maxDiff = 0; let anomalyAvg = 0; let anomalyCurr = 0;
-        Object.entries(categoryTotals).forEach(([cat, amt]) => {
-            if (cat === '상환' || cat === '미분류' || cat === '고정비') return;
-            const avg = pastAvgs[cat] || 0;
-            const diff = amt - avg;
-            if (diff >= 50000 && amt >= avg * 1.3 && diff > maxDiff) {
-                anomalyCat = cat; maxDiff = diff; anomalyAvg = avg; anomalyCurr = amt;
-            }
-        });
-
-        if (anomalyCat) {
-            html += `<p class="flex gap-3 items-start mb-3"><i class="fas fa-exclamation-triangle text-amber-500 mt-1 shrink-0"></i> <span>최근 평균 대비 <strong>${anomalyCat}</strong> 카테고리의 지출이 크게 늘었습니다. <br><span class="text-xs text-gray-500">(과거 평균: ${Math.round(anomalyAvg).toLocaleString()}원 ➔ 이번 달: <strong class="text-amber-600">${anomalyCurr.toLocaleString()}원</strong>) 특이사항을 점검해보세요.</span></span></p>`;
-        } else {
-            html += `<p class="flex gap-3 items-start mb-3"><i class="fas fa-check-circle text-emerald-500 mt-1 shrink-0"></i> <span>이번 달은 과거 평균과 비교해 크게 튀는 지출 카테고리가 없이 안정적입니다.</span></p>`;
-        }
-
-        const expenses = currentTxData.filter(t => t.type === '지출' && t.cat !== '상환' && t.cat !== '고정비');
-        if (expenses.length > 0) {
-            expenses.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
-            const topTx = expenses[0];
-            if (Math.abs(topTx.amount) >= 100000) { 
-                html += `<p class="flex gap-3 items-start"><i class="fas fa-search-dollar text-indigo-500 mt-1 shrink-0"></i> <span>특이 지출건 확인: <strong>${escapeHtml(topTx.memo)}</strong>에 <strong class="text-indigo-600">${Math.abs(topTx.amount).toLocaleString()}원</strong>이 결제되었습니다.</span></p>`;
-            }
-        }
-
-        if (monthsCount === 0 && expenses.length === 0) html += '<p class="text-sm text-gray-500 py-4">지출 내역이 충분하지 않아 분석할 수 없습니다.</p>';
-        container.innerHTML = html;
-    }
-
     function renderAssetTrendDashboardDiff(model) {
         const diffEl = document.getElementById('dashboard-asset-diff');
         if (!diffEl || !model) return;
@@ -4282,7 +4218,7 @@
         return model;
     }
 
-    function renderFinanceSummaryKpis({ assetModel, totalIncome, totalExpense, currentBalance, fixedSaving }) {
+    function renderFinanceSummaryKpis({ assetModel, totalIncome, totalExpense, currentBalance }) {
         const setText = (id, text) => {
             const el = document.getElementById(id);
             if (el) el.textContent = text;
@@ -4309,38 +4245,90 @@
         setHtml('finance-kpi-cashflow', `<span class="${cashflowClass}">${formatSignedWon(currentBalance)}</span>`);
         setText('finance-kpi-cashflow-meta', `수입 ${formatWon(totalIncome)} · 지출 ${formatWon(totalExpense)}`);
 
-        const savingAmount = currentBalance + fixedSaving;
-        const savingRate = totalIncome > 0 ? (savingAmount / totalIncome) * 100 : 0;
+        const savingRate = totalIncome > 0 ? (currentBalance / totalIncome) * 100 : 0;
         const savingClass = savingRate >= 0 ? 'text-sky-600' : 'text-red-500';
         setHtml('finance-kpi-saving-rate', `<span class="${savingClass}">${savingRate.toFixed(1)}</span>%`);
-        setText('finance-kpi-saving-meta', `잉여 ${formatSignedWon(currentBalance)} + 고정저축 ${formatWon(fixedSaving)}`);
+        setText('finance-kpi-saving-meta', `잉여 ${formatSignedWon(currentBalance)} / 수입 ${formatWon(totalIncome)}`);
         setProgressBar('finance-kpi-saving-bar', savingRate);
     }
 
-    function renderDashboard() {
-        if(!currentMonthKey || !monthlyDB[currentMonthKey]) return;
-        const db = monthlyDB[currentMonthKey];
-        
-        const shortYear = currentMonthKey.substring(2, 4); const shortMonth = currentMonthKey.substring(5, 7); 
+    function applyAssetStateForMonth(db, monthKey) {
+        const shortYear = monthKey.substring(2, 4);
+        const shortMonth = monthKey.substring(5, 7);
         const targetLabel = `${shortYear}.${shortMonth}`;
-        
         const monthIdx = dynamicAssetHistory.labels.indexOf(targetLabel);
+
         if (monthIdx !== -1) {
             db.asset = dynamicAssetHistory.data[monthIdx];
             db.prevAsset = monthIdx > 0 ? dynamicAssetHistory.data[monthIdx - 1] : 0;
             db.monthIndex = monthIdx;
         } else {
-            db.monthIndex = dynamicAssetHistory.data.length - 1; 
+            db.monthIndex = dynamicAssetHistory.data.length - 1;
             db.asset = db.monthIndex >= 0 ? dynamicAssetHistory.data[db.monthIndex] : 0;
             db.prevAsset = db.monthIndex > 0 ? dynamicAssetHistory.data[db.monthIndex - 1] : 0;
         }
+    }
 
+    function getCashFlowStats(txData = []) {
+        return txData.reduce((acc, item) => {
+            if (item.type === '수입') acc.totalIncome += item.amount;
+            else if (item.type === '지출') acc.totalExpense += Math.abs(item.amount);
+            return acc;
+        }, { totalIncome: 0, totalExpense: 0 });
+    }
+
+    function renderFinanceSummary() {
+        if(!currentMonthKey || !monthlyDB[currentMonthKey]) return;
+        const db = monthlyDB[currentMonthKey];
+        applyAssetStateForMonth(db, currentMonthKey);
+
+        const { totalIncome, totalExpense } = getCashFlowStats(db.transactions);
+        const currentBalance = totalIncome - totalExpense;
+
+        if (document.getElementById('card-total')) document.getElementById('card-total').textContent = `${currentBalance.toLocaleString()}원`;
+        if (document.getElementById('card-asset')) document.getElementById('card-asset').textContent = `${db.asset.toLocaleString()}원`;
+
+        const budgetStatus = document.getElementById('card-budget-status');
+        if (budgetStatus) {
+            if (currentBalance >= 0) {
+                budgetStatus.innerHTML = '<i class="fas fa-check-circle"></i> 흑자';
+                budgetStatus.className = 'text-[10px] md:text-xs text-indigo-100 flex items-center gap-1 mb-1 whitespace-nowrap shrink-0';
+            } else {
+                budgetStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i> 적자';
+                budgetStatus.className = 'text-[10px] md:text-xs text-red-200 flex items-center gap-1 mb-1 whitespace-nowrap shrink-0';
+            }
+        }
+
+        const assetModel = renderAssetTrend(db);
+        renderFinanceSummaryKpis({ assetModel, totalIncome, totalExpense, currentBalance });
+    }
+
+    function renderCashFlow() {
+        if(!currentMonthKey || !monthlyDB[currentMonthKey]) return;
+        const db = monthlyDB[currentMonthKey];
         const txData = db.transactions;
-        document.getElementById('display-month').textContent = db.title;
-        document.getElementById('display-period').textContent = db.periodStr;
-        document.getElementById('manage-title').textContent = `${db.title} 거래 내역`;
 
-        let totalIncome = 0; let totalExpense = 0; let currentFixedSaving = 0; let categoryTotals = {};
+        const displayMonth = document.getElementById('display-month');
+        const displayPeriod = document.getElementById('display-period');
+        const manageTitle = document.getElementById('manage-title');
+        if (displayMonth) displayMonth.textContent = db.title;
+        if (displayPeriod) displayPeriod.textContent = db.periodStr;
+        if (manageTitle) manageTitle.textContent = `${db.title} 거래 내역`;
+
+        const { totalIncome, totalExpense } = getCashFlowStats(txData);
+        const currentBalance = totalIncome - totalExpense;
+        const cashflowClass = currentBalance >= 0 ? 'text-emerald-600' : 'text-red-500';
+
+        const selectedIncome = document.getElementById('cashflow-selected-income');
+        const selectedExpense = document.getElementById('cashflow-selected-expense');
+        const selectedNet = document.getElementById('cashflow-selected-net');
+        if (selectedIncome) selectedIncome.textContent = formatWon(totalIncome);
+        if (selectedExpense) selectedExpense.textContent = formatWon(totalExpense);
+        if (selectedNet) {
+            selectedNet.innerHTML = `<span class="${cashflowClass}">${formatSignedWon(currentBalance)}</span>`;
+            selectedNet.className = `text-xl md:text-2xl font-bold truncate ${cashflowClass}`;
+        }
+
         const manageList = document.getElementById('manageTransactionList');
         if (manageList) manageList.innerHTML = '';
 
@@ -4353,17 +4341,11 @@
         const sortedTxData = [...txData].sort((a, b) => {
             const dateTimeA = `${a.date} ${a.time || '00:00'}`;
             const dateTimeB = `${b.date} ${b.time || '00:00'}`;
-            if (txSortOrder === 'desc') return dateTimeB.localeCompare(dateTimeA); 
-            return dateTimeA.localeCompare(dateTimeB); 
+            if (txSortOrder === 'desc') return dateTimeB.localeCompare(dateTimeA);
+            return dateTimeA.localeCompare(dateTimeB);
         });
 
         sortedTxData.forEach((item) => {
-            if (isFixedSavingTransaction(item)) currentFixedSaving += Math.abs(Number(item.amount || 0));
-            if (item.type === '수입') totalIncome += item.amount;
-            else if (item.type === '지출') {
-                const absAmount = Math.abs(item.amount); totalExpense += absAmount;
-                const category = item.cat || '미분류'; categoryTotals[category] = (categoryTotals[category] || 0) + absAmount;
-            }
             const colorClass = item.type === '수입' ? 'text-blue-600' : (item.type === '지출' ? 'text-red-600' : 'text-gray-600');
             const sign = item.amount > 0 ? '+' : '';
             const tr = document.createElement('tr');
@@ -4377,93 +4359,39 @@
             if (manageList) manageList.appendChild(tr);
         });
 
-        const currentBalance = totalIncome - totalExpense;
-        if (document.getElementById('card-income')) document.getElementById('card-income').textContent = `+${totalIncome.toLocaleString()}원`;
-        if (document.getElementById('card-expense')) document.getElementById('card-expense').textContent = `-${totalExpense.toLocaleString()}원`;
-        if (document.getElementById('card-total')) document.getElementById('card-total').textContent = `${currentBalance.toLocaleString()}원`;
-        if (document.getElementById('card-asset')) document.getElementById('card-asset').textContent = `${db.asset.toLocaleString()}원`;
         if (document.getElementById('manage-count')) document.getElementById('manage-count').textContent = `총 ${txData.length}건`;
 
-        const budgetStatus = document.getElementById('card-budget-status');
-        if (budgetStatus) {
-            if (currentBalance >= 0) {
-                budgetStatus.innerHTML = '<i class="fas fa-check-circle"></i> 흑자';
-                budgetStatus.className = 'text-[10px] md:text-xs text-indigo-100 flex items-center gap-1 mb-1 whitespace-nowrap shrink-0';
-            } else {
-                budgetStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i> 적자';
-                budgetStatus.className = 'text-[10px] md:text-xs text-red-200 flex items-center gap-1 mb-1 whitespace-nowrap shrink-0';
-            }
-        }
-
-        generateAIComments(txData, categoryTotals, db.title, currentMonthKey);
-
-        const getCategoryColor = (category, index) => {
-            const fixedColors = { '상환': '#D1D5DB', '식비': '#F87171', '생활': '#FBBF24', '주거': '#34D399', '통신': '#60A5FA', '교통': '#A78BFA', '쇼핑': '#F472B6', '의료/건강': '#10B981', '문화/여가': '#F59E0B', '교육': '#3B82F6', '경조/선물': '#EF4444', '고정비': '#818CF8', '미분류': '#9CA3AF' };
-            if (fixedColors[category]) return fixedColors[category];
-            const fallbackColors = ['#4F46E5', '#2DD4BF', '#FBBF24', '#FB7185', '#C084FC', '#38BDF8', '#A3E635'];
-            return fallbackColors[index % fallbackColors.length];
-        };
-        
-        const predefinedOrder = ['식비', '생활', '주거', '통신', '교통', '쇼핑', '의료/건강', '문화/여가', '교육', '경조/선물', '고정비', '미분류', '상환'];
-        const categoryLabels = Object.keys(categoryTotals).sort((a, b) => {
-            if (a === '상환') return 1; if (b === '상환') return -1;
-            let idxA = predefinedOrder.indexOf(a); let idxB = predefinedOrder.indexOf(b);
-            if (idxA === -1) idxA = 99; if (idxB === -1) idxB = 99;
-            return idxA - idxB;
-        });
-        
-        const categoryData = categoryLabels.map(cat => categoryTotals[cat]);
-        const bgColors = categoryLabels.map((cat, idx) => getCategoryColor(cat, idx));
-
-        const ctxExp = document.getElementById('expenseChart');
-        if (ctxExp && categoryLabels.length > 0) {
-            renderOrUpdateChart('expense', 'expenseChart', {
-                type: 'doughnut', data: { labels: categoryLabels, datasets: [{ data: categoryData, backgroundColor: bgColors, borderWidth: 0, hoverOffset: 4 }] },
-                options: withChartTransitions({ responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } }, tooltip: { callbacks: { label: function(c) { return ' ' + c.raw.toLocaleString() + '원'; } } } } }, 420)
-            });
-        } else {
-            destroyChart('expense');
-        }
-
-        const trendLabels = []; const incomeData = []; const expenseData = []; const savingData = []; const netData = [];
-        let last6Net = [];
+        const trendLabels = [];
+        const incomeData = [];
+        const expenseData = [];
+        const netData = [];
         getMonthKeys().forEach(key => {
             const monthDb = monthlyDB[key];
-            trendLabels.push(key.replace('20', '').replace('-', '.')); 
-            let mInc = 0, mExp = 0, mSav = 0;
-            monthDb.transactions.forEach(t => { 
-                const isSaving = isFixedSavingTransaction(t);
-                if (isSaving) mSav += Math.abs(t.amount);
-                else if (t.type === '수입') mInc += t.amount; 
-                else if (t.type === '지출') mExp += Math.abs(t.amount); 
-            });
-            incomeData.push(mInc); expenseData.push(mExp); savingData.push(mSav); netData.push(mInc - mExp);
-            if (mInc > 0 || mExp > 0) last6Net.push(mInc - mExp);
+            const stats = getCashFlowStats(monthDb.transactions);
+            trendLabels.push(key.replace('20', '').replace('-', '.'));
+            incomeData.push(stats.totalIncome);
+            expenseData.push(stats.totalExpense);
+            netData.push(stats.totalIncome - stats.totalExpense);
         });
-
 
         const trendCtx = document.getElementById('monthlyTrendChart');
         if (trendCtx) {
             renderOrUpdateChart('monthlyTrend', 'monthlyTrendChart', {
                 type: 'bar',
                 data: { labels: trendLabels, datasets: [
-                    { type: 'line', label: '순수익', data: netData, borderColor: '#F59E0B', backgroundColor: '#F59E0B', borderWidth: 2, pointRadius: 3, fill: false, tension: 0.3, yAxisID: 'y' }, 
-                    { type: 'bar', label: '수입', data: incomeData, backgroundColor: 'rgba(59, 130, 246, 0.8)', borderRadius: 4, stack: 'Stack 0', yAxisID: 'y' }, 
-                    { type: 'bar', label: '지출', data: expenseData, backgroundColor: 'rgba(239, 68, 68, 0.8)', borderRadius: 4, stack: 'Stack 1', yAxisID: 'y' },
-                    { type: 'bar', label: '고정저축', data: savingData, backgroundColor: 'rgba(16, 185, 129, 0.8)', borderRadius: 4, stack: 'Stack 1', yAxisID: 'y' }
+                    { type: 'bar', label: '수입', data: incomeData, backgroundColor: 'rgba(59, 130, 246, 0.75)', borderRadius: 6, yAxisID: 'y' },
+                    { type: 'bar', label: '지출', data: expenseData, backgroundColor: 'rgba(239, 68, 68, 0.72)', borderRadius: 6, yAxisID: 'y' },
+                    { type: 'line', label: '잉여', data: netData, borderColor: '#10B981', backgroundColor: '#10B981', borderWidth: 2.5, pointRadius: 3, fill: false, tension: 0.32, yAxisID: 'y' }
                 ] },
-                options: withChartTransitions({ responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } }, y: { stacked: true, beginAtZero: true, grid: { borderDash: [5, 5] }, ticks: { font: { size: 10 }, callback: function(value) { return Math.floor(value / 10000).toLocaleString() + '만'; } } } }, plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 6, font: { size: 10 } } }, tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + c.raw.toLocaleString() + '원'; } } } } }, 480)
+                options: withChartTransitions({ responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { x: { stacked: false, grid: { display: false }, ticks: { font: { size: 10 } } }, y: { stacked: false, grid: { borderDash: [5, 5] }, ticks: { font: { size: 10 }, callback: function(value) { return Math.floor(value / 10000).toLocaleString() + '만'; } } } }, plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 6, font: { size: 10 } } }, tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + c.raw.toLocaleString() + '원'; } } } } }, 480)
             });
         }
+        destroyChart('expense');
+    }
 
-        const assetModel = renderAssetTrend(db);
-        renderFinanceSummaryKpis({
-            assetModel,
-            totalIncome,
-            totalExpense,
-            currentBalance,
-            fixedSaving: currentFixedSaving
-        });
+    function renderDashboard() {
+        renderFinanceSummary();
+        renderCashFlow();
     }
     
     function updateFinanceRoadmap(currentAsset) {

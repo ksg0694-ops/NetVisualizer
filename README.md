@@ -20,8 +20,9 @@
 - Navigation now has two levels: Goal first, then Finance tools.
 - Finance is the active goal. Career, Project, and Health are visible placeholders for later expansion.
 - Finance tools are grouped as Summary, Portfolio, Cash Flow, Long-Term Asset, and Real Estate.
-- Summary now works as a Finance KPI cockpit with asset goal progress, housing funding readiness, monthly surplus, and saving rate.
+- Summary now works as a Finance KPI cockpit with asset goal progress, housing funding readiness, monthly surplus, and monthly surplus rate.
 - Month navigation is scoped to Cash Flow; Summary, Portfolio, Long-Term Asset, and Real Estate default back to the latest available month/state.
+- Cash Flow now focuses on selected-month totals plus the full monthly income/expense/surplus trend; fixed-saving bars, AI cash-flow comments, and category doughnut cards were removed.
 - Asset trend model logic now lives in `js/features/assetTrend.js`.
 - `index.html` keeps DOM and Chart.js rendering for now, but calls `AssetTrendFeature.createModel()` for metrics and chart series.
 - The long-term asset screen is now arranged as a Finance goal workspace: chart on the left, goal/growth KPIs on the right, roadmap below.
@@ -85,7 +86,7 @@ Supabase에서 병렬 조회하는 테이블은 다음과 같습니다.
 
 ### 4. 화면 렌더링
 
-- `renderDashboard()`는 월별 수입/지출, 지출 카테고리 차트, 현금 흐름, 자산 성장 차트를 렌더링합니다.
+- `renderFinanceSummary()`는 Finance KPI와 자산 성장 차트를 렌더링하고, `renderCashFlow()`는 선택 월 요약과 전체 월 흐름 차트를 렌더링합니다.
 - `renderPortfolio()`는 현재 월 포트폴리오 요약, 아코디언 목록, 포트폴리오 차트를 렌더링합니다.
 - `renderInvestDetail()`은 투자 자산 상세 분석, 전략 분류, 투자 비중 차트를 렌더링합니다.
 - `renderRealEstate()`는 Leaflet 지도와 청약 준비 자금 진행률을 렌더링합니다.

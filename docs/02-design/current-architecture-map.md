@@ -73,12 +73,12 @@ flowchart LR
     FinanceSummary["Finance Summary"] --> AssetGoal["Asset goal progress\ncurrent asset / 250M KRW"]
     FinanceSummary --> HousingFunding["Housing funding readiness\nready amount / 800M KRW"]
     FinanceSummary --> MonthlySurplus["Monthly surplus\nincome - expense"]
-    FinanceSummary --> SavingRate["Saving rate\n(monthly surplus + fixed saving transfers) / income"]
+    FinanceSummary --> SavingRate["Monthly surplus rate\nmonthly surplus / income"]
 
     AssetGoal --> AssetTrendModel["AssetTrendFeature.createModel()"]
     HousingFunding --> RealEstateFunding["getRealEstateFundingStatus()"]
     MonthlySurplus --> MonthlyDB["monthlyDB transactions"]
-    SavingRate --> FixedSavingRule["isFixedSavingTransaction()"]
+    SavingRate --> MonthlyDB
 ```
 
 This keeps KPI calculation in `index.html` for now. The next architecture step should move Finance summary KPI definitions into a small domain module before adding non-Finance goals.
@@ -94,7 +94,7 @@ flowchart TD
     LatestState --> AssetTrend["Long-Term Asset"]
     LatestState --> RealEstate["Real Estate"]
 
-    CashFlowMonth["cashFlowMonthKey"] --> CashFlow["Cash Flow\nmonthly exploration"]
+    CashFlowMonth["cashFlowMonthKey"] --> CashFlow["Cash Flow\nselected-month totals + full monthly trend"]
     CashFlowMonth --> MonthControls["Prev / Next month controls\ninside Cash Flow only"]
 ```
 
@@ -116,7 +116,7 @@ flowchart TD
 
     Parsers["Parser / Normalizer Functions\nparseTxData, parseAssetData,\nparsePortfolioData,\nparseQuantStrategyRules,\nparseMarketPrices"]
 
-    Renderers["Render Functions\nrenderDashboard, renderPortfolio,\nrenderInvestDetail, renderRealEstate,\nrenderAddons, renderSections"]
+    Renderers["Render Functions\nrenderFinanceSummary, renderCashFlow,\nrenderPortfolio, renderInvestDetail,\nrenderRealEstate, renderAddons, renderSections"]
 
     ChartLayer["Chart Layer\nrenderOrUpdateChart, destroyChart,\nwithChartTransitions"]
 
@@ -161,7 +161,7 @@ sequenceDiagram
     Index->>Index: formatTransactionRows / formatAssetRows / formatPortfolioRows
     Index->>Cache: persistDataCache()
     Index->>State: parseTxData / parseAssetData / parsePortfolioData
-    State->>UI: renderDashboard / renderPortfolio / renderAddons
+    State->>UI: renderFinanceSummary / renderCashFlow / renderPortfolio / renderAddons
 ```
 
 ## State And Storage Map
