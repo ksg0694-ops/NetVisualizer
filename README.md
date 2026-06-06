@@ -13,6 +13,14 @@
 - Recent import run summaries are stored locally, without raw transaction rows.
 - Official banking API sync remains deferred until Auth/RLS and secret handling are designed.
 
+## 2026-06-06 Architecture Redesign Slice
+
+`codex/asset-trend-redesign` branch starts the redesign from the long-term asset trend screen.
+
+- Asset trend model logic now lives in `js/features/assetTrend.js`.
+- `index.html` keeps DOM and Chart.js rendering for now, but calls `AssetTrendFeature.createModel()` for metrics and chart series.
+- Slice design notes: `docs/02-design/asset-trend-redesign-slice.md`.
+
 개인 가계부, 자산 포트폴리오, 카드/보험, 부동산 청약 준비 상태를 한 화면에서 확인하는 HTML 기반 PWA입니다. 현재 저장소 기준으로는 별도 프론트엔드 빌드 도구 없이 `index.html` 하나가 화면, 상태, Supabase 연동, 차트 렌더링, 입력 폼 처리를 모두 담당합니다.
 
 이 문서는 2026-06-03 기준 `C:\Users\ksg06\Documents\NetVisualizer` 코드 조사 결과를 바탕으로 현재 프로세스, 확인된 문제점, Load 저감 방향, 테스트 관점을 정리한 것입니다.

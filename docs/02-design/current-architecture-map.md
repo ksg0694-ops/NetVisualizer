@@ -1,19 +1,20 @@
 # Current Architecture Map
 
 Date: 2026-06-06
-Branch: `codex/realtime-db-sync`
+Branch: `codex/asset-trend-redesign`
 
 ## Purpose
 
 This document maps the current NetVisualizer structure before any architecture redesign. It describes what exists today, not the desired future shape.
 
-The current app is a static PWA built around one large `index.html` file. Most UI, state, Supabase reads/writes, parsing, chart rendering, transaction import, portfolio editing, real-estate views, and Quant workflows are implemented in that single file. The main exception is the Supabase Edge Function for market price sync.
+The current app is a static PWA built around one large `index.html` file. Most UI, state, Supabase reads/writes, parsing, chart rendering, transaction import, portfolio editing, real-estate views, and Quant workflows are implemented in that single file. The main exception is the Supabase Edge Function for market price sync. The first redesign slice now extracts long-term asset trend model logic into `js/features/assetTrend.js`.
 
 ## File-Level Map
 
 ```mermaid
 flowchart TD
     User["User Browser"] --> App["index.html\nSingle-file SPA"]
+    App --> AssetTrendModule["js/features/assetTrend.js\nasset trend model"]
     App --> Manifest["manifest.json\nPWA metadata"]
     App --> SW["sw.js\nstatic cache + network-first fallback"]
     App --> CardImage["img/cards/s_choice.png"]
@@ -54,6 +55,8 @@ flowchart TD
 
     State["Global Mutable State\nmonthlyDB, dataCache, dynamicPortfolioData,\nrawPortfolioData, marketPriceMap,\nquantStrategyRules, txImportCandidates"]
 
+    AssetTrendModule["AssetTrendFeature\npure asset trend model"]
+
     DataAdapter["Data Adapter Functions\nfetchRemoteTables, fetchSheetData,\nformatRows, mergeTransactionRowsIntoCache"]
 
     Parsers["Parser / Normalizer Functions\nparseTxData, parseAssetData,\nparsePortfolioData,\nparseQuantStrategyRules,\nparseMarketPrices"]
@@ -71,6 +74,8 @@ flowchart TD
     Events --> Renderers
     DataAdapter --> Parsers
     Parsers --> State
+    State --> AssetTrendModule
+    AssetTrendModule --> Renderers
     State --> Renderers
     Renderers --> ChartLayer
     Mutations --> DataAdapter

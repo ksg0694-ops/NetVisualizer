@@ -24,6 +24,8 @@
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- Feature modules -->
+    <script src="./js/features/assetTrend.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -3966,6 +3968,146 @@
         container.innerHTML = html;
     }
 
+    function renderAssetTrendDashboardDiff(model) {
+        const diffEl = document.getElementById('dashboard-asset-diff');
+        if (!diffEl || !model) return;
+
+        if (model.currentAsset === 0) {
+            diffEl.innerHTML = `<i class="fas fa-minus"></i> 데이터 없음`;
+            diffEl.className = "text-[10px] md:text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full whitespace-nowrap";
+        } else if (model.monthDiff >= 0) {
+            diffEl.innerHTML = `<i class="fas fa-arrow-up"></i> 전월대비 +${model.monthDiff.toLocaleString()}원`;
+            diffEl.className = "text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full whitespace-nowrap";
+        } else {
+            diffEl.innerHTML = `<i class="fas fa-arrow-down"></i> 전월대비 ${model.monthDiff.toLocaleString()}원`;
+            diffEl.className = "text-[10px] md:text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full whitespace-nowrap";
+        }
+    }
+
+    function renderAssetTrendSummary(model) {
+        if (!model) return;
+
+        const totalGrowthEl = document.getElementById('asset-total-growth');
+        const avgGrowthEl = document.getElementById('asset-avg-growth');
+        const goalPercentEl = document.getElementById('asset-goal-percent');
+        const goalBarEl = document.getElementById('asset-goal-bar');
+        const dashboardTitleEl = document.getElementById('dashboard-asset-title');
+        const goalPercentage = Number(model.goalPercentage) || 0;
+
+        if (totalGrowthEl) totalGrowthEl.innerHTML = `<span class="text-indigo-600">${model.totalAssetGrowth >= 0 ? '+' : ''}${model.totalAssetGrowth.toLocaleString()}</span>원`;
+        if (avgGrowthEl) avgGrowthEl.innerHTML = `<span class="text-emerald-600">${model.avgMonthlyGrowth >= 0 ? '+' : ''}${Math.round(model.avgMonthlyGrowth).toLocaleString()}</span>원/월`;
+        if (goalPercentEl) goalPercentEl.innerHTML = `<span class="text-amber-500">${goalPercentage.toFixed(1)}</span>%`;
+        if (goalBarEl) {
+            goalBarEl.style.width = '0%';
+            setTimeout(() => { goalBarEl.style.width = `${Math.max(0, Math.min(100, goalPercentage))}%`; }, 100);
+        }
+        if (dashboardTitleEl) dashboardTitleEl.textContent = model.dashboardTitle;
+    }
+
+    function createAssetTrendChartConfig(labels, data, targetGoalAsset) {
+        const goalData = labels.map(() => targetGoalAsset);
+        return {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: '내 총 자산',
+                        data,
+                        spanGaps: false,
+                        borderColor: '#4F46E5',
+                        backgroundColor: function(context) {
+                            const chartArea = context.chart.chartArea;
+                            if (!chartArea) return null;
+                            const gradient = context.chart.ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                            gradient.addColorStop(0, 'rgba(79, 70, 229, 0.4)');
+                            gradient.addColorStop(1, 'rgba(79, 70, 229, 0.0)');
+                            return gradient;
+                        },
+                        borderWidth: 2,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#4F46E5',
+                        pointBorderWidth: 2,
+                        pointRadius: 3,
+                        fill: true,
+                        tension: 0.4,
+                        order: 1
+                    },
+                    {
+                        label: '목표 자산 (2.5억)',
+                        data: goalData,
+                        borderColor: '#F59E0B',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        pointHoverRadius: 0,
+                        pointHitRadius: 0,
+                        pointStyle: false,
+                        fill: false,
+                        order: 2
+                    }
+                ]
+            },
+            options: withChartTransitions({
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        ticks: { font: { size: 10 }, callback: function(value) { return Math.floor(value / 10000).toLocaleString() + '만'; } },
+                        grid: { borderDash: [5, 5] }
+                    },
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                },
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { usePointStyle: false, boxWidth: 18, boxHeight: 2, font: { size: 10 } } },
+                    tooltip: { callbacks: { label: function(context) { return ' ' + context.dataset.label + ': ' + context.raw.toLocaleString() + '원'; } } }
+                }
+            }, 480)
+        };
+    }
+
+    function renderAssetTrendCharts(model) {
+        if (!model) return;
+
+        if (document.getElementById('dashboardAssetChart')) {
+            renderOrUpdateChart(
+                'dashAsset',
+                'dashboardAssetChart',
+                createAssetTrendChartConfig(model.dashboardSeries.labels, model.dashboardSeries.data, model.targetGoalAsset)
+            );
+        }
+
+        if (document.getElementById('fullAssetChart')) {
+            renderOrUpdateChart(
+                'fullAsset',
+                'fullAssetChart',
+                createAssetTrendChartConfig(model.fullSeries.labels, model.fullSeries.data, model.targetGoalAsset)
+            );
+        }
+    }
+
+    function renderAssetTrend(db) {
+        if (!db) return;
+        if (!window.AssetTrendFeature || typeof window.AssetTrendFeature.createModel !== 'function') {
+            console.warn('AssetTrendFeature module is not loaded.');
+            return;
+        }
+
+        const model = window.AssetTrendFeature.createModel({
+            history: dynamicAssetHistory,
+            currentMonthKey,
+            currentAssetFilter,
+            currentAsset: db.asset,
+            prevAsset: db.prevAsset,
+            monthIndex: db.monthIndex
+        });
+
+        renderAssetTrendDashboardDiff(model);
+        renderAssetTrendSummary(model);
+        renderAssetTrendCharts(model);
+        if (typeof updateFinanceRoadmap === 'function') updateFinanceRoadmap(model.currentAsset);
+    }
+
     function renderDashboard() {
         if(!currentMonthKey || !monthlyDB[currentMonthKey]) return;
         const db = monthlyDB[currentMonthKey];
@@ -4104,99 +4246,7 @@
             });
         }
 
-        const diffEl = document.getElementById('dashboard-asset-diff');
-        if (diffEl) {
-            if (db.asset === 0) {
-                diffEl.innerHTML = `<i class="fas fa-minus"></i> 데이터 없음`;
-                diffEl.className = "text-[10px] md:text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full whitespace-nowrap";
-            } else {
-                const monthDiff = db.asset - db.prevAsset;
-                if (monthDiff >= 0) { diffEl.innerHTML = `<i class="fas fa-arrow-up"></i> 전월대비 +${monthDiff.toLocaleString()}원`; diffEl.className = "text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full whitespace-nowrap"; }
-                else { diffEl.innerHTML = `<i class="fas fa-arrow-down"></i> 전월대비 ${monthDiff.toLocaleString()}원`; diffEl.className = "text-[10px] md:text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full whitespace-nowrap"; }
-            }
-        }
-
-        const firstAsset = dynamicAssetHistory.data[0] || 0; 
-        const startIdx = dynamicAssetHistory.labels.indexOf('25.12');
-        const start2026Asset = startIdx !== -1 ? dynamicAssetHistory.data[startIdx] : (dynamicAssetHistory.data[0] || 0);
-        const targetGoalAsset = 250000000; 
-
-        const safeMonthIndex = db.monthIndex > 0 ? db.monthIndex : 1; 
-        const totalAssetGrowth = db.asset > 0 ? (db.asset - firstAsset) : 0;
-        const avgMonthlyGrowth = totalAssetGrowth / safeMonthIndex; 
-        
-        let goalPercentage = 0;
-        if (db.asset > 0 && targetGoalAsset > start2026Asset) {
-            goalPercentage = (((db.asset - start2026Asset) / (targetGoalAsset - start2026Asset)) * 100).toFixed(1);
-        }
-
-        if(document.getElementById('asset-total-growth')) document.getElementById('asset-total-growth').innerHTML = `<span class="text-indigo-600">${totalAssetGrowth >= 0 ? '+' : ''}${totalAssetGrowth.toLocaleString()}</span>원`;
-        if(document.getElementById('asset-avg-growth')) document.getElementById('asset-avg-growth').innerHTML = `<span class="text-emerald-600">${avgMonthlyGrowth >= 0 ? '+' : ''}${Math.round(avgMonthlyGrowth).toLocaleString()}</span>원/월`;
-        if(document.getElementById('asset-goal-percent')) document.getElementById('asset-goal-percent').innerHTML = `<span class="text-amber-500">${goalPercentage}</span>%`;
-        if(document.getElementById('asset-goal-bar')) {
-            document.getElementById('asset-goal-bar').style.width = '0%'; setTimeout(() => { document.getElementById('asset-goal-bar').style.width = `${goalPercentage}%`; }, 100);
-        }
-
-        const currentYear = currentMonthKey.split('-')[0]; const currentShortYear = currentYear.substring(2); 
-        if (document.getElementById('dashboard-asset-title')) document.getElementById('dashboard-asset-title').textContent = `${currentYear}년 자산 흐름`;
-
-        const dynamicYearLabels = []; const dynamicYearData = [];
-        for (let i = 1; i <= 12; i++) {
-            dynamicYearLabels.push(`${i}월`);
-            let findIdx = dynamicAssetHistory.labels.indexOf(`${currentShortYear}.${String(i).padStart(2, '0')}`);
-            if (findIdx !== -1) dynamicYearData.push(dynamicAssetHistory.data[findIdx]);
-            else dynamicYearData.push(null); 
-        }
-
-        let allLabels = [...dynamicAssetHistory.labels];
-        let allData = [...dynamicAssetHistory.data];
-        const maxYearNum = parseInt(currentShortYear, 10);
-
-        if (allLabels.length > 0) {
-            const lastLabel = allLabels[allLabels.length - 1]; 
-            const [lastYStr, lastMStr] = lastLabel.split('.');
-            const lastY = parseInt(lastYStr, 10);
-            const lastM = parseInt(lastMStr, 10);
-
-            if (lastY <= maxYearNum) {
-                for (let y = lastY; y <= maxYearNum; y++) {
-                    let startMonth = (y === lastY) ? lastM + 1 : 1;
-                    for (let m = startMonth; m <= 12; m++) {
-                        allLabels.push(`${y}.${String(m).padStart(2, '0')}`);
-                        allData.push(null);
-                    }
-                }
-            }
-        }
-
-        let finalLabels = []; let finalData = [];
-        if (currentAssetFilter === 'all') { 
-            finalLabels = allLabels; 
-            finalData = allData; 
-        } else {
-            allLabels.forEach((label, index) => {
-                if (label.startsWith(currentAssetFilter + '.')) { 
-                    finalLabels.push(label); 
-                    finalData.push(allData[index]); 
-                }
-            });
-        }
-
-        const createLineChart = (id, labels, data) => {
-            const el = document.getElementById(id); if (!el) return null;
-            const goalData = labels.map(() => targetGoalAsset);
-            const chartKey = id === 'dashboardAssetChart' ? 'dashAsset' : 'fullAsset';
-            return renderOrUpdateChart(chartKey, id, {
-                type: 'line',
-                data: { labels: labels, datasets: [{ label: '내 총 자산', data: data, spanGaps: false, borderColor: '#4F46E5', backgroundColor: function(context) { const chartArea = context.chart.chartArea; if (!chartArea) return null; const gradient = context.chart.ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom); gradient.addColorStop(0, 'rgba(79, 70, 229, 0.4)'); gradient.addColorStop(1, 'rgba(79, 70, 229, 0.0)'); return gradient; }, borderWidth: 2, pointBackgroundColor: '#fff', pointBorderColor: '#4F46E5', pointBorderWidth: 2, pointRadius: 3, fill: true, tension: 0.4, order: 1 }, { label: '목표 자산 (2.5억)', data: goalData, borderColor: '#F59E0B', borderWidth: 2, borderDash: [5, 5], pointRadius: 0, pointHoverRadius: 0, pointHitRadius: 0, pointStyle: false, fill: false, order: 2 }] },
-                options: withChartTransitions({ responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { font: { size: 10 }, callback: function(value) { return Math.floor(value / 10000).toLocaleString() + '만'; } }, grid: { borderDash: [5, 5] } }, x: { grid: { display: false }, ticks: { font: { size: 10 } } } }, plugins: { legend: { display: true, position: 'bottom', labels: { usePointStyle: false, boxWidth: 18, boxHeight: 2, font: { size: 10 } } }, tooltip: { callbacks: { label: function(context) { return ' ' + context.dataset.label + ': ' + context.raw.toLocaleString() + '원'; } } } } }, 480)
-            });
-        };
-
-        createLineChart('dashboardAssetChart', dynamicYearLabels, dynamicYearData);
-        createLineChart('fullAssetChart', finalLabels, finalData);
-        
-        if (typeof updateFinanceRoadmap === 'function') updateFinanceRoadmap(db.asset);
+        renderAssetTrend(db);
     }
     
     function updateFinanceRoadmap(currentAsset) {

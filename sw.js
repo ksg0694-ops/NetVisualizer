@@ -4,6 +4,7 @@ const urlsToCache = [
   './index.html',
   './manifest.json',
   './sw.js',
+  './js/features/assetTrend.js',
   './img/cards/s_choice.png'
 ];
 
