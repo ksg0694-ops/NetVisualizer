@@ -49,6 +49,7 @@ The first MCP candidate used a generated file-data endpoint that does not match 
 - Finance, Career, Project, and Life are selectable Goal cockpits. Career/Project/Life currently provide draft KPI structures and next-action areas before data tables are added.
 - Life tools are grouped as Weekly Timetable, Routine Checklist, and Vacation Plan.
 - Weekly Timetable now supports week navigation, ISO week labels such as `W24`, hour-by-hour slot editing, and localStorage persistence per week.
+- Weekly Timetable keeps the hourly grid readable while allowing 10-minute start/end editing, with a compressed week layout for narrow screens.
 - Desktop sidebar navigation was compacted to fit the expanded Goal/Tool structure with less vertical space.
 - Mobile tool navigation now follows the selected Goal, so Finance and Life expose different bottom tool shortcuts on small screens.
 - Finance opens a Goal cockpit with asset goal progress, housing funding readiness, year-to-date surplus, and year-to-date surplus rate.

@@ -64,7 +64,7 @@
                     <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
                 </div>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.03.05
+                    version 1.03.06
                 </div>
             </div>
             <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-3 space-y-3">
@@ -633,7 +633,7 @@
                             </div>
                         </div>
                         <div class="overflow-x-auto">
-                            <div id="weekly-calendar-grid" class="min-w-[1080px]"></div>
+                            <div id="weekly-calendar-grid" class="w-full min-w-0"></div>
                         </div>
                     </div>
                     <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 h-fit">
@@ -657,6 +657,16 @@
                                     <option value="movement">운동</option>
                                     <option value="life">생활</option>
                                 </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Start</label>
+                                    <select id="weekly-event-start" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"></select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">End</label>
+                                    <select id="weekly-event-end" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"></select>
+                                </div>
                             </div>
                             <div>
                                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Memo</label>
@@ -3952,6 +3962,386 @@
         document.getElementById('weekly-save-slot')?.addEventListener('click', saveSelectedLifeTimetableSlot);
         document.getElementById('weekly-delete-slot')?.addEventListener('click', deleteSelectedLifeTimetableSlot);
         document.getElementById('weekly-reset-template')?.addEventListener('click', resetActiveLifeWeekTemplate);
+    }
+
+    const LIFE_TIMETABLE_STEP_MINUTES = 10;
+    const LIFE_TIMETABLE_FIRST_MINUTE = 6 * 60;
+    const LIFE_TIMETABLE_LAST_MINUTE = 24 * 60;
+    const LIFE_TIMETABLE_DAY_LABELS_KO = ['월', '화', '수', '목', '금', '토', '일'];
+
+    function formatTimetableMinute(totalMinutes) {
+        const minutes = Math.max(0, Math.min(LIFE_TIMETABLE_LAST_MINUTE, Number(totalMinutes) || 0));
+        if (minutes === LIFE_TIMETABLE_LAST_MINUTE) return '24:00';
+        const hour = Math.floor(minutes / 60);
+        const minute = minutes % 60;
+        return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    }
+
+    function clampTimetableMinute(value, fallback = LIFE_TIMETABLE_FIRST_MINUTE) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) return fallback;
+        const stepped = Math.round(numeric / LIFE_TIMETABLE_STEP_MINUTES) * LIFE_TIMETABLE_STEP_MINUTES;
+        return Math.max(LIFE_TIMETABLE_FIRST_MINUTE, Math.min(LIFE_TIMETABLE_LAST_MINUTE, stepped));
+    }
+
+    function normalizeLifeTimetableEvent(rawKey, rawEvent = {}) {
+        const [rawDayIndex, rawTimeValue] = String(rawKey || '').split('-').map(Number);
+        const dayIndex = Number.isInteger(Number(rawEvent.dayIndex)) ? Number(rawEvent.dayIndex) : rawDayIndex;
+        const keyTime = Number.isFinite(rawTimeValue) ? rawTimeValue : LIFE_TIMETABLE_FIRST_MINUTE;
+        const inferredStart = keyTime < 24 ? keyTime * 60 : keyTime;
+        const startMinute = clampTimetableMinute(rawEvent.startMinute ?? inferredStart, inferredStart);
+        const defaultEnd = Math.min(startMinute + 60, LIFE_TIMETABLE_LAST_MINUTE);
+        let endMinute = clampTimetableMinute(rawEvent.endMinute ?? defaultEnd, defaultEnd);
+        if (endMinute <= startMinute) endMinute = Math.min(startMinute + LIFE_TIMETABLE_STEP_MINUTES, LIFE_TIMETABLE_LAST_MINUTE);
+        return {
+            ...rawEvent,
+            dayIndex: Math.max(0, Math.min(6, Number.isFinite(dayIndex) ? dayIndex : 0)),
+            startMinute,
+            endMinute,
+        };
+    }
+
+    function getTimetableSlotKey(dayIndex, startMinute) {
+        return `${dayIndex}-${startMinute}`;
+    }
+
+    function normalizeLifeWeekTimetable(weekRows = {}) {
+        const normalizedRows = {};
+        let changed = false;
+        Object.entries(weekRows).forEach(([key, event]) => {
+            const normalized = normalizeLifeTimetableEvent(key, event);
+            const normalizedKey = getTimetableSlotKey(normalized.dayIndex, normalized.startMinute);
+            normalizedRows[normalizedKey] = normalized;
+            if (normalizedKey !== key) changed = true;
+            if (normalized.startMinute !== event?.startMinute || normalized.endMinute !== event?.endMinute || normalized.dayIndex !== event?.dayIndex) changed = true;
+        });
+        return { rows: normalizedRows, changed };
+    }
+
+    function createDefaultLifeWeekTemplate() {
+        return {
+            '0-420': { title: '출근 준비', type: 'routine', note: '물, 일정 확인, 이동 준비', dayIndex: 0, startMinute: 420, endMinute: 480 },
+            '0-1200': { title: '학습', type: 'focus', note: '이번 주 습득 과제', dayIndex: 0, startMinute: 1200, endMinute: 1260 },
+            '1-420': { title: '이동', type: 'movement', note: '가볍게 30분', dayIndex: 1, startMinute: 420, endMinute: 450 },
+            '2-1200': { title: '프로젝트', type: 'focus', note: '개인 앱 개선', dayIndex: 2, startMinute: 1200, endMinute: 1260 },
+            '3-420': { title: '운동', type: 'movement', note: '근력/유산소 중 선택', dayIndex: 3, startMinute: 420, endMinute: 480 },
+            '3-1260': { title: '청소', type: 'life', note: '생활 리셋', dayIndex: 3, startMinute: 1260, endMinute: 1290 },
+            '4-1200': { title: '주간 회고', type: 'recovery', note: '다음 주 조정', dayIndex: 4, startMinute: 1200, endMinute: 1230 },
+            '5-540': { title: '개인 프로젝트', type: 'focus', note: '오전 집중 블록', dayIndex: 5, startMinute: 540, endMinute: 660 },
+            '6-1260': { title: '다음 주 준비', type: 'routine', note: '캘린더와 할 일 정리', dayIndex: 6, startMinute: 1260, endMinute: 1320 },
+        };
+    }
+
+    function ensureLifeWeekTimetable(weekKey) {
+        const store = getLifeTimetableStore();
+        if (!store[weekKey]) store[weekKey] = createDefaultLifeWeekTemplate();
+        const normalized = normalizeLifeWeekTimetable(store[weekKey]);
+        if (normalized.changed) {
+            store[weekKey] = normalized.rows;
+            saveLifeTimetableStore(store);
+        }
+        return store[weekKey];
+    }
+
+    function getTimetableSlotLabel(dayIndex, startMinute, endMinute = startMinute + 60) {
+        const date = addDays(activeLifeWeekStart, dayIndex);
+        const dayLabel = LIFE_TIMETABLE_DAY_LABELS_KO[dayIndex] || '';
+        return `${dayLabel} ${formatShortDate(date)} ${formatTimetableMinute(startMinute)} - ${formatTimetableMinute(endMinute)}`;
+    }
+
+    function getLifeTimetableEvents(weekRows) {
+        return Object.entries(weekRows)
+            .map(([key, event]) => ({ key, ...normalizeLifeTimetableEvent(key, event) }))
+            .sort((a, b) => a.dayIndex - b.dayIndex || a.startMinute - b.startMinute);
+    }
+
+    function getLifeTimetableEventsForHour(weekRows, dayIndex, hour) {
+        const hourStart = hour * 60;
+        const hourEnd = hourStart + 60;
+        return getLifeTimetableEvents(weekRows).filter(event =>
+            event.dayIndex === dayIndex && event.startMinute >= hourStart && event.startMinute < hourEnd
+        );
+    }
+
+    function formatTimetableDuration(minutes) {
+        const rounded = Math.round(minutes / LIFE_TIMETABLE_STEP_MINUTES) * LIFE_TIMETABLE_STEP_MINUTES;
+        if (rounded % 60 === 0) return `${rounded / 60}h`;
+        return `${(rounded / 60).toFixed(1)}h`;
+    }
+
+    function getEditorTimeSelection() {
+        const startEl = document.getElementById('weekly-event-start');
+        const endEl = document.getElementById('weekly-event-end');
+        const fallbackStart = selectedLifeTimetableSlot?.startMinute ?? LIFE_TIMETABLE_FIRST_MINUTE;
+        const startMinute = clampTimetableMinute(startEl?.value, fallbackStart);
+        let endMinute = clampTimetableMinute(endEl?.value, Math.min(startMinute + 60, LIFE_TIMETABLE_LAST_MINUTE));
+        if (endMinute <= startMinute) endMinute = Math.min(startMinute + LIFE_TIMETABLE_STEP_MINUTES, LIFE_TIMETABLE_LAST_MINUTE);
+        return { startMinute, endMinute };
+    }
+
+    function renderTimetableTimeOptions(startMinute, endMinute) {
+        const startEl = document.getElementById('weekly-event-start');
+        const endEl = document.getElementById('weekly-event-end');
+        if (!startEl || !endEl) return;
+
+        const startOptions = [];
+        for (let minute = LIFE_TIMETABLE_FIRST_MINUTE; minute < LIFE_TIMETABLE_LAST_MINUTE; minute += LIFE_TIMETABLE_STEP_MINUTES) {
+            startOptions.push(`<option value="${minute}" ${minute === startMinute ? 'selected' : ''}>${formatTimetableMinute(minute)}</option>`);
+        }
+        startEl.innerHTML = startOptions.join('');
+
+        const endOptions = [];
+        for (let minute = LIFE_TIMETABLE_FIRST_MINUTE + LIFE_TIMETABLE_STEP_MINUTES; minute <= LIFE_TIMETABLE_LAST_MINUTE; minute += LIFE_TIMETABLE_STEP_MINUTES) {
+            endOptions.push(`<option value="${minute}" ${minute <= startMinute ? 'disabled' : ''} ${minute === endMinute ? 'selected' : ''}>${formatTimetableMinute(minute)}</option>`);
+        }
+        endEl.innerHTML = endOptions.join('');
+        startEl.value = String(startMinute);
+        endEl.value = String(endMinute);
+    }
+
+    function updateSelectedTimetableLabelFromEditor() {
+        if (!selectedLifeTimetableSlot) return;
+        const selectedEl = document.getElementById('weekly-selected-slot');
+        const { startMinute, endMinute } = getEditorTimeSelection();
+        selectedLifeTimetableSlot.startMinute = startMinute;
+        selectedLifeTimetableSlot.endMinute = endMinute;
+        if (selectedEl) selectedEl.textContent = getTimetableSlotLabel(selectedLifeTimetableSlot.dayIndex, startMinute, endMinute);
+        renderTimetableTimeOptions(startMinute, endMinute);
+    }
+
+    function renderWeeklyTimetable() {
+        const grid = document.getElementById('weekly-calendar-grid');
+        if (!grid) return;
+
+        const weekInfo = getIsoWeekInfo(activeLifeWeekStart);
+        const weekKey = getLifeWeekKey(activeLifeWeekStart);
+        const weekRows = ensureLifeWeekTimetable(weekKey);
+        const weekEnd = addDays(activeLifeWeekStart, 6);
+        const labelEl = document.getElementById('weekly-week-label');
+        const rangeEl = document.getElementById('weekly-week-range');
+        if (labelEl) labelEl.textContent = `${weekInfo.year} W${String(weekInfo.week).padStart(2, '0')}`;
+        if (rangeEl) rangeEl.textContent = `${formatShortDate(activeLifeWeekStart)} - ${formatShortDate(weekEnd)}`;
+
+        const today = formatIsoDate(new Date());
+        const selectedKey = selectedLifeTimetableSlot?.eventKey || (
+            selectedLifeTimetableSlot ? getTimetableSlotKey(selectedLifeTimetableSlot.dayIndex, selectedLifeTimetableSlot.startMinute) : ''
+        );
+        const events = getLifeTimetableEvents(weekRows);
+        const focusMinutes = events
+            .filter(item => ['focus', 'work'].includes(item.type))
+            .reduce((sum, item) => sum + Math.max(0, item.endMinute - item.startMinute), 0);
+        const blockCountEl = document.getElementById('weekly-block-count');
+        const focusHoursEl = document.getElementById('weekly-focus-hours');
+        const recoveryCountEl = document.getElementById('weekly-recovery-count');
+        if (blockCountEl) blockCountEl.textContent = events.length.toLocaleString();
+        if (focusHoursEl) focusHoursEl.textContent = formatTimetableDuration(focusMinutes);
+        if (recoveryCountEl) recoveryCountEl.textContent = events.filter(item => item.type === 'recovery').length.toLocaleString();
+
+        let html = '<div class="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] md:grid-cols-[64px_repeat(7,minmax(82px,1fr))] gap-px bg-gray-200 border border-gray-200 rounded-xl overflow-hidden w-full">';
+        html += '<div class="bg-gray-50 min-h-[46px] md:min-h-[54px]"></div>';
+        lifeTimetableDays.forEach((day, idx) => {
+            const date = addDays(activeLifeWeekStart, idx);
+            const isToday = formatIsoDate(date) === today;
+            const dayLabel = LIFE_TIMETABLE_DAY_LABELS_KO[idx];
+            html += `
+                <div class="bg-white min-h-[46px] md:min-h-[54px] flex flex-col items-center justify-center px-0.5 ${isToday ? 'text-indigo-700' : 'text-gray-600'}">
+                    <span class="text-[11px] md:text-xs font-black leading-none whitespace-nowrap">${dayLabel}</span>
+                    <span class="text-[9px] md:text-xs font-bold mt-1 whitespace-nowrap ${isToday ? 'bg-indigo-600 text-white px-1.5 md:px-2 py-0.5 rounded-full' : ''}">${formatShortDate(date)}</span>
+                </div>
+            `;
+        });
+
+        lifeTimetableHours.forEach(hour => {
+            html += `<div class="bg-gray-50 min-h-[58px] md:min-h-[72px] px-1 md:px-2 py-2 text-[9px] md:text-[10px] font-bold text-gray-400 whitespace-nowrap">${String(hour).padStart(2, '0')}:00</div>`;
+            lifeTimetableDays.forEach((day, dayIndex) => {
+                const hourEvents = getLifeTimetableEventsForHour(weekRows, dayIndex, hour);
+                const isAddingHere = selectedLifeTimetableSlot && !selectedLifeTimetableSlot.eventKey
+                    && selectedLifeTimetableSlot.dayIndex === dayIndex
+                    && Math.floor(selectedLifeTimetableSlot.startMinute / 60) === hour;
+                html += `
+                    <div class="min-h-[58px] md:min-h-[72px] bg-white p-1 md:p-1.5 border border-transparent ${isAddingHere ? 'ring-2 ring-indigo-400 ring-inset bg-indigo-50' : ''}">
+                        <div class="space-y-1">
+                            ${hourEvents.map(event => {
+                                const meta = lifeTimetableTypeMeta[event.type] || lifeTimetableTypeMeta.life;
+                                const isSelected = event.key === selectedKey;
+                                return `
+                                    <button type="button" data-weekly-event-key="${event.key}"
+                                        class="w-full text-left rounded-md border px-1 py-1 transition ${meta.cell} ${isSelected ? 'ring-2 ring-indigo-400 ring-inset' : 'hover:brightness-[0.98]'}">
+                                        <div class="flex items-center gap-1 min-w-0">
+                                            <span class="w-1.5 h-1.5 rounded-full ${meta.dot} shrink-0"></span>
+                                            <span class="text-[8px] md:text-[9px] font-bold truncate">${formatTimetableMinute(event.startMinute)}</span>
+                                        </div>
+                                        <p class="text-[9px] md:text-xs font-bold leading-tight truncate mt-0.5">${escapeHtml(event.title)}</p>
+                                    </button>
+                                `;
+                            }).join('')}
+                            <button type="button" data-weekly-slot="${dayIndex}-${hour}" data-day-index="${dayIndex}" data-hour="${hour}"
+                                class="w-full rounded-md border border-dashed ${isAddingHere ? 'border-indigo-300 text-indigo-500 bg-white/70' : 'border-transparent text-gray-300 hover:border-gray-200 hover:bg-gray-50'} text-[10px] md:text-xs font-bold leading-none py-1 transition">+</button>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+        html += '</div>';
+        grid.innerHTML = html;
+
+        grid.querySelectorAll('[data-weekly-slot]').forEach(button => {
+            button.addEventListener('click', () => {
+                selectLifeTimetableSlot(Number(button.dataset.dayIndex), Number(button.dataset.hour));
+            });
+        });
+        grid.querySelectorAll('[data-weekly-event-key]').forEach(button => {
+            button.addEventListener('click', () => selectLifeTimetableEvent(button.dataset.weeklyEventKey));
+        });
+        syncLifeTimetableEditor();
+    }
+
+    function selectLifeTimetableSlot(dayIndex, hour) {
+        const startMinute = hour * 60;
+        selectedLifeTimetableSlot = {
+            dayIndex,
+            startMinute,
+            endMinute: Math.min(startMinute + 60, LIFE_TIMETABLE_LAST_MINUTE),
+            eventKey: null,
+        };
+        syncLifeTimetableEditor();
+        renderWeeklyTimetable();
+    }
+
+    function selectLifeTimetableEvent(eventKey) {
+        const weekRows = ensureLifeWeekTimetable(getLifeWeekKey(activeLifeWeekStart));
+        const event = normalizeLifeTimetableEvent(eventKey, weekRows[eventKey]);
+        selectedLifeTimetableSlot = {
+            dayIndex: event.dayIndex,
+            startMinute: event.startMinute,
+            endMinute: event.endMinute,
+            eventKey,
+        };
+        syncLifeTimetableEditor();
+        renderWeeklyTimetable();
+    }
+
+    function syncLifeTimetableEditor() {
+        const selectedEl = document.getElementById('weekly-selected-slot');
+        const titleEl = document.getElementById('weekly-event-title');
+        const typeEl = document.getElementById('weekly-event-type');
+        const noteEl = document.getElementById('weekly-event-note');
+        const startEl = document.getElementById('weekly-event-start');
+        const endEl = document.getElementById('weekly-event-end');
+        if (!selectedEl || !titleEl || !typeEl || !noteEl || !startEl || !endEl) return;
+
+        if (!selectedLifeTimetableSlot) {
+            selectedEl.textContent = '슬롯을 선택하세요';
+            titleEl.value = '';
+            typeEl.value = 'focus';
+            noteEl.value = '';
+            renderTimetableTimeOptions(LIFE_TIMETABLE_FIRST_MINUTE, LIFE_TIMETABLE_FIRST_MINUTE + 60);
+            startEl.disabled = true;
+            endEl.disabled = true;
+            return;
+        }
+
+        startEl.disabled = false;
+        endEl.disabled = false;
+        const weekRows = ensureLifeWeekTimetable(getLifeWeekKey(activeLifeWeekStart));
+        const event = selectedLifeTimetableSlot.eventKey ? weekRows[selectedLifeTimetableSlot.eventKey] : null;
+        const normalizedEvent = event ? normalizeLifeTimetableEvent(selectedLifeTimetableSlot.eventKey, event) : null;
+        const startMinute = normalizedEvent?.startMinute ?? selectedLifeTimetableSlot.startMinute;
+        const endMinute = normalizedEvent?.endMinute ?? selectedLifeTimetableSlot.endMinute ?? Math.min(startMinute + 60, LIFE_TIMETABLE_LAST_MINUTE);
+        selectedEl.textContent = getTimetableSlotLabel(selectedLifeTimetableSlot.dayIndex, startMinute, endMinute);
+        titleEl.value = normalizedEvent?.title || '';
+        typeEl.value = normalizedEvent?.type || 'focus';
+        noteEl.value = normalizedEvent?.note || '';
+        renderTimetableTimeOptions(startMinute, endMinute);
+    }
+
+    function saveSelectedLifeTimetableSlot() {
+        if (!selectedLifeTimetableSlot) {
+            showToast('먼저 시간 칸을 선택하세요', 'warning');
+            return;
+        }
+        const title = document.getElementById('weekly-event-title')?.value.trim() || '';
+        const type = document.getElementById('weekly-event-type')?.value || 'focus';
+        const note = document.getElementById('weekly-event-note')?.value.trim() || '';
+        const { startMinute, endMinute } = getEditorTimeSelection();
+        const store = getLifeTimetableStore();
+        const weekKey = getLifeWeekKey(activeLifeWeekStart);
+        store[weekKey] = ensureLifeWeekTimetable(weekKey);
+        const oldKey = selectedLifeTimetableSlot.eventKey;
+        const slotKey = getTimetableSlotKey(selectedLifeTimetableSlot.dayIndex, startMinute);
+        if (oldKey && oldKey !== slotKey) delete store[weekKey][oldKey];
+        if (!title) delete store[weekKey][oldKey || slotKey];
+        else {
+            store[weekKey][slotKey] = {
+                title,
+                type,
+                note,
+                dayIndex: selectedLifeTimetableSlot.dayIndex,
+                startMinute,
+                endMinute,
+                updatedAt: new Date().toISOString(),
+            };
+            selectedLifeTimetableSlot = {
+                dayIndex: selectedLifeTimetableSlot.dayIndex,
+                startMinute,
+                endMinute,
+                eventKey: slotKey,
+            };
+        }
+        saveLifeTimetableStore(store);
+        renderWeeklyTimetable();
+        showToast(title ? '시간표를 저장했습니다' : '시간 칸을 비웠습니다', 'info', 1600);
+    }
+
+    function deleteSelectedLifeTimetableSlot() {
+        if (!selectedLifeTimetableSlot) {
+            showToast('먼저 시간 칸을 선택하세요', 'warning');
+            return;
+        }
+        const store = getLifeTimetableStore();
+        const weekKey = getLifeWeekKey(activeLifeWeekStart);
+        store[weekKey] = ensureLifeWeekTimetable(weekKey);
+        const { startMinute } = getEditorTimeSelection();
+        const slotKey = selectedLifeTimetableSlot.eventKey || getTimetableSlotKey(selectedLifeTimetableSlot.dayIndex, startMinute);
+        if (store[weekKey]) delete store[weekKey][slotKey];
+        selectedLifeTimetableSlot = null;
+        saveLifeTimetableStore(store);
+        renderWeeklyTimetable();
+        showToast('시간 칸을 비웠습니다', 'info', 1600);
+    }
+
+    function resetActiveLifeWeekTemplate() {
+        const store = getLifeTimetableStore();
+        store[getLifeWeekKey(activeLifeWeekStart)] = createDefaultLifeWeekTemplate();
+        selectedLifeTimetableSlot = null;
+        saveLifeTimetableStore(store);
+        renderWeeklyTimetable();
+        showToast('이번 주 시간표를 기본 템플릿으로 되돌렸습니다.', 'info', 1800);
+    }
+
+    function bindWeeklyTimetableControls() {
+        if (window.__lifeTimetableBound) return;
+        window.__lifeTimetableBound = true;
+        document.getElementById('weekly-prev-week')?.addEventListener('click', () => {
+            activeLifeWeekStart = addDays(activeLifeWeekStart, -7);
+            selectedLifeTimetableSlot = null;
+            renderWeeklyTimetable();
+        });
+        document.getElementById('weekly-current-week')?.addEventListener('click', () => {
+            activeLifeWeekStart = getIsoWeekStart(new Date());
+            selectedLifeTimetableSlot = null;
+            renderWeeklyTimetable();
+        });
+        document.getElementById('weekly-next-week')?.addEventListener('click', () => {
+            activeLifeWeekStart = addDays(activeLifeWeekStart, 7);
+            selectedLifeTimetableSlot = null;
+            renderWeeklyTimetable();
+        });
+        document.getElementById('weekly-save-slot')?.addEventListener('click', saveSelectedLifeTimetableSlot);
+        document.getElementById('weekly-delete-slot')?.addEventListener('click', deleteSelectedLifeTimetableSlot);
+        document.getElementById('weekly-reset-template')?.addEventListener('click', resetActiveLifeWeekTemplate);
+        document.getElementById('weekly-event-start')?.addEventListener('change', updateSelectedTimetableLabelFromEditor);
+        document.getElementById('weekly-event-end')?.addEventListener('change', updateSelectedTimetableLabelFromEditor);
     }
 
     const views = {
