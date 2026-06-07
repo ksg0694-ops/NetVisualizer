@@ -56,79 +56,79 @@
 <body class="bg-gray-50 flex h-[100dvh] overflow-hidden text-gray-800">
 
     <!-- 데스크탑 사이드바 -->
-    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col justify-between hidden md:flex z-10 shrink-0">
-        <div>
-            <div class="h-20 flex flex-col justify-center px-8 border-b border-gray-100">
+    <aside class="w-56 bg-white border-r border-gray-200 flex flex-col hidden md:flex z-10 shrink-0">
+        <div class="flex-1 min-h-0 flex flex-col">
+            <div class="h-16 flex flex-col justify-center px-5 border-b border-gray-100">
                 <div class="flex items-center gap-2 text-indigo-600">
-                    <i class="fas fa-chart-line text-2xl"></i>
-                    <span class="text-xl font-bold tracking-tight">NetVisualizer</span>
+                    <i class="fas fa-chart-line text-xl"></i>
+                    <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
                 </div>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.03.03
+                    version 1.03.04
                 </div>
             </div>
-            <nav class="p-4 space-y-5 mt-4">
+            <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-3 space-y-3">
                 <div>
-                    <p class="px-3 mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Goal</p>
-                    <div class="space-y-1">
-                        <button type="button" data-target="dashboard-view" onclick="switchView('dashboard-view')" class="goal-link w-full flex items-center gap-3 px-4 py-3 text-indigo-700 bg-indigo-50 rounded-xl font-semibold border border-indigo-100 transition-all">
-                            <i class="fas fa-coins w-5 text-center"></i> Finance
+                    <p class="px-2 mb-1.5 text-[9px] font-bold text-gray-400 uppercase tracking-wider">Goal</p>
+                    <div class="space-y-0.5">
+                        <button type="button" data-target="dashboard-view" onclick="switchView('dashboard-view')" class="goal-link w-full flex items-center gap-2 px-3 py-2 text-sm text-indigo-700 bg-indigo-50 rounded-lg font-semibold border border-indigo-100 transition-all">
+                            <i class="fas fa-coins w-4 text-center text-xs"></i> <span class="truncate">Finance</span>
                         </button>
-                        <button type="button" data-target="career-view" onclick="switchView('career-view')" class="goal-link w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
-                            <i class="fas fa-id-badge w-5 text-center"></i> Career
+                        <button type="button" data-target="career-view" onclick="switchView('career-view')" class="goal-link w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                            <i class="fas fa-id-badge w-4 text-center text-xs"></i> <span class="truncate">Career</span>
                         </button>
-                        <button type="button" data-target="project-view" onclick="switchView('project-view')" class="goal-link w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
-                            <i class="fas fa-folder-open w-5 text-center"></i> Project
+                        <button type="button" data-target="project-view" onclick="switchView('project-view')" class="goal-link w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                            <i class="fas fa-folder-open w-4 text-center text-xs"></i> <span class="truncate">Project</span>
                         </button>
-                        <button type="button" data-target="life-view" onclick="switchView('life-view')" class="goal-link w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
-                            <i class="fas fa-compass w-5 text-center"></i> Life
+                        <button type="button" data-target="life-view" onclick="switchView('life-view')" class="goal-link w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                            <i class="fas fa-compass w-4 text-center text-xs"></i> <span class="truncate">Life</span>
                         </button>
                     </div>
                 </div>
 
                 <div>
-                    <p class="px-3 mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Finance Tools</p>
-                    <div class="space-y-1">
-                        <a href="#" data-target="portfolio-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
-                            <i class="fas fa-briefcase w-5 text-center"></i> 포트폴리오
+                    <p class="px-2 mb-1.5 text-[9px] font-bold text-gray-400 uppercase tracking-wider">Finance Tools</p>
+                    <div class="space-y-0.5">
+                        <a href="#" data-target="portfolio-view" class="nav-link flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                            <i class="fas fa-briefcase w-4 text-center text-xs"></i> <span class="truncate">포트폴리오</span>
                         </a>
-                        <a href="#" data-target="stats-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
-                            <i class="fas fa-money-bill-transfer w-5 text-center"></i> 현금 흐름
+                        <a href="#" data-target="stats-view" class="nav-link flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                            <i class="fas fa-money-bill-transfer w-4 text-center text-xs"></i> <span class="truncate">현금 흐름</span>
                         </a>
-                        <a href="#" data-target="asset-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
-                            <i class="fas fa-chart-area w-5 text-center"></i> 장기 자산
+                        <a href="#" data-target="asset-view" class="nav-link flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                            <i class="fas fa-chart-area w-4 text-center text-xs"></i> <span class="truncate">장기 자산</span>
                         </a>
-                        <a href="#" data-target="realestate-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
-                            <i class="fas fa-home w-5 text-center"></i> 부동산
+                        <a href="#" data-target="realestate-view" class="nav-link flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                            <i class="fas fa-home w-4 text-center text-xs"></i> <span class="truncate">부동산</span>
                         </a>
                     </div>
                 </div>
 
                 <div>
-                    <p class="px-3 mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Life Tools</p>
-                    <div class="space-y-1">
-                        <a href="#" data-target="weekly-timetable-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
-                            <i class="fas fa-calendar-week w-5 text-center"></i> Weekly Timetable
+                    <p class="px-2 mb-1.5 text-[9px] font-bold text-gray-400 uppercase tracking-wider">Life Tools</p>
+                    <div class="space-y-0.5">
+                        <a href="#" data-target="weekly-timetable-view" class="nav-link flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                            <i class="fas fa-calendar-week w-4 text-center text-xs"></i> <span class="truncate">Weekly Timetable</span>
                         </a>
-                        <a href="#" data-target="routine-checklist-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
-                            <i class="fas fa-list-check w-5 text-center"></i> Routine Checklist
+                        <a href="#" data-target="routine-checklist-view" class="nav-link flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                            <i class="fas fa-list-check w-4 text-center text-xs"></i> <span class="truncate">Routine Checklist</span>
                         </a>
-                        <a href="#" data-target="vacation-plan-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
-                            <i class="fas fa-plane-departure w-5 text-center"></i> Vacation Plan
+                        <a href="#" data-target="vacation-plan-view" class="nav-link flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                            <i class="fas fa-plane-departure w-4 text-center text-xs"></i> <span class="truncate">Vacation Plan</span>
                         </a>
                     </div>
                 </div>
             </nav>
         </div>
         
-        <div class="p-4 border-t border-gray-100">
-            <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 overflow-hidden">
-                <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shadow-sm shrink-0">
+        <div class="p-3 border-t border-gray-100">
+            <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 overflow-hidden">
+                <div class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 shadow-sm shrink-0">
                     <i class="fas fa-book-open"></i>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-bold text-gray-900 truncate">나의 자산 기록</p>
-                    <p class="text-xs text-indigo-600 font-medium flex items-center gap-1" id="sidebar-sync-status">
+                    <p class="text-xs font-bold text-gray-900 truncate">나의 자산 기록</p>
+                    <p class="text-[10px] text-indigo-600 font-medium flex items-center gap-1 truncate" id="sidebar-sync-status">
                         <i class="fas fa-bolt text-[10px]"></i> 캐시 데이터 로드됨
                     </p>
                 </div>
