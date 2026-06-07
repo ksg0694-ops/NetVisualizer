@@ -64,7 +64,7 @@
                     <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
                 </div>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.03.04
+                    version 1.03.05
                 </div>
             </div>
             <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-3 space-y-3">
@@ -1425,7 +1425,7 @@
     </main>
 
     <!-- 모바일 전용 하단 탭 네비게이션 -->
-    <nav class="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around items-center h-[68px] z-50 pb-safe px-1">
+    <nav id="mobile-tool-nav" class="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around items-center h-[68px] z-50 pb-safe px-1">
         <a href="#" data-target="portfolio-view" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 transition-colors">
             <i class="fas fa-briefcase text-lg mb-1"></i>
             <span class="text-[9px] font-medium">포트폴리오</span>
@@ -3980,6 +3980,50 @@
         'invest-detail-view': { label: 'Finance Tool', title: '투자 상세' }
     };
 
+    const financeToolViews = new Set(['portfolio-view', 'stats-view', 'asset-view', 'realestate-view', 'invest-detail-view']);
+    const lifeToolViews = new Set(['weekly-timetable-view', 'routine-checklist-view', 'vacation-plan-view']);
+    const mobileToolNav = document.getElementById('mobile-tool-nav');
+    const mobileToolGroups = {
+        'dashboard-view': [
+            { target: 'portfolio-view', icon: 'fa-briefcase', label: '포트폴리오' },
+            { target: 'stats-view', icon: 'fa-money-bill-transfer', label: '현금' },
+            { target: 'asset-view', icon: 'fa-chart-area', label: '자산' },
+            { target: 'realestate-view', icon: 'fa-home', label: '부동산' }
+        ],
+        'career-view': [
+            { target: 'career-view', icon: 'fa-id-badge', label: '커리어' }
+        ],
+        'project-view': [
+            { target: 'project-view', icon: 'fa-folder-open', label: '프로젝트' }
+        ],
+        'life-view': [
+            { target: 'weekly-timetable-view', icon: 'fa-calendar-week', label: '주간' },
+            { target: 'routine-checklist-view', icon: 'fa-list-check', label: '루틴' },
+            { target: 'vacation-plan-view', icon: 'fa-plane-departure', label: '휴가' }
+        ]
+    };
+
+    function resolveActiveGoalTarget(targetId) {
+        if (financeToolViews.has(targetId)) return 'dashboard-view';
+        if (lifeToolViews.has(targetId)) return 'life-view';
+        return targetId;
+    }
+
+    function renderMobileToolNavigation(activeGoalTarget, targetId) {
+        if (!mobileToolNav) return;
+        const toolItems = mobileToolGroups[activeGoalTarget] || mobileToolGroups['dashboard-view'];
+        mobileToolNav.innerHTML = toolItems.map(item => {
+            const isActive = item.target === targetId;
+            const stateClasses = isActive ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600';
+            return `
+                <a href="#" data-target="${item.target}" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full ${stateClasses} transition-colors min-w-0">
+                    <i class="fas ${item.icon} text-lg mb-1"></i>
+                    <span class="text-[9px] font-medium truncate max-w-full px-1">${item.label}</span>
+                </a>
+            `;
+        }).join('');
+    }
+
     function updateAppContext(targetId) {
         const meta = viewContextMeta[targetId] || viewContextMeta['dashboard-view'];
         const labelEl = document.getElementById('app-context-label');
@@ -3989,9 +4033,7 @@
     }
 
     function updateGoalNavigation(targetId) {
-        const financeToolViews = new Set(['portfolio-view', 'stats-view', 'asset-view', 'realestate-view', 'invest-detail-view']);
-        const lifeToolViews = new Set(['weekly-timetable-view', 'routine-checklist-view', 'vacation-plan-view']);
-        const activeGoalTarget = financeToolViews.has(targetId) ? 'dashboard-view' : lifeToolViews.has(targetId) ? 'life-view' : targetId;
+        const activeGoalTarget = resolveActiveGoalTarget(targetId);
         document.querySelectorAll('.goal-link').forEach(nav => {
             const isActive = nav.getAttribute('data-target') === activeGoalTarget;
             nav.classList.toggle('text-indigo-700', isActive);
@@ -4013,6 +4055,7 @@
             nav.classList.toggle('text-gray-500', !isActive);
             nav.classList.toggle('border-gray-100', !isActive);
         });
+        renderMobileToolNavigation(activeGoalTarget, targetId);
     }
 
     function switchView(targetId) {
@@ -4057,9 +4100,18 @@
         }, 20);
     }
 
-    document.querySelectorAll('.nav-link, .mobile-nav-link').forEach(link => {
+    document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', (e) => { e.preventDefault(); switchView(e.currentTarget.getAttribute('data-target')); });
     });
+
+    mobileToolNav?.addEventListener('click', (e) => {
+        const link = e.target.closest('.mobile-nav-link');
+        if (!link || !mobileToolNav.contains(link)) return;
+        e.preventDefault();
+        switchView(link.getAttribute('data-target'));
+    });
+
+    renderMobileToolNavigation(resolveActiveGoalTarget(activeViewId), activeViewId);
 
     document.getElementById('asset-year-filter')?.addEventListener('change', (e) => {
         currentAssetFilter = e.target.value; renderFinanceSummary();

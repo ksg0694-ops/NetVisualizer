@@ -50,6 +50,7 @@ The first MCP candidate used a generated file-data endpoint that does not match 
 - Life tools are grouped as Weekly Timetable, Routine Checklist, and Vacation Plan.
 - Weekly Timetable now supports week navigation, ISO week labels such as `W24`, hour-by-hour slot editing, and localStorage persistence per week.
 - Desktop sidebar navigation was compacted to fit the expanded Goal/Tool structure with less vertical space.
+- Mobile tool navigation now follows the selected Goal, so Finance and Life expose different bottom tool shortcuts on small screens.
 - Finance opens a Goal cockpit with asset goal progress, housing funding readiness, year-to-date surplus, and year-to-date surplus rate.
 - The Finance cockpit and Finance tool screens follow a consistent visual structure: time-scope badges, decision cards, one primary visual, and detail/action cards.
 - Finance tools are grouped as Portfolio, Cash Flow, Long-Term Asset, and Real Estate.
