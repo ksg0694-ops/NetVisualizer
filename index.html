@@ -274,7 +274,7 @@
                     <button onclick="switchView('stats-view')" class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 text-left hover:border-emerald-200 hover:shadow-md transition-all">
                         <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3"><i class="fas fa-money-bill-transfer"></i></div>
                         <h4 class="text-sm font-bold text-gray-800 mb-1">현금 흐름 확인</h4>
-                        <p class="text-xs text-gray-500 leading-relaxed">선택 월 거래와 전체 월 흐름을 비교합니다.</p>
+                        <p class="text-xs text-gray-500 leading-relaxed">선택 월 거래와 올해 월 흐름을 비교합니다.</p>
                     </button>
                     <button onclick="switchView('realestate-view')" class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 text-left hover:border-amber-200 hover:shadow-md transition-all">
                         <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3"><i class="fas fa-home"></i></div>
@@ -667,8 +667,8 @@
                         <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Primary Visual</p>
                         <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-5 gap-3">
                             <div class="min-w-0">
-                                <h3 class="text-base md:text-lg font-bold text-gray-800 truncate">전체 월 흐름</h3>
-                                <p class="text-xs md:text-sm text-gray-500 truncate">모든 월의 수입, 지출, 잉여자금 흐름입니다.</p>
+                                <h3 class="text-base md:text-lg font-bold text-gray-800 truncate">올해 월 흐름</h3>
+                                <p class="text-xs md:text-sm text-gray-500 truncate">현재 회계연도의 수입, 지출, 잉여자금 흐름입니다.</p>
                             </div>
                             <div class="flex flex-wrap gap-2 shrink-0">
                                 <button onclick="openTxImportModal()" class="text-xs md:text-sm text-sky-600 bg-sky-50 px-3 py-1.5 rounded-lg hover:bg-sky-100 transition whitespace-nowrap">
@@ -1448,7 +1448,7 @@
     };
     const DEFAULT_WEBAPP_URL = userUrls.webapp;
     const GOOGLE_SHEET_EDIT_URL = 'https://docs.google.com/spreadsheets/d/1pFBp0zYmr1AFykD-a6k44HQicnmS4JtSFIpd_E4gkBU/edit?usp=drive_link';
-    const CACHE_KEY = 'smartbook_v2_data_cache';
+    const CACHE_KEY = 'smartbook_v2_data_cache_v3';
     const IMPORT_AUDIT_KEY = 'smartbook_v2_tx_import_runs';
 
     function loadSettings() {
@@ -4711,10 +4711,17 @@
         }, { totalIncome: 0, totalExpense: 0 });
     }
 
+    function getYearMonthKeys(referenceMonthKey) {
+        const referenceKey = referenceMonthKey || getLatestMonthKey();
+        const year = String(referenceKey || '').slice(0, 4);
+        if (!/^\d{4}$/.test(year)) return getMonthKeys();
+        const keys = getMonthKeys().filter(key => key.startsWith(`${year}-`));
+        return keys.length ? keys : getMonthKeys();
+    }
+
     function getYearToDateCashFlowStats(referenceMonthKey) {
         const year = String(referenceMonthKey || getLatestMonthKey()).slice(0, 4);
-        return getMonthKeys()
-            .filter(key => key.startsWith(`${year}-`))
+        return getYearMonthKeys(referenceMonthKey)
             .reduce((acc, key) => {
                 const stats = getCashFlowStats(monthlyDB[key]?.transactions || []);
                 acc.totalIncome += stats.totalIncome;
@@ -4811,7 +4818,7 @@
         const incomeData = [];
         const expenseData = [];
         const netData = [];
-        getMonthKeys().forEach(key => {
+        getYearMonthKeys(currentMonthKey).forEach(key => {
             const monthDb = monthlyDB[key];
             const stats = getCashFlowStats(monthDb.transactions);
             trendLabels.push(key.replace('20', '').replace('-', '.'));
