@@ -2,3 +2,6 @@ project_id = "netvisualizer"
 
 [functions.sync-market-prices]
 verify_jwt = true
+
+[functions.sync-realestate-subscriptions]
+verify_jwt = true

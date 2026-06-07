@@ -1,5 +1,17 @@
 # NetVisualizer
 
+## 2026-06-07 Real Estate Data Sync Scaffold
+
+`codex/realestate-data-sync` branch starts moving the Real Estate / Subscription tab from hardcoded schedule data toward Supabase-backed public-data sync.
+
+- Real Estate schedule cards and map markers now prefer `real_estate_subscription_sites` when the table exists.
+- The app keeps a local fallback for 고양창릉 S2/S3/S4, so the screen still works before migration/API setup.
+- `supabase/migrations/20260607022840_create_realestate_data_sync.sql` adds subscription-site, housing-type, competition, and apartment price-reference tables.
+- The migration seeds 고양창릉 S2/S3/S4 with supply count, type, priority, approximate location, and target budget.
+- `supabase/functions/sync-realestate-subscriptions` is a free-only Edge Function scaffold for Applyhome/data.go.kr sync.
+- The sync provider is `disabled` by default, so no external real-estate API call occurs until a free public-data key is configured.
+- Design notes: `docs/02-design/realestate-data-sync-plan.md`.
+
 ## 2026-06-05 Realtime DB Sync Update
 
 `codex/realtime-db-sync` branch now includes the first practical import path for reducing manual Supabase edits.

@@ -24,6 +24,7 @@ flowchart TD
     App --> SupabaseDir["supabase\nconfig + Edge Function"]
 
     SupabaseDir --> PriceFn["sync-market-prices\nEdge Function"]
+    SupabaseDir --> RealEstateFn["sync-realestate-subscriptions\nEdge Function scaffold"]
 ```
 
 ## Runtime Container Diagram
@@ -37,10 +38,13 @@ flowchart LR
     Index --> ServiceWorker["Service Worker\nstatic cache"]
 
     Index --> SupabaseClient["Supabase JS Client\nanon key in browser"]
-    SupabaseClient --> Tables["Supabase Tables\ntransactions, assets, portfolios, cards, insurances,\nquant_strategy_rules, portfolio_market_prices"]
+    SupabaseClient --> Tables["Supabase Tables\ntransactions, assets, portfolios, cards, insurances,\nquant_strategy_rules, portfolio_market_prices,\nreal_estate_*"]
     SupabaseClient --> EdgeFunction["Supabase Edge Function\nsync-market-prices"]
+    SupabaseClient --> RealEstateEdge["Supabase Edge Function\nsync-realestate-subscriptions"]
     EdgeFunction --> PriceProviders["Optional Quote Providers\nKIS or Twelve Data when configured"]
     EdgeFunction --> PriceTables["portfolio_market_prices\nportfolio_price_history"]
+    RealEstateEdge --> Applyhome["Optional Free Public API\nApplyhome / data.go.kr when configured"]
+    RealEstateEdge --> RealEstateTables["real_estate_subscription_sites\nreal_estate_housing_types\nreal_estate_competition\nreal_estate_price_refs"]
 
     Index --> OpenStreetMap["Leaflet + OpenStreetMap Tiles"]
 ```
@@ -219,6 +223,7 @@ flowchart LR
     PortfolioState["dynamicPortfolioData"] --> PortfolioTab["Portfolio Tab"]
     PortfolioState --> InvestDetail["Invest Detail / Quant"]
     PortfolioState --> RealEstate["Real Estate"]
+    RealEstateTables["real_estate_* rows"] --> RealEstate
 
     AddonState["cards / insurances"] --> Addons["Cash Flow Add-ons"]
     QuantState["quant rules + market prices"] --> InvestDetail
@@ -291,6 +296,10 @@ sequenceDiagram
 | `portfolio_market_prices` | Latest manual/API market prices by ticker |
 | `portfolio_price_history` | Written by Edge Function for historical price cache |
 | `quant_rebalance_signals` | Written when saving Quant rebalance suggestions |
+| `real_estate_subscription_sites` | Real Estate tab schedule cards and map markers; seeded with Goyang Changneung S2/S3/S4 |
+| `real_estate_housing_types` | Future Applyhome housing-type supply and sale-price details |
+| `real_estate_competition` | Future Applyhome competition and application rows |
+| `real_estate_price_refs` | Future MOLIT apartment transaction references |
 
 Drafted but not applied for realtime DB sync:
 
