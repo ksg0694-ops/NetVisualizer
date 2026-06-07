@@ -64,7 +64,7 @@
                     <span class="text-xl font-bold tracking-tight">NetVisualizer</span>
                 </div>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.03.02
+                    version 1.03.03
                 </div>
             </div>
             <nav class="p-4 space-y-5 mt-4">
@@ -601,48 +601,73 @@
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5 mb-6">
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-indigo-500">
                         <p class="text-xs font-semibold text-gray-500 mb-2">고정 블록</p>
-                        <h3 class="text-2xl font-bold text-gray-900">12</h3>
+                        <h3 class="text-2xl font-bold text-gray-900" id="weekly-block-count">0</h3>
                         <p class="text-[10px] text-gray-400 mt-1">업무, 운동, 공부, 정리</p>
                     </div>
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-emerald-500">
                         <p class="text-xs font-semibold text-gray-500 mb-2">집중 시간</p>
-                        <h3 class="text-2xl font-bold text-gray-900">9h</h3>
+                        <h3 class="text-2xl font-bold text-gray-900" id="weekly-focus-hours">0h</h3>
                         <p class="text-[10px] text-gray-400 mt-1">주중 저녁과 주말 오전</p>
                     </div>
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-sky-500">
                         <p class="text-xs font-semibold text-gray-500 mb-2">회복 블록</p>
-                        <h3 class="text-2xl font-bold text-gray-900">4</h3>
+                        <h3 class="text-2xl font-bold text-gray-900" id="weekly-recovery-count">0</h3>
                         <p class="text-[10px] text-gray-400 mt-1">휴식, 산책, 정리 시간</p>
                     </div>
                 </div>
 
-                <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 mb-8 overflow-x-auto">
-                    <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Primary Visual</p>
-                    <div class="min-w-[820px] grid grid-cols-[90px_repeat(7,minmax(90px,1fr))] gap-2">
-                        <div></div>
-                        <div class="text-center text-xs font-bold text-gray-500 py-2">MON</div>
-                        <div class="text-center text-xs font-bold text-gray-500 py-2">TUE</div>
-                        <div class="text-center text-xs font-bold text-gray-500 py-2">WED</div>
-                        <div class="text-center text-xs font-bold text-gray-500 py-2">THU</div>
-                        <div class="text-center text-xs font-bold text-gray-500 py-2">FRI</div>
-                        <div class="text-center text-xs font-bold text-gray-500 py-2">SAT</div>
-                        <div class="text-center text-xs font-bold text-gray-500 py-2">SUN</div>
-                        <div class="text-xs font-bold text-gray-400 py-3">Morning</div>
-                        <div class="rounded-xl bg-indigo-50 border border-indigo-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-indigo-700">출근 준비</p><p class="text-[10px] text-indigo-400 mt-1">07:30</p></div>
-                        <div class="rounded-xl bg-emerald-50 border border-emerald-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-emerald-700">운동</p><p class="text-[10px] text-emerald-400 mt-1">30m</p></div>
-                        <div class="rounded-xl bg-indigo-50 border border-indigo-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-indigo-700">정리</p><p class="text-[10px] text-indigo-400 mt-1">15m</p></div>
-                        <div class="rounded-xl bg-emerald-50 border border-emerald-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-emerald-700">운동</p><p class="text-[10px] text-emerald-400 mt-1">30m</p></div>
-                        <div class="rounded-xl bg-gray-50 border border-gray-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-gray-700">가벼운 정리</p><p class="text-[10px] text-gray-400 mt-1">15m</p></div>
-                        <div class="rounded-xl bg-sky-50 border border-sky-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-sky-700">개인 프로젝트</p><p class="text-[10px] text-sky-400 mt-1">2h</p></div>
-                        <div class="rounded-xl bg-amber-50 border border-amber-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-amber-700">느린 오전</p><p class="text-[10px] text-amber-400 mt-1">회복</p></div>
-                        <div class="text-xs font-bold text-gray-400 py-3">Evening</div>
-                        <div class="rounded-xl bg-sky-50 border border-sky-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-sky-700">학습</p><p class="text-[10px] text-sky-400 mt-1">1h</p></div>
-                        <div class="rounded-xl bg-gray-50 border border-gray-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-gray-700">휴식</p><p class="text-[10px] text-gray-400 mt-1">무계획</p></div>
-                        <div class="rounded-xl bg-sky-50 border border-sky-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-sky-700">프로젝트</p><p class="text-[10px] text-sky-400 mt-1">1.5h</p></div>
-                        <div class="rounded-xl bg-gray-50 border border-gray-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-gray-700">청소</p><p class="text-[10px] text-gray-400 mt-1">30m</p></div>
-                        <div class="rounded-xl bg-amber-50 border border-amber-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-amber-700">주간 회고</p><p class="text-[10px] text-amber-400 mt-1">20m</p></div>
-                        <div class="rounded-xl bg-indigo-50 border border-indigo-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-indigo-700">외출 후보</p><p class="text-[10px] text-indigo-400 mt-1">반나절</p></div>
-                        <div class="rounded-xl bg-gray-50 border border-gray-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-gray-700">다음 주 준비</p><p class="text-[10px] text-gray-400 mt-1">30m</p></div>
+                <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-4 md:gap-6 mb-8">
+                    <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+                            <div>
+                                <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Time Grid</p>
+                                <div class="flex items-baseline gap-2">
+                                    <h3 class="text-xl md:text-2xl font-bold text-gray-900" id="weekly-week-label">W--</h3>
+                                    <p class="text-xs text-gray-500" id="weekly-week-range">-</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="button" id="weekly-prev-week" class="w-9 h-9 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"><i class="fas fa-chevron-left"></i></button>
+                                <button type="button" id="weekly-current-week" class="px-3 h-9 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-bold border border-indigo-100">이번 주</button>
+                                <button type="button" id="weekly-next-week" class="w-9 h-9 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <div id="weekly-calendar-grid" class="min-w-[1080px]"></div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 h-fit">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Selected Slot</p>
+                        <div class="p-3 rounded-xl bg-gray-50 border border-gray-100 mb-4">
+                            <p class="text-xs font-bold text-gray-800" id="weekly-selected-slot">슬롯을 선택하세요</p>
+                            <p class="text-[10px] text-gray-400 mt-1">시간 칸을 누르면 이 패널에서 바로 수정합니다.</p>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Title</label>
+                                <input id="weekly-event-title" type="text" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="예: 운동, 공부, 휴식">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Type</label>
+                                <select id="weekly-event-type" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                    <option value="focus">집중</option>
+                                    <option value="work">업무</option>
+                                    <option value="routine">루틴</option>
+                                    <option value="recovery">회복</option>
+                                    <option value="movement">운동</option>
+                                    <option value="life">생활</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Memo</label>
+                                <textarea id="weekly-event-note" rows="3" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="간단한 메모"></textarea>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button" id="weekly-save-slot" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700">저장</button>
+                                <button type="button" id="weekly-delete-slot" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200">비우기</button>
+                            </div>
+                            <button type="button" id="weekly-reset-template" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-500 text-xs font-bold hover:bg-gray-50">이번 주 템플릿으로 초기화</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3656,6 +3681,279 @@
         }
     }
 
+    const LIFE_TIMETABLE_STORAGE_KEY = 'netvisualizer.life.weeklyTimetable.v1';
+    const lifeTimetableHours = Array.from({ length: 18 }, (_, idx) => idx + 6);
+    const lifeTimetableDays = [
+        { label: 'MON', ko: '월' },
+        { label: 'TUE', ko: '화' },
+        { label: 'WED', ko: '수' },
+        { label: 'THU', ko: '목' },
+        { label: 'FRI', ko: '금' },
+        { label: 'SAT', ko: '토' },
+        { label: 'SUN', ko: '일' },
+    ];
+    const lifeTimetableTypeMeta = {
+        focus: { label: '집중', cell: 'bg-sky-50 border-sky-200 text-sky-800', dot: 'bg-sky-500' },
+        work: { label: '업무', cell: 'bg-indigo-50 border-indigo-200 text-indigo-800', dot: 'bg-indigo-500' },
+        routine: { label: '루틴', cell: 'bg-emerald-50 border-emerald-200 text-emerald-800', dot: 'bg-emerald-500' },
+        recovery: { label: '회복', cell: 'bg-amber-50 border-amber-200 text-amber-800', dot: 'bg-amber-500' },
+        movement: { label: '운동', cell: 'bg-rose-50 border-rose-200 text-rose-800', dot: 'bg-rose-500' },
+        life: { label: '생활', cell: 'bg-gray-50 border-gray-200 text-gray-800', dot: 'bg-gray-400' },
+    };
+    let activeLifeWeekStart = getIsoWeekStart(new Date());
+    let selectedLifeTimetableSlot = null;
+
+    function addDays(date, days) {
+        const next = new Date(date);
+        next.setDate(next.getDate() + days);
+        return next;
+    }
+
+    function getIsoWeekStart(date) {
+        const target = new Date(date);
+        target.setHours(0, 0, 0, 0);
+        const day = target.getDay() || 7;
+        target.setDate(target.getDate() - day + 1);
+        return target;
+    }
+
+    function getIsoWeekInfo(date) {
+        const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+        const dayNumber = target.getUTCDay() || 7;
+        target.setUTCDate(target.getUTCDate() + 4 - dayNumber);
+        const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+        const week = Math.ceil((((target - yearStart) / 86400000) + 1) / 7);
+        return { year: target.getUTCFullYear(), week };
+    }
+
+    function formatShortDate(date) {
+        return `${date.getMonth() + 1}/${date.getDate()}`;
+    }
+
+    function formatIsoDate(date) {
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function getLifeWeekKey(date = activeLifeWeekStart) {
+        const info = getIsoWeekInfo(date);
+        return `${info.year}-W${String(info.week).padStart(2, '0')}`;
+    }
+
+    function getLifeTimetableStore() {
+        try {
+            return JSON.parse(localStorage.getItem(LIFE_TIMETABLE_STORAGE_KEY) || '{}');
+        } catch (error) {
+            console.warn('Life timetable storage parse failed', error);
+            return {};
+        }
+    }
+
+    function saveLifeTimetableStore(store) {
+        localStorage.setItem(LIFE_TIMETABLE_STORAGE_KEY, JSON.stringify(store));
+    }
+
+    function createDefaultLifeWeekTemplate() {
+        return {
+            '0-7': { title: '출근 준비', type: 'routine', note: '물, 일정 확인, 이동 준비' },
+            '0-20': { title: '학습', type: 'focus', note: '이번 주 핵심 과제' },
+            '1-7': { title: '운동', type: 'movement', note: '가볍게 30분' },
+            '2-20': { title: '프로젝트', type: 'focus', note: '개인 앱 개선' },
+            '3-7': { title: '운동', type: 'movement', note: '근력/유산소 중 택1' },
+            '3-21': { title: '청소', type: 'life', note: '생활 리셋' },
+            '4-20': { title: '주간 회고', type: 'recovery', note: '다음 주 조정' },
+            '5-9': { title: '개인 프로젝트', type: 'focus', note: '오전 집중 블록' },
+            '6-21': { title: '다음 주 준비', type: 'routine', note: '캘린더와 할 일 정리' },
+        };
+    }
+
+    function ensureLifeWeekTimetable(weekKey) {
+        const store = getLifeTimetableStore();
+        if (!store[weekKey]) {
+            store[weekKey] = createDefaultLifeWeekTemplate();
+            saveLifeTimetableStore(store);
+        }
+        return store[weekKey];
+    }
+
+    function getTimetableSlotKey(dayIndex, hour) {
+        return `${dayIndex}-${hour}`;
+    }
+
+    function getTimetableSlotLabel(dayIndex, hour) {
+        const date = addDays(activeLifeWeekStart, dayIndex);
+        return `${lifeTimetableDays[dayIndex].ko} ${formatShortDate(date)} ${String(hour).padStart(2, '0')}:00`;
+    }
+
+    function renderWeeklyTimetable() {
+        const grid = document.getElementById('weekly-calendar-grid');
+        if (!grid) return;
+
+        const weekInfo = getIsoWeekInfo(activeLifeWeekStart);
+        const weekKey = getLifeWeekKey(activeLifeWeekStart);
+        const weekRows = ensureLifeWeekTimetable(weekKey);
+        const weekEnd = addDays(activeLifeWeekStart, 6);
+        const labelEl = document.getElementById('weekly-week-label');
+        const rangeEl = document.getElementById('weekly-week-range');
+        if (labelEl) labelEl.textContent = `${weekInfo.year} W${String(weekInfo.week).padStart(2, '0')}`;
+        if (rangeEl) rangeEl.textContent = `${formatShortDate(activeLifeWeekStart)} - ${formatShortDate(weekEnd)}`;
+
+        const today = formatIsoDate(new Date());
+        const selectedKey = selectedLifeTimetableSlot
+            ? getTimetableSlotKey(selectedLifeTimetableSlot.dayIndex, selectedLifeTimetableSlot.hour)
+            : '';
+        const events = Object.values(weekRows);
+        const blockCountEl = document.getElementById('weekly-block-count');
+        const focusHoursEl = document.getElementById('weekly-focus-hours');
+        const recoveryCountEl = document.getElementById('weekly-recovery-count');
+        if (blockCountEl) blockCountEl.textContent = events.length.toLocaleString();
+        if (focusHoursEl) focusHoursEl.textContent = `${events.filter(item => ['focus', 'work'].includes(item.type)).length}h`;
+        if (recoveryCountEl) recoveryCountEl.textContent = events.filter(item => item.type === 'recovery').length.toLocaleString();
+
+        let html = '<div class="grid grid-cols-[76px_repeat(7,minmax(128px,1fr))] gap-px bg-gray-200 border border-gray-200 rounded-xl overflow-hidden">';
+        html += '<div class="bg-gray-50 min-h-[54px]"></div>';
+        lifeTimetableDays.forEach((day, idx) => {
+            const date = addDays(activeLifeWeekStart, idx);
+            const isToday = formatIsoDate(date) === today;
+            html += `
+                <div class="bg-white min-h-[54px] flex flex-col items-center justify-center ${isToday ? 'text-indigo-700' : 'text-gray-600'}">
+                    <span class="text-[10px] font-bold">${day.label}</span>
+                    <span class="text-xs font-bold mt-0.5 ${isToday ? 'bg-indigo-600 text-white px-2 py-0.5 rounded-full' : ''}">${formatShortDate(date)}</span>
+                </div>
+            `;
+        });
+
+        lifeTimetableHours.forEach(hour => {
+            html += `<div class="bg-gray-50 min-h-[64px] px-2 py-3 text-[10px] font-bold text-gray-400">${String(hour).padStart(2, '0')}:00</div>`;
+            lifeTimetableDays.forEach((day, dayIndex) => {
+                const slotKey = getTimetableSlotKey(dayIndex, hour);
+                const event = weekRows[slotKey];
+                const meta = lifeTimetableTypeMeta[event?.type] || lifeTimetableTypeMeta.life;
+                const isSelected = slotKey === selectedKey;
+                const emptyClass = isSelected ? 'bg-indigo-50 border-indigo-300' : 'bg-white border-transparent hover:bg-gray-50 hover:border-gray-200';
+                html += `
+                    <button type="button" data-weekly-slot="${slotKey}" data-day-index="${dayIndex}" data-hour="${hour}"
+                        class="min-h-[64px] text-left p-2 border transition ${event ? `${meta.cell} hover:brightness-[0.98]` : emptyClass} ${isSelected ? 'ring-2 ring-indigo-400 ring-inset' : ''}">
+                        ${event ? `
+                            <div class="flex items-center gap-1.5 mb-1">
+                                <span class="w-1.5 h-1.5 rounded-full ${meta.dot} shrink-0"></span>
+                                <span class="text-[9px] font-bold">${meta.label}</span>
+                            </div>
+                            <p class="text-xs font-bold leading-snug line-clamp-2">${escapeHtml(event.title)}</p>
+                            ${event.note ? `<p class="text-[10px] opacity-70 mt-1 truncate">${escapeHtml(event.note)}</p>` : ''}
+                        ` : '<span class="text-[10px] text-gray-300">+</span>'}
+                    </button>
+                `;
+            });
+        });
+        html += '</div>';
+        grid.innerHTML = html;
+
+        grid.querySelectorAll('[data-weekly-slot]').forEach(button => {
+            button.addEventListener('click', () => {
+                selectLifeTimetableSlot(Number(button.dataset.dayIndex), Number(button.dataset.hour));
+            });
+        });
+        syncLifeTimetableEditor();
+    }
+
+    function selectLifeTimetableSlot(dayIndex, hour) {
+        selectedLifeTimetableSlot = { dayIndex, hour };
+        syncLifeTimetableEditor();
+        renderWeeklyTimetable();
+    }
+
+    function syncLifeTimetableEditor() {
+        const selectedEl = document.getElementById('weekly-selected-slot');
+        const titleEl = document.getElementById('weekly-event-title');
+        const typeEl = document.getElementById('weekly-event-type');
+        const noteEl = document.getElementById('weekly-event-note');
+        if (!selectedEl || !titleEl || !typeEl || !noteEl) return;
+
+        if (!selectedLifeTimetableSlot) {
+            selectedEl.textContent = '슬롯을 선택하세요';
+            titleEl.value = '';
+            typeEl.value = 'focus';
+            noteEl.value = '';
+            return;
+        }
+
+        const weekRows = ensureLifeWeekTimetable(getLifeWeekKey(activeLifeWeekStart));
+        const slotKey = getTimetableSlotKey(selectedLifeTimetableSlot.dayIndex, selectedLifeTimetableSlot.hour);
+        const event = weekRows[slotKey];
+        selectedEl.textContent = getTimetableSlotLabel(selectedLifeTimetableSlot.dayIndex, selectedLifeTimetableSlot.hour);
+        titleEl.value = event?.title || '';
+        typeEl.value = event?.type || 'focus';
+        noteEl.value = event?.note || '';
+    }
+
+    function saveSelectedLifeTimetableSlot() {
+        if (!selectedLifeTimetableSlot) {
+            showToast('먼저 시간 칸을 선택하세요.', 'warning');
+            return;
+        }
+        const title = document.getElementById('weekly-event-title')?.value.trim() || '';
+        const type = document.getElementById('weekly-event-type')?.value || 'focus';
+        const note = document.getElementById('weekly-event-note')?.value.trim() || '';
+        const store = getLifeTimetableStore();
+        const weekKey = getLifeWeekKey(activeLifeWeekStart);
+        const slotKey = getTimetableSlotKey(selectedLifeTimetableSlot.dayIndex, selectedLifeTimetableSlot.hour);
+        store[weekKey] = store[weekKey] || {};
+        if (!title) delete store[weekKey][slotKey];
+        else store[weekKey][slotKey] = { title, type, note, updatedAt: new Date().toISOString() };
+        saveLifeTimetableStore(store);
+        renderWeeklyTimetable();
+        showToast(title ? '시간표를 저장했습니다.' : '시간표 슬롯을 비웠습니다.', 'info', 1600);
+    }
+
+    function deleteSelectedLifeTimetableSlot() {
+        if (!selectedLifeTimetableSlot) {
+            showToast('먼저 시간 칸을 선택하세요.', 'warning');
+            return;
+        }
+        const store = getLifeTimetableStore();
+        const weekKey = getLifeWeekKey(activeLifeWeekStart);
+        const slotKey = getTimetableSlotKey(selectedLifeTimetableSlot.dayIndex, selectedLifeTimetableSlot.hour);
+        if (store[weekKey]) delete store[weekKey][slotKey];
+        saveLifeTimetableStore(store);
+        renderWeeklyTimetable();
+        showToast('시간표 슬롯을 비웠습니다.', 'info', 1600);
+    }
+
+    function resetActiveLifeWeekTemplate() {
+        const store = getLifeTimetableStore();
+        store[getLifeWeekKey(activeLifeWeekStart)] = createDefaultLifeWeekTemplate();
+        selectedLifeTimetableSlot = null;
+        saveLifeTimetableStore(store);
+        renderWeeklyTimetable();
+        showToast('이번 주 시간표를 기본 템플릿으로 되돌렸습니다.', 'info', 1800);
+    }
+
+    function bindWeeklyTimetableControls() {
+        if (window.__lifeTimetableBound) return;
+        window.__lifeTimetableBound = true;
+        document.getElementById('weekly-prev-week')?.addEventListener('click', () => {
+            activeLifeWeekStart = addDays(activeLifeWeekStart, -7);
+            selectedLifeTimetableSlot = null;
+            renderWeeklyTimetable();
+        });
+        document.getElementById('weekly-current-week')?.addEventListener('click', () => {
+            activeLifeWeekStart = getIsoWeekStart(new Date());
+            selectedLifeTimetableSlot = null;
+            renderWeeklyTimetable();
+        });
+        document.getElementById('weekly-next-week')?.addEventListener('click', () => {
+            activeLifeWeekStart = addDays(activeLifeWeekStart, 7);
+            selectedLifeTimetableSlot = null;
+            renderWeeklyTimetable();
+        });
+        document.getElementById('weekly-save-slot')?.addEventListener('click', saveSelectedLifeTimetableSlot);
+        document.getElementById('weekly-delete-slot')?.addEventListener('click', deleteSelectedLifeTimetableSlot);
+        document.getElementById('weekly-reset-template')?.addEventListener('click', resetActiveLifeWeekTemplate);
+    }
+
     const views = {
         'dashboard-view': document.getElementById('dashboard-view'), 'portfolio-view': document.getElementById('portfolio-view'),
         'career-view': document.getElementById('career-view'), 'project-view': document.getElementById('project-view'),
@@ -3752,6 +4050,10 @@
             else if (targetId === 'stats-view') renderSections({ cashFlow: true });
             else if (targetId === 'asset-view') renderSections({ financeSummary: true });
             else if (targetId === 'realestate-view') renderSections({ realEstate: true });
+            else if (targetId === 'weekly-timetable-view') {
+                bindWeeklyTimetableControls();
+                renderWeeklyTimetable();
+            }
         }, 20);
     }
 

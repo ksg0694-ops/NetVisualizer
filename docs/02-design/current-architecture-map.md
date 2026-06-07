@@ -94,6 +94,7 @@ flowchart TD
     GoalNav --> ProjectGoal["Project Cockpit"]
     GoalNav --> LifeGoal["Life Cockpit"]
     LifeGoal --> LifeTools["Weekly Timetable\nRoutine Checklist\nVacation Plan"]
+    LifeTools --> WeeklyTimetable["ISO week navigation\nhour-slot localStorage editing"]
 
     Header["Goal title + time-scope badges"] --> DecisionCards["Decision Cards\nasset goal, housing readiness,\nyear surplus, surplus rate"]
     DecisionCards --> PrimaryVisual["Primary Visual\nasset-flow chart"]
