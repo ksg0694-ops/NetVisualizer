@@ -2,6 +2,8 @@ param(
     [string]$RepoPath = "$PSScriptRoot\..\tools\external\real-estate-mcp",
     [string[]]$Keywords = @(),
     [int]$PerPage = 1000,
+    [int]$MaxPages = 5,
+    [string]$FromDate = "",
     [switch]$Fixture,
     [switch]$Apply
 )
@@ -20,13 +22,18 @@ if (-not (Test-Path $venvPython)) {
 $argsList = @(
     $syncScript,
     "--mcp-path", $repoFullPath,
-    "--per-page", "$PerPage"
+    "--per-page", "$PerPage",
+    "--max-pages", "$MaxPages"
 )
 
 foreach ($keyword in $Keywords) {
     if ($keyword) {
         $argsList += @("--keyword", $keyword)
     }
+}
+
+if ($FromDate) {
+    $argsList += @("--from-date", $FromDate)
 }
 
 if ($Fixture) {

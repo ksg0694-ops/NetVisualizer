@@ -1,8 +1,9 @@
-"""Sync Applyhome subscription rows from the community real-estate MCP package.
+"""Sync Applyhome subscription rows from the approved Applyhome API.
 
-The NetVisualizer app reads normalized rows from Supabase. This script keeps the
-community MCP as an agent-side data collector, then maps its output into
-real_estate_subscription_sites.
+The NetVisualizer app reads normalized rows from Supabase. This script calls the
+approved ApplyhomeInfoDetailSvc endpoint, then maps its output into
+real_estate_subscription_sites. The community MCP path is still used as the
+local secret home and can be used as a legacy source when needed.
 
 Default behavior is dry-run. Pass --apply to upsert into Supabase.
 """
@@ -31,6 +32,10 @@ BLOCK_COORDS = {
 }
 
 DEFAULT_KEYWORDS = ["고양창릉", "고양 창릉", "창릉"]
+
+APPLYHOME_APT_DETAIL_URL = (
+    "https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1/getAPTLttotPblancDetail"
+)
 
 FIXTURE_ROWS = [
     {
@@ -70,6 +75,34 @@ def suppress_http_key_logging() -> None:
     """Keep third-party HTTP clients from logging serviceKey query strings."""
     for logger_name in ("httpx", "httpcore"):
         logging.getLogger(logger_name).setLevel(logging.WARNING)
+
+
+def load_env_file(env_path: Path) -> None:
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and value and key not in os.environ:
+            os.environ[key] = value
+
+
+def get_applyhome_service_key() -> str:
+    key = (
+        os.getenv("ODCLOUD_SERVICE_KEY", "")
+        or os.getenv("DATA_GO_KR_API_KEY", "")
+        or os.getenv("ODCLOUD_API_KEY", "")
+    )
+    if not key:
+        raise RuntimeError(
+            "Set ODCLOUD_SERVICE_KEY or DATA_GO_KR_API_KEY in the ignored MCP .env file."
+        )
+    return key
 
 
 def read_text(row: dict[str, Any], keys: list[str]) -> str:
@@ -130,6 +163,26 @@ def row_matches(row: dict[str, Any], keywords: list[str]) -> bool:
     return any(keyword in haystack or keyword.replace(" ", "") in compact for keyword in keywords)
 
 
+def row_is_on_or_after(row: dict[str, Any], from_date: str | None) -> bool:
+    if not from_date:
+        return True
+    row_date = parse_date(
+        read_text(
+            row,
+            [
+                "모집공고일",
+                "RCRIT_PBLANC_DE",
+                "rcritPblancDe",
+                "청약접수시작일",
+                "RCEPT_BGNDE",
+                "SPSPLY_RCEPT_BGNDE",
+                "GNRL_RNK1_CRSPAREA_RCPTDE",
+            ],
+        )
+    )
+    return bool(row_date and row_date >= from_date)
+
+
 def normalize_row(row: dict[str, Any]) -> dict[str, Any]:
     block = infer_block(row)
     coords = BLOCK_COORDS.get(block, {})
@@ -139,7 +192,9 @@ def normalize_row(row: dict[str, Any]) -> dict[str, Any]:
     housing_type = read_text(row, ["주택구분코드명", "HOUSE_SECD_NM", "houseSecdNm"])
     sale_type = read_text(row, ["분양구분코드명", "RENT_SECD_NM", "rentSecdNm"])
     notice_date = parse_date(read_text(row, ["모집공고일", "RCRIT_PBLANC_DE", "rcritPblancDe"]))
-    main_start_date = parse_date(read_text(row, ["청약접수시작일", "SUBSCRPT_RCEPT_BGNDE", "subscrptRceptBgnde"]))
+    main_start_date = parse_date(
+        read_text(row, ["청약접수시작일", "RCEPT_BGNDE", "SUBSCRPT_RCEPT_BGNDE", "subscrptRceptBgnde"])
+    )
     special_start_date = parse_date(
         read_text(row, ["특별공급접수시작일", "SPSPLY_RCEPT_BGNDE", "spsplyRceptBgnde"])
     )
@@ -170,9 +225,9 @@ def normalize_row(row: dict[str, Any]) -> dict[str, Any]:
         "priority_order": coords.get("priority_order", 99),
         "budget_note": "가장 중요" if block == "S2" else "매우 중요",
         "key_point": (
-            "청약홈 MCP에서 수집된 고양창릉 본청약 후보"
+            "청약홈 공식 API에서 수집된 고양창릉 본청약 후보"
             if block == "S2"
-            else "청약홈 MCP에서 수집된 고양창릉 주요 물량"
+            else "청약홈 공식 API에서 수집된 고양창릉 주요 물량"
         ),
         "target_budget": 800000000,
         "expected_notice_month": parse_month(main_start_date or notice_date) or "2026-06-01",
@@ -207,8 +262,8 @@ def normalize_row(row: dict[str, Any]) -> dict[str, Any]:
         "longitude": coords.get("longitude"),
         "color": coords.get("color", "#4F46E5"),
         "status": "scheduled" if main_start_date else "planned",
-        "source": "community_mcp",
-        "source_url": "https://github.com/tae0y/real-estate-mcp",
+        "source": "applyhome_official_api",
+        "source_url": "https://www.data.go.kr/data/15098547/openapi.do",
         "source_notice_no": source_notice_no or None,
         "source_house_manage_no": source_house_manage_no or None,
         "synced_at": datetime.now(timezone.utc).isoformat(),
@@ -231,6 +286,54 @@ async def fetch_mcp_rows(mcp_path: Path, page: int, per_page: int) -> list[dict[
     if not isinstance(items, list):
         raise RuntimeError("MCP response items is not a list")
     return [item for item in items if isinstance(item, dict)]
+
+
+def fetch_applyhome_rows(
+    mcp_path: Path,
+    page: int,
+    per_page: int,
+    max_pages: int,
+) -> list[dict[str, Any]]:
+    load_env_file(mcp_path / ".env")
+    service_key = get_applyhome_service_key()
+    all_rows: list[dict[str, Any]] = []
+    current_page = page
+    final_page = page + max(max_pages, 1) - 1
+
+    while current_page <= final_page:
+        params = {
+            "page": current_page,
+            "perPage": per_page,
+            "returnType": "JSON",
+            "serviceKey": service_key,
+        }
+        request_url = f"{APPLYHOME_APT_DETAIL_URL}?{urllib.parse.urlencode(params)}"
+
+        try:
+            with urllib.request.urlopen(request_url, timeout=30) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            safe_body = body.replace(service_key, "<redacted>")
+            raise RuntimeError(f"Applyhome API failed: HTTP {exc.code} {safe_body}") from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError(f"Applyhome API network error: {exc.reason}") from exc
+
+        if not isinstance(payload, dict):
+            raise RuntimeError("Applyhome API response is not an object")
+
+        rows = payload.get("data") or []
+        if not isinstance(rows, list):
+            raise RuntimeError("Applyhome API response data is not a list")
+        all_rows.extend(row for row in rows if isinstance(row, dict))
+
+        total_count = to_int(payload.get("totalCount")) or len(all_rows)
+        current_count = to_int(payload.get("currentCount")) or len(rows)
+        if current_count < per_page or len(all_rows) >= total_count:
+            break
+        current_page += 1
+
+    return all_rows
 
 
 def upsert_supabase(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -273,7 +376,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--page", type=int, default=1)
     parser.add_argument("--per-page", type=int, default=1000)
+    parser.add_argument("--max-pages", type=int, default=5)
+    parser.add_argument(
+        "--source",
+        choices=("official", "legacy-mcp"),
+        default="official",
+        help="official uses ApplyhomeInfoDetailSvc; legacy-mcp uses tae0y/real-estate-mcp.",
+    )
     parser.add_argument("--keyword", action="append", dest="keywords", help="Filter keyword.")
+    parser.add_argument("--from-date", help="Only include rows whose notice date is on or after YYYY-MM-DD.")
     parser.add_argument("--fixture", action="store_true", help="Use built-in fixture rows instead of MCP API.")
     parser.add_argument("--dry-run", action="store_true", default=True)
     parser.add_argument("--apply", action="store_true", help="Upsert normalized rows into Supabase.")
@@ -286,15 +397,27 @@ def main() -> int:
     mcp_path = Path(args.mcp_path).resolve()
 
     try:
-        raw_rows = FIXTURE_ROWS if args.fixture else asyncio.run(fetch_mcp_rows(mcp_path, args.page, args.per_page))
-        filtered_rows = [row for row in raw_rows if row_matches(row, keywords)]
+        if args.fixture:
+            raw_rows = FIXTURE_ROWS
+            source = "fixture"
+        elif args.source == "legacy-mcp":
+            raw_rows = asyncio.run(fetch_mcp_rows(mcp_path, args.page, args.per_page))
+            source = "real-estate-mcp"
+        else:
+            raw_rows = fetch_applyhome_rows(mcp_path, args.page, args.per_page, args.max_pages)
+            source = "applyhome-official-api"
+
+        filtered_rows = [
+            row for row in raw_rows if row_matches(row, keywords) and row_is_on_or_after(row, args.from_date)
+        ]
         normalized_rows = [normalize_row(row) for row in filtered_rows]
 
         result: dict[str, Any] = {
-            "source": "fixture" if args.fixture else "real-estate-mcp",
+            "source": source,
             "raw_count": len(raw_rows),
             "matched_count": len(normalized_rows),
             "keywords": keywords,
+            "from_date": args.from_date,
             "dry_run": not args.apply,
             "rows": normalized_rows,
         }

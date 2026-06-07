@@ -1,14 +1,18 @@
 # NetVisualizer
 
-## 2026-06-07 Community Real Estate MCP Adapter
+## 2026-06-07 Applyhome Real Estate Sync Adapter
 
-`codex/realestate-mcp-adapter` branch adds a local adapter for the community `tae0y/real-estate-mcp` project.
+`codex/realestate-mcp-adapter` branch adds a local sync adapter for the approved `한국부동산원_청약홈 분양정보 조회 서비스`.
+
+The first MCP candidate used a generated file-data endpoint that does not match the approved public-data account. The current default collector calls:
+
+`https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1/getAPTLttotPblancDetail`
 
 - The external MCP checkout lives under ignored `tools/external/real-estate-mcp`.
 - Codex MCP server `real-estate` is registered locally through the external repo's `.venv` Python.
-- `scripts/install-realestate-mcp.ps1` installs and registers the MCP without storing API keys in Codex config.
+- `scripts/install-realestate-mcp.ps1` installs and registers the MCP candidate without storing API keys in Codex config.
 - `scripts/set-realestate-mcp-secrets.ps1` writes data.go.kr / ODcloud keys only into the ignored external `.env`.
-- `tools/sync_realestate_from_mcp.py` maps Applyhome subscription rows into `real_estate_subscription_sites`.
+- `tools/sync_realestate_from_mcp.py` maps approved Applyhome subscription rows into `real_estate_subscription_sites`.
 - `scripts/sync-realestate-from-mcp.ps1` supports fixture dry-run, live dry-run, and explicit Supabase apply mode.
 - Design notes: `docs/02-design/realestate-mcp-adapter.md`.
 

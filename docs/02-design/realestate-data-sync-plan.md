@@ -67,7 +67,7 @@ Community real-estate MCP servers can be useful for agent-side investigation or 
 - Prefer official public APIs where available.
 - Store normalized results in Supabase rather than making the UI depend on the MCP runtime.
 
-`tae0y/real-estate-mcp` is the selected first adapter candidate because it exposes Applyhome APT subscription notice and result tools. The local adapter work is tracked in `docs/02-design/realestate-mcp-adapter.md`.
+`tae0y/real-estate-mcp` is kept as the selected first MCP candidate because it exposes Applyhome APT subscription notice and result tools. The default local adapter now calls the approved `ApplyhomeInfoDetailSvc/v1/getAPTLttotPblancDetail` endpoint directly because the generated file-data endpoint used by the MCP does not share the same API approval account. The local adapter work is tracked in `docs/02-design/realestate-mcp-adapter.md`.
 
 ## Next Steps
 
