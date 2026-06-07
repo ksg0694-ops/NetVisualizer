@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import logging
 import os
 import re
 import sys
@@ -63,6 +64,12 @@ FIXTURE_ROWS = [
         "해당지역1순위접수시작일": "",
     },
 ]
+
+
+def suppress_http_key_logging() -> None:
+    """Keep third-party HTTP clients from logging serviceKey query strings."""
+    for logger_name in ("httpx", "httpcore"):
+        logging.getLogger(logger_name).setLevel(logging.WARNING)
 
 
 def read_text(row: dict[str, Any], keys: list[str]) -> str:
@@ -209,6 +216,7 @@ def normalize_row(row: dict[str, Any]) -> dict[str, Any]:
 
 
 async def fetch_mcp_rows(mcp_path: Path, page: int, per_page: int) -> list[dict[str, Any]]:
+    suppress_http_key_logging()
     src_path = mcp_path / "src"
     if not src_path.exists():
         raise RuntimeError(f"real-estate-mcp src path not found: {src_path}")
