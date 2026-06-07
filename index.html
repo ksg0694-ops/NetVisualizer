@@ -64,7 +64,7 @@
                     <span class="text-xl font-bold tracking-tight">NetVisualizer</span>
                 </div>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.03.01
+                    version 1.03.02
                 </div>
             </div>
             <nav class="p-4 space-y-5 mt-4">
@@ -80,8 +80,8 @@
                         <button type="button" data-target="project-view" onclick="switchView('project-view')" class="goal-link w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
                             <i class="fas fa-folder-open w-5 text-center"></i> Project
                         </button>
-                        <button type="button" data-target="health-view" onclick="switchView('health-view')" class="goal-link w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
-                            <i class="fas fa-heart-pulse w-5 text-center"></i> Health
+                        <button type="button" data-target="life-view" onclick="switchView('life-view')" class="goal-link w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
+                            <i class="fas fa-compass w-5 text-center"></i> Life
                         </button>
                     </div>
                 </div>
@@ -100,6 +100,21 @@
                         </a>
                         <a href="#" data-target="realestate-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
                             <i class="fas fa-home w-5 text-center"></i> 부동산
+                        </a>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="px-3 mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Life Tools</p>
+                    <div class="space-y-1">
+                        <a href="#" data-target="weekly-timetable-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
+                            <i class="fas fa-calendar-week w-5 text-center"></i> Weekly Timetable
+                        </a>
+                        <a href="#" data-target="routine-checklist-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
+                            <i class="fas fa-list-check w-5 text-center"></i> Routine Checklist
+                        </a>
+                        <a href="#" data-target="vacation-plan-view" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-all">
+                            <i class="fas fa-plane-departure w-5 text-center"></i> Vacation Plan
                         </a>
                     </div>
                 </div>
@@ -155,8 +170,8 @@
                     <button type="button" data-target="project-view" onclick="switchView('project-view')" class="mobile-goal-link shrink-0 flex items-center gap-2 bg-white text-gray-500 border border-gray-100 px-3 py-2 rounded-xl text-xs font-bold">
                         <i class="fas fa-folder-open"></i> Project
                     </button>
-                    <button type="button" data-target="health-view" onclick="switchView('health-view')" class="mobile-goal-link shrink-0 flex items-center gap-2 bg-white text-gray-500 border border-gray-100 px-3 py-2 rounded-xl text-xs font-bold">
-                        <i class="fas fa-heart-pulse"></i> Health
+                    <button type="button" data-target="life-view" onclick="switchView('life-view')" class="mobile-goal-link shrink-0 flex items-center gap-2 bg-white text-gray-500 border border-gray-100 px-3 py-2 rounded-xl text-xs font-bold">
+                        <i class="fas fa-compass"></i> Life
                     </button>
                 </div>
             </div>
@@ -468,51 +483,76 @@
                 </div>
             </div>
 
-            <!-- 1-4. Health Goal -->
-            <div id="health-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
+            <!-- 1-4. Life Goal -->
+            <div id="life-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
                 <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
                     <div>
-                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Health Goal</p>
-                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">Health Cockpit</h2>
-                        <p class="text-xs md:text-sm text-gray-500 mt-1">수면, 운동, 컨디션, 검진 루틴을 장기 목표와 함께 관리합니다.</p>
+                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Life Goal</p>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">Life Cockpit</h2>
+                        <p class="text-xs md:text-sm text-gray-500 mt-1">주간 시간표, 반복 루틴, 휴가 계획을 한 곳에서 정리합니다.</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">생활 루틴</span>
-                        <span class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-xl whitespace-nowrap">주간 점검</span>
+                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">주간 운영</span>
+                        <span class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-xl whitespace-nowrap">회복 계획</span>
                     </div>
                 </div>
 
                 <div class="mb-3 flex items-center justify-between gap-3">
-                    <h3 class="text-sm md:text-base font-bold text-gray-800">건강 지표</h3>
-                    <span class="text-[10px] md:text-xs text-gray-400">수면 / 운동 / 회복</span>
+                    <h3 class="text-sm md:text-base font-bold text-gray-800">Life Tools</h3>
+                    <span class="text-[10px] md:text-xs text-gray-400">Time / Routine / Vacation</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 mb-8">
+                    <button type="button" onclick="switchView('weekly-timetable-view')" class="text-left bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-md transition min-w-0">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-4"><i class="fas fa-calendar-week"></i></div>
+                        <p class="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-1">Tool 01</p>
+                        <h3 class="text-lg font-bold text-gray-900">Weekly Timetable</h3>
+                        <p class="text-xs text-gray-500 mt-2 leading-relaxed">평일/주말의 고정 일정과 집중 시간을 주간 단위로 배치합니다.</p>
+                    </button>
+                    <button type="button" onclick="switchView('routine-checklist-view')" class="text-left bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-200 hover:shadow-md transition min-w-0">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4"><i class="fas fa-list-check"></i></div>
+                        <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-wider mb-1">Tool 02</p>
+                        <h3 class="text-lg font-bold text-gray-900">Routine Checklist</h3>
+                        <p class="text-xs text-gray-500 mt-2 leading-relaxed">아침, 퇴근 후, 자기 전 반복 루틴을 체크리스트로 관리합니다.</p>
+                    </button>
+                    <button type="button" onclick="switchView('vacation-plan-view')" class="text-left bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-sky-200 hover:shadow-md transition min-w-0">
+                        <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center mb-4"><i class="fas fa-plane-departure"></i></div>
+                        <p class="text-[10px] font-bold text-sky-500 uppercase tracking-wider mb-1">Tool 03</p>
+                        <h3 class="text-lg font-bold text-gray-900">Vacation Plan</h3>
+                        <p class="text-xs text-gray-500 mt-2 leading-relaxed">휴가 후보, 예산, 예약 상태, 준비물을 여행 단위로 정리합니다.</p>
+                    </button>
+                </div>
+
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <h3 class="text-sm md:text-base font-bold text-gray-800">생활 운영 지표</h3>
+                    <span class="text-[10px] md:text-xs text-gray-400">시간표 / 루틴 / 휴가</span>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5 mb-8">
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-indigo-500 min-w-0">
-                        <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">수면 목표</p>
-                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">정의 필요</h3>
-                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">시간, 취침/기상, 질 점수</p>
+                        <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">주간 고정 블록</p>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">12개</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">업무, 운동, 공부, 회복 시간 후보</p>
                     </div>
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-emerald-500 min-w-0">
-                        <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">운동 빈도</p>
-                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">주 0회</h3>
-                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">근력, 유산소, 스트레칭 분리 예정</p>
+                        <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">핵심 루틴</p>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">9개</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">아침/퇴근 후/취침 전 체크 항목</p>
                     </div>
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500 min-w-0">
-                        <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">컨디션 로그</p>
-                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">0건</h3>
-                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">피로, 통증, 집중도 기록</p>
+                        <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">이번 주 회복</p>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">2회</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">무계획 휴식과 가벼운 외출 블록</p>
                     </div>
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-sky-500 min-w-0">
-                        <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">검진 / 치료</p>
-                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">대기</h3>
-                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">검진 주기와 예약 관리 후보</p>
+                        <p class="text-xs md:text-sm font-semibold text-gray-500 mb-2 truncate">휴가 후보</p>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900">3건</h3>
+                        <p class="text-[10px] md:text-xs text-gray-400 mt-1">연차, 장거리 여행, 짧은 회복 휴가</p>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_360px] gap-4 md:gap-6 mb-8">
                     <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 min-w-0">
                         <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Primary Visual</p>
-                        <h3 class="text-base md:text-lg font-bold text-gray-800 mb-4">Weekly Health Rhythm</h3>
+                        <h3 class="text-base md:text-lg font-bold text-gray-800 mb-4">Weekly Life Rhythm</h3>
                         <div class="grid grid-cols-7 gap-2">
                             <div class="rounded-xl bg-indigo-50 border border-indigo-100 p-3 text-center"><p class="text-[10px] font-bold text-indigo-500">MON</p><i class="fas fa-moon text-indigo-300 mt-3"></i></div>
                             <div class="rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-center"><p class="text-[10px] font-bold text-emerald-500">TUE</p><i class="fas fa-dumbbell text-emerald-300 mt-3"></i></div>
@@ -522,23 +562,175 @@
                             <div class="rounded-xl bg-amber-50 border border-amber-100 p-3 text-center"><p class="text-[10px] font-bold text-amber-500">SAT</p><i class="fas fa-heart-pulse text-amber-300 mt-3"></i></div>
                             <div class="rounded-xl bg-sky-50 border border-sky-100 p-3 text-center"><p class="text-[10px] font-bold text-sky-500">SUN</p><i class="fas fa-clipboard-check text-sky-300 mt-3"></i></div>
                         </div>
-                        <p class="text-xs text-gray-400 mt-4">주간 루틴은 실제 건강 데이터 테이블이 생기면 자동 계산으로 전환합니다.</p>
+                        <p class="text-xs text-gray-400 mt-4">주간 시간표는 나중에 실제 일정/루틴 데이터 테이블이 생기면 자동 계산으로 전환합니다.</p>
                     </div>
                     <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100">
                         <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Next Actions</p>
                         <div class="space-y-3">
                             <div class="flex gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
                                 <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><i class="fas fa-moon"></i></div>
-                                <div><h4 class="text-sm font-bold text-gray-800">수면 로그</h4><p class="text-xs text-gray-500">수면 시간과 질 점수 기록 구조</p></div>
+                                <div><h4 class="text-sm font-bold text-gray-800">시간표 고정</h4><p class="text-xs text-gray-500">평일 반복 일정과 집중 블록부터 확정</p></div>
                             </div>
                             <div class="flex gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
                                 <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><i class="fas fa-dumbbell"></i></div>
-                                <div><h4 class="text-sm font-bold text-gray-800">운동 기록</h4><p class="text-xs text-gray-500">운동 종류, 시간, 강도 기록</p></div>
+                                <div><h4 class="text-sm font-bold text-gray-800">루틴 체크</h4><p class="text-xs text-gray-500">가장 작은 반복 행동부터 체크리스트화</p></div>
                             </div>
                             <div class="flex gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
-                                <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><i class="fas fa-notes-medical"></i></div>
-                                <div><h4 class="text-sm font-bold text-gray-800">검진 관리</h4><p class="text-xs text-gray-500">검진 주기와 병원 기록 연결</p></div>
+                                <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><i class="fas fa-suitcase-rolling"></i></div>
+                                <div><h4 class="text-sm font-bold text-gray-800">휴가 후보 정리</h4><p class="text-xs text-gray-500">날짜, 예산, 예약 상태를 먼저 분리</p></div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1-5. Life Tool: Weekly Timetable -->
+            <div id="weekly-timetable-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
+                <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Life Tool</p>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">Weekly Timetable</h2>
+                        <p class="text-xs md:text-sm text-gray-500 mt-1">반복 일정, 집중 블록, 회복 시간을 한 주 단위로 배치합니다.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">주간 기준</span>
+                        <span class="text-[10px] md:text-xs font-bold text-sky-600 bg-sky-50 border border-sky-100 px-3 py-2 rounded-xl whitespace-nowrap">시간 블록</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5 mb-6">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-indigo-500">
+                        <p class="text-xs font-semibold text-gray-500 mb-2">고정 블록</p>
+                        <h3 class="text-2xl font-bold text-gray-900">12</h3>
+                        <p class="text-[10px] text-gray-400 mt-1">업무, 운동, 공부, 정리</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-emerald-500">
+                        <p class="text-xs font-semibold text-gray-500 mb-2">집중 시간</p>
+                        <h3 class="text-2xl font-bold text-gray-900">9h</h3>
+                        <p class="text-[10px] text-gray-400 mt-1">주중 저녁과 주말 오전</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-sky-500">
+                        <p class="text-xs font-semibold text-gray-500 mb-2">회복 블록</p>
+                        <h3 class="text-2xl font-bold text-gray-900">4</h3>
+                        <p class="text-[10px] text-gray-400 mt-1">휴식, 산책, 정리 시간</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 mb-8 overflow-x-auto">
+                    <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Primary Visual</p>
+                    <div class="min-w-[820px] grid grid-cols-[90px_repeat(7,minmax(90px,1fr))] gap-2">
+                        <div></div>
+                        <div class="text-center text-xs font-bold text-gray-500 py-2">MON</div>
+                        <div class="text-center text-xs font-bold text-gray-500 py-2">TUE</div>
+                        <div class="text-center text-xs font-bold text-gray-500 py-2">WED</div>
+                        <div class="text-center text-xs font-bold text-gray-500 py-2">THU</div>
+                        <div class="text-center text-xs font-bold text-gray-500 py-2">FRI</div>
+                        <div class="text-center text-xs font-bold text-gray-500 py-2">SAT</div>
+                        <div class="text-center text-xs font-bold text-gray-500 py-2">SUN</div>
+                        <div class="text-xs font-bold text-gray-400 py-3">Morning</div>
+                        <div class="rounded-xl bg-indigo-50 border border-indigo-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-indigo-700">출근 준비</p><p class="text-[10px] text-indigo-400 mt-1">07:30</p></div>
+                        <div class="rounded-xl bg-emerald-50 border border-emerald-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-emerald-700">운동</p><p class="text-[10px] text-emerald-400 mt-1">30m</p></div>
+                        <div class="rounded-xl bg-indigo-50 border border-indigo-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-indigo-700">정리</p><p class="text-[10px] text-indigo-400 mt-1">15m</p></div>
+                        <div class="rounded-xl bg-emerald-50 border border-emerald-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-emerald-700">운동</p><p class="text-[10px] text-emerald-400 mt-1">30m</p></div>
+                        <div class="rounded-xl bg-gray-50 border border-gray-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-gray-700">가벼운 정리</p><p class="text-[10px] text-gray-400 mt-1">15m</p></div>
+                        <div class="rounded-xl bg-sky-50 border border-sky-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-sky-700">개인 프로젝트</p><p class="text-[10px] text-sky-400 mt-1">2h</p></div>
+                        <div class="rounded-xl bg-amber-50 border border-amber-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-amber-700">느린 오전</p><p class="text-[10px] text-amber-400 mt-1">회복</p></div>
+                        <div class="text-xs font-bold text-gray-400 py-3">Evening</div>
+                        <div class="rounded-xl bg-sky-50 border border-sky-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-sky-700">학습</p><p class="text-[10px] text-sky-400 mt-1">1h</p></div>
+                        <div class="rounded-xl bg-gray-50 border border-gray-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-gray-700">휴식</p><p class="text-[10px] text-gray-400 mt-1">무계획</p></div>
+                        <div class="rounded-xl bg-sky-50 border border-sky-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-sky-700">프로젝트</p><p class="text-[10px] text-sky-400 mt-1">1.5h</p></div>
+                        <div class="rounded-xl bg-gray-50 border border-gray-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-gray-700">청소</p><p class="text-[10px] text-gray-400 mt-1">30m</p></div>
+                        <div class="rounded-xl bg-amber-50 border border-amber-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-amber-700">주간 회고</p><p class="text-[10px] text-amber-400 mt-1">20m</p></div>
+                        <div class="rounded-xl bg-indigo-50 border border-indigo-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-indigo-700">외출 후보</p><p class="text-[10px] text-indigo-400 mt-1">반나절</p></div>
+                        <div class="rounded-xl bg-gray-50 border border-gray-100 p-3 min-h-[86px]"><p class="text-xs font-bold text-gray-700">다음 주 준비</p><p class="text-[10px] text-gray-400 mt-1">30m</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1-6. Life Tool: Routine Checklist -->
+            <div id="routine-checklist-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
+                <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Life Tool</p>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">Routine Checklist</h2>
+                        <p class="text-xs md:text-sm text-gray-500 mt-1">하루를 망치지 않게 만드는 최소 루틴만 체크합니다.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-xl whitespace-nowrap">Daily Loop</span>
+                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">Minimum Viable Day</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Morning</p>
+                        <div class="space-y-3">
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-indigo-600"><span class="text-sm font-medium text-gray-700">물 한 컵 + 약/영양제</span></label>
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-indigo-600"><span class="text-sm font-medium text-gray-700">오늘 일정 3분 확인</span></label>
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-indigo-600"><span class="text-sm font-medium text-gray-700">가벼운 스트레칭</span></label>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">After Work</p>
+                        <div class="space-y-3">
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-emerald-600"><span class="text-sm font-medium text-gray-700">가계부/메모 5분 정리</span></label>
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-emerald-600"><span class="text-sm font-medium text-gray-700">운동 또는 산책</span></label>
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-emerald-600"><span class="text-sm font-medium text-gray-700">개인 프로젝트 30분</span></label>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Night</p>
+                        <div class="space-y-3">
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-sky-600"><span class="text-sm font-medium text-gray-700">내일 첫 행동 정하기</span></label>
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-sky-600"><span class="text-sm font-medium text-gray-700">방/책상 5분 리셋</span></label>
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-sky-600"><span class="text-sm font-medium text-gray-700">수면 준비 알림</span></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1-7. Life Tool: Vacation Plan -->
+            <div id="vacation-plan-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
+                <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Life Tool</p>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">Vacation Plan</h2>
+                        <p class="text-xs md:text-sm text-gray-500 mt-1">연차, 이동, 예산, 예약 상태를 휴가 후보별로 나눠 봅니다.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-[10px] md:text-xs font-bold text-sky-600 bg-sky-50 border border-sky-100 px-3 py-2 rounded-xl whitespace-nowrap">3 Candidates</span>
+                        <span class="text-[10px] md:text-xs font-bold text-amber-600 bg-amber-50 border border-amber-100 px-3 py-2 rounded-xl whitespace-nowrap">Budget Draft</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_340px] gap-4 md:gap-6 mb-8">
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 min-w-0">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Vacation Candidates</p>
+                        <div class="space-y-3">
+                            <div class="grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr_0.8fr] gap-3 p-4 rounded-xl bg-sky-50 border border-sky-100">
+                                <div><p class="text-sm font-bold text-gray-900">여름 3박 4일</p><p class="text-xs text-gray-500 mt-1">바다/휴식 중심</p></div>
+                                <div><p class="text-[10px] font-bold text-sky-500 uppercase">Budget</p><p class="text-sm font-bold text-gray-800">80만 원</p></div>
+                                <div><p class="text-[10px] font-bold text-sky-500 uppercase">Status</p><p class="text-sm font-bold text-sky-700">후보</p></div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr_0.8fr] gap-3 p-4 rounded-xl bg-amber-50 border border-amber-100">
+                                <div><p class="text-sm font-bold text-gray-900">가을 장거리 여행</p><p class="text-xs text-gray-500 mt-1">항공권 가격 관찰</p></div>
+                                <div><p class="text-[10px] font-bold text-amber-500 uppercase">Budget</p><p class="text-sm font-bold text-gray-800">150만 원</p></div>
+                                <div><p class="text-[10px] font-bold text-amber-500 uppercase">Status</p><p class="text-sm font-bold text-amber-700">검토</p></div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr_0.8fr] gap-3 p-4 rounded-xl bg-gray-50 border border-gray-100">
+                                <div><p class="text-sm font-bold text-gray-900">짧은 회복 휴가</p><p class="text-xs text-gray-500 mt-1">금요일 연차 + 주말</p></div>
+                                <div><p class="text-[10px] font-bold text-gray-500 uppercase">Budget</p><p class="text-sm font-bold text-gray-800">30만 원</p></div>
+                                <div><p class="text-[10px] font-bold text-gray-500 uppercase">Status</p><p class="text-sm font-bold text-gray-700">즉시 가능</p></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Preparation</p>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100"><span class="text-sm font-medium text-gray-700">연차 후보일</span><span class="text-xs font-bold text-indigo-600">미정</span></div>
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100"><span class="text-sm font-medium text-gray-700">교통/숙박</span><span class="text-xs font-bold text-amber-600">가격 관찰</span></div>
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100"><span class="text-sm font-medium text-gray-700">예산 캡</span><span class="text-xs font-bold text-emerald-600">월 예산 분리</span></div>
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100"><span class="text-sm font-medium text-gray-700">준비물</span><span class="text-xs font-bold text-gray-600">초안 필요</span></div>
                         </div>
                     </div>
                 </div>
@@ -3467,7 +3659,10 @@
     const views = {
         'dashboard-view': document.getElementById('dashboard-view'), 'portfolio-view': document.getElementById('portfolio-view'),
         'career-view': document.getElementById('career-view'), 'project-view': document.getElementById('project-view'),
-        'health-view': document.getElementById('health-view'),
+        'life-view': document.getElementById('life-view'),
+        'weekly-timetable-view': document.getElementById('weekly-timetable-view'),
+        'routine-checklist-view': document.getElementById('routine-checklist-view'),
+        'vacation-plan-view': document.getElementById('vacation-plan-view'),
         'stats-view': document.getElementById('stats-view'), 'asset-view': document.getElementById('asset-view'),
         'realestate-view': document.getElementById('realestate-view'), 'invest-detail-view': document.getElementById('invest-detail-view')
     };
@@ -3476,7 +3671,10 @@
         'dashboard-view': { label: 'Finance Goal', title: 'Finance Cockpit' },
         'career-view': { label: 'Career Goal', title: 'Career Cockpit' },
         'project-view': { label: 'Project Goal', title: 'Project Cockpit' },
-        'health-view': { label: 'Health Goal', title: 'Health Cockpit' },
+        'life-view': { label: 'Life Goal', title: 'Life Cockpit' },
+        'weekly-timetable-view': { label: 'Life Tool', title: 'Weekly Timetable' },
+        'routine-checklist-view': { label: 'Life Tool', title: 'Routine Checklist' },
+        'vacation-plan-view': { label: 'Life Tool', title: 'Vacation Plan' },
         'portfolio-view': { label: 'Finance Tool', title: '포트폴리오' },
         'stats-view': { label: 'Finance Tool', title: '현금 흐름' },
         'asset-view': { label: 'Finance Tool', title: '장기 자산' },
@@ -3494,7 +3692,8 @@
 
     function updateGoalNavigation(targetId) {
         const financeToolViews = new Set(['portfolio-view', 'stats-view', 'asset-view', 'realestate-view', 'invest-detail-view']);
-        const activeGoalTarget = financeToolViews.has(targetId) ? 'dashboard-view' : targetId;
+        const lifeToolViews = new Set(['weekly-timetable-view', 'routine-checklist-view', 'vacation-plan-view']);
+        const activeGoalTarget = financeToolViews.has(targetId) ? 'dashboard-view' : lifeToolViews.has(targetId) ? 'life-view' : targetId;
         document.querySelectorAll('.goal-link').forEach(nav => {
             const isActive = nav.getAttribute('data-target') === activeGoalTarget;
             nav.classList.toggle('text-indigo-700', isActive);

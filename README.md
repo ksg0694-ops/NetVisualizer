@@ -46,7 +46,8 @@ The first MCP candidate used a generated file-data endpoint that does not match 
 `codex/asset-trend-redesign` branch starts the redesign from the long-term asset trend screen.
 
 - Navigation now has two levels: Goal first, then Finance tools.
-- Finance, Career, Project, and Health are selectable Goal cockpits. Career/Project/Health currently provide draft KPI structures and next-action areas before data tables are added.
+- Finance, Career, Project, and Life are selectable Goal cockpits. Career/Project/Life currently provide draft KPI structures and next-action areas before data tables are added.
+- Life tools are grouped as Weekly Timetable, Routine Checklist, and Vacation Plan.
 - Finance opens a Goal cockpit with asset goal progress, housing funding readiness, year-to-date surplus, and year-to-date surplus rate.
 - The Finance cockpit and Finance tool screens follow a consistent visual structure: time-scope badges, decision cards, one primary visual, and detail/action cards.
 - Finance tools are grouped as Portfolio, Cash Flow, Long-Term Asset, and Real Estate.

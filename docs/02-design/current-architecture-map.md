@@ -56,7 +56,7 @@ The app is moving away from one flat tab list. The first visible step keeps all 
 ```mermaid
 flowchart TD
     AppShell["App shell"] --> GoalLayer["Goal layer\nFinance active"]
-    GoalLayer --> FutureGoals["Career / Project / Health\nvisible placeholders"]
+    GoalLayer --> FutureGoals["Career / Project / Life\nvisible placeholders"]
     GoalLayer --> FinanceCockpit["Finance Goal cockpit\nformerly Summary"]
     GoalLayer --> FinanceTools["Finance tool layer"]
 
@@ -92,7 +92,8 @@ flowchart TD
     GoalNav["Goal navigation"] --> FinanceGoal["Finance Cockpit"]
     GoalNav --> CareerGoal["Career Cockpit"]
     GoalNav --> ProjectGoal["Project Cockpit"]
-    GoalNav --> HealthGoal["Health Cockpit"]
+    GoalNav --> LifeGoal["Life Cockpit"]
+    LifeGoal --> LifeTools["Weekly Timetable\nRoutine Checklist\nVacation Plan"]
 
     Header["Goal title + time-scope badges"] --> DecisionCards["Decision Cards\nasset goal, housing readiness,\nyear surplus, surplus rate"]
     DecisionCards --> PrimaryVisual["Primary Visual\nasset-flow chart"]
@@ -108,7 +109,7 @@ flowchart TD
     ToolVisual --> ToolDetail["Detail / Action\nlists, edit buttons, schedule, roadmap"]
 ```
 
-This keeps KPI calculation in `index.html` for now. The next architecture step should move Finance summary KPI definitions and future Career/Project/Health goal metrics into small domain modules.
+This keeps KPI calculation in `index.html` for now. The next architecture step should move Finance summary KPI definitions and future Career/Project/Life goal metrics into small domain modules.
 
 ## Current Time Scope
 

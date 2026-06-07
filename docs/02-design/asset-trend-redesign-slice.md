@@ -50,7 +50,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    GoalNav["Goal navigation\nFinance active\nCareer / Project / Health placeholders"] --> FinanceTools["Finance Tools"]
+    GoalNav["Goal navigation\nFinance active\nCareer / Project / Life placeholders"] --> FinanceTools["Finance Tools"]
     FinanceTools --> Summary["Summary"]
     FinanceTools --> Portfolio["Portfolio"]
     FinanceTools --> CashFlow["Cash Flow"]
@@ -91,6 +91,6 @@ This keeps the first slice low-risk. The new feature file is pure model logic an
 
 1. Move asset trend chart config into the feature boundary.
 2. Move asset trend DOM renderers into a screen controller.
-3. Promote Goal/Tool navigation into a small app-shell controller before adding Career, Project, or Health.
+3. Promote Goal/Tool navigation into a small app-shell controller before adding Career, Project, or Life.
 4. Add a small fixture-based regression test for `AssetTrendFeature.createModel()`.
 5. Repeat the pattern for cash-flow import or portfolio detail after this screen is stable.
