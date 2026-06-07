@@ -64,7 +64,7 @@
                     <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
                 </div>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.03.06
+                    version 1.03.07
                 </div>
             </div>
             <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-3 space-y-3">
@@ -3692,6 +3692,7 @@
     }
 
     const LIFE_TIMETABLE_STORAGE_KEY = 'netvisualizer.life.weeklyTimetable.v1';
+    const LIFE_TIMETABLE_TEMPLATE_SYNC_KEY = 'netvisualizer.life.weeklyTimetable.templateSync.v1';
     const lifeTimetableHours = Array.from({ length: 18 }, (_, idx) => idx + 6);
     const lifeTimetableDays = [
         { label: 'MON', ko: '월' },
@@ -3763,6 +3764,19 @@
 
     function saveLifeTimetableStore(store) {
         localStorage.setItem(LIFE_TIMETABLE_STORAGE_KEY, JSON.stringify(store));
+    }
+
+    function getLifeTimetableTemplateSyncStore() {
+        try {
+            return JSON.parse(localStorage.getItem(LIFE_TIMETABLE_TEMPLATE_SYNC_KEY) || '{}');
+        } catch (error) {
+            console.warn('Life timetable template sync parse failed', error);
+            return {};
+        }
+    }
+
+    function saveLifeTimetableTemplateSyncStore(store) {
+        localStorage.setItem(LIFE_TIMETABLE_TEMPLATE_SYNC_KEY, JSON.stringify(store));
     }
 
     function createDefaultLifeWeekTemplate() {
@@ -3968,6 +3982,31 @@
     const LIFE_TIMETABLE_FIRST_MINUTE = 6 * 60;
     const LIFE_TIMETABLE_LAST_MINUTE = 24 * 60;
     const LIFE_TIMETABLE_DAY_LABELS_KO = ['월', '화', '수', '목', '금', '토', '일'];
+    const LIFE_COMPANY_WORK_START_MINUTE = (8 * 60) + 30;
+    const LIFE_COMPANY_WORK_END_MINUTE = (17 * 60) + 30;
+    const KOREAN_PUBLIC_HOLIDAYS = {
+        '2026-01-01': '신정',
+        '2026-02-16': '설날 연휴',
+        '2026-02-17': '설날',
+        '2026-02-18': '설날 연휴',
+        '2026-03-01': '삼일절',
+        '2026-03-02': '대체공휴일(삼일절)',
+        '2026-05-01': '근로자의 날',
+        '2026-05-05': '어린이날',
+        '2026-05-24': '부처님오신날',
+        '2026-05-25': '대체공휴일(부처님오신날)',
+        '2026-06-03': '전국동시지방선거',
+        '2026-06-06': '현충일',
+        '2026-08-15': '광복절',
+        '2026-08-17': '대체공휴일(광복절)',
+        '2026-09-24': '추석 연휴',
+        '2026-09-25': '추석',
+        '2026-09-26': '추석 연휴',
+        '2026-10-03': '개천절',
+        '2026-10-05': '대체공휴일(개천절)',
+        '2026-10-09': '한글날',
+        '2026-12-25': '성탄절',
+    };
 
     function formatTimetableMinute(totalMinutes) {
         const minutes = Math.max(0, Math.min(LIFE_TIMETABLE_LAST_MINUTE, Number(totalMinutes) || 0));
@@ -4018,8 +4057,45 @@
         return { rows: normalizedRows, changed };
     }
 
-    function createDefaultLifeWeekTemplate() {
+    function getKoreanPublicHolidayName(date) {
+        return KOREAN_PUBLIC_HOLIDAYS[formatIsoDate(date)] || '';
+    }
+
+    function createCompanyWorkEvent(dayIndex) {
         return {
+            title: '회사출근',
+            type: 'work',
+            note: '08:30-17:30, 공휴일 자동 제외',
+            dayIndex,
+            startMinute: LIFE_COMPANY_WORK_START_MINUTE,
+            endMinute: LIFE_COMPANY_WORK_END_MINUTE,
+        };
+    }
+
+    function addCompanyWorkTemplateBlocks(weekRows, weekStart) {
+        let changed = false;
+        for (let dayIndex = 0; dayIndex < 5; dayIndex += 1) {
+            const date = addDays(weekStart, dayIndex);
+            if (getKoreanPublicHolidayName(date)) continue;
+            const key = getTimetableSlotKey(dayIndex, LIFE_COMPANY_WORK_START_MINUTE);
+            if (weekRows[key]) continue;
+            weekRows[key] = createCompanyWorkEvent(dayIndex);
+            changed = true;
+        }
+        return changed;
+    }
+
+    function applyCompanyWorkTemplateSync(weekKey, weekRows, weekStart) {
+        const syncStore = getLifeTimetableTemplateSyncStore();
+        if (syncStore[weekKey]?.companyWorkV1) return false;
+        const changed = addCompanyWorkTemplateBlocks(weekRows, weekStart);
+        syncStore[weekKey] = { ...(syncStore[weekKey] || {}), companyWorkV1: true };
+        saveLifeTimetableTemplateSyncStore(syncStore);
+        return changed;
+    }
+
+    function createDefaultLifeWeekTemplate(weekStart = activeLifeWeekStart) {
+        const template = {
             '0-420': { title: '출근 준비', type: 'routine', note: '물, 일정 확인, 이동 준비', dayIndex: 0, startMinute: 420, endMinute: 480 },
             '0-1200': { title: '학습', type: 'focus', note: '이번 주 습득 과제', dayIndex: 0, startMinute: 1200, endMinute: 1260 },
             '1-420': { title: '이동', type: 'movement', note: '가볍게 30분', dayIndex: 1, startMinute: 420, endMinute: 450 },
@@ -4030,16 +4106,18 @@
             '5-540': { title: '개인 프로젝트', type: 'focus', note: '오전 집중 블록', dayIndex: 5, startMinute: 540, endMinute: 660 },
             '6-1260': { title: '다음 주 준비', type: 'routine', note: '캘린더와 할 일 정리', dayIndex: 6, startMinute: 1260, endMinute: 1320 },
         };
+        addCompanyWorkTemplateBlocks(template, weekStart);
+        return template;
     }
 
     function ensureLifeWeekTimetable(weekKey) {
         const store = getLifeTimetableStore();
-        if (!store[weekKey]) store[weekKey] = createDefaultLifeWeekTemplate();
+        const isNewWeek = !store[weekKey];
+        if (isNewWeek) store[weekKey] = createDefaultLifeWeekTemplate(activeLifeWeekStart);
         const normalized = normalizeLifeWeekTimetable(store[weekKey]);
-        if (normalized.changed) {
-            store[weekKey] = normalized.rows;
-            saveLifeTimetableStore(store);
-        }
+        store[weekKey] = normalized.rows;
+        const companyTemplateChanged = applyCompanyWorkTemplateSync(weekKey, store[weekKey], activeLifeWeekStart);
+        if (isNewWeek || normalized.changed || companyTemplateChanged) saveLifeTimetableStore(store);
         return store[weekKey];
     }
 
@@ -4312,7 +4390,7 @@
 
     function resetActiveLifeWeekTemplate() {
         const store = getLifeTimetableStore();
-        store[getLifeWeekKey(activeLifeWeekStart)] = createDefaultLifeWeekTemplate();
+        store[getLifeWeekKey(activeLifeWeekStart)] = createDefaultLifeWeekTemplate(activeLifeWeekStart);
         selectedLifeTimetableSlot = null;
         saveLifeTimetableStore(store);
         renderWeeklyTimetable();
