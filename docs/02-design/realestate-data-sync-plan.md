@@ -67,6 +67,8 @@ Community real-estate MCP servers can be useful for agent-side investigation or 
 - Prefer official public APIs where available.
 - Store normalized results in Supabase rather than making the UI depend on the MCP runtime.
 
+`tae0y/real-estate-mcp` is the selected first adapter candidate because it exposes Applyhome APT subscription notice and result tools. The local adapter work is tracked in `docs/02-design/realestate-mcp-adapter.md`.
+
 ## Next Steps
 
 1. Apply the Supabase migration to the remote project.

@@ -8,3 +8,6 @@ supabase/.temp/
 supabase/functions/.env
 supabase/functions/.env.*
 !supabase/functions/.env.example
+
+# External MCP/runtime checkouts
+tools/external/
