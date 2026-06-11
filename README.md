@@ -51,6 +51,12 @@ The first MCP candidate used a generated file-data endpoint that does not match 
 - Weekly Timetable now supports week navigation, ISO week labels such as `W24`, hour-by-hour slot editing, and localStorage persistence per week.
 - Weekly Timetable can register the current week as a personal template, then reset a week from that registered template.
 - Weekly Timetable hides the top KPI cards so the calendar grid starts higher on the screen.
+- Weekly Timetable behavior is now backed by `js/features/weeklyTimetable.js` as the first step toward feature-level module extraction.
+- Quant strategy, rebalance signal, and market price helpers are backed by `js/features/quantEngine.js` to keep the static shell leaner.
+- Real-estate subscription schedule and map rendering are backed by `js/features/realEstate.js`.
+- Transaction import and portfolio edit modal behavior are backed by `js/features/transactionImport.js` and `js/features/portfolioEditor.js`.
+- Cashflow controls, portfolio/detail rendering, and finance summary rendering are backed by `js/features/cashflowControls.js`, `js/features/portfolioViews.js`, and `js/features/financeViews.js`.
+- App state/data loading and shell navigation/bootstrap are backed by `js/features/appCore.js` and `js/features/appShell.js`.
 - Weekly Timetable keeps the hourly grid readable while allowing 10-minute start/end editing, with a compressed week layout for narrow screens.
 - Weekly Timetable renders multi-hour events as a single Google Calendar-style block stretched across the full start/end duration.
 - Overlapping Weekly Timetable events are placed side-by-side within the same day column.
