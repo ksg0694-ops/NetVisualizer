@@ -64,7 +64,7 @@
                     <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
                 </div>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.03.09
+                    version 1.03.10
                 </div>
             </div>
             <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-3 space-y-3">
@@ -676,7 +676,10 @@
                                 <button type="button" id="weekly-save-slot" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700">저장</button>
                                 <button type="button" id="weekly-delete-slot" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200">비우기</button>
                             </div>
-                            <button type="button" id="weekly-reset-template" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-500 text-xs font-bold hover:bg-gray-50">이번 주 템플릿으로 초기화</button>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button" id="weekly-register-template" class="px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 text-xs font-bold hover:bg-emerald-100">템플릿 등록</button>
+                                <button type="button" id="weekly-reset-template" class="px-3 py-2 rounded-lg border border-gray-200 text-gray-500 text-xs font-bold hover:bg-gray-50">템플릿 초기화</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3693,6 +3696,7 @@
 
     const LIFE_TIMETABLE_STORAGE_KEY = 'netvisualizer.life.weeklyTimetable.v1';
     const LIFE_TIMETABLE_TEMPLATE_SYNC_KEY = 'netvisualizer.life.weeklyTimetable.templateSync.v1';
+    const LIFE_TIMETABLE_REGISTERED_TEMPLATE_KEY = 'netvisualizer.life.weeklyTimetable.registeredTemplate.v1';
     const lifeTimetableHours = Array.from({ length: 18 }, (_, idx) => idx + 6);
     const lifeTimetableDays = [
         { label: 'MON', ko: '월' },
@@ -3777,6 +3781,31 @@
 
     function saveLifeTimetableTemplateSyncStore(store) {
         localStorage.setItem(LIFE_TIMETABLE_TEMPLATE_SYNC_KEY, JSON.stringify(store));
+    }
+
+    function cloneLifeTimetableRows(rows) {
+        return JSON.parse(JSON.stringify(rows || {}));
+    }
+
+    function getRegisteredLifeWeekTemplate() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(LIFE_TIMETABLE_REGISTERED_TEMPLATE_KEY) || 'null');
+            const rows = saved?.rows || null;
+            if (!rows || typeof rows !== 'object') return null;
+            return normalizeLifeWeekTimetable(rows).rows;
+        } catch (error) {
+            console.warn('Life timetable registered template parse failed', error);
+            return null;
+        }
+    }
+
+    function saveRegisteredLifeWeekTemplate(rows) {
+        const normalized = normalizeLifeWeekTimetable(rows).rows;
+        localStorage.setItem(LIFE_TIMETABLE_REGISTERED_TEMPLATE_KEY, JSON.stringify({
+            version: 1,
+            updatedAt: new Date().toISOString(),
+            rows: normalized,
+        }));
     }
 
     function createDefaultLifeWeekTemplate() {
@@ -4072,6 +4101,25 @@
         };
     }
 
+    function isCompanyWorkTemplateEvent(event) {
+        return event?.title === '회사출근'
+            && Number(event.startMinute) === LIFE_COMPANY_WORK_START_MINUTE
+            && Number(event.endMinute) === LIFE_COMPANY_WORK_END_MINUTE;
+    }
+
+    function materializeLifeWeekTemplate(templateRows, weekStart) {
+        const normalizedRows = normalizeLifeWeekTimetable(cloneLifeTimetableRows(templateRows)).rows;
+        return Object.entries(normalizedRows).reduce((result, [key, event]) => {
+            const eventDate = addDays(weekStart, event.dayIndex);
+            if (isCompanyWorkTemplateEvent(event) && getKoreanPublicHolidayName(eventDate)) return result;
+            result[key] = {
+                ...event,
+                updatedAt: undefined,
+            };
+            return result;
+        }, {});
+    }
+
     function addCompanyWorkTemplateBlocks(weekRows, weekStart) {
         let changed = false;
         for (let dayIndex = 0; dayIndex < 5; dayIndex += 1) {
@@ -4095,6 +4143,9 @@
     }
 
     function createDefaultLifeWeekTemplate(weekStart = activeLifeWeekStart) {
+        const registeredTemplate = getRegisteredLifeWeekTemplate();
+        if (registeredTemplate) return materializeLifeWeekTemplate(registeredTemplate, weekStart);
+
         const template = {
             '0-420': { title: '출근 준비', type: 'routine', note: '물, 일정 확인, 이동 준비', dayIndex: 0, startMinute: 420, endMinute: 480 },
             '0-1200': { title: '학습', type: 'focus', note: '이번 주 습득 과제', dayIndex: 0, startMinute: 1200, endMinute: 1260 },
@@ -4445,13 +4496,20 @@
         showToast('시간 칸을 비웠습니다', 'info', 1600);
     }
 
+    function registerActiveLifeWeekTemplate() {
+        const weekRows = ensureLifeWeekTimetable(getLifeWeekKey(activeLifeWeekStart));
+        const normalizedRows = normalizeLifeWeekTimetable(weekRows).rows;
+        saveRegisteredLifeWeekTemplate(normalizedRows);
+        showToast('현재 주 시간표를 개인 템플릿으로 등록했습니다.', 'info', 1800);
+    }
+
     function resetActiveLifeWeekTemplate() {
         const store = getLifeTimetableStore();
         store[getLifeWeekKey(activeLifeWeekStart)] = createDefaultLifeWeekTemplate(activeLifeWeekStart);
         selectedLifeTimetableSlot = null;
         saveLifeTimetableStore(store);
         renderWeeklyTimetable();
-        showToast('이번 주 시간표를 기본 템플릿으로 되돌렸습니다.', 'info', 1800);
+        showToast(getRegisteredLifeWeekTemplate() ? '등록된 개인 템플릿으로 초기화했습니다.' : '이번 주 시간표를 기본 템플릿으로 되돌렸습니다.', 'info', 1800);
     }
 
     function bindWeeklyTimetableControls() {
@@ -4474,6 +4532,7 @@
         });
         document.getElementById('weekly-save-slot')?.addEventListener('click', saveSelectedLifeTimetableSlot);
         document.getElementById('weekly-delete-slot')?.addEventListener('click', deleteSelectedLifeTimetableSlot);
+        document.getElementById('weekly-register-template')?.addEventListener('click', registerActiveLifeWeekTemplate);
         document.getElementById('weekly-reset-template')?.addEventListener('click', resetActiveLifeWeekTemplate);
         document.getElementById('weekly-event-start')?.addEventListener('change', updateSelectedTimetableLabelFromEditor);
         document.getElementById('weekly-event-end')?.addEventListener('change', updateSelectedTimetableLabelFromEditor);
