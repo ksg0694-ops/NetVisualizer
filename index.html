@@ -64,7 +64,7 @@
                     <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
                 </div>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.03.07
+                    version 1.03.08
                 </div>
             </div>
             <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-3 space-y-3">
@@ -4137,8 +4137,23 @@
         const hourStart = hour * 60;
         const hourEnd = hourStart + 60;
         return getLifeTimetableEvents(weekRows).filter(event =>
-            event.dayIndex === dayIndex && event.startMinute >= hourStart && event.startMinute < hourEnd
+            event.dayIndex === dayIndex && event.startMinute < hourEnd && event.endMinute > hourStart
         );
+    }
+
+    function getTimetableEventHourLabel(event, hour) {
+        const hourStart = hour * 60;
+        const hourEnd = hourStart + 60;
+        const startsHere = event.startMinute >= hourStart && event.startMinute < hourEnd;
+        const endsHere = event.endMinute > hourStart && event.endMinute <= hourEnd;
+        if (startsHere && endsHere) return `${formatTimetableMinute(event.startMinute)}-${formatTimetableMinute(event.endMinute)}`;
+        if (startsHere) return `${formatTimetableMinute(event.startMinute)}~`;
+        if (endsHere) return `~${formatTimetableMinute(event.endMinute)}`;
+        return '계속';
+    }
+
+    function isTimetableEventContinuation(event, hour) {
+        return event.startMinute < (hour * 60);
     }
 
     function formatTimetableDuration(minutes) {
@@ -4242,12 +4257,14 @@
                             ${hourEvents.map(event => {
                                 const meta = lifeTimetableTypeMeta[event.type] || lifeTimetableTypeMeta.life;
                                 const isSelected = event.key === selectedKey;
+                                const eventHourLabel = getTimetableEventHourLabel(event, hour);
+                                const continuationClass = isTimetableEventContinuation(event, hour) ? 'border-dashed opacity-80' : '';
                                 return `
                                     <button type="button" data-weekly-event-key="${event.key}"
-                                        class="w-full text-left rounded-md border px-1 py-1 transition ${meta.cell} ${isSelected ? 'ring-2 ring-indigo-400 ring-inset' : 'hover:brightness-[0.98]'}">
+                                        class="w-full text-left rounded-md border px-1 py-1 transition ${meta.cell} ${continuationClass} ${isSelected ? 'ring-2 ring-indigo-400 ring-inset' : 'hover:brightness-[0.98]'}">
                                         <div class="flex items-center gap-1 min-w-0">
                                             <span class="w-1.5 h-1.5 rounded-full ${meta.dot} shrink-0"></span>
-                                            <span class="text-[8px] md:text-[9px] font-bold truncate">${formatTimetableMinute(event.startMinute)}</span>
+                                            <span class="text-[8px] md:text-[9px] font-bold truncate">${eventHourLabel}</span>
                                         </div>
                                         <p class="text-[9px] md:text-xs font-bold leading-tight truncate mt-0.5">${escapeHtml(event.title)}</p>
                                     </button>
