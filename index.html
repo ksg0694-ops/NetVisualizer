@@ -64,7 +64,7 @@
                     <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
                 </div>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.03.08
+                    version 1.03.09
                 </div>
             </div>
             <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-3 space-y-3">
@@ -4133,27 +4133,35 @@
             .sort((a, b) => a.dayIndex - b.dayIndex || a.startMinute - b.startMinute);
     }
 
-    function getLifeTimetableEventsForHour(weekRows, dayIndex, hour) {
-        const hourStart = hour * 60;
-        const hourEnd = hourStart + 60;
-        return getLifeTimetableEvents(weekRows).filter(event =>
-            event.dayIndex === dayIndex && event.startMinute < hourEnd && event.endMinute > hourStart
-        );
-    }
+    function getTimetableDayEventLayouts(dayEvents) {
+        const sortedEvents = [...dayEvents].sort((a, b) => a.startMinute - b.startMinute || a.endMinute - b.endMinute);
+        const activeLanes = [];
+        const laneEvents = sortedEvents.map(event => {
+            for (let idx = activeLanes.length - 1; idx >= 0; idx -= 1) {
+                if (activeLanes[idx].endMinute <= event.startMinute) activeLanes.splice(idx, 1);
+            }
+            const usedLanes = new Set(activeLanes.map(item => item.lane));
+            let lane = 0;
+            while (usedLanes.has(lane)) lane += 1;
+            activeLanes.push({ lane, endMinute: event.endMinute });
+            return { ...event, lane };
+        });
 
-    function getTimetableEventHourLabel(event, hour) {
-        const hourStart = hour * 60;
-        const hourEnd = hourStart + 60;
-        const startsHere = event.startMinute >= hourStart && event.startMinute < hourEnd;
-        const endsHere = event.endMinute > hourStart && event.endMinute <= hourEnd;
-        if (startsHere && endsHere) return `${formatTimetableMinute(event.startMinute)}-${formatTimetableMinute(event.endMinute)}`;
-        if (startsHere) return `${formatTimetableMinute(event.startMinute)}~`;
-        if (endsHere) return `~${formatTimetableMinute(event.endMinute)}`;
-        return '계속';
-    }
+        const getMaxConcurrentCount = (event) => {
+            const checkPoints = new Set([event.startMinute]);
+            laneEvents.forEach(other => {
+                if (other.startMinute > event.startMinute && other.startMinute < event.endMinute) checkPoints.add(other.startMinute);
+                if (other.endMinute > event.startMinute && other.endMinute < event.endMinute) checkPoints.add(other.endMinute);
+            });
+            return Math.max(1, ...Array.from(checkPoints).map(point =>
+                laneEvents.filter(other => other.startMinute <= point && other.endMinute > point).length
+            ));
+        };
 
-    function isTimetableEventContinuation(event, hour) {
-        return event.startMinute < (hour * 60);
+        return laneEvents.map(event => {
+            const laneCount = Math.max(getMaxConcurrentCount(event), event.lane + 1, 1);
+            return { ...event, laneCount };
+        });
     }
 
     function formatTimetableDuration(minutes) {
@@ -4230,6 +4238,13 @@
         if (focusHoursEl) focusHoursEl.textContent = formatTimetableDuration(focusMinutes);
         if (recoveryCountEl) recoveryCountEl.textContent = events.filter(item => item.type === 'recovery').length.toLocaleString();
 
+        const calendarStartMinute = LIFE_TIMETABLE_FIRST_MINUTE;
+        const calendarTotalMinutes = LIFE_TIMETABLE_LAST_MINUTE - LIFE_TIMETABLE_FIRST_MINUTE;
+        const getMinuteTopPct = (minute) => ((minute - calendarStartMinute) / calendarTotalMinutes) * 100;
+        const getMinuteHeightPct = (startMinute, endMinute) => ((endMinute - startMinute) / calendarTotalMinutes) * 100;
+        const timelineHeightClass = 'h-[1044px] md:h-[1296px]';
+        const hourRowPct = 100 / lifeTimetableHours.length;
+
         let html = '<div class="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] md:grid-cols-[64px_repeat(7,minmax(82px,1fr))] gap-px bg-gray-200 border border-gray-200 rounded-xl overflow-hidden w-full">';
         html += '<div class="bg-gray-50 min-h-[46px] md:min-h-[54px]"></div>';
         lifeTimetableDays.forEach((day, idx) => {
@@ -4244,38 +4259,63 @@
             `;
         });
 
-        lifeTimetableHours.forEach(hour => {
-            html += `<div class="bg-gray-50 min-h-[58px] md:min-h-[72px] px-1 md:px-2 py-2 text-[9px] md:text-[10px] font-bold text-gray-400 whitespace-nowrap">${String(hour).padStart(2, '0')}:00</div>`;
-            lifeTimetableDays.forEach((day, dayIndex) => {
-                const hourEvents = getLifeTimetableEventsForHour(weekRows, dayIndex, hour);
-                const isAddingHere = selectedLifeTimetableSlot && !selectedLifeTimetableSlot.eventKey
-                    && selectedLifeTimetableSlot.dayIndex === dayIndex
-                    && Math.floor(selectedLifeTimetableSlot.startMinute / 60) === hour;
-                html += `
-                    <div class="min-h-[58px] md:min-h-[72px] bg-white p-1 md:p-1.5 border border-transparent ${isAddingHere ? 'ring-2 ring-indigo-400 ring-inset bg-indigo-50' : ''}">
-                        <div class="space-y-1">
-                            ${hourEvents.map(event => {
-                                const meta = lifeTimetableTypeMeta[event.type] || lifeTimetableTypeMeta.life;
-                                const isSelected = event.key === selectedKey;
-                                const eventHourLabel = getTimetableEventHourLabel(event, hour);
-                                const continuationClass = isTimetableEventContinuation(event, hour) ? 'border-dashed opacity-80' : '';
-                                return `
-                                    <button type="button" data-weekly-event-key="${event.key}"
-                                        class="w-full text-left rounded-md border px-1 py-1 transition ${meta.cell} ${continuationClass} ${isSelected ? 'ring-2 ring-indigo-400 ring-inset' : 'hover:brightness-[0.98]'}">
-                                        <div class="flex items-center gap-1 min-w-0">
-                                            <span class="w-1.5 h-1.5 rounded-full ${meta.dot} shrink-0"></span>
-                                            <span class="text-[8px] md:text-[9px] font-bold truncate">${eventHourLabel}</span>
-                                        </div>
-                                        <p class="text-[9px] md:text-xs font-bold leading-tight truncate mt-0.5">${escapeHtml(event.title)}</p>
-                                    </button>
-                                `;
-                            }).join('')}
-                            <button type="button" data-weekly-slot="${dayIndex}-${hour}" data-day-index="${dayIndex}" data-hour="${hour}"
-                                class="w-full rounded-md border border-dashed ${isAddingHere ? 'border-indigo-300 text-indigo-500 bg-white/70' : 'border-transparent text-gray-300 hover:border-gray-200 hover:bg-gray-50'} text-[10px] md:text-xs font-bold leading-none py-1 transition">+</button>
-                        </div>
+        html += `
+            <div class="relative bg-gray-50 ${timelineHeightClass}">
+                ${lifeTimetableHours.map((hour, index) => `
+                    <div class="absolute left-0 right-0 px-1 md:px-2 py-1.5 text-[9px] md:text-[10px] font-bold text-gray-400 whitespace-nowrap border-t border-gray-200 first:border-t-0"
+                        style="top:${index * hourRowPct}%;height:${hourRowPct}%">
+                        ${String(hour).padStart(2, '0')}:00
                     </div>
-                `;
-            });
+                `).join('')}
+            </div>
+        `;
+
+        lifeTimetableDays.forEach((day, dayIndex) => {
+            const dayEvents = getTimetableDayEventLayouts(events.filter(event => event.dayIndex === dayIndex));
+            const isAddingDay = selectedLifeTimetableSlot && !selectedLifeTimetableSlot.eventKey && selectedLifeTimetableSlot.dayIndex === dayIndex;
+            html += `
+                <div class="relative bg-white ${timelineHeightClass} overflow-hidden ${isAddingDay ? 'bg-indigo-50/30' : ''}">
+                    <div class="absolute inset-0 pointer-events-none">
+                        ${lifeTimetableHours.map((hour, index) => `
+                            <div class="absolute left-0 right-0 border-t border-gray-100 ${index === 0 ? 'border-t-0' : ''}" style="top:${index * hourRowPct}%"></div>
+                        `).join('')}
+                    </div>
+                    ${lifeTimetableHours.map(hour => {
+                        const isAddingHere = selectedLifeTimetableSlot && !selectedLifeTimetableSlot.eventKey
+                            && selectedLifeTimetableSlot.dayIndex === dayIndex
+                            && Math.floor(selectedLifeTimetableSlot.startMinute / 60) === hour;
+                        const slotTop = getMinuteTopPct(hour * 60);
+                        return `
+                            <button type="button" data-weekly-slot="${dayIndex}-${hour}" data-day-index="${dayIndex}" data-hour="${hour}"
+                                class="group absolute left-0 right-0 z-0 border border-transparent transition ${isAddingHere ? 'bg-indigo-100/60 ring-2 ring-indigo-400 ring-inset' : 'hover:bg-gray-50/80'}"
+                                style="top:${slotTop}%;height:${hourRowPct}%">
+                                <span class="absolute right-1 top-1 text-[10px] md:text-xs font-bold text-gray-300 opacity-0 group-hover:opacity-100">+</span>
+                            </button>
+                        `;
+                    }).join('')}
+                    ${dayEvents.map(event => {
+                        const meta = lifeTimetableTypeMeta[event.type] || lifeTimetableTypeMeta.life;
+                        const isSelected = event.key === selectedKey;
+                        const topPct = getMinuteTopPct(event.startMinute);
+                        const heightPct = getMinuteHeightPct(event.startMinute, event.endMinute);
+                        const leftPct = (event.lane / event.laneCount) * 100;
+                        const widthPct = 100 / event.laneCount;
+                        const timeLabel = `${formatTimetableMinute(event.startMinute)}-${formatTimetableMinute(event.endMinute)}`;
+                        return `
+                            <button type="button" data-weekly-event-key="${event.key}"
+                                class="absolute z-20 text-left rounded-lg border px-1.5 md:px-2 py-1.5 shadow-sm transition overflow-hidden ${meta.cell} ${isSelected ? 'ring-2 ring-indigo-500 ring-inset' : 'hover:brightness-[0.98]'}"
+                                style="top:${topPct}%;height:${heightPct}%;min-height:28px;left:calc(${leftPct}% + 4px);width:calc(${widthPct}% - 8px)">
+                                <div class="flex items-center gap-1 min-w-0">
+                                    <span class="w-1.5 h-1.5 rounded-full ${meta.dot} shrink-0"></span>
+                                    <span class="text-[8px] md:text-[9px] font-bold truncate">${timeLabel}</span>
+                                </div>
+                                <p class="text-[9px] md:text-xs font-bold leading-tight truncate mt-0.5">${escapeHtml(event.title)}</p>
+                                ${event.note ? `<p class="hidden md:block text-[10px] opacity-70 mt-1 truncate">${escapeHtml(event.note)}</p>` : ''}
+                            </button>
+                        `;
+                    }).join('')}
+                </div>
+            `;
         });
         html += '</div>';
         grid.innerHTML = html;

@@ -50,7 +50,8 @@ The first MCP candidate used a generated file-data endpoint that does not match 
 - Life tools are grouped as Weekly Timetable, Routine Checklist, and Vacation Plan.
 - Weekly Timetable now supports week navigation, ISO week labels such as `W24`, hour-by-hour slot editing, and localStorage persistence per week.
 - Weekly Timetable keeps the hourly grid readable while allowing 10-minute start/end editing, with a compressed week layout for narrow screens.
-- Weekly Timetable renders multi-hour events across every overlapping hourly cell instead of only the start hour.
+- Weekly Timetable renders multi-hour events as a single Google Calendar-style block stretched across the full start/end duration.
+- Overlapping Weekly Timetable events are placed side-by-side within the same day column.
 - Weekly Timetable templates include weekday `08:30-17:30` company work blocks and skip configured Korean public holidays.
 - Desktop sidebar navigation was compacted to fit the expanded Goal/Tool structure with less vertical space.
 - Mobile tool navigation now follows the selected Goal, so Finance and Life expose different bottom tool shortcuts on small screens.
