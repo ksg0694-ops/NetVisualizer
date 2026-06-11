@@ -50,6 +50,7 @@ The first MCP candidate used a generated file-data endpoint that does not match 
 - Life tools are grouped as Weekly Timetable, Routine Checklist, and Vacation Plan.
 - Weekly Timetable now supports week navigation, ISO week labels such as `W24`, hour-by-hour slot editing, and localStorage persistence per week.
 - Weekly Timetable can register the current week as a personal template, then reset a week from that registered template.
+- Weekly Timetable hides the top KPI cards so the calendar grid starts higher on the screen.
 - Weekly Timetable keeps the hourly grid readable while allowing 10-minute start/end editing, with a compressed week layout for narrow screens.
 - Weekly Timetable renders multi-hour events as a single Google Calendar-style block stretched across the full start/end duration.
 - Overlapping Weekly Timetable events are placed side-by-side within the same day column.
