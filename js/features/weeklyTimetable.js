@@ -2,6 +2,10 @@
     const STORAGE_KEY = 'netvisualizer.life.weeklyTimetable.v1';
     const TEMPLATE_SYNC_KEY = 'netvisualizer.life.weeklyTimetable.templateSync.v1';
     const REGISTERED_TEMPLATE_KEY = 'netvisualizer.life.weeklyTimetable.registeredTemplate.v1';
+    const WEEKS_TABLE = 'weekly_timetable_weeks';
+    const EVENTS_TABLE = 'weekly_timetable_events';
+    const TEMPLATES_TABLE = 'weekly_timetable_templates';
+    const DEFAULT_TEMPLATE_KEY = 'default';
     const STEP_MINUTES = 10;
     const FIRST_MINUTE = 6 * 60;
     const LAST_MINUTE = 24 * 60;
@@ -46,6 +50,9 @@
     let activeWeekStart = getIsoWeekStart(new Date());
     let selectedSlot = null;
     let isBound = false;
+    let remoteWeeklyAvailable = true;
+    let remoteTemplateLoadStarted = false;
+    const remoteWeekStates = {};
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
@@ -59,6 +66,35 @@
 
     function toast(message, type = 'info', duration = 1800) {
         if (typeof window.showToast === 'function') window.showToast(message, type, duration);
+    }
+
+    function getWeeklySupabaseClient() {
+        if (!remoteWeeklyAvailable) return null;
+        if (typeof getSupabaseClient !== 'function') return null;
+        try {
+            return getSupabaseClient();
+        } catch (error) {
+            console.warn('Weekly timetable Supabase client unavailable', error);
+            return null;
+        }
+    }
+
+    function isMissingTableError(error) {
+        const code = String(error?.code || '');
+        const message = String(error?.message || '').toLowerCase();
+        return code === '42P01'
+            || code === 'PGRST205'
+            || message.includes('could not find the table')
+            || message.includes('does not exist');
+    }
+
+    function handleRemoteError(error, context) {
+        if (isMissingTableError(error)) {
+            remoteWeeklyAvailable = false;
+            console.warn(`${context}: weekly timetable Supabase tables are not ready`, error);
+            return;
+        }
+        console.warn(`${context}: weekly timetable Supabase sync failed`, error);
     }
 
     function addDays(date, days) {
@@ -179,6 +215,142 @@
         return { rows: normalizedRows, changed };
     }
 
+    function remoteRowsToEvents(rows = []) {
+        return rows.reduce((result, row) => {
+            const key = row.event_key || getSlotKey(row.day_index, row.start_minute);
+            result[key] = {
+                title: row.title || '',
+                type: row.event_type || 'focus',
+                note: row.note || '',
+                dayIndex: Number(row.day_index),
+                startMinute: Number(row.start_minute),
+                endMinute: Number(row.end_minute),
+                updatedAt: row.updated_at || '',
+            };
+            return result;
+        }, {});
+    }
+
+    function rowsToRemotePayload(weekKey, rows = {}) {
+        const normalizedRows = normalizeRows(rows).rows;
+        return Object.entries(normalizedRows)
+            .filter(([, event]) => String(event.title || '').trim())
+            .map(([eventKey, event]) => ({
+                week_key: weekKey,
+                event_key: eventKey,
+                day_index: Number(event.dayIndex),
+                start_minute: Number(event.startMinute),
+                end_minute: Number(event.endMinute),
+                title: String(event.title || '').trim(),
+                event_type: event.type || 'focus',
+                note: event.note || '',
+                updated_at: event.updatedAt || new Date().toISOString(),
+            }));
+    }
+
+    function markRemoteCompanyTemplateSync(weekKey, weekRow) {
+        if (!weekRow?.company_work_template_v1) return;
+        const syncStore = getTemplateSyncStore();
+        syncStore[weekKey] = { ...(syncStore[weekKey] || {}), companyWorkV1: true };
+        saveTemplateSyncStore(syncStore);
+    }
+
+    async function persistWeekRowsToRemote(weekKey, rows = {}) {
+        const client = getWeeklySupabaseClient();
+        if (!client) return false;
+
+        const syncStore = getTemplateSyncStore();
+        const now = new Date().toISOString();
+        const weekPayload = {
+            week_key: weekKey,
+            company_work_template_v1: syncStore[weekKey]?.companyWorkV1 === true,
+            updated_at: now,
+        };
+        const eventPayload = rowsToRemotePayload(weekKey, rows);
+
+        try {
+            const { error: weekError } = await client
+                .from(WEEKS_TABLE)
+                .upsert(weekPayload, { onConflict: 'week_key' });
+            if (weekError) throw weekError;
+
+            const { error: deleteError } = await client
+                .from(EVENTS_TABLE)
+                .delete()
+                .eq('week_key', weekKey);
+            if (deleteError) throw deleteError;
+
+            if (eventPayload.length > 0) {
+                const { error: insertError } = await client
+                    .from(EVENTS_TABLE)
+                    .insert(eventPayload);
+                if (insertError) throw insertError;
+            }
+
+            remoteWeekStates[weekKey] = 'loaded';
+            return true;
+        } catch (error) {
+            handleRemoteError(error, 'persistWeekRowsToRemote');
+            return false;
+        }
+    }
+
+    async function loadWeekRowsFromRemote(weekKey, { force = false } = {}) {
+        const client = getWeeklySupabaseClient();
+        if (!client) return null;
+        if (!force && remoteWeekStates[weekKey] === 'loaded') return null;
+        if (remoteWeekStates[weekKey] === 'loading') return null;
+        remoteWeekStates[weekKey] = 'loading';
+
+        try {
+            const { data: weekRow, error: weekError } = await client
+                .from(WEEKS_TABLE)
+                .select('week_key,company_work_template_v1,updated_at')
+                .eq('week_key', weekKey)
+                .maybeSingle();
+            if (weekError) throw weekError;
+
+            if (!weekRow) {
+                const localRows = getStore()[weekKey];
+                remoteWeekStates[weekKey] = 'loaded';
+                if (localRows) await persistWeekRowsToRemote(weekKey, localRows);
+                return null;
+            }
+
+            markRemoteCompanyTemplateSync(weekKey, weekRow);
+
+            const { data: eventRows, error: eventsError } = await client
+                .from(EVENTS_TABLE)
+                .select('event_key,title,event_type,note,day_index,start_minute,end_minute,updated_at')
+                .eq('week_key', weekKey)
+                .order('day_index', { ascending: true })
+                .order('start_minute', { ascending: true });
+            if (eventsError) throw eventsError;
+
+            const normalized = normalizeRows(remoteRowsToEvents(eventRows || [])).rows;
+            const store = getStore();
+            store[weekKey] = normalized;
+            saveStore(store);
+            remoteWeekStates[weekKey] = 'loaded';
+            return normalized;
+        } catch (error) {
+            remoteWeekStates[weekKey] = 'failed';
+            handleRemoteError(error, 'loadWeekRowsFromRemote');
+            return null;
+        }
+    }
+
+    function queueRemoteWeekLoad(weekKey) {
+        if (!weekKey || remoteWeekStates[weekKey] === 'loading' || remoteWeekStates[weekKey] === 'loaded') return;
+        loadWeekRowsFromRemote(weekKey).then((remoteRows) => {
+            if (!remoteRows) return;
+            if (weekKey === getWeekKey(activeWeekStart)) {
+                selectedSlot = null;
+                render({ skipRemoteLoad: true });
+            }
+        });
+    }
+
     function getRegisteredTemplate() {
         try {
             const saved = JSON.parse(localStorage.getItem(REGISTERED_TEMPLATE_KEY) || 'null');
@@ -198,6 +370,51 @@
             updatedAt: new Date().toISOString(),
             rows: normalized,
         }));
+    }
+
+    async function persistRegisteredTemplateToRemote(rows) {
+        const client = getWeeklySupabaseClient();
+        if (!client) return false;
+        try {
+            const { error } = await client
+                .from(TEMPLATES_TABLE)
+                .upsert({
+                    template_key: DEFAULT_TEMPLATE_KEY,
+                    rows: normalizeRows(rows).rows,
+                    updated_at: new Date().toISOString(),
+                }, { onConflict: 'template_key' });
+            if (error) throw error;
+            return true;
+        } catch (error) {
+            handleRemoteError(error, 'persistRegisteredTemplateToRemote');
+            return false;
+        }
+    }
+
+    async function loadRegisteredTemplateFromRemote() {
+        const client = getWeeklySupabaseClient();
+        if (!client) return null;
+        try {
+            const { data, error } = await client
+                .from(TEMPLATES_TABLE)
+                .select('rows,updated_at')
+                .eq('template_key', DEFAULT_TEMPLATE_KEY)
+                .maybeSingle();
+            if (error) throw error;
+            if (!data?.rows) return null;
+            const normalized = normalizeRows(data.rows).rows;
+            saveRegisteredTemplate(normalized);
+            return normalized;
+        } catch (error) {
+            handleRemoteError(error, 'loadRegisteredTemplateFromRemote');
+            return null;
+        }
+    }
+
+    function queueRemoteTemplateLoad() {
+        if (remoteTemplateLoadStarted) return;
+        remoteTemplateLoadStarted = true;
+        loadRegisteredTemplateFromRemote();
     }
 
     function getHolidayName(date) {
@@ -279,7 +496,12 @@
         const normalized = normalizeRows(store[weekKey]);
         store[weekKey] = normalized.rows;
         const companyTemplateChanged = applyCompanyWorkTemplateSync(weekKey, store[weekKey], activeWeekStart);
-        if (isNewWeek || normalized.changed || companyTemplateChanged) saveStore(store);
+        if (isNewWeek || normalized.changed || companyTemplateChanged) {
+            saveStore(store);
+            if (remoteWeekStates[weekKey] === 'loaded' || isNewWeek) {
+                persistWeekRowsToRemote(weekKey, store[weekKey]);
+            }
+        }
         return store[weekKey];
     }
 
@@ -372,13 +594,17 @@
         renderTimeOptions(startMinute, endMinute);
     }
 
-    function render() {
+    function render(options = {}) {
         const grid = document.getElementById('weekly-calendar-grid');
         if (!grid) return;
 
         const weekInfo = getIsoWeekInfo(activeWeekStart);
         const weekKey = getWeekKey(activeWeekStart);
         const weekRows = ensureWeekRows(weekKey);
+        if (!options.skipRemoteLoad) {
+            queueRemoteTemplateLoad();
+            queueRemoteWeekLoad(weekKey);
+        }
         const weekEnd = addDays(activeWeekStart, 6);
         const labelEl = document.getElementById('weekly-week-label');
         const rangeEl = document.getElementById('weekly-week-range');
@@ -585,7 +811,11 @@
             };
         }
         saveStore(store);
-        render();
+        remoteWeekStates[weekKey] = 'loaded';
+        render({ skipRemoteLoad: true });
+        persistWeekRowsToRemote(weekKey, store[weekKey]).then((synced) => {
+            if (synced) toast('Saved to Supabase.', 'info', 1200);
+        });
         toast(title ? '시간표를 저장했습니다' : '시간 칸을 비웠습니다', 'info', 1600);
     }
 
@@ -602,7 +832,11 @@
         if (store[weekKey]) delete store[weekKey][slotKey];
         selectedSlot = null;
         saveStore(store);
-        render();
+        remoteWeekStates[weekKey] = 'loaded';
+        render({ skipRemoteLoad: true });
+        persistWeekRowsToRemote(weekKey, store[weekKey] || {}).then((synced) => {
+            if (synced) toast('Deleted from Supabase.', 'info', 1200);
+        });
         toast('시간 칸을 비웠습니다', 'info', 1600);
     }
 
@@ -610,15 +844,23 @@
         const weekRows = ensureWeekRows(getWeekKey(activeWeekStart));
         const normalizedRows = normalizeRows(weekRows).rows;
         saveRegisteredTemplate(normalizedRows);
+        persistRegisteredTemplateToRemote(normalizedRows).then((synced) => {
+            if (synced) toast('Template synced to Supabase.', 'info', 1200);
+        });
         toast('현재 주 시간표를 개인 템플릿으로 등록했습니다.', 'info', 1800);
     }
 
     function resetTemplate() {
         const store = getStore();
-        store[getWeekKey(activeWeekStart)] = createDefaultWeekTemplate(activeWeekStart);
+        const weekKey = getWeekKey(activeWeekStart);
+        store[weekKey] = createDefaultWeekTemplate(activeWeekStart);
         selectedSlot = null;
         saveStore(store);
-        render();
+        remoteWeekStates[weekKey] = 'loaded';
+        render({ skipRemoteLoad: true });
+        persistWeekRowsToRemote(weekKey, store[weekKey]).then((synced) => {
+            if (synced) toast('Reset synced to Supabase.', 'info', 1200);
+        });
         toast(getRegisteredTemplate() ? '등록된 개인 템플릿으로 초기화했습니다.' : '이번 주 시간표를 기본 템플릿으로 되돌렸습니다.', 'info', 1800);
     }
 
