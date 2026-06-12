@@ -177,6 +177,10 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
                 window.WeeklyTimetableFeature?.bindControls();
                 window.WeeklyTimetableFeature?.render();
             }
+            else if (targetId === 'vacation-plan-view') {
+                window.VacationPlanFeature?.bindControls();
+                window.VacationPlanFeature?.render();
+            }
         }, 20);
     }
 
