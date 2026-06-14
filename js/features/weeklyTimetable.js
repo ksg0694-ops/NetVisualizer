@@ -572,6 +572,25 @@
         return { startMinute, endMinute };
     }
 
+    function getEditorDayIndex() {
+        const dayEl = document.getElementById('weekly-event-day');
+        const dayIndex = Number(dayEl?.value);
+        if (Number.isInteger(dayIndex) && dayIndex >= 0 && dayIndex <= 6) return dayIndex;
+        return selectedSlot?.dayIndex ?? 0;
+    }
+
+    function openMobileEditor() {
+        const panel = document.getElementById('weekly-editor-panel');
+        if (!panel || !window.matchMedia('(max-width: 767px)').matches) return;
+        panel.className = 'block fixed inset-x-3 bottom-[76px] z-50 max-h-[74vh] overflow-y-auto bg-white p-3 rounded-2xl shadow-2xl border border-indigo-100';
+    }
+
+    function closeMobileEditor() {
+        const panel = document.getElementById('weekly-editor-panel');
+        if (!panel || !window.matchMedia('(max-width: 767px)').matches) return;
+        panel.className = 'hidden md:block bg-white p-3 md:p-5 rounded-2xl shadow-sm border border-gray-100 h-fit';
+    }
+
     function renderTimeOptions(startMinute, endMinute) {
         const startEl = document.getElementById('weekly-event-start');
         const endEl = document.getElementById('weekly-event-end');
@@ -641,7 +660,7 @@
         const timelineHeightClass = 'h-[684px] md:h-[828px]';
         const hourRowPct = 100 / hours.length;
 
-        let html = '<div class="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] md:grid-cols-[64px_repeat(7,minmax(82px,1fr))] gap-px bg-gray-200 border border-gray-200 rounded-xl overflow-hidden w-full">';
+        let html = '<div class="grid grid-cols-[34px_repeat(7,minmax(0,1fr))] md:grid-cols-[50px_repeat(7,minmax(82px,1fr))] gap-px bg-gray-200 border border-gray-200 rounded-xl overflow-hidden w-full">';
         html += '<div class="bg-gray-50 min-h-[32px] md:min-h-[38px]"></div>';
         dayLabels.forEach((dayLabel, idx) => {
             const date = addDays(activeWeekStart, idx);
@@ -657,7 +676,7 @@
         html += `
             <div class="relative bg-gray-50 ${timelineHeightClass}">
                 ${hours.map((hour, index) => `
-                    <div class="absolute left-0 right-0 px-1 md:px-2 py-1.5 text-[9px] md:text-[10px] font-bold text-gray-400 whitespace-nowrap border-t border-gray-200 first:border-t-0"
+                    <div class="absolute left-0 right-0 px-0.5 md:px-1.5 py-1.5 text-[8px] md:text-[10px] font-bold text-gray-400 whitespace-nowrap border-t border-gray-200 first:border-t-0"
                         style="top:${index * hourRowPct}%;height:${hourRowPct}%">
                         ${String(hour).padStart(2, '0')}:00
                     </div>
@@ -735,6 +754,7 @@
             eventKey: null,
         };
         syncEditor();
+        openMobileEditor();
         render();
     }
 
@@ -748,6 +768,7 @@
             eventKey,
         };
         syncEditor();
+        openMobileEditor();
         render();
     }
 
@@ -758,16 +779,18 @@
         const noteEl = document.getElementById('weekly-event-note');
         const startEl = document.getElementById('weekly-event-start');
         const endEl = document.getElementById('weekly-event-end');
+        const dayEl = document.getElementById('weekly-event-day');
         if (!selectedEl || !titleEl || !typeEl || !noteEl || !startEl || !endEl) return;
 
         if (!selectedSlot) {
-            selectedEl.textContent = '슬롯을 선택하세요';
+            selectedEl.textContent = '바로 입력 가능';
             titleEl.value = '';
             typeEl.value = 'focus';
             noteEl.value = '';
-            renderTimeOptions(FIRST_MINUTE, FIRST_MINUTE + 60);
-            startEl.disabled = true;
-            endEl.disabled = true;
+            if (dayEl) dayEl.value = '0';
+            renderTimeOptions(COMPANY_WORK_END_MINUTE, Math.min(COMPANY_WORK_END_MINUTE + 60, LAST_MINUTE));
+            startEl.disabled = false;
+            endEl.disabled = false;
             return;
         }
 
@@ -779,6 +802,7 @@
         const startMinute = normalizedEvent?.startMinute ?? selectedSlot.startMinute;
         const endMinute = normalizedEvent?.endMinute ?? selectedSlot.endMinute ?? Math.min(startMinute + 60, LAST_MINUTE);
         selectedEl.textContent = getSlotLabel(selectedSlot.dayIndex, startMinute, endMinute);
+        if (dayEl) dayEl.value = String(selectedSlot.dayIndex);
         titleEl.value = normalizedEvent?.title || '';
         typeEl.value = normalizedEvent?.type || 'focus';
         noteEl.value = normalizedEvent?.note || '';
@@ -789,6 +813,14 @@
         const store = getStore();
         const weekKey = getWeekKey(activeWeekStart);
         store[weekKey] = ensureWeekRows(weekKey);
+        if (!selectedSlot) {
+            selectedSlot = {
+                dayIndex: getEditorDayIndex(),
+                startMinute,
+                endMinute,
+                eventKey: null,
+            };
+        }
         const oldKey = selectedSlot.eventKey;
         const slotKey = getSlotKey(selectedSlot.dayIndex, startMinute);
         if (oldKey && oldKey !== slotKey) delete store[weekKey][oldKey];
@@ -821,8 +853,12 @@
 
     function saveSelectedSlot() {
         if (!selectedSlot) {
-            toast('먼저 시간 칸을 선택하세요', 'warning');
-            return;
+            selectedSlot = {
+                dayIndex: getEditorDayIndex(),
+                startMinute: getEditorTimeSelection().startMinute,
+                endMinute: getEditorTimeSelection().endMinute,
+                eventKey: null,
+            };
         }
         const title = document.getElementById('weekly-event-title')?.value.trim() || '';
         const type = document.getElementById('weekly-event-type')?.value || 'focus';
@@ -833,8 +869,12 @@
 
     function applyQuickPreset(presetKey) {
         if (!selectedSlot) {
-            toast('먼저 시간 칸을 선택하세요', 'warning');
-            return;
+            selectedSlot = {
+                dayIndex: getEditorDayIndex(),
+                startMinute: getEditorTimeSelection().startMinute,
+                endMinute: getEditorTimeSelection().endMinute,
+                eventKey: null,
+            };
         }
         const preset = quickPresets[presetKey];
         if (!preset) return;
@@ -921,11 +961,20 @@
         });
         document.getElementById('weekly-save-slot')?.addEventListener('click', saveSelectedSlot);
         document.getElementById('weekly-delete-slot')?.addEventListener('click', deleteSelectedSlot);
+        document.getElementById('weekly-open-editor')?.addEventListener('click', () => {
+            if (!selectedSlot) syncEditor();
+            openMobileEditor();
+        });
+        document.getElementById('weekly-close-editor')?.addEventListener('click', closeMobileEditor);
         document.querySelectorAll('[data-weekly-preset]').forEach(button => {
             button.addEventListener('click', () => applyQuickPreset(button.dataset.weeklyPreset));
         });
         document.getElementById('weekly-register-template')?.addEventListener('click', registerTemplate);
         document.getElementById('weekly-reset-template')?.addEventListener('click', resetTemplate);
+        document.getElementById('weekly-event-day')?.addEventListener('change', () => {
+            if (selectedSlot) selectedSlot.dayIndex = getEditorDayIndex();
+            updateSelectedLabelFromEditor();
+        });
         document.getElementById('weekly-event-start')?.addEventListener('change', updateSelectedLabelFromEditor);
         document.getElementById('weekly-event-end')?.addEventListener('change', updateSelectedLabelFromEditor);
     }

@@ -10,12 +10,6 @@
         done: { label: '완료', badge: 'bg-slate-100 text-slate-600 border-slate-200' },
     };
 
-    const priorityMeta = {
-        high: { label: '우선', className: 'text-rose-600 bg-rose-50 border-rose-100' },
-        medium: { label: '보통', className: 'text-amber-600 bg-amber-50 border-amber-100' },
-        low: { label: '나중', className: 'text-gray-600 bg-gray-50 border-gray-100' },
-    };
-
     const defaultPlans = [
         {
             title: '여름 3박 4일',
@@ -24,10 +18,13 @@
             endDate: '',
             budgetKrw: 800000,
             status: 'idea',
-            priority: 'medium',
             transport: 'KTX 또는 항공권 비교',
             lodging: '숙소 후보 3곳 비교',
             note: '회복 중심. 이동 피로가 적은 후보부터 본다.',
+            itinerary: [
+                { day: 'Day 1', text: '이동, 체크인, 근처 산책' },
+                { day: 'Day 2', text: '메인 일정 1개 + 여유 시간' },
+            ],
             checklist: [
                 { text: '연차 가능일 확인', done: false },
                 { text: '숙소 가격대 확인', done: false },
@@ -41,10 +38,13 @@
             endDate: '',
             budgetKrw: 300000,
             status: 'researching',
-            priority: 'high',
             transport: '자차 또는 대중교통',
             lodging: '1박 가능한 숙소',
             note: '금요일 연차 + 주말 조합.',
+            itinerary: [
+                { day: 'Day 1', text: '퇴근 후 이동 또는 금요일 오전 출발' },
+                { day: 'Day 2', text: '회복 일정, 카페, 온천/호텔 휴식' },
+            ],
             checklist: [
                 { text: '금요일 연차 후보 잡기', done: false },
                 { text: '체크인 시간 확인', done: false },
@@ -150,6 +150,32 @@
         return normalizeChecklist(checklist).map((item) => item.text).join('\n');
     }
 
+    function normalizeItinerary(value) {
+        if (Array.isArray(value)) {
+            return value
+                .map((item, index) => ({
+                    day: String(item?.day || `Day ${index + 1}`).trim(),
+                    text: String(item?.text || item || '').trim(),
+                }))
+                .filter((item) => item.text);
+        }
+        return String(value || '')
+            .split('\n')
+            .map((line, index) => {
+                const cleaned = line.replace(/^\s*[-*]\s*/, '').trim();
+                const match = cleaned.match(/^(Day\s*\d+|D[+-]?\d+|[0-9]+일차)\s*[:：-]\s*(.+)$/i);
+                return {
+                    day: match ? match[1].replace(/\s+/g, ' ') : `Day ${index + 1}`,
+                    text: match ? match[2].trim() : cleaned,
+                };
+            })
+            .filter((item) => item.text);
+    }
+
+    function itineraryToText(itinerary = []) {
+        return normalizeItinerary(itinerary).map((item) => `${item.day}: ${item.text}`).join('\n');
+    }
+
     function normalizePlan(raw = {}) {
         const rawId = String(raw.id || '');
         return {
@@ -160,10 +186,10 @@
             endDate: raw.endDate || raw.end_date || '',
             budgetKrw: parseBudget(raw.budgetKrw ?? raw.budget_krw),
             status: statusMeta[raw.status] ? raw.status : 'idea',
-            priority: priorityMeta[raw.priority] ? raw.priority : 'medium',
             transport: String(raw.transport || '').trim(),
             lodging: String(raw.lodging || '').trim(),
             note: String(raw.note || '').trim(),
+            itinerary: normalizeItinerary(raw.itinerary),
             checklist: normalizeChecklist(raw.checklist),
             updatedAt: raw.updatedAt || raw.updated_at || new Date().toISOString(),
         };
@@ -177,6 +203,21 @@
             console.warn('Vacation Plan storage parse failed', error);
         }
         return defaultPlans.map(normalizePlan);
+    }
+
+    function getLocalItineraryById() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            if (!Array.isArray(parsed)) return {};
+            return parsed.reduce((result, item) => {
+                const id = String(item?.id || '');
+                const itinerary = normalizeItinerary(item?.itinerary);
+                if (id && itinerary.length) result[id] = itinerary;
+                return result;
+            }, {});
+        } catch (error) {
+            return {};
+        }
     }
 
     function saveStore(nextPlans = plans) {
@@ -193,7 +234,6 @@
             end_date: normalized.endDate || null,
             budget_krw: normalized.budgetKrw,
             status: normalized.status,
-            priority: normalized.priority,
             transport: normalized.transport || null,
             lodging: normalized.lodging || null,
             note: normalized.note || null,
@@ -211,7 +251,6 @@
             endDate: row.end_date,
             budgetKrw: row.budget_krw,
             status: row.status,
-            priority: row.priority,
             transport: row.transport,
             lodging: row.lodging,
             note: row.note,
@@ -230,7 +269,11 @@
                 .order('start_date', { ascending: true, nullsFirst: false })
                 .order('updated_at', { ascending: false });
             if (error) throw error;
-            const remotePlans = (data || []).map(fromRemoteRow);
+            const localItineraryById = getLocalItineraryById();
+            const remotePlans = (data || []).map(fromRemoteRow).map((plan) => ({
+                ...plan,
+                itinerary: plan.itinerary.length ? plan.itinerary : (localItineraryById[plan.id] || []),
+            }));
             if (remotePlans.length === 0 && plans.length > 0) {
                 await persistAllPlans();
                 return null;
@@ -309,10 +352,10 @@
             endDate: document.getElementById('vacation-end-date')?.value,
             budgetKrw: document.getElementById('vacation-budget')?.value,
             status: document.getElementById('vacation-status')?.value,
-            priority: document.getElementById('vacation-priority')?.value,
             transport: document.getElementById('vacation-transport')?.value,
             lodging: document.getElementById('vacation-lodging')?.value,
             note: document.getElementById('vacation-note')?.value,
+            itinerary: document.getElementById('vacation-itinerary')?.value,
             checklist: document.getElementById('vacation-checklist')?.value,
             updatedAt: new Date().toISOString(),
         });
@@ -331,9 +374,9 @@
         setValue('vacation-end-date', normalized.endDate);
         setValue('vacation-budget', normalized.budgetKrw ? normalized.budgetKrw.toLocaleString() : '');
         setValue('vacation-status', normalized.status);
-        setValue('vacation-priority', normalized.priority);
         setValue('vacation-transport', normalized.transport);
         setValue('vacation-lodging', normalized.lodging);
+        setValue('vacation-itinerary', itineraryToText(normalized.itinerary));
         setValue('vacation-note', normalized.note);
         setValue('vacation-checklist', checklistToText(normalized.checklist));
     }
@@ -342,49 +385,35 @@
         const root = document.getElementById('vacation-plan-view');
         if (!root || document.getElementById('vacation-plan-list')) return;
         root.innerHTML = `
-            <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+            <div class="mb-3 md:mb-4 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
                 <div>
                     <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Life Tool</p>
                     <h2 class="text-xl md:text-2xl font-bold text-gray-900">Vacation Plan</h2>
-                    <p class="text-xs md:text-sm text-gray-500 mt-1">연차, 이동, 예산, 예약 상태를 휴가 후보별로 정리합니다.</p>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    <span id="vacation-count-badge" class="text-[10px] md:text-xs font-bold text-sky-600 bg-sky-50 border border-sky-100 px-3 py-2 rounded-xl whitespace-nowrap">0 Candidates</span>
-                    <span id="vacation-budget-badge" class="text-[10px] md:text-xs font-bold text-amber-600 bg-amber-50 border border-amber-100 px-3 py-2 rounded-xl whitespace-nowrap">0원</span>
+                    <span id="vacation-count-badge" class="text-[10px] md:text-xs font-bold text-sky-600 bg-sky-50 border border-sky-100 px-2.5 py-1 rounded-lg whitespace-nowrap">잔여 15일</span>
+                    <span id="vacation-budget-badge" class="text-[10px] md:text-xs font-bold text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-lg whitespace-nowrap">이월 3 / 발생 12</span>
                 </div>
             </div>
 
-            <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
-                <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-5">
-                    <div>
-                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Annual Leave</p>
-                        <h3 class="text-base md:text-lg font-bold text-gray-900">휴가 사용 현황</h3>
-                    </div>
-                    <p class="text-xs font-bold text-gray-500">전체 21일</p>
-                </div>
+            <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-gray-100 mb-4">
                 <div class="flex items-center justify-between gap-3 mb-2">
-                    <p class="text-sm font-bold text-gray-800">사용 / 계획 / 잔여</p>
-                    <p class="text-xs font-bold text-gray-500">0일 / 5일 / 16일</p>
+                    <h3 class="text-sm md:text-base font-bold text-gray-900">연차 흐름</h3>
+                    <p class="text-[10px] md:text-xs font-bold text-gray-500">전체 21일 · 사용 0 / 계획 5 / 잔여 16</p>
                 </div>
-                <div class="flex h-5 overflow-hidden rounded-full bg-gray-100 border border-gray-100">
+                <div class="flex h-3 overflow-hidden rounded-full bg-gray-100 border border-gray-100">
                     <div class="bg-emerald-500" style="width: 0%" title="이미 사용한 휴가 0일"></div>
                     <div class="bg-sky-500" style="width: 23.81%" title="계획된 휴가 5일"></div>
                     <div class="bg-gray-300" style="width: 76.19%" title="잔여 휴가 16일"></div>
                 </div>
-                <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
-                    <span class="flex items-center gap-2 text-gray-600"><i class="w-2.5 h-2.5 rounded-full bg-emerald-500"></i>이미 사용한 휴가 0일</span>
-                    <span class="flex items-center gap-2 text-gray-600"><i class="w-2.5 h-2.5 rounded-full bg-sky-500"></i>계획된 휴가 5일</span>
-                    <span class="flex items-center gap-2 text-gray-600"><i class="w-2.5 h-2.5 rounded-full bg-gray-300"></i>잔여 휴가 16일</span>
-                </div>
-                <p class="mt-2 text-[11px] text-gray-400">남은 휴가: 발생휴가 11일, 이월휴가 3일, 경조휴가 2일</p>
+                <p class="mt-2 text-[10px] md:text-xs text-gray-400">남은 휴가: 발생휴가 11일, 이월휴가 3일, 경조휴가 2일</p>
             </div>
 
-            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-4 md:gap-6 mb-8">
-                <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 min-w-0">
+            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-3 md:gap-4 mb-8">
+                <div class="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100 min-w-0">
                     <div class="flex items-center justify-between gap-3 mb-4">
                         <div>
-                            <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Vacation Candidates</p>
-                            <h3 class="text-base md:text-lg font-bold text-gray-900">후보 목록</h3>
+                            <h3 class="text-base md:text-lg font-bold text-gray-900">휴가 후보</h3>
                         </div>
                         <button type="button" id="vacation-new-plan" class="px-3 py-2 rounded-lg bg-sky-50 text-sky-700 border border-sky-100 text-xs font-bold hover:bg-sky-100">
                             <i class="fas fa-plus mr-1"></i>새 후보
@@ -394,8 +423,8 @@
                 </div>
 
                 <div class="space-y-4">
-                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Edit Candidate</p>
+                    <div class="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Edit Trip</p>
                         <input type="hidden" id="vacation-plan-id">
                         <div class="space-y-3">
                             <div>
@@ -416,12 +445,12 @@
                                     <input id="vacation-end-date" type="date" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none">
                                 </div>
                             </div>
-                            <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Budget</label>
+                                <input id="vacation-budget" type="text" inputmode="numeric" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-right focus:ring-2 focus:ring-sky-500 outline-none" placeholder="800,000">
+                            </div>
+                            <div class="hidden">
                                 <div>
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Budget</label>
-                                    <input id="vacation-budget" type="text" inputmode="numeric" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-right focus:ring-2 focus:ring-sky-500 outline-none" placeholder="800,000">
-                                </div>
-                                <div class="hidden">
                                     <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Status</label>
                                     <select id="vacation-status" class="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm bg-white focus:ring-2 focus:ring-sky-500 outline-none">
                                         <option value="idea">후보</option>
@@ -429,14 +458,6 @@
                                         <option value="planned">계획중</option>
                                         <option value="booked">예약완료</option>
                                         <option value="done">완료</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Priority</label>
-                                    <select id="vacation-priority" class="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm bg-white focus:ring-2 focus:ring-sky-500 outline-none">
-                                        <option value="high">우선</option>
-                                        <option value="medium">보통</option>
-                                        <option value="low">나중</option>
                                     </select>
                                 </div>
                             </div>
@@ -449,6 +470,10 @@
                                     <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Lodging</label>
                                     <input id="vacation-lodging" type="text" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none" placeholder="숙소 후보">
                                 </div>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Trip Plan</label>
+                                <textarea id="vacation-itinerary" rows="4" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none resize-none" placeholder="Day 1: 이동, 체크인&#10;Day 2: 메인 일정&#10;Day 3: 복귀"></textarea>
                             </div>
                             <div>
                                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Checklist</label>
@@ -465,9 +490,9 @@
                         </div>
                     </div>
 
-                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Preparation</p>
-                        <div id="vacation-prep-list" class="space-y-3 mb-4"></div>
+                    <div class="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Trip Detail</p>
+                        <div id="vacation-itinerary-list" class="space-y-2 mb-4"></div>
                         <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Checklist</p>
                         <div id="vacation-checklist-list" class="space-y-2"></div>
                     </div>
@@ -499,8 +524,6 @@
         }
 
         container.innerHTML = plans.map((plan) => {
-            const status = statusMeta[plan.status] || statusMeta.idea;
-            const priority = priorityMeta[plan.priority] || priorityMeta.medium;
             const isActive = plan.id === selectedPlanId;
             const completed = plan.checklist.filter((item) => item.done).length;
             const checklistLabel = plan.checklist.length > 0
@@ -515,7 +538,7 @@
                             <p class="text-xs text-gray-500 mt-1 truncate">${escapeHtml(plan.destination || '휴가 내용 미정')}</p>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
+                    <div class="grid grid-cols-3 gap-2 mt-3">
                         <div>
                             <p class="text-[10px] font-bold text-gray-400 uppercase">Date</p>
                             <p class="text-xs font-bold text-gray-700 mt-1">${escapeHtml(formatDateRange(plan))}</p>
@@ -523,10 +546,6 @@
                         <div>
                             <p class="text-[10px] font-bold text-gray-400 uppercase">Budget</p>
                             <p class="text-xs font-bold text-gray-700 mt-1">${formatMoney(plan.budgetKrw)}</p>
-                        </div>
-                        <div>
-                            <p class="text-[10px] font-bold text-gray-400 uppercase">Priority</p>
-                            <p class="text-xs font-bold mt-1 inline-flex border rounded-full px-2 py-0.5 ${priority.className}">${priority.label}</p>
                         </div>
                         <div>
                             <p class="text-[10px] font-bold text-gray-400 uppercase">Ready</p>
@@ -539,24 +558,23 @@
         }).join('');
     }
 
-    function renderPreparation() {
-        const container = document.getElementById('vacation-prep-list');
+    function renderItinerary() {
+        const container = document.getElementById('vacation-itinerary-list');
         if (!container) return;
         const selected = getSelectedPlan();
         if (!selected) {
-            container.innerHTML = '<p class="text-sm text-gray-400">후보를 선택하면 준비 상태가 표시됩니다.</p>';
+            container.innerHTML = '<p class="text-xs text-gray-400">후보를 선택하면 여행 일정이 표시됩니다.</p>';
             return;
         }
-        const items = [
-            { label: '날짜', value: formatDateRange(selected), ready: Boolean(selected.startDate) },
-            { label: '교통', value: selected.transport || '미정', ready: Boolean(selected.transport) },
-            { label: '숙소', value: selected.lodging || '미정', ready: Boolean(selected.lodging) },
-            { label: '예산', value: formatMoney(selected.budgetKrw), ready: selected.budgetKrw > 0 },
-        ];
-        container.innerHTML = items.map((item) => `
-            <div class="flex items-center justify-between gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
-                <span class="text-sm font-medium text-gray-700">${item.label}</span>
-                <span class="text-xs font-bold ${item.ready ? 'text-emerald-600' : 'text-amber-600'} text-right">${escapeHtml(item.value)}</span>
+        const itinerary = normalizeItinerary(selected.itinerary);
+        if (!itinerary.length) {
+            container.innerHTML = '<p class="text-xs text-gray-400">Trip Plan에 일차별 계획을 입력하면 여기에 표시됩니다.</p>';
+            return;
+        }
+        container.innerHTML = itinerary.map((item) => `
+            <div class="grid grid-cols-[54px_minmax(0,1fr)] gap-2 p-2.5 rounded-lg bg-sky-50/60 border border-sky-100">
+                <span class="text-[10px] font-black text-sky-700 bg-white border border-sky-100 rounded-md px-1.5 py-1 text-center">${escapeHtml(item.day)}</span>
+                <p class="text-xs md:text-sm font-medium text-gray-700 leading-relaxed">${escapeHtml(item.text)}</p>
             </div>
         `).join('');
     }
@@ -584,7 +602,7 @@
         if (selectedPlanId && !plans.some((plan) => plan.id === selectedPlanId)) selectedPlanId = plans[0]?.id || '';
         renderSummary();
         renderPlanList();
-        renderPreparation();
+        renderItinerary();
         renderChecklist();
         fillForm(getSelectedPlan());
         if (!options.skipRemoteLoad) queueRemoteLoad();
