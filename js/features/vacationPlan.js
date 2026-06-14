@@ -351,8 +351,32 @@
                 <div class="flex flex-wrap gap-2">
                     <span id="vacation-count-badge" class="text-[10px] md:text-xs font-bold text-sky-600 bg-sky-50 border border-sky-100 px-3 py-2 rounded-xl whitespace-nowrap">0 Candidates</span>
                     <span id="vacation-budget-badge" class="text-[10px] md:text-xs font-bold text-amber-600 bg-amber-50 border border-amber-100 px-3 py-2 rounded-xl whitespace-nowrap">0원</span>
-                    <span id="vacation-booked-count" class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-xl whitespace-nowrap">0 booked</span>
                 </div>
+            </div>
+
+            <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
+                <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-5">
+                    <div>
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Annual Leave</p>
+                        <h3 class="text-base md:text-lg font-bold text-gray-900">휴가 사용 현황</h3>
+                    </div>
+                    <p class="text-xs font-bold text-gray-500">전체 21일</p>
+                </div>
+                <div class="flex items-center justify-between gap-3 mb-2">
+                    <p class="text-sm font-bold text-gray-800">사용 / 계획 / 잔여</p>
+                    <p class="text-xs font-bold text-gray-500">0일 / 5일 / 16일</p>
+                </div>
+                <div class="flex h-5 overflow-hidden rounded-full bg-gray-100 border border-gray-100">
+                    <div class="bg-emerald-500" style="width: 0%" title="이미 사용한 휴가 0일"></div>
+                    <div class="bg-sky-500" style="width: 23.81%" title="계획된 휴가 5일"></div>
+                    <div class="bg-gray-300" style="width: 76.19%" title="잔여 휴가 16일"></div>
+                </div>
+                <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                    <span class="flex items-center gap-2 text-gray-600"><i class="w-2.5 h-2.5 rounded-full bg-emerald-500"></i>이미 사용한 휴가 0일</span>
+                    <span class="flex items-center gap-2 text-gray-600"><i class="w-2.5 h-2.5 rounded-full bg-sky-500"></i>계획된 휴가 5일</span>
+                    <span class="flex items-center gap-2 text-gray-600"><i class="w-2.5 h-2.5 rounded-full bg-gray-300"></i>잔여 휴가 16일</span>
+                </div>
+                <p class="mt-2 text-[11px] text-gray-400">남은 휴가: 발생휴가 11일, 이월휴가 3일, 경조휴가 2일</p>
             </div>
 
             <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-4 md:gap-6 mb-8">
@@ -379,8 +403,8 @@
                                 <input id="vacation-title" type="text" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none" placeholder="예: 여름 3박 4일">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Destination</label>
-                                <input id="vacation-destination" type="text" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none" placeholder="예: 부산, 제주, 근교 호텔">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">휴가</label>
+                                <input id="vacation-destination" type="text" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none" placeholder="예: Refresh + 발생연차 1일">
                             </div>
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
@@ -392,12 +416,12 @@
                                     <input id="vacation-end-date" type="date" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none">
                                 </div>
                             </div>
-                            <div class="grid grid-cols-3 gap-2">
+                            <div class="grid grid-cols-2 gap-2">
                                 <div>
                                     <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Budget</label>
                                     <input id="vacation-budget" type="text" inputmode="numeric" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-right focus:ring-2 focus:ring-sky-500 outline-none" placeholder="800,000">
                                 </div>
-                                <div>
+                                <div class="hidden">
                                     <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Status</label>
                                     <select id="vacation-status" class="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm bg-white focus:ring-2 focus:ring-sky-500 outline-none">
                                         <option value="idea">후보</option>
@@ -455,14 +479,10 @@
     }
 
     function renderSummary() {
-        const totalBudget = plans.reduce((sum, plan) => sum + Number(plan.budgetKrw || 0), 0);
-        const bookedCount = plans.filter((plan) => plan.status === 'booked').length;
         const countEl = document.getElementById('vacation-count-badge');
         const budgetEl = document.getElementById('vacation-budget-badge');
-        const bookedEl = document.getElementById('vacation-booked-count');
-        if (countEl) countEl.textContent = `${plans.length.toLocaleString()} Candidates`;
-        if (budgetEl) budgetEl.textContent = formatMoney(totalBudget);
-        if (bookedEl) bookedEl.textContent = `${bookedCount.toLocaleString()} booked`;
+        if (countEl) countEl.textContent = '잔여 15일';
+        if (budgetEl) budgetEl.textContent = '이월 3 / 발생 12';
     }
 
     function renderPlanList() {
@@ -492,9 +512,8 @@
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <p class="text-sm md:text-base font-bold text-gray-900 truncate">${escapeHtml(plan.title)}</p>
-                            <p class="text-xs text-gray-500 mt-1 truncate">${escapeHtml(plan.destination || '목적지 미정')}</p>
+                            <p class="text-xs text-gray-500 mt-1 truncate">${escapeHtml(plan.destination || '휴가 내용 미정')}</p>
                         </div>
-                        <span class="shrink-0 text-[10px] font-bold border px-2 py-1 rounded-full ${status.badge}">${status.label}</span>
                     </div>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
                         <div>

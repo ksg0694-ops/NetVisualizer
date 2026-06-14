@@ -121,6 +121,21 @@
         `;
     }
 
+    async function syncTxImportTransactionsFromRemote() {
+        if (typeof fetchRemoteTables !== 'function') return false;
+        try {
+            const patch = await fetchRemoteTables(['transactions']);
+            if (!patch?.tx) return false;
+            dataCache = normalizeCache({ ...dataCache, ...patch });
+            persistDataCache();
+            applyCachedData();
+            return true;
+        } catch (error) {
+            console.warn('import 중복 확인용 Supabase 동기화 실패:', error.message);
+            return false;
+        }
+    }
+
     function detectDelimitedImportDelimiter(text) {
         const sample = String(text || '').split(/\r?\n/).slice(0, 5).join('\n');
         const tabCount = (sample.match(/\t/g) || []).length;
@@ -388,6 +403,12 @@
         return text || fallback;
     }
 
+    function normalizeTxDedupeText(value) {
+        return normalizeImportText(value)
+            .toLowerCase()
+            .replace(/[\s_\-.,/\\()[\]{}:;'"`~!@#$%^&*+=|<>?]/g, '');
+    }
+
     function buildTxDedupeKey(tx) {
         const time = tx.time ? normalizeImportTime(tx.time) || tx.time : '';
         const memo = normalizeImportText(tx.memo).toLowerCase();
@@ -395,19 +416,74 @@
         return [tx.date, time, tx.type, String(Math.round(Number(tx.amount) || 0)), memo, method].join('|');
     }
 
+    function buildTxDedupeKeyEntries(tx) {
+        const date = tx.date || '';
+        const time = tx.time ? normalizeImportTime(tx.time) || tx.time : '';
+        const amount = String(Math.round(Number(tx.amount) || 0));
+        const type = tx.type || '';
+        const memo = normalizeTxDedupeText(tx.memo);
+        return [
+            { keyType: '전체 일치', key: buildTxDedupeKey(tx) },
+            { keyType: '시간+유형+금액+내용', key: [date, time, type, amount, memo].join('|') },
+            { keyType: '시간+금액+내용', key: [date, time, amount, memo].join('|') },
+        ];
+    }
+
+    function buildTxDedupeKeys(tx) {
+        const keys = buildTxDedupeKeyEntries(tx).map(entry => entry.key);
+        return keys.filter(Boolean);
+    }
+
+    function addTxDedupeKeys(keyStore, tx, meta = {}) {
+        buildTxDedupeKeyEntries(tx).forEach(({ keyType, key }) => {
+            if (!key) return;
+            if (typeof keyStore.set === 'function') {
+                if (!keyStore.has(key)) keyStore.set(key, { ...meta, key, keyType, tx });
+            } else {
+                keyStore.add(key);
+            }
+        });
+    }
+
+    function findTxDedupeMatch(keyStore, tx) {
+        for (const { keyType, key } of buildTxDedupeKeyEntries(tx)) {
+            if (!key || !keyStore.has(key)) continue;
+            const match = typeof keyStore.get === 'function' ? keyStore.get(key) : null;
+            return match || { key, keyType, tx: null };
+        }
+        return null;
+    }
+
+    function hasTxDedupeMatch(keySet, tx) {
+        return Boolean(findTxDedupeMatch(keySet, tx));
+    }
+
     function getExistingTransactionKeys() {
-        const keys = new Set();
+        const keys = new Map();
         Object.values(monthlyDB || {}).forEach(month => {
-            (month.transactions || []).forEach(tx => keys.add(buildTxDedupeKey({
+            (month.transactions || []).forEach(tx => addTxDedupeKeys(keys, {
                 date: tx.date,
                 time: tx.time || null,
                 type: tx.type,
                 amount: tx.amount,
                 memo: tx.memo,
                 method: tx.method
-            })));
+            }, { source: 'database' }));
         });
         return keys;
+    }
+
+    function formatTxImportDuplicateDetail(match) {
+        if (!match) return '';
+        const tx = match.tx || {};
+        const sourceLabel = match.source === 'file'
+            ? `파일 ${match.rowNumber || '?'}행`
+            : 'DB 기존 거래';
+        const time = tx.time ? ` ${tx.time}` : '';
+        const amount = Number.isFinite(Number(tx.amount)) ? ` · ${formatSignedWon(Number(tx.amount))}` : '';
+        const memo = tx.memo ? ` · ${tx.memo}` : '';
+        const method = tx.method ? ` · ${tx.method}` : '';
+        return `${sourceLabel} / ${match.keyType || '중복키'} / ${tx.date || ''}${time}${amount}${memo}${method}`;
     }
 
     function getTxImportRowValues(headers, row) {
@@ -453,13 +529,14 @@
 
         const headers = txImportRawRows[0].map(normalizeImportHeader);
         const existingKeys = getExistingTransactionKeys();
-        const seenKeys = new Set();
 
         txImportCandidates = txImportRawRows.slice(1).map((row, index) => {
             const values = getTxImportRowValues(headers, row);
             const txPayload = buildTxImportPayload(values);
             let status = 'ready';
             let reason = '';
+            let duplicateMatch = null;
+            const rowNumber = index + 2;
 
             if (!txPayload.date) {
                 status = 'invalid';
@@ -470,16 +547,14 @@
             }
 
             const dedupeKey = status === 'ready' ? buildTxDedupeKey(txPayload) : '';
-            if (status === 'ready' && existingKeys.has(dedupeKey)) {
+            const existingMatch = status === 'ready' ? findTxDedupeMatch(existingKeys, txPayload) : null;
+            if (status === 'ready' && existingMatch) {
                 status = 'duplicate';
                 reason = '기존 거래와 중복';
-            } else if (status === 'ready' && seenKeys.has(dedupeKey)) {
-                status = 'duplicate';
-                reason = '파일 내 중복';
+                duplicateMatch = existingMatch;
             }
 
-            if (status === 'ready') seenKeys.add(dedupeKey);
-            return { rowNumber: index + 2, txPayload, status, reason, dedupeKey };
+            return { rowNumber, txPayload, status, reason, dedupeKey, duplicateMatch };
         });
 
         txImportStats = txImportCandidates.reduce((acc, item) => {
@@ -505,6 +580,7 @@
                 : await parseTextImportFile(file);
             if (rows.length < 2) throw new Error('가져올 거래 행을 찾지 못했습니다.');
             txImportRawRows = rows;
+            await syncTxImportTransactionsFromRemote();
             rebuildTxImportCandidates();
         } catch (error) {
             txImportRawRows = null;
@@ -536,7 +612,11 @@
             return;
         }
 
-        const visibleRows = txImportCandidates.slice(0, 80);
+        const duplicateRows = txImportCandidates.filter(item => item.status === 'duplicate');
+        const visibleRows = [
+            ...txImportCandidates.slice(0, 60),
+            ...duplicateRows,
+        ].filter((item, index, arr) => arr.findIndex(candidate => candidate.rowNumber === item.rowNumber) === index).slice(0, 120);
         const hiddenCount = Math.max(txImportCandidates.length - visibleRows.length, 0);
         const sourceBadge = txImportSourceMeta?.kind
             ? `<span class="px-2 py-1 rounded-md bg-sky-100 text-sky-700 font-bold">${escapeHtml(txImportSourceMeta.kind.toUpperCase())}${txImportSourceMeta.sheetName ? ` · ${escapeHtml(txImportSourceMeta.sheetName)}` : ''}</span>`
@@ -556,10 +636,18 @@
             const tx = item.txPayload;
             const meta = getTxImportStatusMeta(item.status);
             const colorClass = tx.amount > 0 ? 'text-blue-600' : (tx.amount < 0 ? 'text-red-600' : 'text-gray-600');
+            const duplicateDetail = item.status === 'duplicate'
+                ? formatTxImportDuplicateDetail(item.duplicateMatch)
+                : '';
             return `
                 <tr class="hover:bg-gray-50/80 transition-colors">
-                    <td class="px-4 py-3 whitespace-nowrap">
-                        <span title="${escapeAttr(item.reason || meta.label)}" class="px-2 py-1 rounded-md text-[10px] font-bold ${meta.className}">${meta.label}</span>
+                    <td class="px-4 py-3 min-w-[190px]">
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <span title="${escapeAttr(item.reason || meta.label)}" class="px-2 py-1 rounded-md text-[10px] font-bold ${meta.className}">${meta.label}</span>
+                            <span class="text-[10px] text-gray-400">${item.rowNumber}행</span>
+                        </div>
+                        ${duplicateDetail ? `<div class="mt-1 text-[10px] leading-snug text-amber-700 break-words">${escapeHtml(duplicateDetail)}</div>` : ''}
+                        ${item.reason && item.status !== 'ready' ? `<div class="mt-0.5 text-[10px] text-gray-400">${escapeHtml(item.reason)}</div>` : ''}
                     </td>
                     <td class="px-4 py-3 whitespace-nowrap text-gray-500">${escapeHtml(tx.date || '-')} <span class="hidden md:inline text-xs text-gray-400 ml-1">${escapeHtml(tx.time || '')}</span></td>
                     <td class="px-4 py-3 whitespace-nowrap"><span class="px-2 py-1 rounded-md text-[10px] font-bold bg-gray-100 text-gray-700">${escapeHtml(tx.type)}</span></td>
@@ -572,9 +660,34 @@
     }
 
     async function confirmTxImport() {
-        const readyRows = txImportCandidates
+        await syncTxImportTransactionsFromRemote();
+        const existingKeys = getExistingTransactionKeys();
+        let skippedDuplicateCount = 0;
+        const readyRows = [];
+
+        txImportCandidates
             .filter(item => item.status === 'ready')
-            .map(item => item.txPayload);
+            .forEach(item => {
+                const txPayload = item.txPayload;
+                const existingMatch = findTxDedupeMatch(existingKeys, txPayload);
+                if (existingMatch) {
+                    item.status = 'duplicate';
+                    item.reason = '저장 직전 DB 중복 재확인';
+                    item.duplicateMatch = existingMatch;
+                    skippedDuplicateCount += 1;
+                    return;
+                }
+                readyRows.push(txPayload);
+            });
+
+        if (skippedDuplicateCount > 0) {
+            txImportStats = txImportCandidates.reduce((acc, item) => {
+                acc.total += 1;
+                acc[item.status] += 1;
+                return acc;
+            }, { total: 0, ready: 0, duplicate: 0, invalid: 0 });
+            renderTxImportPreview();
+        }
 
         if (!readyRows.length) return showToast('저장 가능한 거래가 없습니다.', 'warning');
 
@@ -593,7 +706,8 @@
             if (error) throw error;
 
             recordTxImportAuditRun({ status: 'success', insertedCount: readyRows.length });
-            showToast(`${readyRows.length.toLocaleString()}건을 저장했습니다.`, 'info');
+            const skipMessage = skippedDuplicateCount > 0 ? ` 중복 ${skippedDuplicateCount.toLocaleString()}건은 제외했습니다.` : '';
+            showToast(`${readyRows.length.toLocaleString()}건을 저장했습니다.${skipMessage}`, 'info');
             closeTxImportModal();
 
             if (insertedRows && insertedRows.length > 0) {

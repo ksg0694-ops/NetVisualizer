@@ -46,8 +46,8 @@ The first MCP candidate used a generated file-data endpoint that does not match 
 `codex/asset-trend-redesign` branch starts the redesign from the long-term asset trend screen.
 
 - Navigation now has two levels: Goal first, then Finance tools.
-- Finance, Career, Project, and Life are selectable Goal cockpits. Career/Project/Life currently provide draft KPI structures and next-action areas before data tables are added.
-- Life tools are grouped as Weekly Timetable, Routine Checklist, and Vacation Plan.
+- Finance, Career, and Life are selectable Goal cockpits. Career combines career growth and personal project tracking in one area.
+- Life tools are grouped as Weekly Timetable and Vacation Plan.
 - Weekly Timetable now supports week navigation, ISO week labels such as `W24`, hour-by-hour slot editing, and localStorage persistence per week.
 - Weekly Timetable can register the current week as a personal template, then reset a week from that registered template.
 - Weekly Timetable hides the top KPI cards so the calendar grid starts higher on the screen.

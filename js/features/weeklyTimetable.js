@@ -22,6 +22,14 @@
         movement: { label: '운동', cell: 'bg-rose-50 border-rose-200 text-rose-800', dot: 'bg-rose-500' },
         life: { label: '생활', cell: 'bg-gray-50 border-gray-200 text-gray-800', dot: 'bg-gray-400' },
     };
+    const quickPresets = {
+        work: { title: '회사', type: 'work', durationMinutes: 540, note: '' },
+        exercise: { title: '운동', type: 'movement', durationMinutes: 60, note: '' },
+        study: { title: '공부', type: 'focus', durationMinutes: 90, note: '' },
+        meetup: { title: '모임', type: 'life', durationMinutes: 120, note: '' },
+        meal: { title: '식사', type: 'life', durationMinutes: 60, note: '' },
+        rest: { title: '휴식', type: 'recovery', durationMinutes: 60, note: '' },
+    };
 
     const koreanPublicHolidays = {
         '2026-01-01': '신정',
@@ -498,7 +506,7 @@
         const companyTemplateChanged = applyCompanyWorkTemplateSync(weekKey, store[weekKey], activeWeekStart);
         if (isNewWeek || normalized.changed || companyTemplateChanged) {
             saveStore(store);
-            if (remoteWeekStates[weekKey] === 'loaded' || isNewWeek) {
+            if (remoteWeekStates[weekKey] === 'loaded') {
                 persistWeekRowsToRemote(weekKey, store[weekKey]);
             }
         }
@@ -630,16 +638,16 @@
         const calendarTotalMinutes = LAST_MINUTE - FIRST_MINUTE;
         const getMinuteTopPct = (minute) => ((minute - calendarStartMinute) / calendarTotalMinutes) * 100;
         const getMinuteHeightPct = (startMinute, endMinute) => ((endMinute - startMinute) / calendarTotalMinutes) * 100;
-        const timelineHeightClass = 'h-[1044px] md:h-[1296px]';
+        const timelineHeightClass = 'h-[684px] md:h-[828px]';
         const hourRowPct = 100 / hours.length;
 
         let html = '<div class="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] md:grid-cols-[64px_repeat(7,minmax(82px,1fr))] gap-px bg-gray-200 border border-gray-200 rounded-xl overflow-hidden w-full">';
-        html += '<div class="bg-gray-50 min-h-[46px] md:min-h-[54px]"></div>';
+        html += '<div class="bg-gray-50 min-h-[32px] md:min-h-[38px]"></div>';
         dayLabels.forEach((dayLabel, idx) => {
             const date = addDays(activeWeekStart, idx);
             const isToday = formatIsoDate(date) === today;
             html += `
-                <div class="bg-white min-h-[46px] md:min-h-[54px] flex flex-col items-center justify-center px-0.5 ${isToday ? 'text-indigo-700' : 'text-gray-600'}">
+                <div class="bg-white min-h-[32px] md:min-h-[38px] flex flex-col items-center justify-center px-0.5 ${isToday ? 'text-indigo-700' : 'text-gray-600'}">
                     <span class="text-[11px] md:text-xs font-black leading-none whitespace-nowrap">${dayLabel}</span>
                     <span class="text-[9px] md:text-xs font-bold mt-1 whitespace-nowrap ${isToday ? 'bg-indigo-600 text-white px-1.5 md:px-2 py-0.5 rounded-full' : ''}">${formatShortDate(date)}</span>
                 </div>
@@ -690,14 +698,14 @@
                         const timeLabel = `${formatMinute(event.startMinute)}-${formatMinute(event.endMinute)}`;
                         return `
                             <button type="button" data-weekly-event-key="${event.key}"
-                                class="absolute z-20 text-left rounded-lg border px-1.5 md:px-2 py-1.5 shadow-sm transition overflow-hidden ${meta.cell} ${isSelected ? 'ring-2 ring-indigo-500 ring-inset' : 'hover:brightness-[0.98]'}"
-                                style="top:${topPct}%;height:${heightPct}%;min-height:28px;left:calc(${leftPct}% + 4px);width:calc(${widthPct}% - 8px)">
+                                class="absolute z-20 text-left rounded-md border px-1.5 py-0.5 shadow-sm transition overflow-hidden ${meta.cell} ${isSelected ? 'ring-2 ring-indigo-500 ring-inset' : 'hover:brightness-[0.98]'}"
+                                style="top:${topPct}%;height:${heightPct}%;min-height:18px;left:calc(${leftPct}% + 2px);width:calc(${widthPct}% - 4px)">
                                 <div class="flex items-center gap-1 min-w-0">
                                     <span class="w-1.5 h-1.5 rounded-full ${meta.dot} shrink-0"></span>
                                     <span class="text-[8px] md:text-[9px] font-bold truncate">${timeLabel}</span>
                                 </div>
                                 <p class="text-[9px] md:text-xs font-bold leading-tight truncate mt-0.5">${escapeHtml(event.title)}</p>
-                                ${event.note ? `<p class="hidden md:block text-[10px] opacity-70 mt-1 truncate">${escapeHtml(event.note)}</p>` : ''}
+                                ${event.note ? `<p class="hidden md:block text-[9px] opacity-70 mt-0.5 truncate">${escapeHtml(event.note)}</p>` : ''}
                             </button>
                         `;
                     }).join('')}
@@ -777,15 +785,7 @@
         renderTimeOptions(startMinute, endMinute);
     }
 
-    function saveSelectedSlot() {
-        if (!selectedSlot) {
-            toast('먼저 시간 칸을 선택하세요', 'warning');
-            return;
-        }
-        const title = document.getElementById('weekly-event-title')?.value.trim() || '';
-        const type = document.getElementById('weekly-event-type')?.value || 'focus';
-        const note = document.getElementById('weekly-event-note')?.value.trim() || '';
-        const { startMinute, endMinute } = getEditorTimeSelection();
+    function writeSelectedSlot({ title, type, note, startMinute, endMinute }) {
         const store = getStore();
         const weekKey = getWeekKey(activeWeekStart);
         store[weekKey] = ensureWeekRows(weekKey);
@@ -817,6 +817,43 @@
             if (synced) toast('Saved to Supabase.', 'info', 1200);
         });
         toast(title ? '시간표를 저장했습니다' : '시간 칸을 비웠습니다', 'info', 1600);
+    }
+
+    function saveSelectedSlot() {
+        if (!selectedSlot) {
+            toast('먼저 시간 칸을 선택하세요', 'warning');
+            return;
+        }
+        const title = document.getElementById('weekly-event-title')?.value.trim() || '';
+        const type = document.getElementById('weekly-event-type')?.value || 'focus';
+        const note = document.getElementById('weekly-event-note')?.value.trim() || '';
+        const { startMinute, endMinute } = getEditorTimeSelection();
+        writeSelectedSlot({ title, type, note, startMinute, endMinute });
+    }
+
+    function applyQuickPreset(presetKey) {
+        if (!selectedSlot) {
+            toast('먼저 시간 칸을 선택하세요', 'warning');
+            return;
+        }
+        const preset = quickPresets[presetKey];
+        if (!preset) return;
+        const startMinute = selectedSlot.startMinute;
+        const endMinute = Math.min(startMinute + preset.durationMinutes, LAST_MINUTE);
+        const titleEl = document.getElementById('weekly-event-title');
+        const typeEl = document.getElementById('weekly-event-type');
+        const noteEl = document.getElementById('weekly-event-note');
+        if (titleEl) titleEl.value = preset.title;
+        if (typeEl) typeEl.value = preset.type;
+        if (noteEl) noteEl.value = preset.note;
+        renderTimeOptions(startMinute, endMinute);
+        writeSelectedSlot({
+            title: preset.title,
+            type: preset.type,
+            note: preset.note,
+            startMinute,
+            endMinute,
+        });
     }
 
     function deleteSelectedSlot() {
@@ -884,6 +921,9 @@
         });
         document.getElementById('weekly-save-slot')?.addEventListener('click', saveSelectedSlot);
         document.getElementById('weekly-delete-slot')?.addEventListener('click', deleteSelectedSlot);
+        document.querySelectorAll('[data-weekly-preset]').forEach(button => {
+            button.addEventListener('click', () => applyQuickPreset(button.dataset.weeklyPreset));
+        });
         document.getElementById('weekly-register-template')?.addEventListener('click', registerTemplate);
         document.getElementById('weekly-reset-template')?.addEventListener('click', resetTemplate);
         document.getElementById('weekly-event-start')?.addEventListener('change', updateSelectedLabelFromEditor);
