@@ -29,15 +29,15 @@
     <!-- Feature modules -->
     <script src="./js/features/appCore.js"></script>
     <script src="./js/features/assetTrend.js"></script>
-    <script src="./js/features/weeklyTimetable.js?v=20260614-compact-quick-add"></script>
+    <script src="./js/features/weeklyTimetable.js?v=20260615-mobile-editor"></script>
     <script src="./js/features/quantEngine.js"></script>
     <script src="./js/features/realEstate.js?v=20260614-asset-realestate-compact"></script>
     <script src="./js/features/transactionImport.js?v=20260614-tx-db-only-dedupe"></script>
     <script src="./js/features/portfolioEditor.js"></script>
     <script src="./js/features/cashflowControls.js"></script>
     <script src="./js/features/portfolioViews.js"></script>
-    <script src="./js/features/financeViews.js?v=20260614-cashflow-detail-analysis"></script>
-    <script src="./js/features/vacationPlan.js?v=20260614-annual-flow-4"></script>
+    <script src="./js/features/financeViews.js?v=20260615-mobile-cashflow"></script>
+    <script src="./js/features/vacationPlan.js?v=20260615-trip-planner"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -1037,37 +1037,33 @@
 
             <!-- 1-5. Life Tool: Weekly Timetable -->
             <div id="weekly-timetable-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
-                <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                <div class="mb-3 md:mb-4 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
                     <div>
                         <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Life Tool</p>
                         <h2 class="text-xl md:text-2xl font-bold text-gray-900">Weekly Timetable</h2>
-                        <p class="text-xs md:text-sm text-gray-500 mt-1">반복 일정, 집중 블록, 회복 시간을 한 주 단위로 배치합니다.</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">주간 기준</span>
-                        <span class="text-[10px] md:text-xs font-bold text-sky-600 bg-sky-50 border border-sky-100 px-3 py-2 rounded-xl whitespace-nowrap">시간 블록</span>
+                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg whitespace-nowrap">주간</span>
+                        <button type="button" id="weekly-open-editor" class="md:hidden text-[10px] font-bold text-white bg-indigo-600 px-2.5 py-1 rounded-lg shadow-sm">입력</button>
                     </div>
                 </div>
 
-                <div class="hidden">
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-indigo-500">
-                        <p class="text-xs font-semibold text-gray-500 mb-2">고정 블록</p>
-                        <h3 class="text-2xl font-bold text-gray-900" id="weekly-block-count">0</h3>
-                        <p class="text-[10px] text-gray-400 mt-1">업무, 운동, 공부, 정리</p>
+                <div class="grid grid-cols-3 gap-2 md:gap-3 mb-3 md:mb-4">
+                    <div class="bg-white px-3 py-2 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-indigo-500 min-w-0">
+                        <p class="text-[10px] font-semibold text-gray-500 truncate">블록</p>
+                        <h3 class="text-sm md:text-lg font-bold text-gray-900" id="weekly-block-count">0</h3>
                     </div>
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-emerald-500">
-                        <p class="text-xs font-semibold text-gray-500 mb-2">집중 시간</p>
-                        <h3 class="text-2xl font-bold text-gray-900" id="weekly-focus-hours">0h</h3>
-                        <p class="text-[10px] text-gray-400 mt-1">주중 저녁과 주말 오전</p>
+                    <div class="bg-white px-3 py-2 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-sky-500 min-w-0">
+                        <p class="text-[10px] font-semibold text-gray-500 truncate">집중</p>
+                        <h3 class="text-sm md:text-lg font-bold text-gray-900" id="weekly-focus-hours">0h</h3>
                     </div>
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-sky-500">
-                        <p class="text-xs font-semibold text-gray-500 mb-2">회복 블록</p>
-                        <h3 class="text-2xl font-bold text-gray-900" id="weekly-recovery-count">0</h3>
-                        <p class="text-[10px] text-gray-400 mt-1">휴식, 산책, 정리 시간</p>
+                    <div class="bg-white px-3 py-2 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500 min-w-0">
+                        <p class="text-[10px] font-semibold text-gray-500 truncate">회복</p>
+                        <h3 class="text-sm md:text-lg font-bold text-gray-900" id="weekly-recovery-count">0</h3>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-4 md:gap-6 mb-8">
+                <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px] gap-3 md:gap-4 mb-8">
                     <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
                             <div>
@@ -1087,11 +1083,14 @@
                             <div id="weekly-calendar-grid" class="w-full min-w-0"></div>
                         </div>
                     </div>
-                    <div class="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-100 h-fit">
-                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Selected Slot</p>
-                        <div class="p-3 rounded-xl bg-gray-50 border border-gray-100 mb-3">
+                    <div id="weekly-editor-panel" class="hidden md:block bg-white p-3 md:p-5 rounded-2xl shadow-sm border border-gray-100 h-fit">
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                            <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Selected Slot</p>
+                            <button type="button" id="weekly-close-editor" class="md:hidden w-7 h-7 rounded-full bg-gray-100 text-gray-500"><i class="fas fa-times text-xs"></i></button>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-gray-50 border border-gray-100 mb-3">
                             <p class="text-xs font-bold text-gray-800" id="weekly-selected-slot">슬롯을 선택하세요</p>
-                            <p class="text-[10px] text-gray-400 mt-1">시간 칸을 누르면 이 패널에서 바로 수정합니다.</p>
+                            <p class="text-[10px] text-gray-400 mt-1">그리드를 누르거나 아래에서 바로 입력합니다.</p>
                         </div>
                         <div class="mb-3">
                             <p class="text-[10px] font-bold text-gray-500 uppercase mb-2">Quick Add</p>
@@ -1105,6 +1104,18 @@
                             </div>
                         </div>
                         <div class="space-y-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Day</label>
+                                <select id="weekly-event-day" class="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                    <option value="0">월요일</option>
+                                    <option value="1">화요일</option>
+                                    <option value="2">수요일</option>
+                                    <option value="3">목요일</option>
+                                    <option value="4">금요일</option>
+                                    <option value="5">토요일</option>
+                                    <option value="6">일요일</option>
+                                </select>
+                            </div>
                             <div>
                                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Title</label>
                                 <input id="weekly-event-title" type="text" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="예: 운동, 공부, 휴식">
@@ -1195,11 +1206,9 @@
                     <div>
                         <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Life Tool</p>
                         <h2 class="text-xl md:text-2xl font-bold text-gray-900">Vacation Plan</h2>
-                        <p class="text-xs md:text-sm text-gray-500 mt-1">연차, 이동, 예산, 예약 상태를 휴가 후보별로 나눠 봅니다.</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <span class="text-[10px] md:text-xs font-bold text-sky-600 bg-sky-50 border border-sky-100 px-3 py-2 rounded-xl whitespace-nowrap">3 Candidates</span>
-                        <span class="text-[10px] md:text-xs font-bold text-amber-600 bg-amber-50 border border-amber-100 px-3 py-2 rounded-xl whitespace-nowrap">Budget Draft</span>
                     </div>
                 </div>
 
@@ -1315,22 +1324,22 @@
 
             <!-- 3. 현금 흐름 뷰 -->
             <div id="stats-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
-                <div class="mb-3 md:mb-4 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
-                    <div>
-                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-0.5">Finance Tool</p>
-                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">현금 흐름</h2>
+                <div class="mb-3 md:mb-4 flex flex-row items-end justify-between gap-2">
+                    <div class="min-w-0">
+                        <p class="text-[9px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-0.5">Finance Tool</p>
+                        <h2 class="text-lg md:text-2xl font-bold text-gray-900 whitespace-nowrap">현금 흐름</h2>
                     </div>
-                    <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-1.5 md:p-2 flex flex-col md:flex-row md:items-center gap-1.5 md:gap-2 w-full lg:w-auto">
-                        <div class="flex items-center justify-between md:justify-center gap-2">
-                            <button id="btn-prev-month" class="w-8 h-8 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-30" title="이전 월">
-                                <i class="fas fa-chevron-left text-sm"></i>
+                    <div class="bg-white border border-gray-200 rounded-lg md:rounded-xl shadow-sm p-1 flex flex-col sm:flex-row sm:items-center gap-1 w-auto max-w-[190px] sm:max-w-none shrink-0">
+                        <div class="flex items-center justify-between gap-1">
+                            <button id="btn-prev-month" class="w-7 h-7 md:w-8 md:h-8 rounded-md md:rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-30" title="이전 월">
+                                <i class="fas fa-chevron-left text-xs md:text-sm"></i>
                             </button>
-                            <span id="display-month" class="min-w-[92px] text-center text-sm md:text-base font-bold text-gray-800 truncate">월 로딩중</span>
-                            <button id="btn-next-month" class="w-8 h-8 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-30" title="다음 월">
-                                <i class="fas fa-chevron-right text-sm"></i>
+                            <span id="display-month" class="min-w-[72px] md:min-w-[92px] text-center text-xs md:text-base font-bold text-gray-800 truncate">월 로딩중</span>
+                            <button id="btn-next-month" class="w-7 h-7 md:w-8 md:h-8 rounded-md md:rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-30" title="다음 월">
+                                <i class="fas fa-chevron-right text-xs md:text-sm"></i>
                             </button>
                         </div>
-                        <span id="display-period" class="text-center text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1.5 rounded-lg truncate">날짜 계산중</span>
+                        <span id="display-period" class="hidden sm:block text-center text-[10px] md:text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md md:rounded-lg truncate">날짜 계산중</span>
                     </div>
                 </div>
 
@@ -1375,9 +1384,9 @@
 
                 <!-- 내역 관리 화면 -->
                 <div id="stats-manage-content" class="hidden flex-col w-full">
-                    <div class="mb-4">
-                        <button onclick="toggleManageView(false)" class="text-xs md:text-sm text-gray-500 hover:text-gray-800 transition flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm w-fit">
-                            <i class="fas fa-arrow-left"></i> 현금 흐름 뷰로 돌아가기
+                    <div class="mb-2">
+                        <button onclick="toggleManageView(false)" class="text-[10px] md:text-xs text-gray-500 hover:text-gray-800 transition flex items-center gap-1.5 bg-white px-2 py-1 rounded-md border border-gray-200 shadow-sm w-fit">
+                            <i class="fas fa-arrow-left text-[9px]"></i> 돌아가기
                         </button>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden mb-8 min-w-0">
@@ -1960,6 +1969,17 @@
                             </div>
                         </div>
                         <i class="fas fa-chevron-right text-blue-400"></i>
+                    </a>
+
+                    <a href="https://lgd.lglifecare.com/auth/login" target="_blank" class="flex items-center justify-between p-4 border border-rose-200 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-rose-200 text-rose-700 flex items-center justify-center text-lg"><i class="fas fa-gift"></i></div>
+                            <div>
+                                <h4 class="font-bold text-gray-800">LGD Lifecare</h4>
+                                <p class="text-xs text-gray-500">복지포인트 환불 · 카드번호 5107 **** **** 9655</p>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right text-rose-400"></i>
                     </a>
                 </div>
             </div>
