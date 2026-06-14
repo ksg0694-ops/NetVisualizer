@@ -73,29 +73,29 @@
         container.innerHTML = sites.map(site => {
             const tone = getRealEstateCardTone(site);
             return `
-                <div class="border ${tone.border} ${tone.bg} rounded-xl p-3">
-                    <div class="flex items-center justify-between gap-2 mb-2">
+                <div class="border ${tone.border} ${tone.bg} rounded-lg p-2.5">
+                    <div class="flex items-center justify-between gap-2 mb-1.5">
                         <div class="flex items-center gap-2 min-w-0">
                             <span class="${tone.badge} text-white px-2 py-1 rounded text-[10px] font-bold shrink-0">${escapeHtml(site.block || 'APT')}</span>
                             <h5 class="font-bold text-gray-800 text-xs truncate">${escapeHtml(site.name)}</h5>
                         </div>
                         <span class="text-[10px] font-bold ${tone.text} whitespace-nowrap">${escapeHtml(site.supply)}</span>
                     </div>
-                    <div class="flex flex-wrap gap-1.5 mb-2">
+                    <div class="flex flex-wrap gap-1.5 mb-1.5">
                         <span class="bg-white ${tone.text} border ${tone.border} px-1.5 py-0.5 rounded text-[9px] font-bold">${escapeHtml(site.type)}</span>
                         <span class="${tone.priority} border px-1.5 py-0.5 rounded text-[9px] font-bold">${escapeHtml(site.priority)}</span>
                     </div>
-                    <p class="text-[10px] text-gray-500 mb-2">${escapeHtml(site.keyPoint)}</p>
+                    <p class="text-[10px] text-gray-500 mb-1.5">${escapeHtml(site.keyPoint)}</p>
                     <div class="grid grid-cols-3 gap-1 text-center">
-                        <div class="bg-white rounded-lg border border-gray-100 px-1 py-1.5">
+                        <div class="bg-white rounded-md border border-gray-100 px-1 py-1">
                             <p class="text-[9px] text-gray-400 font-bold">본청약</p>
                             <p class="text-[10px] text-gray-800 font-bold">${escapeHtml(site.mainDateText)}</p>
                         </div>
-                        <div class="bg-white rounded-lg border border-gray-100 px-1 py-1.5">
+                        <div class="bg-white rounded-md border border-gray-100 px-1 py-1">
                             <p class="text-[9px] text-gray-400 font-bold">특공</p>
                             <p class="text-[10px] text-gray-800 font-bold">${escapeHtml(site.specialDateText)}</p>
                         </div>
-                        <div class="bg-white rounded-lg border border-gray-100 px-1 py-1.5">
+                        <div class="bg-white rounded-md border border-gray-100 px-1 py-1">
                             <p class="text-[9px] text-gray-400 font-bold">일반</p>
                             <p class="text-[10px] text-gray-800 font-bold">${escapeHtml(site.generalDateText)}</p>
                         </div>

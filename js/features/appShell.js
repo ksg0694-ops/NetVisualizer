@@ -47,11 +47,10 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
 
     const viewContextMeta = {
         'dashboard-view': { label: 'Finance Goal', title: 'Finance Cockpit' },
-        'career-view': { label: 'Career Goal', title: 'Career Cockpit' },
-        'project-view': { label: 'Project Goal', title: 'Project Cockpit' },
+        'career-view': { label: 'Career Profile', title: 'Career Profile' },
+        'project-view': { label: 'Career Profile', title: 'Career Profile' },
         'life-view': { label: 'Life Goal', title: 'Life Cockpit' },
         'weekly-timetable-view': { label: 'Life Tool', title: 'Weekly Timetable' },
-        'routine-checklist-view': { label: 'Life Tool', title: 'Routine Checklist' },
         'vacation-plan-view': { label: 'Life Tool', title: 'Vacation Plan' },
         'portfolio-view': { label: 'Finance Tool', title: '포트폴리오' },
         'stats-view': { label: 'Finance Tool', title: '현금 흐름' },
@@ -61,24 +60,20 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     };
 
     const financeToolViews = new Set(['portfolio-view', 'stats-view', 'asset-view', 'realestate-view', 'invest-detail-view']);
-    const lifeToolViews = new Set(['weekly-timetable-view', 'routine-checklist-view', 'vacation-plan-view']);
+    const lifeToolViews = new Set(['weekly-timetable-view', 'vacation-plan-view']);
     const mobileToolNav = document.getElementById('mobile-tool-nav');
     const mobileToolGroups = {
         'dashboard-view': [
-            { target: 'portfolio-view', icon: 'fa-briefcase', label: '포트폴리오' },
             { target: 'stats-view', icon: 'fa-money-bill-transfer', label: '현금' },
+            { target: 'portfolio-view', icon: 'fa-briefcase', label: '포트폴리오' },
             { target: 'asset-view', icon: 'fa-chart-area', label: '자산' },
             { target: 'realestate-view', icon: 'fa-home', label: '부동산' }
         ],
         'career-view': [
             { target: 'career-view', icon: 'fa-id-badge', label: '커리어' }
         ],
-        'project-view': [
-            { target: 'project-view', icon: 'fa-folder-open', label: '프로젝트' }
-        ],
         'life-view': [
             { target: 'weekly-timetable-view', icon: 'fa-calendar-week', label: '주간' },
-            { target: 'routine-checklist-view', icon: 'fa-list-check', label: '루틴' },
             { target: 'vacation-plan-view', icon: 'fa-plane-departure', label: '휴가' }
         ]
     };
@@ -89,9 +84,37 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         return targetId;
     }
 
+    function updateGoalHomeButton(targetId) {
+        const button = document.getElementById('btn-goal-home');
+        if (!button) return;
+        const homeTarget = resolveActiveGoalTarget(targetId);
+        const shouldShow = homeTarget !== targetId;
+        button.dataset.target = homeTarget;
+        button.classList.toggle('hidden', !shouldShow);
+        button.classList.toggle('flex', shouldShow);
+        if (homeTarget === 'dashboard-view') button.title = 'Finance 홈으로';
+        else if (homeTarget === 'life-view') button.title = 'Life 홈으로';
+        else if (homeTarget === 'career-view') button.title = 'Career 홈으로';
+        else button.title = '홈으로';
+    }
+
     function renderMobileToolNavigation(activeGoalTarget, targetId) {
         if (!mobileToolNav) return;
-        const toolItems = mobileToolGroups[activeGoalTarget] || mobileToolGroups['dashboard-view'];
+        let toolItems = mobileToolGroups[activeGoalTarget] || mobileToolGroups['dashboard-view'];
+        if (activeGoalTarget === 'career-view') {
+            toolItems = [{ target: 'career-view', icon: 'fa-id-badge', label: 'Career' }];
+        } else if (activeGoalTarget === 'life-view') {
+            toolItems = [
+                { target: 'weekly-timetable-view', icon: 'fa-calendar-week', label: '주간' },
+                { target: 'vacation-plan-view', icon: 'fa-plane-departure', label: '휴가' }
+            ];
+        }
+        if (activeGoalTarget === 'life-view') {
+            toolItems = [
+                { target: 'weekly-timetable-view', icon: 'fa-calendar-week', label: '주간' },
+                { target: 'vacation-plan-view', icon: 'fa-plane-departure', label: '휴가' }
+            ];
+        }
         mobileToolNav.innerHTML = toolItems.map(item => {
             const isActive = item.target === targetId;
             const stateClasses = isActive ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600';
@@ -110,6 +133,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         const titleEl = document.getElementById('app-context-title');
         if (labelEl) labelEl.textContent = meta.label;
         if (titleEl) titleEl.textContent = meta.title;
+        updateGoalHomeButton(targetId);
     }
 
     function updateGoalNavigation(targetId) {
@@ -138,7 +162,18 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         renderMobileToolNavigation(activeGoalTarget, targetId);
     }
 
+    function normalizeGoalShellText() {
+        return;
+        const lifeTitle = document.querySelector('#life-view h2');
+        if (lifeTitle) {
+            const description = lifeTitle.nextElementSibling;
+            if (description) description.textContent = '주간 시간표와 휴가 계획을 한 곳에서 정리합니다.';
+        }
+    }
+
     function switchView(targetId) {
+        if (targetId === 'project-view') targetId = 'career-view';
+        if (targetId === 'routine-checklist-view') targetId = 'life-view';
         useMonthScopeForView(targetId);
         activeViewId = targetId;
         updateAppContext(targetId);
@@ -195,7 +230,13 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         switchView(link.getAttribute('data-target'));
     });
 
+    document.getElementById('btn-goal-home')?.addEventListener('click', (event) => {
+        const target = event.currentTarget.dataset.target || resolveActiveGoalTarget(activeViewId);
+        switchView(target);
+    });
+
     renderMobileToolNavigation(resolveActiveGoalTarget(activeViewId), activeViewId);
+    updateGoalHomeButton(activeViewId);
 
     document.getElementById('asset-year-filter')?.addEventListener('change', (e) => {
         currentAssetFilter = e.target.value; renderFinanceSummary();
@@ -256,6 +297,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     // Real-estate subscription schedule and map rendering lives in js/features/realEstate.js.
 
     window.addEventListener('DOMContentLoaded', () => {
+        normalizeGoalShellText();
         loadSettings();
         fetchSheetData(true);
     });
