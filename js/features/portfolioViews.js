@@ -202,6 +202,7 @@
 
         renderQuantStrategyStructure(processedItems, total);
         renderMarketSyncStatus(processedItems);
+        renderQuantHoldingEditor(processedItems);
         renderStrategyPerformance(processedItems);
 
         // 3. 종목 상세 카드 렌더링 (2단 아코디언 UI)

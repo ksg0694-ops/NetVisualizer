@@ -26,13 +26,36 @@
         const container = document.getElementById('pf-edit-groups');
         container.innerHTML = '';
 
-        // 1. 그룹별로 데이터 묶기 (index 포함하여 맵핑)
-        const groups = {};
+        const getAmountNumber = (value) => Math.round(parseFloat(String(value || '0').replace(/[^0-9.-]/g, ''))) || 0;
+        const isQuickEditableItem = (item) => {
+            const groupText = String(item.groupName || '').toLowerCase();
+            const classification = item.classification || classifyPortfolioItem(item.groupName, item);
+            if (Number(item.shares || 0) > 0) return false;
+            if (classification.assetType === 'debt') return true;
+            if (classification.assetType !== 'account') return false;
+            if (includesAny(groupText, ['투자', '주식', 'etf', '펀드', '연금', 'irp'])) return false;
+            return true;
+        };
+        const getEditableBucket = (item) => {
+            const groupText = String(item.groupName || '').toLowerCase();
+            const classification = item.classification || classifyPortfolioItem(item.groupName, item);
+            if (classification.assetType === 'debt' || includesAny(groupText, ['부채', '대출', '마이너스'])) return '부채';
+            if (includesAny(groupText, ['안전', '예금', '적금', 'cma', '파킹', 'rp', '발행어음', '채권'])) return '안전';
+            return '현금';
+        };
+        const bucketMeta = {
+            '현금': { icon: 'fa-wallet', color: 'blue', label: '현금 / 계좌' },
+            '안전': { icon: 'fa-shield-alt', color: 'emerald', label: '안전자산' },
+            '부채': { icon: 'fa-credit-card', color: 'red', label: '부채' }
+        };
+
+        // 1. 편집 대상은 현금/안전/부채로만 묶고, 투자자산은 Quant로 안내한다.
+        const editBuckets = { '현금': [], '안전': [], '부채': [] };
+        const quantItems = [];
         for (let i = 1; i < workingPortfolioData.length; i++) {
             const row = workingPortfolioData[i];
             if(row.length < 5) continue;
             const groupName = row[0] || '미분류';
-            if (!groups[groupName]) groups[groupName] = [];
             const editItem = {
                 index: i,
                 id: row[6] || '',
@@ -49,76 +72,85 @@
                 classificationSource: row[11] || '',
                 classificationUpdatedAt: row[12] || '',
                 strategyTag: row[13] || '',
-                avgBuyPrice: row[14] || ''
+                avgBuyPrice: row[14] || '',
+                accountName: row[15] || ''
             };
             editItem.classification = classifyPortfolioItem(groupName, editItem);
-            groups[groupName].push(editItem);
+            if (isQuickEditableItem(editItem)) editBuckets[getEditableBucket(editItem)].push(editItem);
+            else quantItems.push(editItem);
         }
 
-        // 2. 그룹별로 카드 렌더링 (A안)
-        getSortedPortfolioGroups(groups).forEach(([groupName, items]) => {
-            const isDebt = groupName === '부채';
-            const iconClass = isDebt ? 'fa-credit-card text-red-500' : (groupName.includes('투자') ? 'fa-chart-line text-purple-500' : 'fa-wallet text-blue-500');
-            const bgClass = isDebt ? 'bg-red-50' : (groupName.includes('투자') ? 'bg-purple-50' : 'bg-blue-50');
-            const safeGroupName = escapeHtml(groupName);
-            const jsGroupName = escapeJsString(groupName);
+        const editableTotal = Object.values(editBuckets).flat().reduce((sum, item) => {
+            const amount = getAmountNumber(item.amount);
+            return sum + (getEditableBucket(item) === '부채' ? -Math.abs(amount) : amount);
+        }, 0);
+        const quantTotal = quantItems.reduce((sum, item) => sum + getAmountNumber(item.amount), 0);
+        const stockLikeCount = quantItems.filter(item => Number(item.shares || 0) > 0 || ['stock', 'etf'].includes(item.classification?.assetType)).length;
+
+        container.insertAdjacentHTML('beforeend', `
+            <div class="bg-white rounded-xl shadow-sm border border-indigo-100 overflow-hidden">
+                <div class="px-3 md:px-4 py-2.5 bg-indigo-50/60 border-b border-indigo-100 flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <h4 class="text-sm font-bold text-gray-900">빠른 금액 수정</h4>
+                        <p class="text-[10px] text-gray-500 truncate">현금/안전/부채만 입력, 투자 종목은 Quant에서 수정</p>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <p class="text-[9px] font-bold text-indigo-500">편집 순액</p>
+                        <p class="text-sm font-black text-indigo-800">${editableTotal.toLocaleString()}원</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-4 divide-x divide-indigo-50 text-center">
+                    <div class="px-2 py-2"><p class="text-[9px] text-gray-400 font-bold">현금</p><p class="text-xs font-bold text-blue-700">${editBuckets['현금'].length}</p></div>
+                    <div class="px-2 py-2"><p class="text-[9px] text-gray-400 font-bold">안전</p><p class="text-xs font-bold text-emerald-700">${editBuckets['안전'].length}</p></div>
+                    <div class="px-2 py-2"><p class="text-[9px] text-gray-400 font-bold">부채</p><p class="text-xs font-bold text-red-700">${editBuckets['부채'].length}</p></div>
+                    <div class="px-2 py-2"><p class="text-[9px] text-gray-400 font-bold">Quant</p><p class="text-xs font-bold text-purple-700">${stockLikeCount}</p></div>
+                </div>
+            </div>
+        `);
+
+        ['현금', '안전', '부채'].forEach((bucketName) => {
+            const items = editBuckets[bucketName];
+            const meta = bucketMeta[bucketName];
+            const color = meta.color;
+            const bucketTotal = items.reduce((sum, item) => sum + getAmountNumber(item.amount), 0);
+            const borderClass = color === 'red' ? 'border-red-100' : (color === 'emerald' ? 'border-emerald-100' : 'border-blue-100');
+            const bgClass = color === 'red' ? 'bg-red-50/50' : (color === 'emerald' ? 'bg-emerald-50/50' : 'bg-blue-50/50');
+            const iconClass = color === 'red' ? 'text-red-600 bg-red-100' : (color === 'emerald' ? 'text-emerald-600 bg-emerald-100' : 'text-blue-600 bg-blue-100');
+            const buttonClass = color === 'red' ? 'text-red-600 bg-red-50 hover:bg-red-100 border-red-100' : (color === 'emerald' ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border-emerald-100' : 'text-blue-600 bg-blue-50 hover:bg-blue-100 border-blue-100');
+            const jsGroupName = escapeJsString(bucketName);
 
             let cardHtml = `
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="px-4 py-3 border-b border-gray-50 flex items-center gap-2 bg-gray-50/50">
-                        <div class="w-6 h-6 rounded-full ${bgClass} flex items-center justify-center"><i class="fas ${iconClass} text-[10px]"></i></div>
-                        <h4 class="text-sm font-bold text-gray-800">${safeGroupName}</h4>
+                <div class="bg-white rounded-xl shadow-sm border ${borderClass} overflow-hidden">
+                    <div class="px-3 py-2 border-b ${borderClass} flex items-center justify-between gap-3 ${bgClass}">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <div class="w-6 h-6 rounded-full ${iconClass} flex items-center justify-center"><i class="fas ${meta.icon} text-[10px]"></i></div>
+                            <div class="min-w-0">
+                                <h4 class="text-xs md:text-sm font-bold text-gray-800 truncate">${meta.label}</h4>
+                                <p class="text-[9px] text-gray-400">${items.length}개</p>
+                            </div>
+                        </div>
+                        <p class="text-xs font-black text-gray-800 whitespace-nowrap">${bucketTotal.toLocaleString()}원</p>
                     </div>
-                    <div class="p-4 space-y-4">
+                    <div class="p-2.5 space-y-1.5">
             `;
+
+            if (items.length === 0) {
+                cardHtml += `
+                    <div class="rounded-lg border border-dashed border-gray-200 px-3 py-2 text-center">
+                        <p class="text-[11px] font-bold text-gray-500">아직 ${meta.label} 항목이 없습니다.</p>
+                    </div>
+                `;
+            }
 
             items.forEach(item => {
                 const amountStr = String(item.amount || '0').replace(/[^0-9.-]/g, '');
                 const formattedAmount = amountStr ? Math.round(parseFloat(amountStr)).toLocaleString() : '0';
-                const currentGroupRank = getPortfolioGroupRank(item.groupName);
-                const classOptions = PORTFOLIO_GROUP_ORDER.map((group, groupIdx) => {
-                    const selected = currentGroupRank === groupIdx ? 'selected' : '';
-                    return `<option value="${escapeAttr(group.label)}" ${selected}>${escapeHtml(group.label)}</option>`;
-                }).join('');
-                const strategyTag = item.strategyTag || inferStrategyTag(item);
-                const strategyOptions = INVEST_STRATEGY_KEYS.map(key => {
-                    const meta = getStrategyMeta(key);
-                    const selected = strategyTag === key ? 'selected' : '';
-                    return `<option value="${escapeAttr(key)}" ${selected}>${escapeHtml(meta.label)}</option>`;
-                }).join('');
                 cardHtml += `
-                    <div class="flex flex-col gap-1 relative group">
-                        <div class="flex justify-between items-center mb-0.5">
-                            <input type="text" value="${escapeAttr(item.name)}" onchange="updatePortfolioName(${item.index}, this.value)" class="text-xs font-bold text-gray-700 bg-transparent border-none p-0 focus:ring-0 focus:outline-none placeholder-gray-400 w-full" placeholder="자산명 입력">
-                            ${getAssetClassBadgeHtml(item.classification)}
-                            <button onclick="removePortfolioItem(${item.index})" class="text-gray-300 hover:text-red-500 transition-colors shrink-0 p-1 bg-white rounded-full"><i class="fas fa-trash-alt text-sm"></i></button>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <input type="text" id="pf-edit-amt-${item.index}" value="${formattedAmount}" oninput="formatNumberInput(this); updatePortfolioAmount(${item.index}, this.value)" class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-right">
-                            <span class="text-xs text-gray-500 font-bold bg-gray-100 px-2 py-2 rounded-lg shrink-0">${escapeHtml(item.currency)}</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] text-gray-400 font-bold shrink-0">자산유형</span>
-                            <select onchange="updatePortfolioAssetClass(${item.index}, this.value)" class="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
-                                ${classOptions}
-                            </select>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                            <label class="flex flex-col gap-1">
-                                <span class="text-[10px] text-gray-400 font-bold">Ticker</span>
-                                <input type="text" value="${escapeAttr(item.ticker)}" oninput="updatePortfolioTicker(${item.index}, this.value)" class="border border-gray-200 rounded-lg px-2 py-1.5 text-xs uppercase focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="예: SCHD">
-                            </label>
-                            <label class="flex flex-col gap-1">
-                                <span class="text-[10px] text-gray-400 font-bold">전략</span>
-                                <select onchange="updatePortfolioStrategy(${item.index}, this.value)" class="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
-                                    ${strategyOptions}
-                                </select>
-                            </label>
-                            <label class="flex flex-col gap-1">
-                                <span class="text-[10px] text-gray-400 font-bold">평균단가</span>
-                                <input type="text" value="${escapeAttr(item.avgBuyPrice)}" oninput="updatePortfolioAvgBuyPrice(${item.index}, this.value)" class="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-right focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0">
-                            </label>
-                        </div>
+                    <div class="grid grid-cols-[minmax(86px,1fr)_minmax(112px,0.95fr)_42px_28px] md:grid-cols-[minmax(160px,1.1fr)_minmax(150px,0.9fr)_48px_28px] gap-1.5 items-center rounded-lg border border-gray-100 bg-white px-2 py-1.5">
+                        <input type="text" value="${escapeAttr(item.name)}" onchange="updatePortfolioName(${item.index}, this.value)" class="min-w-0 text-[11px] md:text-xs font-bold text-gray-800 bg-transparent border border-transparent hover:border-gray-100 focus:border-indigo-300 rounded px-1.5 py-1 focus:ring-1 focus:ring-indigo-200 focus:outline-none placeholder-gray-400" placeholder="계좌명">
+                        <input type="text" inputmode="numeric" id="pf-edit-amt-${item.index}" value="${formattedAmount}" oninput="formatNumberInput(this); updatePortfolioAmount(${item.index}, this.value)" class="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs md:text-sm font-black focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-right">
+                        <span class="text-[9px] md:text-[10px] text-gray-500 font-bold bg-gray-100 px-1.5 py-1.5 rounded-md shrink-0 text-center">${escapeHtml(item.currency)}</span>
+                        <button onclick="removePortfolioItem(${item.index})" class="w-7 h-7 text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0 rounded-md"><i class="fas fa-trash-alt text-[10px]"></i></button>
                     </div>
                 `;
             });
@@ -126,13 +158,43 @@
             // [+ 항목 추가] 버튼 (B안)
             cardHtml += `
                     </div>
-                    <button onclick="addPortfolioItem('${jsGroupName}')" class="w-full py-2 bg-gray-50/80 hover:bg-gray-100 text-xs font-bold text-indigo-500 transition-colors border-t border-gray-50">
+                    <button onclick="addPortfolioItem('${jsGroupName}')" class="w-full py-1.5 border-t text-[11px] font-bold transition-colors ${buttonClass}">
                         <i class="fas fa-plus mr-1"></i> 항목 추가
                     </button>
                 </div>
             `;
             container.insertAdjacentHTML('beforeend', cardHtml);
         });
+
+        container.insertAdjacentHTML('beforeend', `
+            <div class="bg-white rounded-xl shadow-sm border border-purple-100 overflow-hidden">
+                <div class="px-3 py-2 border-b border-purple-100 bg-purple-50/60 flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <h4 class="text-xs md:text-sm font-bold text-gray-800">투자자산은 Quant에서 관리</h4>
+                        <p class="text-[10px] text-gray-500 mt-0.5">티커/수량/평단은 투자 상세에서 수정</p>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <p class="text-[9px] font-bold text-purple-500">${stockLikeCount}개 종목</p>
+                        <p class="text-xs font-black text-purple-800">${quantTotal.toLocaleString()}원</p>
+                    </div>
+                </div>
+                <div class="p-2.5 space-y-1.5 max-h-36 overflow-y-auto scrollbar-hide">
+                    ${quantItems.length ? quantItems.map(item => {
+                        const amount = getAmountNumber(item.amount);
+                        const meta = getAssetClassMeta(item.classification?.assetType);
+                        return `
+                            <div class="flex items-center justify-between gap-3 rounded-lg bg-gray-50 border border-gray-100 px-2.5 py-1.5">
+                                <div class="min-w-0">
+                                    <p class="text-[11px] md:text-xs font-bold text-gray-800 truncate">${escapeHtml(item.name || '투자자산')}</p>
+                                    <p class="text-[10px] text-gray-400 truncate">${escapeHtml(meta.shortLabel)}${item.ticker ? ` · ${escapeHtml(item.ticker)}` : ''}${item.shares ? ` · ${Number(item.shares).toLocaleString()}주` : ''}</p>
+                                </div>
+                                <p class="text-xs font-bold text-gray-500 whitespace-nowrap">${amount.toLocaleString()}원</p>
+                            </div>
+                        `;
+                    }).join('') : '<p class="text-xs text-gray-400 p-2">투자/연금 항목이 없습니다.</p>'}
+                </div>
+            </div>
+        `);
 
         calculateExpectedTotal(); // 초기 계산
     }
@@ -141,7 +203,7 @@
         const rowLen = workingPortfolioData.length > 0 ? workingPortfolioData[0].length : 5;
         const newRow = new Array(rowLen).fill('');
         newRow[0] = groupName;
-        newRow[1] = "새 자산";
+        newRow[1] = groupName === '부채' ? '새 부채' : (groupName === '안전' ? '새 안전자산' : '새 계좌');
         newRow[2] = "KRW";
         newRow[4] = 0;
         workingPortfolioData.push(newRow);
@@ -293,7 +355,8 @@
                     riskBucket: workingPortfolioData[i][10] || '',
                     classificationSource: workingPortfolioData[i][11] || '',
                     strategyTag: workingPortfolioData[i][13] || '',
-                    avgBuyPrice: workingPortfolioData[i][14] || ''
+                    avgBuyPrice: workingPortfolioData[i][14] || '',
+                    accountName: workingPortfolioData[i][15] || ''
                 };
                 const classification = classifyPortfolioItem(payload.group_name, classificationItem);
                 const strategyTag = workingPortfolioData[i][13] || inferStrategyTag({ ...classificationItem, classification });
@@ -306,6 +369,7 @@
                 payload.classification_updated_at = workingPortfolioData[i][12] || new Date().toISOString();
                 payload.strategy_tag = INVEST_STRATEGY_META[strategyTag] ? strategyTag : 'other';
                 payload.avg_buy_price = avgBuyPriceRaw ? parseFloat(avgBuyPriceRaw) : null;
+                payload.account_name = workingPortfolioData[i][15] || null;
 
                 if (rowId) {
                     payload.id = rowId;

@@ -22,6 +22,7 @@
         let missingDataCount = 0;
         let rebalanceCount = 0;
 
+        container.className = 'space-y-1.5';
         container.innerHTML = structureKeys.map(key => {
             const meta = getStrategyMeta(key);
             const rule = quantStrategyRules[key] || DEFAULT_QUANT_STRATEGY_RULES.other;
@@ -65,40 +66,36 @@
                         : 'text-emerald-600 bg-emerald-50';
 
             return `
-                <div class="border-t border-gray-100 pt-3 first:border-t-0 first:pt-0">
-                    <div class="flex items-center justify-between gap-2 mb-2">
-                        <div class="flex items-center gap-2 min-w-0">
-                            <span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${meta.color}"></span>
-                            <span class="text-xs font-bold text-gray-800 truncate">${escapeHtml(meta.label)}</span>
+                <div class="rounded-xl border border-gray-100 bg-white px-3 py-2">
+                    <div class="grid grid-cols-[minmax(80px,1fr)_48px_58px_58px_minmax(72px,0.8fr)] md:grid-cols-[minmax(140px,1.2fr)_64px_70px_70px_minmax(120px,1fr)] gap-2 items-center">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${meta.color}"></span>
+                                <span class="text-[11px] md:text-xs font-bold text-gray-800 truncate">${escapeHtml(meta.label)}</span>
+                                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded ${statusClass} hidden md:inline">${statusLabel}</span>
+                            </div>
+                            <div class="mt-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full" style="width: ${Math.min(100, Math.max(0, currentPct))}%; background-color: ${meta.color}"></div>
+                            </div>
                         </div>
-                        <span class="text-[10px] font-bold px-2 py-0.5 rounded ${statusClass}">${statusLabel}</span>
+                        <div class="text-right">
+                            <p class="text-[9px] text-gray-400 font-bold">현재</p>
+                            <p class="text-[11px] font-black text-gray-800">${currentPct.toFixed(1)}%</p>
+                        </div>
+                        <label class="min-w-0">
+                            <span class="block text-[9px] text-gray-400 font-bold">목표</span>
+                            <input id="quant-target-${key}" type="number" min="0" max="100" step="0.1" value="${escapeAttr(targetPct)}" oninput="markQuantRulesDirty()" class="w-full border border-gray-200 rounded-md px-1 py-1 text-[10px] font-bold text-gray-800 text-right focus:ring-1 focus:ring-indigo-500 outline-none">
+                        </label>
+                        <label class="min-w-0">
+                            <span class="block text-[9px] text-gray-400 font-bold">밴드</span>
+                            <input id="quant-band-${key}" type="number" min="0" max="100" step="0.1" value="${escapeAttr(bandPct)}" oninput="markQuantRulesDirty()" class="w-full border border-gray-200 rounded-md px-1 py-1 text-[10px] font-bold text-gray-800 text-right focus:ring-1 focus:ring-indigo-500 outline-none">
+                        </label>
+                        <div class="min-w-0 text-right">
+                            <input id="quant-trigger-${key}" type="hidden" value="${escapeAttr(rule.trigger)}">
+                            <p class="text-[9px] text-gray-400 font-bold">리밸런싱</p>
+                            <p class="text-[10px] md:text-[11px] font-bold truncate ${needsRebalance ? 'text-rose-600' : 'text-gray-500'}">${rebalanceLabel}</p>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-4 gap-2 text-[10px]">
-                        <div>
-                            <p class="text-gray-400 font-bold">현재</p>
-                            <p class="text-gray-800 font-bold">${currentPct.toFixed(1)}%</p>
-                        </div>
-                        <div>
-                            <p class="text-gray-400 font-bold">목표</p>
-                            <input id="quant-target-${key}" type="number" min="0" max="100" step="0.1" value="${escapeAttr(targetPct)}" oninput="markQuantRulesDirty()" class="w-full border border-gray-200 rounded px-1 py-0.5 text-[10px] font-bold text-gray-800 focus:ring-1 focus:ring-indigo-500 outline-none">
-                        </div>
-                        <div>
-                            <p class="text-gray-400 font-bold">밴드</p>
-                            <input id="quant-band-${key}" type="number" min="0" max="100" step="0.1" value="${escapeAttr(bandPct)}" oninput="markQuantRulesDirty()" class="w-full border border-gray-200 rounded px-1 py-0.5 text-[10px] font-bold text-gray-800 focus:ring-1 focus:ring-indigo-500 outline-none">
-                        </div>
-                        <div>
-                            <p class="text-gray-400 font-bold">기준</p>
-                            <input id="quant-trigger-${key}" type="text" value="${escapeAttr(rule.trigger)}" oninput="markQuantRulesDirty()" class="w-full border border-gray-200 rounded px-1 py-0.5 text-[10px] font-bold text-gray-800 focus:ring-1 focus:ring-indigo-500 outline-none">
-                        </div>
-                    </div>
-                    <div class="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div class="h-full rounded-full" style="width: ${Math.min(100, Math.max(0, currentPct))}%; background-color: ${meta.color}"></div>
-                    </div>
-                    <div class="mt-2 flex items-center justify-between gap-2 rounded-lg px-2 py-1 ${needsRebalance ? 'bg-rose-50 text-rose-600' : 'bg-gray-50 text-gray-500'}">
-                        <span class="text-[10px] font-bold">리밸런싱</span>
-                        <span class="text-[10px] font-bold text-right">${rebalanceLabel}</span>
-                    </div>
-                    <p class="mt-1 text-[10px] text-gray-400">Ticker ${tickerReady}/${items.length} · 평균단가 ${avgReady}/${items.length} · 현재가 ${priceReady}/${items.length}</p>
                 </div>
             `;
         }).join('');
@@ -329,6 +326,191 @@
             `;
         }).join('');
     }
+
+    function renderQuantHoldingEditor(processedItems = []) {
+        const container = document.getElementById('invest-holding-editor');
+        if (!container) return;
+
+        const editableItems = processedItems
+            .map((item, index) => ({ item, index }))
+            .filter(({ item }) => !!item.id);
+        const accountSuggestions = [...new Set([
+            ...processedItems.map(item => String(item.accountName || '').trim()).filter(Boolean),
+            ...Object.values(dynamicPortfolioData || {}).flatMap(group => group.items || [])
+                .filter(item => item.classification?.assetType === 'account')
+                .map(item => String(item.name || '').trim())
+                .filter(Boolean)
+        ])].sort((a, b) => a.localeCompare(b, 'ko-KR'));
+
+        const strategyOptions = (selectedKey) => INVEST_STRATEGY_KEYS.map(key => {
+            const meta = getStrategyMeta(key);
+            const selected = selectedKey === key ? 'selected' : '';
+            return `<option value="${escapeAttr(key)}" ${selected}>${escapeHtml(meta.label)}</option>`;
+        }).join('');
+        const getAccountKey = (item) => String(item.accountName || '').trim() || '계좌 미지정';
+        const accountGroups = {};
+        editableItems.forEach(entry => {
+            const key = getAccountKey(entry.item);
+            if (!accountGroups[key]) accountGroups[key] = [];
+            accountGroups[key].push(entry);
+        });
+        const accountEntries = Object.entries(accountGroups).sort(([a], [b]) => {
+            if (a === '계좌 미지정') return 1;
+            if (b === '계좌 미지정') return -1;
+            return a.localeCompare(b, 'ko-KR');
+        });
+
+        if (editableItems.length === 0) {
+            container.innerHTML = `
+                <div class="flex items-center justify-between gap-2">
+                    <h3 class="text-sm md:text-base font-bold text-gray-800 flex items-center gap-2"><i class="fas fa-sliders text-purple-500"></i> 계좌별 보유종목 입력</h3>
+                    <span class="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded">수정 가능 항목 없음</span>
+                </div>
+                <p class="text-xs text-gray-400 mt-3">저장 가능한 투자 항목 ID가 없습니다.</p>
+            `;
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="flex items-center justify-between gap-2 mb-3">
+                <div>
+                    <h3 class="text-sm md:text-base font-bold text-gray-800 flex items-center gap-2"><i class="fas fa-sliders text-purple-500"></i> 계좌별 보유종목 입력</h3>
+                    <p class="text-[10px] md:text-xs text-gray-400 mt-0.5">계좌 기준으로 묶고, 티커/수량/평단/전략만 빠르게 수정합니다.</p>
+                </div>
+                <button id="btn-save-quant-holdings" onclick="saveQuantHoldings()" class="shrink-0 text-[10px] md:text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                    <i class="fas fa-save text-[9px]"></i> 보유 저장
+                </button>
+            </div>
+            <datalist id="quant-account-options">
+                ${accountSuggestions.map(name => `<option value="${escapeAttr(name)}"></option>`).join('')}
+            </datalist>
+            <div class="space-y-3">
+                ${accountEntries.map(([accountName, rows]) => {
+                    const accountTotal = rows.reduce((sum, { item }) => sum + Number(item.amount || 0), 0);
+                    return `
+                        <div class="bg-white rounded-xl shadow-sm border border-purple-100 overflow-hidden">
+                            <div class="px-3 py-2 border-b border-purple-100 bg-purple-50/60 flex items-center justify-between gap-3">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <div class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center"><i class="fas fa-wallet text-[10px]"></i></div>
+                                    <div class="min-w-0">
+                                        <h4 class="text-xs md:text-sm font-bold text-gray-800 truncate">${escapeHtml(accountName)}</h4>
+                                        <p class="text-[9px] text-gray-400">${rows.length}개 종목</p>
+                                    </div>
+                                </div>
+                                <p class="text-xs font-black text-gray-800 whitespace-nowrap">${accountTotal.toLocaleString()}원</p>
+                            </div>
+                            <div class="p-2.5 space-y-1.5">
+                                ${rows.map(({ item, index }) => {
+                                    const strategyTag = item.strategyTag || inferStrategyTag(item);
+                                    const amountText = Number(item.amount || 0).toLocaleString();
+                                    return `
+                                        <div class="rounded-lg border border-gray-100 bg-white px-2 py-1.5">
+                                            <div class="grid grid-cols-[minmax(104px,1fr)_70px_72px_72px] md:grid-cols-[minmax(150px,1.1fr)_96px_100px_112px_112px_84px] gap-1.5 items-center">
+                                                <div class="min-w-0">
+                                                    <input id="quant-holding-account-${index}" list="quant-account-options" type="text" value="${escapeAttr(item.accountName || '')}" oninput="markQuantHoldingsDirty()" class="w-full text-[10px] text-purple-600 font-bold bg-purple-50 border border-purple-100 rounded px-1.5 py-0.5 mb-1 focus:ring-1 focus:ring-purple-400 outline-none" placeholder="계좌명">
+                                                    <p class="text-[11px] md:text-xs font-bold text-gray-800 truncate">${escapeHtml(item.name || '투자자산')}</p>
+                                                </div>
+                                                <input id="quant-holding-ticker-${index}" type="text" value="${escapeAttr(item.ticker || '')}" oninput="markQuantHoldingsDirty()" class="uppercase border border-gray-200 rounded-md px-2 py-1.5 text-[11px] font-bold focus:ring-1 focus:ring-purple-500 outline-none bg-white" placeholder="Ticker">
+                                                <input id="quant-holding-shares-${index}" type="number" min="0" step="0.0001" value="${escapeAttr(item.shares || '')}" oninput="markQuantHoldingsDirty()" class="border border-gray-200 rounded-md px-2 py-1.5 text-[11px] font-bold text-right focus:ring-1 focus:ring-purple-500 outline-none bg-white" placeholder="수량">
+                                                <input id="quant-holding-avg-${index}" type="number" min="0" step="0.0001" value="${escapeAttr(item.avgBuyPrice || '')}" oninput="markQuantHoldingsDirty()" class="border border-gray-200 rounded-md px-2 py-1.5 text-[11px] font-bold text-right focus:ring-1 focus:ring-purple-500 outline-none bg-white" placeholder="평단">
+                                                <select id="quant-holding-strategy-${index}" onchange="markQuantHoldingsDirty()" class="hidden md:block border border-gray-200 rounded-md px-2 py-1.5 text-[11px] font-bold focus:ring-1 focus:ring-purple-500 outline-none bg-white">
+                                                    ${strategyOptions(strategyTag)}
+                                                </select>
+                                                <p class="hidden md:block text-[11px] font-bold text-gray-500 text-right truncate">${amountText}원</p>
+                                            </div>
+                                            <div class="md:hidden grid grid-cols-[minmax(0,1fr)_82px] gap-1.5 mt-1.5">
+                                                <select id="quant-holding-strategy-mobile-${index}" onchange="document.getElementById('quant-holding-strategy-${index}').value=this.value; markQuantHoldingsDirty()" class="border border-gray-200 rounded-md px-2 py-1.5 text-[11px] font-bold focus:ring-1 focus:ring-purple-500 outline-none bg-white">
+                                                    ${strategyOptions(strategyTag)}
+                                                </select>
+                                                <p class="text-[11px] font-bold text-gray-500 text-right truncate self-center">${amountText}원</p>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    window.markQuantHoldingsDirty = function() {
+        const status = document.getElementById('invest-quant-status');
+        if (status) status.textContent = '보유 수정 중';
+    };
+
+    window.saveQuantHoldings = async function() {
+        const btn = document.getElementById('btn-save-quant-holdings');
+        const status = document.getElementById('invest-quant-status');
+        const originalHtml = btn ? btn.innerHTML : '';
+        const rows = (activeInvestProcessedItems || [])
+            .map((item, index) => ({ item, index }))
+            .filter(({ item }) => !!item.id);
+
+        if (rows.length === 0) {
+            showToast('저장할 투자 항목이 없습니다.', 'warning', 2200);
+            return;
+        }
+
+        const updates = [];
+        for (const { item, index } of rows) {
+            const ticker = String(document.getElementById(`quant-holding-ticker-${index}`)?.value || '').trim().toUpperCase();
+            const accountName = String(document.getElementById(`quant-holding-account-${index}`)?.value || '').trim();
+            const sharesRaw = String(document.getElementById(`quant-holding-shares-${index}`)?.value || '').replace(/[^0-9.-]/g, '');
+            const avgRaw = String(document.getElementById(`quant-holding-avg-${index}`)?.value || '').replace(/[^0-9.-]/g, '');
+            const strategy = String(document.getElementById(`quant-holding-strategy-${index}`)?.value || item.strategyTag || inferStrategyTag(item)).trim();
+            const shares = sharesRaw ? Number(sharesRaw) : null;
+            const avgBuyPrice = avgRaw ? Number(avgRaw) : null;
+
+            if ((shares !== null && (!Number.isFinite(shares) || shares < 0)) || (avgBuyPrice !== null && (!Number.isFinite(avgBuyPrice) || avgBuyPrice < 0))) {
+                showToast('수량과 평단은 0 이상의 숫자로 입력해주세요.', 'error');
+                return;
+            }
+
+            updates.push({
+                id: item.id,
+                payload: {
+                    ticker: ticker || null,
+                    account_name: accountName || null,
+                    shares,
+                    strategy_tag: INVEST_STRATEGY_META[strategy] ? strategy : 'other',
+                    avg_buy_price: avgBuyPrice,
+                    classification_updated_at: new Date().toISOString()
+                }
+            });
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin text-[9px]"></i> 저장';
+        }
+        if (status) status.textContent = '보유 저장 중';
+
+        try {
+            const _supabase = getSupabaseClient();
+            for (const update of updates) {
+                const { error } = await _supabase
+                    .from('portfolios')
+                    .update(update.payload)
+                    .eq('id', update.id);
+                if (error) throw error;
+            }
+
+            showToast(`보유종목 ${updates.length}건을 저장했습니다.`, 'info', 1800);
+            await fetchSheetData(false, ['portfolios']);
+            if (activeInvestGroupName) renderInvestDetail(activeInvestGroupName);
+        } catch (error) {
+            console.error('보유종목 저장 실패:', error);
+            if (status) status.textContent = '보유 저장 실패';
+            alert('보유종목 저장 실패: ' + error.message);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml || '<i class="fas fa-save text-[9px]"></i> 보유 저장';
+            }
+        }
+    };
 
     window.markQuantRulesDirty = function() {
         const status = document.getElementById('invest-quant-status');

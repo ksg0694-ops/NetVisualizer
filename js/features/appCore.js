@@ -320,7 +320,7 @@
     }
 
     function formatPortfolioRows(rows = []) {
-        const pfFormat = [["대분류 (Drop-down)","계좌/자산명 (Text)","통화/형태 (Text)","만기일 (Date/Text)","금액 (Number)", "주식수", "id", "asset_type", "instrument_type", "ticker", "risk_bucket", "classification_source", "classification_updated_at", "strategy_tag", "avg_buy_price"]];
+        const pfFormat = [["대분류 (Drop-down)","계좌/자산명 (Text)","통화/형태 (Text)","만기일 (Date/Text)","금액 (Number)", "주식수", "id", "asset_type", "instrument_type", "ticker", "risk_bucket", "classification_source", "classification_updated_at", "strategy_tag", "avg_buy_price", "account_name"]];
         rows.forEach(r => pfFormat.push([
             r.group_name,
             r.name,
@@ -336,7 +336,8 @@
             r.classification_source || '',
             r.classification_updated_at || '',
             r.strategy_tag || '',
-            r.avg_buy_price ?? ''
+            r.avg_buy_price ?? '',
+            r.account_name || ''
         ]));
         return pfFormat;
     }
@@ -767,6 +768,7 @@
             const strategyTag = row.length > 13 ? row[13] : '';
             const avgBuyPriceStr = row.length > 14 ? String(row[14] || '').replace(/[^0-9.-]/g, '') : '';
             const avgBuyPrice = avgBuyPriceStr ? parseFloat(avgBuyPriceStr) : null;
+            const accountName = row.length > 15 ? row[15] : '';
 
             if (isNaN(amount) || !name) return;
 
@@ -777,7 +779,7 @@
                 dynamicPortfolioData[group] = { color: isDebtColor.c, bg: isDebtColor.b, isDebt: isDebt, items: [] };
                 if(!isDebt) colorIdx++;
             }
-            const item = { id, name, amount: isDebt && amount > 0 ? -amount : amount, currency, maturity, shares, assetType, instrumentType, ticker, riskBucket, classificationSource, classificationUpdatedAt, strategyTag, avgBuyPrice };
+            const item = { id, name, amount: isDebt && amount > 0 ? -amount : amount, currency, maturity, shares, assetType, instrumentType, ticker, riskBucket, classificationSource, classificationUpdatedAt, strategyTag, avgBuyPrice, accountName };
             item.classification = classifyPortfolioItem(group, item);
             dynamicPortfolioData[group].items.push(item);
             hasData = true;
