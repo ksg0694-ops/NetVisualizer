@@ -56,6 +56,50 @@
                 // 💡 아코디언이 닫혀있도록 'open' 클래스 제거
                 const safeGroupName = escapeHtml(groupName);
                 const jsGroupName = escapeJsString(groupName);
+                const isInvestGroup = groupName.includes('투자');
+                const renderPortfolioItemRow = (item) => `
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-600 flex items-center gap-2 min-w-0">
+                            <div class="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0"></div>
+                            <span class="truncate">${escapeHtml(item.name)}</span>
+                            ${getAssetClassBadgeHtml(item.classification)}
+                            ${item.maturity ? `<span class="text-[10px] bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded font-bold whitespace-nowrap"><i class="fas fa-lock text-[9px]"></i> 묶인 돈 (${escapeHtml(item.maturity)})</span>` : ''}
+                        </span>
+                        <div class="text-right flex flex-col items-end shrink-0">
+                            <span class="font-medium ${item.amount < 0 ? 'text-red-500' : 'text-gray-700'}">${item.amount.toLocaleString()}원</span>
+                            ${item.shares ? `<span class="text-[10px] text-gray-400 font-bold tracking-tight">${item.shares.toLocaleString()}주 | 단가 ${Math.floor(item.amount / item.shares).toLocaleString()}원</span>` : ''}
+                        </div>
+                    </div>
+                `;
+                const renderInvestmentAccountRows = () => {
+                    const accountGroups = {};
+                    groupData.items.forEach(item => {
+                        const accountName = String(item.accountName || '').trim() || '계좌 미지정';
+                        if (!accountGroups[accountName]) accountGroups[accountName] = [];
+                        accountGroups[accountName].push(item);
+                    });
+                    return Object.entries(accountGroups).sort(([a], [b]) => {
+                        if (a === '계좌 미지정') return 1;
+                        if (b === '계좌 미지정') return -1;
+                        return a.localeCompare(b, 'ko-KR');
+                    }).map(([accountName, items]) => {
+                        const accountTotal = items.reduce((acc, item) => acc + Number(item.amount || 0), 0);
+                        return `
+                            <div class="rounded-xl border border-purple-100 overflow-hidden bg-white">
+                                <div class="px-3 py-2 bg-purple-50/50 border-b border-purple-100 flex items-center justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-bold text-gray-800 truncate">${escapeHtml(accountName)}</p>
+                                        <p class="text-[10px] text-gray-400">${items.length}개 자산</p>
+                                    </div>
+                                    <p class="text-xs font-black text-purple-700 whitespace-nowrap">${accountTotal.toLocaleString()}원</p>
+                                </div>
+                                <div class="p-3 space-y-2">
+                                    ${items.map(renderPortfolioItemRow).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                };
                 const itemHtml = `
                 <div class="border border-gray-100 rounded-xl overflow-hidden shadow-sm">
                     <div class="w-full flex justify-between items-center p-4 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer" onclick="toggleAccordion(this)">
@@ -73,20 +117,7 @@
                     </div>
                     <div class="accordion-content bg-white">
                         <div class="p-4 space-y-3 border-t border-gray-100">
-                            ${groupData.items.length > 0 ? groupData.items.map(item => `
-                                <div class="flex justify-between items-center text-sm">
-                                    <span class="text-gray-600 flex items-center gap-2">
-                                        <div class="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0"></div>
-                                        ${escapeHtml(item.name)}
-                                        ${getAssetClassBadgeHtml(item.classification)}
-                                        ${item.maturity ? `<span class="text-[10px] bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded font-bold whitespace-nowrap"><i class="fas fa-lock text-[9px]"></i> 묶인 돈 (${escapeHtml(item.maturity)})</span>` : ''}
-                                    </span>
-                                    <div class="text-right flex flex-col items-end">
-                                        <span class="font-medium ${item.amount < 0 ? 'text-red-500' : 'text-gray-700'}">${item.amount.toLocaleString()}원</span>
-                                        ${item.shares ? `<span class="text-[10px] text-gray-400 font-bold tracking-tight">${item.shares.toLocaleString()}주 | 단가 ${Math.floor(item.amount / item.shares).toLocaleString()}원</span>` : ''}
-                                    </div>
-                                </div>
-                            `).join('') : '<p class="text-sm text-gray-400 text-center py-2">등록된 내역이 없습니다.</p>'}
+                            ${groupData.items.length > 0 ? (isInvestGroup ? renderInvestmentAccountRows() : groupData.items.map(renderPortfolioItemRow).join('')) : '<p class="text-sm text-gray-400 text-center py-2">등록된 내역이 없습니다.</p>'}
                         </div>
                     </div>
                 </div>`;
@@ -138,8 +169,7 @@
         const total = groupData.items.reduce((acc, curr) => acc + curr.amount, 0);
         document.getElementById('invest-detail-total').textContent = total.toLocaleString() + '원';
 
-        // 종목별 전략 태그 부여. DB 값이 있으면 우선 사용하고, 없으면 기존 규칙으로 추론한다.
-        const processedItems = groupData.items.map(item => {
+        const buildProcessedInvestItem = (item, sourceGroupName = groupName) => {
             const strategyTag = inferStrategyTag(item);
             const strategyMeta = getStrategyMeta(strategyTag);
             const marketPrice = getMarketPriceForTicker(item.ticker);
@@ -152,6 +182,7 @@
             const returnPct = hasComparablePrice && investedCost > 0 ? (unrealizedPnl / investedCost) * 100 : null;
             return {
                 ...item,
+                groupName: sourceGroupName,
                 strategyTag,
                 strategy: strategyMeta.label,
                 strategyColor: strategyMeta.color,
@@ -162,7 +193,10 @@
                 returnPct,
                 hasComparablePrice
             };
-        });
+        };
+
+        // 종목별 전략 태그 부여. DB 값이 있으면 우선 사용하고, 없으면 기존 규칙으로 추론한다.
+        const processedItems = groupData.items.map(item => buildProcessedInvestItem(item, groupName));
         activeInvestProcessedItems = processedItems;
         activeInvestTotal = total;
 
@@ -200,9 +234,20 @@
         else if (cashRatio >= 10) { mddStatus.textContent = "보통 (적정 방어력)"; mddStatus.className = "text-[10px] font-bold text-yellow-500 mb-1"; }
         else { mddStatus.textContent = "위험 (현금 부족)"; mddStatus.className = "text-[10px] font-bold text-red-500 mb-1"; }
 
+        const holdingEditorItems = Object.entries(dynamicPortfolioData || {}).flatMap(([sourceGroupName, group]) => {
+            const sourceText = String(sourceGroupName || '').toLowerCase();
+            return (group.items || [])
+                .map(item => buildProcessedInvestItem(item, sourceGroupName))
+                .filter(item => {
+                    const assetType = item.classification?.assetType || '';
+                    const hasShares = Number(item.shares || 0) > 0;
+                    return hasShares || assetType === 'stock' || assetType === 'etf' || assetType === 'pension' || sourceText.includes('투자') || sourceText.includes('연금');
+                });
+        });
+
         renderQuantStrategyStructure(processedItems, total);
         renderMarketSyncStatus(processedItems);
-        renderQuantHoldingEditor(processedItems);
+        renderQuantHoldingEditor(holdingEditorItems);
         renderStrategyPerformance(processedItems);
 
         // 3. 종목 상세 카드 렌더링 (2단 아코디언 UI)

@@ -32,25 +32,28 @@
             const classification = item.classification || classifyPortfolioItem(item.groupName, item);
             if (Number(item.shares || 0) > 0) return false;
             if (classification.assetType === 'debt') return true;
+            if (classification.assetType === 'pension' || includesAny(groupText, ['연금', '퇴직', 'irp'])) return true;
             if (classification.assetType !== 'account') return false;
-            if (includesAny(groupText, ['투자', '주식', 'etf', '펀드', '연금', 'irp'])) return false;
+            if (includesAny(groupText, ['투자', '주식', 'etf', '펀드'])) return false;
             return true;
         };
         const getEditableBucket = (item) => {
             const groupText = String(item.groupName || '').toLowerCase();
             const classification = item.classification || classifyPortfolioItem(item.groupName, item);
             if (classification.assetType === 'debt' || includesAny(groupText, ['부채', '대출', '마이너스'])) return '부채';
+            if (classification.assetType === 'pension' || includesAny(groupText, ['연금', '퇴직', 'irp'])) return '연금';
             if (includesAny(groupText, ['안전', '예금', '적금', 'cma', '파킹', 'rp', '발행어음', '채권'])) return '안전';
             return '현금';
         };
         const bucketMeta = {
             '현금': { icon: 'fa-wallet', color: 'blue', label: '현금 / 계좌' },
             '안전': { icon: 'fa-shield-alt', color: 'emerald', label: '안전자산' },
+            '연금': { icon: 'fa-piggy-bank', color: 'pink', label: '연금' },
             '부채': { icon: 'fa-credit-card', color: 'red', label: '부채' }
         };
 
-        // 1. 편집 대상은 현금/안전/부채로만 묶고, 투자자산은 Quant로 안내한다.
-        const editBuckets = { '현금': [], '안전': [], '부채': [] };
+        // 1. 편집 대상은 현금/안전/연금/부채로 묶고, 투자 보유정보는 별도 섹션에서 관리한다.
+        const editBuckets = { '현금': [], '안전': [], '연금': [], '부채': [] };
         const quantItems = [];
         for (let i = 1; i < workingPortfolioData.length; i++) {
             const row = workingPortfolioData[i];
@@ -84,7 +87,6 @@
             const amount = getAmountNumber(item.amount);
             return sum + (getEditableBucket(item) === '부채' ? -Math.abs(amount) : amount);
         }, 0);
-        const quantTotal = quantItems.reduce((sum, item) => sum + getAmountNumber(item.amount), 0);
         const stockLikeCount = quantItems.filter(item => Number(item.shares || 0) > 0 || ['stock', 'etf'].includes(item.classification?.assetType)).length;
 
         container.insertAdjacentHTML('beforeend', `
@@ -92,7 +94,7 @@
                 <div class="px-3 md:px-4 py-2.5 bg-indigo-50/60 border-b border-indigo-100 flex items-center justify-between gap-3">
                     <div class="min-w-0">
                         <h4 class="text-sm font-bold text-gray-900">빠른 금액 수정</h4>
-                        <p class="text-[10px] text-gray-500 truncate">현금/안전/부채만 입력, 투자 종목은 Quant에서 수정</p>
+                        <p class="text-[10px] text-gray-500 truncate">현금/안전/연금/부채 금액을 입력</p>
                     </div>
                     <div class="text-right shrink-0">
                         <p class="text-[9px] font-bold text-indigo-500">편집 순액</p>
@@ -102,26 +104,27 @@
                 <div class="grid grid-cols-4 divide-x divide-indigo-50 text-center">
                     <div class="px-2 py-2"><p class="text-[9px] text-gray-400 font-bold">현금</p><p class="text-xs font-bold text-blue-700">${editBuckets['현금'].length}</p></div>
                     <div class="px-2 py-2"><p class="text-[9px] text-gray-400 font-bold">안전</p><p class="text-xs font-bold text-emerald-700">${editBuckets['안전'].length}</p></div>
+                    <div class="px-2 py-2"><p class="text-[9px] text-gray-400 font-bold">연금</p><p class="text-xs font-bold text-pink-700">${editBuckets['연금'].length}</p></div>
                     <div class="px-2 py-2"><p class="text-[9px] text-gray-400 font-bold">부채</p><p class="text-xs font-bold text-red-700">${editBuckets['부채'].length}</p></div>
-                    <div class="px-2 py-2"><p class="text-[9px] text-gray-400 font-bold">Quant</p><p class="text-xs font-bold text-purple-700">${stockLikeCount}</p></div>
                 </div>
             </div>
         `);
 
-        ['현금', '안전', '부채'].forEach((bucketName) => {
+        ['현금', '안전', '연금', '부채'].forEach((bucketName) => {
             const items = editBuckets[bucketName];
             const meta = bucketMeta[bucketName];
             const color = meta.color;
             const bucketTotal = items.reduce((sum, item) => sum + getAmountNumber(item.amount), 0);
-            const borderClass = color === 'red' ? 'border-red-100' : (color === 'emerald' ? 'border-emerald-100' : 'border-blue-100');
-            const bgClass = color === 'red' ? 'bg-red-50/50' : (color === 'emerald' ? 'bg-emerald-50/50' : 'bg-blue-50/50');
-            const iconClass = color === 'red' ? 'text-red-600 bg-red-100' : (color === 'emerald' ? 'text-emerald-600 bg-emerald-100' : 'text-blue-600 bg-blue-100');
-            const buttonClass = color === 'red' ? 'text-red-600 bg-red-50 hover:bg-red-100 border-red-100' : (color === 'emerald' ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border-emerald-100' : 'text-blue-600 bg-blue-50 hover:bg-blue-100 border-blue-100');
+            const borderClass = color === 'red' ? 'border-red-100' : (color === 'pink' ? 'border-pink-100' : (color === 'emerald' ? 'border-emerald-100' : 'border-blue-100'));
+            const bgClass = color === 'red' ? 'bg-red-50/50' : (color === 'pink' ? 'bg-pink-50/50' : (color === 'emerald' ? 'bg-emerald-50/50' : 'bg-blue-50/50'));
+            const iconClass = color === 'red' ? 'text-red-600 bg-red-100' : (color === 'pink' ? 'text-pink-600 bg-pink-100' : (color === 'emerald' ? 'text-emerald-600 bg-emerald-100' : 'text-blue-600 bg-blue-100'));
+            const buttonClass = color === 'red' ? 'text-red-600 bg-red-50 hover:bg-red-100 border-red-100' : (color === 'pink' ? 'text-pink-600 bg-pink-50 hover:bg-pink-100 border-pink-100' : (color === 'emerald' ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border-emerald-100' : 'text-blue-600 bg-blue-50 hover:bg-blue-100 border-blue-100'));
             const jsGroupName = escapeJsString(bucketName);
+            const sectionId = `pf-edit-section-${bucketName}`;
 
             let cardHtml = `
                 <div class="bg-white rounded-xl shadow-sm border ${borderClass} overflow-hidden">
-                    <div class="px-3 py-2 border-b ${borderClass} flex items-center justify-between gap-3 ${bgClass}">
+                    <button type="button" onclick="togglePortfolioEditSection('${sectionId}', this)" class="w-full px-3 py-2 border-b ${borderClass} flex items-center justify-between gap-3 ${bgClass} text-left">
                         <div class="flex items-center gap-2 min-w-0">
                             <div class="w-6 h-6 rounded-full ${iconClass} flex items-center justify-center"><i class="fas ${meta.icon} text-[10px]"></i></div>
                             <div class="min-w-0">
@@ -129,9 +132,12 @@
                                 <p class="text-[9px] text-gray-400">${items.length}개</p>
                             </div>
                         </div>
-                        <p class="text-xs font-black text-gray-800 whitespace-nowrap">${bucketTotal.toLocaleString()}원</p>
-                    </div>
-                    <div class="p-2.5 space-y-1.5">
+                        <div class="flex items-center gap-2 shrink-0">
+                            <p class="text-xs font-black text-gray-800 whitespace-nowrap">${bucketTotal.toLocaleString()}원</p>
+                            <i class="fas fa-chevron-down text-[10px] text-gray-400 transition-transform"></i>
+                        </div>
+                    </button>
+                    <div id="${sectionId}" class="hidden p-2.5 space-y-1.5">
             `;
 
             if (items.length === 0) {
@@ -166,36 +172,6 @@
             container.insertAdjacentHTML('beforeend', cardHtml);
         });
 
-        container.insertAdjacentHTML('beforeend', `
-            <div class="bg-white rounded-xl shadow-sm border border-purple-100 overflow-hidden">
-                <div class="px-3 py-2 border-b border-purple-100 bg-purple-50/60 flex items-center justify-between gap-3">
-                    <div class="min-w-0">
-                        <h4 class="text-xs md:text-sm font-bold text-gray-800">투자자산은 Quant에서 관리</h4>
-                        <p class="text-[10px] text-gray-500 mt-0.5">티커/수량/평단은 투자 상세에서 수정</p>
-                    </div>
-                    <div class="text-right shrink-0">
-                        <p class="text-[9px] font-bold text-purple-500">${stockLikeCount}개 종목</p>
-                        <p class="text-xs font-black text-purple-800">${quantTotal.toLocaleString()}원</p>
-                    </div>
-                </div>
-                <div class="p-2.5 space-y-1.5 max-h-36 overflow-y-auto scrollbar-hide">
-                    ${quantItems.length ? quantItems.map(item => {
-                        const amount = getAmountNumber(item.amount);
-                        const meta = getAssetClassMeta(item.classification?.assetType);
-                        return `
-                            <div class="flex items-center justify-between gap-3 rounded-lg bg-gray-50 border border-gray-100 px-2.5 py-1.5">
-                                <div class="min-w-0">
-                                    <p class="text-[11px] md:text-xs font-bold text-gray-800 truncate">${escapeHtml(item.name || '투자자산')}</p>
-                                    <p class="text-[10px] text-gray-400 truncate">${escapeHtml(meta.shortLabel)}${item.ticker ? ` · ${escapeHtml(item.ticker)}` : ''}${item.shares ? ` · ${Number(item.shares).toLocaleString()}주` : ''}</p>
-                                </div>
-                                <p class="text-xs font-bold text-gray-500 whitespace-nowrap">${amount.toLocaleString()}원</p>
-                            </div>
-                        `;
-                    }).join('') : '<p class="text-xs text-gray-400 p-2">투자/연금 항목이 없습니다.</p>'}
-                </div>
-            </div>
-        `);
-
         calculateExpectedTotal(); // 초기 계산
     }
 
@@ -203,7 +179,7 @@
         const rowLen = workingPortfolioData.length > 0 ? workingPortfolioData[0].length : 5;
         const newRow = new Array(rowLen).fill('');
         newRow[0] = groupName;
-        newRow[1] = groupName === '부채' ? '새 부채' : (groupName === '안전' ? '새 안전자산' : '새 계좌');
+        newRow[1] = groupName === '부채' ? '새 부채' : (groupName === '연금' ? '새 연금' : (groupName === '안전' ? '새 안전자산' : '새 계좌'));
         newRow[2] = "KRW";
         newRow[4] = 0;
         workingPortfolioData.push(newRow);
@@ -213,6 +189,17 @@
     window.removePortfolioItem = function(index) {
         workingPortfolioData.splice(index, 1);
         renderPortfolioEditForm();
+    };
+
+    window.togglePortfolioEditSection = function(sectionId, buttonEl) {
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+        const willOpen = section.classList.contains('hidden');
+        section.classList.toggle('hidden', !willOpen);
+        const icon = buttonEl?.querySelector('.fa-chevron-down');
+        if (icon) icon.style.transform = willOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+        const label = buttonEl?.querySelector('[data-toggle-label]');
+        if (label) label.textContent = willOpen ? (label.dataset.openLabel || '접기') : (label.dataset.closedLabel || '펼치기');
     };
 
     window.updatePortfolioName = function(index, val) {
@@ -237,6 +224,11 @@
         workingPortfolioData[index][9] = String(val || '').trim().toUpperCase();
     };
 
+    window.updatePortfolioShares = function(index, val) {
+        if (!workingPortfolioData[index]) return;
+        workingPortfolioData[index][5] = String(val || '').replace(/[^0-9.-]/g, '');
+    };
+
     window.updatePortfolioStrategy = function(index, val) {
         if (!workingPortfolioData[index]) return;
         workingPortfolioData[index][13] = INVEST_STRATEGY_META[val] ? val : '';
@@ -245,6 +237,11 @@
     window.updatePortfolioAvgBuyPrice = function(index, val) {
         if (!workingPortfolioData[index]) return;
         workingPortfolioData[index][14] = String(val || '').replace(/[^0-9.-]/g, '');
+    };
+
+    window.updatePortfolioAccountName = function(index, val) {
+        if (!workingPortfolioData[index]) return;
+        workingPortfolioData[index][15] = String(val || '').trim();
     };
 
     window.formatNumberInput = function(el) {
@@ -313,6 +310,16 @@
                 const rawVal = String(inputEl.value).replace(/[^0-9.-]/g, '');
                 workingPortfolioData[i][4] = rawVal ? Math.round(parseFloat(rawVal)) : 0;
             }
+            const tickerEl = document.getElementById(`pf-quant-ticker-${i}`);
+            if (tickerEl) workingPortfolioData[i][9] = String(tickerEl.value || '').trim().toUpperCase();
+            const sharesEl = document.getElementById(`pf-quant-shares-${i}`);
+            if (sharesEl) workingPortfolioData[i][5] = String(sharesEl.value || '').replace(/[^0-9.-]/g, '');
+            const avgEl = document.getElementById(`pf-quant-avg-${i}`);
+            if (avgEl) workingPortfolioData[i][14] = String(avgEl.value || '').replace(/[^0-9.-]/g, '');
+            const strategyEl = document.getElementById(`pf-quant-strategy-${i}`);
+            if (strategyEl) workingPortfolioData[i][13] = INVEST_STRATEGY_META[strategyEl.value] ? strategyEl.value : '';
+            const accountEl = document.getElementById(`pf-quant-account-${i}`);
+            if (accountEl) workingPortfolioData[i][15] = String(accountEl.value || '').trim();
         }
 
         const btn = document.getElementById('btn-submit-pf');

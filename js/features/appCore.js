@@ -55,6 +55,7 @@
     let activeViewId = 'dashboard-view';
     let activeInvestGroupName = '';
     let activeInvestProcessedItems = [];
+    let activeQuantHoldingItems = [];
     let activeInvestTotal = 0;
     let marketPriceMap = {};
 
