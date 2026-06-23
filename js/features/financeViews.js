@@ -411,6 +411,19 @@
         return keys.length ? keys : getMonthKeys();
     }
 
+    const REAL_ESTATE_ANALYSIS_STORAGE_KEY = 'smartbook_v2_realestate_analysis_v1';
+    const REAL_ESTATE_ANALYSIS_DEFAULTS = {
+        targetName: '고양창릉 S2/S3/S4',
+        targetBudget: 800000000,
+        annualIncome: null,
+        existingMonthlyDebt: 0,
+        mortgageRatePct: 4.5,
+        stressRatePct: 1.5,
+        termYears: 30,
+        dsrLimitPct: 40
+    };
+    let realEstateAnalysisOverrides = null;
+
     function getYearToDateCashFlowStats(referenceMonthKey) {
         const year = String(referenceMonthKey || getLatestMonthKey()).slice(0, 4);
         return getYearMonthKeys(referenceMonthKey)
@@ -420,6 +433,290 @@
                 acc.totalExpense += stats.totalExpense;
                 return acc;
             }, { year, totalIncome: 0, totalExpense: 0 });
+    }
+
+    function parseAssumptionNumber(value, fallback = 0) {
+        const number = Number(String(value ?? '').replace(/[^0-9.-]/g, ''));
+        return Number.isFinite(number) ? number : fallback;
+    }
+
+    function wonToManwon(value) {
+        return Math.round((Number(value) || 0) / 10000);
+    }
+
+    function manwonToWon(value) {
+        return Math.max(0, Math.round(parseAssumptionNumber(value) * 10000));
+    }
+
+    function clampPct(value, fallback) {
+        const number = parseAssumptionNumber(value, fallback);
+        return Math.max(0, Math.min(100, Number.isFinite(number) ? number : fallback));
+    }
+
+    function getYearCashFlowRunRate(referenceMonthKey) {
+        const monthKey = referenceMonthKey || getLatestMonthKey();
+        const year = String(monthKey || '').slice(0, 4);
+        const keys = getYearMonthKeys(monthKey)
+            .filter(key => key.startsWith(`${year}-`) && (!monthKey || key <= monthKey));
+
+        const stats = keys.reduce((acc, key) => {
+            const monthStats = getCashFlowStats(monthlyDB[key]?.transactions || []);
+            acc.totalIncome += monthStats.totalIncome;
+            acc.totalExpense += monthStats.totalExpense;
+            return acc;
+        }, { totalIncome: 0, totalExpense: 0 });
+
+        const observedMonths = Math.max(1, keys.length || Number(String(monthKey).slice(5, 7)) || 1);
+        const avgMonthlyIncome = stats.totalIncome / observedMonths;
+        const avgMonthlySaving = (stats.totalIncome - stats.totalExpense) / observedMonths;
+
+        return {
+            year,
+            observedMonths,
+            totalIncome: stats.totalIncome,
+            totalExpense: stats.totalExpense,
+            avgMonthlyIncome,
+            avgMonthlySaving,
+            annualizedIncome: Math.round(avgMonthlyIncome * 12)
+        };
+    }
+
+    function loadRealEstateAnalysisOverrides() {
+        if (realEstateAnalysisOverrides) return realEstateAnalysisOverrides;
+        try {
+            realEstateAnalysisOverrides = JSON.parse(localStorage.getItem(REAL_ESTATE_ANALYSIS_STORAGE_KEY) || '{}') || {};
+        } catch (error) {
+            realEstateAnalysisOverrides = {};
+        }
+        return realEstateAnalysisOverrides;
+    }
+
+    function getRealEstateAnalysisAssumptions() {
+        const overrides = loadRealEstateAnalysisOverrides();
+        const runRate = getYearCashFlowRunRate(currentMonthKey);
+        const annualIncome = overrides.annualIncome ?? REAL_ESTATE_ANALYSIS_DEFAULTS.annualIncome ?? runRate.annualizedIncome;
+
+        return {
+            targetName: String(overrides.targetName || REAL_ESTATE_ANALYSIS_DEFAULTS.targetName).trim() || REAL_ESTATE_ANALYSIS_DEFAULTS.targetName,
+            targetBudget: Math.max(0, Number(overrides.targetBudget ?? REAL_ESTATE_ANALYSIS_DEFAULTS.targetBudget) || 0),
+            annualIncome: Math.max(0, Number(annualIncome) || 0),
+            existingMonthlyDebt: Math.max(0, Number(overrides.existingMonthlyDebt ?? REAL_ESTATE_ANALYSIS_DEFAULTS.existingMonthlyDebt) || 0),
+            mortgageRatePct: Math.max(0, Number(overrides.mortgageRatePct ?? REAL_ESTATE_ANALYSIS_DEFAULTS.mortgageRatePct) || 0),
+            stressRatePct: Math.max(0, Number(overrides.stressRatePct ?? REAL_ESTATE_ANALYSIS_DEFAULTS.stressRatePct) || 0),
+            termYears: Math.max(1, Number(overrides.termYears ?? REAL_ESTATE_ANALYSIS_DEFAULTS.termYears) || 30),
+            dsrLimitPct: clampPct(overrides.dsrLimitPct ?? REAL_ESTATE_ANALYSIS_DEFAULTS.dsrLimitPct, REAL_ESTATE_ANALYSIS_DEFAULTS.dsrLimitPct)
+        };
+    }
+
+    function saveRealEstateAnalysisAssumptions(assumptions) {
+        realEstateAnalysisOverrides = { ...assumptions };
+        localStorage.setItem(REAL_ESTATE_ANALYSIS_STORAGE_KEY, JSON.stringify(realEstateAnalysisOverrides));
+    }
+
+    function readRealEstateAnalysisForm() {
+        return {
+            targetName: String(document.getElementById('re-input-target-name')?.value || REAL_ESTATE_ANALYSIS_DEFAULTS.targetName).trim(),
+            targetBudget: manwonToWon(document.getElementById('re-input-target-budget')?.value),
+            annualIncome: manwonToWon(document.getElementById('re-input-annual-income')?.value),
+            existingMonthlyDebt: manwonToWon(document.getElementById('re-input-existing-debt')?.value),
+            mortgageRatePct: Math.max(0, parseAssumptionNumber(document.getElementById('re-input-rate')?.value, REAL_ESTATE_ANALYSIS_DEFAULTS.mortgageRatePct)),
+            stressRatePct: Math.max(0, parseAssumptionNumber(document.getElementById('re-input-stress-rate')?.value, REAL_ESTATE_ANALYSIS_DEFAULTS.stressRatePct)),
+            termYears: Math.max(1, parseAssumptionNumber(document.getElementById('re-input-term-years')?.value, REAL_ESTATE_ANALYSIS_DEFAULTS.termYears)),
+            dsrLimitPct: clampPct(document.getElementById('re-input-dsr-limit')?.value, REAL_ESTATE_ANALYSIS_DEFAULTS.dsrLimitPct)
+        };
+    }
+
+    function bindRealEstateAnalysisControls() {
+        const ids = [
+            're-input-target-name',
+            're-input-target-budget',
+            're-input-annual-income',
+            're-input-existing-debt',
+            're-input-rate',
+            're-input-stress-rate',
+            're-input-term-years',
+            're-input-dsr-limit'
+        ];
+        ids.forEach(id => {
+            const input = document.getElementById(id);
+            if (!input) return;
+            const handleInput = () => {
+                saveRealEstateAnalysisAssumptions(readRealEstateAnalysisForm());
+                renderRealEstateAnalysis();
+                if (typeof updateFinanceRoadmap === 'function') updateFinanceRoadmap(monthlyDB[currentMonthKey]?.asset || 0);
+            };
+            input.oninput = handleInput;
+            input.onchange = handleInput;
+        });
+
+        const settingsBtn = document.getElementById('re-analysis-settings');
+        if (settingsBtn) settingsBtn.onclick = openRealEstateAssumptionModal;
+
+        const resetBtn = document.getElementById('re-analysis-reset');
+        if (resetBtn) {
+            resetBtn.onclick = () => {
+                realEstateAnalysisOverrides = {};
+                localStorage.removeItem(REAL_ESTATE_ANALYSIS_STORAGE_KEY);
+                renderRealEstateAnalysis();
+                if (typeof updateFinanceRoadmap === 'function') updateFinanceRoadmap(monthlyDB[currentMonthKey]?.asset || 0);
+                showToast('청약 자금 분석 가정을 기본값으로 되돌렸습니다.', 'info');
+            };
+        }
+    }
+
+    function getAnnuityFactor(annualRatePct, termYears) {
+        const months = Math.max(1, Math.round((Number(termYears) || 1) * 12));
+        const monthlyRate = Math.max(0, Number(annualRatePct) || 0) / 100 / 12;
+        if (monthlyRate === 0) return 1 / months;
+        return monthlyRate * Math.pow(1 + monthlyRate, months) / (Math.pow(1 + monthlyRate, months) - 1);
+    }
+
+    function calculateMortgageMonthlyPayment(principal, annualRatePct, termYears) {
+        const amount = Math.max(0, Number(principal) || 0);
+        if (!amount) return 0;
+        return amount * getAnnuityFactor(annualRatePct, termYears);
+    }
+
+    function getRealEstateDebtCapacity(assumptions) {
+        const stressedRatePct = assumptions.mortgageRatePct + assumptions.stressRatePct;
+        const monthlyDsrCapacity = assumptions.annualIncome > 0
+            ? Math.max(0, (assumptions.annualIncome * (assumptions.dsrLimitPct / 100) / 12) - assumptions.existingMonthlyDebt)
+            : 0;
+        const maxLoanByDsr = monthlyDsrCapacity > 0
+            ? monthlyDsrCapacity / getAnnuityFactor(stressedRatePct, assumptions.termYears)
+            : 0;
+        return { stressedRatePct, monthlyDsrCapacity, maxLoanByDsr };
+    }
+
+    function getRealEstateAnalysisStatus(model) {
+        if (!model.assumptions.annualIncome) {
+            return { label: '소득 가정 필요', className: 'bg-gray-100 text-gray-600 border-gray-200', icon: 'fa-circle-info' };
+        }
+        if (model.loanCapacityGap > 0) {
+            return { label: 'DSR 한도 내 대출 부족', className: 'bg-rose-50 text-rose-600 border-rose-100', icon: 'fa-triangle-exclamation' };
+        }
+        if (model.equityShortfall > 0) {
+            return { label: '자기자금 보강 필요', className: 'bg-amber-50 text-amber-700 border-amber-100', icon: 'fa-wallet' };
+        }
+        return { label: '가정상 실행 가능', className: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: 'fa-check-circle' };
+    }
+
+    function getRealEstateAnalysisModel() {
+        const assumptions = getRealEstateAnalysisAssumptions();
+        const funding = getRealEstateFundingStatus();
+        const runRate = getYearCashFlowRunRate(currentMonthKey);
+        const debtCapacity = getRealEstateDebtCapacity(assumptions);
+        const plannedLoan = funding.expectedLoan;
+        const monthlyPayment = calculateMortgageMonthlyPayment(plannedLoan, assumptions.mortgageRatePct, assumptions.termYears);
+        const stressedMonthlyPayment = calculateMortgageMonthlyPayment(plannedLoan, debtCapacity.stressedRatePct, assumptions.termYears);
+        const annualDebtService = (stressedMonthlyPayment + assumptions.existingMonthlyDebt) * 12;
+        const dsrPct = assumptions.annualIncome > 0 ? (annualDebtService / assumptions.annualIncome) * 100 : 0;
+        const requiredEquity = Math.max(0, assumptions.targetBudget - plannedLoan);
+        const equityShortfall = Math.max(0, requiredEquity - funding.cashAndSafe);
+        const totalShortfall = Math.max(0, assumptions.targetBudget - funding.totalReady);
+        const loanCapacityGap = Math.max(0, funding.fundingGapBeforeLoan - debtCapacity.maxLoanByDsr);
+        const monthsToReady = equityShortfall > 0 && runRate.avgMonthlySaving > 0
+            ? Math.ceil(equityShortfall / runRate.avgMonthlySaving)
+            : null;
+
+        const model = {
+            assumptions,
+            funding,
+            runRate,
+            plannedLoan,
+            stressedRatePct: debtCapacity.stressedRatePct,
+            monthlyPayment,
+            stressedMonthlyPayment,
+            annualDebtService,
+            dsrPct,
+            monthlyDsrCapacity: debtCapacity.monthlyDsrCapacity,
+            maxLoanByDsr: debtCapacity.maxLoanByDsr,
+            loanCapacityGap,
+            requiredEquity,
+            equityShortfall,
+            totalShortfall,
+            monthsToReady
+        };
+        return { ...model, status: getRealEstateAnalysisStatus(model) };
+    }
+
+    function setInputValue(id, value) {
+        const input = document.getElementById(id);
+        if (input && document.activeElement !== input) input.value = value;
+    }
+
+    function setElementText(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+    }
+
+    function setElementHtml(id, html) {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = html;
+    }
+
+    function setElementWidth(id, percentage) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.width = `${Math.max(0, Math.min(100, Number(percentage) || 0))}%`;
+    }
+
+    function renderRealEstateAnalysis() {
+        const model = getRealEstateAnalysisModel();
+        const { assumptions, funding, runRate, status } = model;
+        bindRealEstateAnalysisControls();
+
+        setInputValue('re-input-target-name', assumptions.targetName);
+        setInputValue('re-input-target-budget', wonToManwon(assumptions.targetBudget));
+        setInputValue('re-input-annual-income', wonToManwon(assumptions.annualIncome));
+        setInputValue('re-input-existing-debt', wonToManwon(assumptions.existingMonthlyDebt));
+        setInputValue('re-input-rate', assumptions.mortgageRatePct);
+        setInputValue('re-input-stress-rate', assumptions.stressRatePct);
+        setInputValue('re-input-term-years', assumptions.termYears);
+        setInputValue('re-input-dsr-limit', assumptions.dsrLimitPct);
+
+        setElementText('re-total-ready', formatWon(funding.totalReady));
+        setElementText('re-target-budget-label', `/ 목표 ${formatWon(assumptions.targetBudget)}`);
+        setElementWidth('re-progress-saved', funding.savedPct);
+        setElementText('re-progress-saved', funding.savedPct > 5 ? '모은돈' : '');
+        setElementWidth('re-progress-loan', Math.min(100 - funding.savedPct, funding.loanPct));
+        setElementText('re-saved-text', `모은돈: ${formatWon(funding.cashAndSafe)}`);
+        setElementText('re-progress-text', `총 ${funding.totalPct.toFixed(1)}% 달성`);
+        setElementText('re-assumption-text', `DSR ${assumptions.dsrLimitPct.toFixed(0)}% 기준 자동대출`);
+
+        setElementText('re-analysis-target-name', assumptions.targetName);
+        setElementText('re-analysis-target-budget', formatWon(assumptions.targetBudget));
+        setElementText('re-analysis-planned-loan', model.plannedLoan > 0 ? formatWon(model.plannedLoan) : '대출 여력 없음');
+        setElementText('re-analysis-monthly-payment', formatWon(model.monthlyPayment));
+        setElementText('re-analysis-stressed-payment', formatWon(model.stressedMonthlyPayment));
+        setElementText('re-analysis-max-loan', model.maxLoanByDsr > 0 ? formatWon(model.maxLoanByDsr) : '소득 가정 필요');
+        setElementText('re-analysis-dsr', assumptions.annualIncome > 0 ? `${model.dsrPct.toFixed(1)}%` : '미입력');
+        setElementWidth('re-analysis-dsr-bar', assumptions.annualIncome > 0 ? (model.dsrPct / Math.max(1, assumptions.dsrLimitPct)) * 100 : 0);
+
+        const dsrBar = document.getElementById('re-analysis-dsr-bar');
+        if (dsrBar) {
+            dsrBar.className = `h-full transition-all duration-500 ${model.dsrPct > assumptions.dsrLimitPct ? 'bg-rose-500' : (model.dsrPct > assumptions.dsrLimitPct * 0.85 ? 'bg-amber-500' : 'bg-emerald-500')}`;
+        }
+
+        setElementText('re-analysis-income-meta', `연소득 가정 ${formatWon(assumptions.annualIncome)} · 기존 월 원리금 ${formatWon(assumptions.existingMonthlyDebt)}`);
+
+        setElementHtml('re-analysis-status', `<span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] md:text-xs font-bold ${status.className}"><i class="fas ${status.icon}"></i>${status.label}</span>`);
+    }
+
+    function openRealEstateAssumptionModal() {
+        renderRealEstateAnalysis();
+        document.getElementById('re-analysis-modal')?.classList.remove('hidden');
+    }
+
+    function closeRealEstateAssumptionModal() {
+        document.getElementById('re-analysis-modal')?.classList.add('hidden');
+    }
+
+    function applyRealEstateAssumptionModal() {
+        saveRealEstateAnalysisAssumptions(readRealEstateAnalysisForm());
+        renderRealEstateAnalysis();
+        closeRealEstateAssumptionModal();
+        showToast('청약 자금 분석 가정을 적용했습니다.', 'info');
     }
 
     function renderFinanceSummary() {
@@ -652,12 +949,25 @@
             });
         }
 
-        const targetBudget = 800000000; // 8억
-        const expectedLoan = 300000000; // 3억 고정
+        const assumptions = getRealEstateAnalysisAssumptions();
+        const debtCapacity = getRealEstateDebtCapacity(assumptions);
+        const targetBudget = assumptions.targetBudget;
+        const fundingGapBeforeLoan = Math.max(0, targetBudget - cashAndSafe);
+        const expectedLoan = Math.min(fundingGapBeforeLoan, debtCapacity.maxLoanByDsr);
         const totalReady = cashAndSafe + expectedLoan;
-        const savedPct = (cashAndSafe / targetBudget) * 100;
-        const loanPct = (expectedLoan / targetBudget) * 100;
+        const savedPct = targetBudget > 0 ? (cashAndSafe / targetBudget) * 100 : 0;
+        const loanPct = targetBudget > 0 ? (expectedLoan / targetBudget) * 100 : 0;
         const totalPct = Math.min(100, Math.max(0, savedPct + loanPct));
 
-        return { cashAndSafe, targetBudget, expectedLoan, totalReady, savedPct, loanPct, totalPct };
+        return {
+            cashAndSafe,
+            targetBudget,
+            expectedLoan,
+            totalReady,
+            savedPct,
+            loanPct,
+            totalPct,
+            fundingGapBeforeLoan,
+            maxLoanByDsr: debtCapacity.maxLoanByDsr
+        };
     }

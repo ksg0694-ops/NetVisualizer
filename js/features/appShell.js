@@ -41,6 +41,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         'weekly-timetable-view': document.getElementById('weekly-timetable-view'),
         'routine-checklist-view': document.getElementById('routine-checklist-view'),
         'vacation-plan-view': document.getElementById('vacation-plan-view'),
+        'health-view': document.getElementById('health-view'),
         'stats-view': document.getElementById('stats-view'), 'asset-view': document.getElementById('asset-view'),
         'realestate-view': document.getElementById('realestate-view'), 'invest-detail-view': document.getElementById('invest-detail-view')
     };
@@ -52,6 +53,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         'life-view': { label: 'Life Goal', title: 'Life Cockpit' },
         'weekly-timetable-view': { label: 'Life Tool', title: 'Weekly Timetable' },
         'vacation-plan-view': { label: 'Life Tool', title: 'Vacation Plan' },
+        'health-view': { label: 'Life Tool', title: 'Health' },
         'portfolio-view': { label: 'Finance Tool', title: '포트폴리오' },
         'stats-view': { label: 'Finance Tool', title: '현금 흐름' },
         'asset-view': { label: 'Finance Tool', title: '장기 자산' },
@@ -60,7 +62,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     };
 
     const financeToolViews = new Set(['portfolio-view', 'stats-view', 'asset-view', 'realestate-view', 'invest-detail-view']);
-    const lifeToolViews = new Set(['weekly-timetable-view', 'vacation-plan-view']);
+    const lifeToolViews = new Set(['weekly-timetable-view', 'vacation-plan-view', 'health-view']);
     const mobileToolNav = document.getElementById('mobile-tool-nav');
     const mobileToolGroups = {
         'dashboard-view': [
@@ -74,6 +76,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         ],
         'life-view': [
             { target: 'weekly-timetable-view', icon: 'fa-calendar-week', label: '주간' },
+            { target: 'health-view', icon: 'fa-heart-pulse', label: '건강' },
             { target: 'vacation-plan-view', icon: 'fa-plane-departure', label: '휴가' }
         ]
     };
@@ -106,12 +109,14 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         } else if (activeGoalTarget === 'life-view') {
             toolItems = [
                 { target: 'weekly-timetable-view', icon: 'fa-calendar-week', label: '주간' },
+                { target: 'health-view', icon: 'fa-heart-pulse', label: '건강' },
                 { target: 'vacation-plan-view', icon: 'fa-plane-departure', label: '휴가' }
             ];
         }
         if (activeGoalTarget === 'life-view') {
             toolItems = [
                 { target: 'weekly-timetable-view', icon: 'fa-calendar-week', label: '주간' },
+                { target: 'health-view', icon: 'fa-heart-pulse', label: '건강' },
                 { target: 'vacation-plan-view', icon: 'fa-plane-departure', label: '휴가' }
             ];
         }
@@ -215,6 +220,10 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
             else if (targetId === 'vacation-plan-view') {
                 window.VacationPlanFeature?.bindControls();
                 window.VacationPlanFeature?.render();
+            }
+            else if (targetId === 'health-view') {
+                window.HealthTrackerFeature?.bindControls();
+                window.HealthTrackerFeature?.render();
             }
         }, 20);
     }

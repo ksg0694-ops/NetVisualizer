@@ -27,17 +27,18 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <!-- Feature modules -->
-    <script src="./js/features/appCore.js?v=20260616-pension-holdings-editor"></script>
+    <script src="./js/features/appCore.js?v=20260619-feature-cleanup"></script>
     <script src="./js/features/assetTrend.js"></script>
     <script src="./js/features/weeklyTimetable.js?v=20260615-mobile-editor"></script>
     <script src="./js/features/quantEngine.js?v=20260616-pension-holdings-editor"></script>
-    <script src="./js/features/realEstate.js?v=20260614-asset-realestate-compact"></script>
+    <script src="./js/features/realEstate.js?v=20260621-dsr-target-summary"></script>
     <script src="./js/features/transactionImport.js?v=20260614-tx-db-only-dedupe"></script>
     <script src="./js/features/portfolioEditor.js?v=20260616-holding-accordion-3level"></script>
     <script src="./js/features/cashflowControls.js"></script>
-    <script src="./js/features/portfolioViews.js?v=20260616-pension-holdings-editor"></script>
-    <script src="./js/features/financeViews.js?v=20260615-mobile-cashflow"></script>
+    <script src="./js/features/portfolioViews.js?v=20260619-feature-cleanup"></script>
+    <script src="./js/features/financeViews.js?v=20260621-dsr-target-summary"></script>
     <script src="./js/features/vacationPlan.js?v=20260615-trip-planner"></script>
+    <script src="./js/features/healthTracker.js?v=20260622-weight-tracker"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -77,48 +78,51 @@
                     version 1.03.11
                 </div>
             </div>
-            <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-3 space-y-3">
+            <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-2 space-y-2">
                 <div>
-                    <p class="px-2 mb-1.5 text-[9px] font-bold text-gray-400 uppercase tracking-wider">Goal</p>
+                    <p class="px-2 mb-1 text-[9px] font-bold text-gray-400 uppercase tracking-wider">Goal</p>
                     <div class="space-y-0.5">
-                        <button type="button" data-target="dashboard-view" onclick="switchView('dashboard-view')" class="goal-link w-full flex items-center gap-2 px-3 py-2 text-sm text-indigo-700 bg-indigo-50 rounded-lg font-semibold border border-indigo-100 transition-all">
+                        <button type="button" data-target="dashboard-view" onclick="switchView('dashboard-view')" class="goal-link w-full flex items-center gap-2 px-3 py-1.5 text-sm text-indigo-700 bg-indigo-50 rounded-lg font-semibold border border-indigo-100 transition-all">
                             <i class="fas fa-coins w-4 text-center text-xs"></i> <span class="truncate">Finance</span>
                         </button>
-                        <button type="button" data-target="career-view" onclick="switchView('career-view')" class="goal-link w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                        <button type="button" data-target="career-view" onclick="switchView('career-view')" class="goal-link w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
                             <i class="fas fa-id-badge w-4 text-center text-xs"></i> <span class="truncate">Career</span>
                         </button>
-                        <button type="button" data-target="life-view" onclick="switchView('life-view')" class="goal-link w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                        <button type="button" data-target="life-view" onclick="switchView('life-view')" class="goal-link w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
                             <i class="fas fa-compass w-4 text-center text-xs"></i> <span class="truncate">Life</span>
                         </button>
                     </div>
                 </div>
 
                 <div>
-                    <p class="px-2 mb-1.5 text-[9px] font-bold text-gray-400 uppercase tracking-wider">Finance Tools</p>
+                    <p class="px-2 mb-1 text-[9px] font-bold text-gray-400 uppercase tracking-wider">Finance Tools</p>
                     <div class="space-y-0.5">
-                        <a href="#" data-target="stats-view" class="nav-link flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                        <a href="#" data-target="stats-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
                             <i class="fas fa-money-bill-transfer w-4 text-center text-xs"></i> <span class="truncate">현금 흐름</span>
                         </a>
-                        <a href="#" data-target="portfolio-view" class="nav-link flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                        <a href="#" data-target="portfolio-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
                             <i class="fas fa-briefcase w-4 text-center text-xs"></i> <span class="truncate">포트폴리오</span>
                         </a>
-                        <a href="#" data-target="asset-view" class="nav-link flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                        <a href="#" data-target="asset-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
                             <i class="fas fa-chart-area w-4 text-center text-xs"></i> <span class="truncate">장기 자산</span>
                         </a>
-                        <a href="#" data-target="realestate-view" class="nav-link flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                        <a href="#" data-target="realestate-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
                             <i class="fas fa-home w-4 text-center text-xs"></i> <span class="truncate">부동산</span>
                         </a>
                     </div>
                 </div>
 
                 <div>
-                    <p class="px-2 mb-1.5 text-[9px] font-bold text-gray-400 uppercase tracking-wider">Life Tools</p>
+                    <p class="px-2 mb-1 text-[9px] font-bold text-gray-400 uppercase tracking-wider">Life Tools</p>
                     <div class="space-y-0.5">
-                        <a href="#" data-target="weekly-timetable-view" class="nav-link flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                        <a href="#" data-target="weekly-timetable-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
                             <i class="fas fa-calendar-week w-4 text-center text-xs"></i> <span class="truncate">Weekly Timetable</span>
                         </a>
-                        <a href="#" data-target="vacation-plan-view" class="nav-link flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                        <a href="#" data-target="vacation-plan-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
                             <i class="fas fa-plane-departure w-4 text-center text-xs"></i> <span class="truncate">Vacation Plan</span>
+                        </a>
+                        <a href="#" data-target="health-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                            <i class="fas fa-heart-pulse w-4 text-center text-xs"></i> <span class="truncate">Health</span>
                         </a>
                     </div>
                 </div>
@@ -807,23 +811,30 @@
                     <div class="flex flex-wrap gap-2">
                         <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">Weekly Timetable</span>
                         <span class="text-[10px] md:text-xs font-bold text-sky-600 bg-sky-50 border border-sky-100 px-3 py-2 rounded-xl whitespace-nowrap">Vacation Plan</span>
+                        <span class="text-[10px] md:text-xs font-bold text-rose-600 bg-rose-50 border border-rose-100 px-3 py-2 rounded-xl whitespace-nowrap">Health Tracking</span>
                     </div>
                 </div>
 
                 <div class="mb-3 flex items-center justify-between gap-3">
                     <h3 class="text-sm md:text-base font-bold text-gray-800">Life Tools</h3>
-                    <span class="text-[10px] md:text-xs text-gray-400">Time / Vacation</span>
+                    <span class="text-[10px] md:text-xs text-gray-400">Time / Health / Vacation</span>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 mb-8">
                     <button type="button" onclick="switchView('weekly-timetable-view')" class="text-left bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-md transition min-w-0">
                         <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-4"><i class="fas fa-calendar-week"></i></div>
                         <p class="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-1">Tool 01</p>
                         <h3 class="text-lg font-bold text-gray-900">Weekly Timetable</h3>
                         <p class="text-xs text-gray-500 mt-2 leading-relaxed">업무, 운동, 이동, 회복, 모임을 주간 단위로 배치합니다.</p>
                     </button>
+                    <button type="button" onclick="switchView('health-view')" class="text-left bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-rose-200 hover:shadow-md transition min-w-0">
+                        <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center mb-4"><i class="fas fa-heart-pulse"></i></div>
+                        <p class="text-[10px] font-bold text-rose-500 uppercase tracking-wider mb-1">Tool 02</p>
+                        <h3 class="text-lg font-bold text-gray-900">Health</h3>
+                        <p class="text-xs text-gray-500 mt-2 leading-relaxed">체중을 날짜별로 기록하고 일별 변화와 7일 평균을 추적합니다.</p>
+                    </button>
                     <button type="button" onclick="switchView('vacation-plan-view')" class="text-left bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-sky-200 hover:shadow-md transition min-w-0">
                         <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center mb-4"><i class="fas fa-plane-departure"></i></div>
-                        <p class="text-[10px] font-bold text-sky-500 uppercase tracking-wider mb-1">Tool 02</p>
+                        <p class="text-[10px] font-bold text-sky-500 uppercase tracking-wider mb-1">Tool 03</p>
                         <h3 class="text-lg font-bold text-gray-900">Vacation Plan</h3>
                         <p class="text-xs text-gray-500 mt-2 leading-relaxed">휴가 후보, 일정, 예산, 예약 상태, 준비물을 여행 단위로 정리합니다.</p>
                     </button>
@@ -1200,7 +1211,12 @@
                 </div>
             </div>
 
-            <!-- 1-7. Life Tool: Vacation Plan -->
+            <!-- 1-7. Life Tool: Health -->
+            <div id="health-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
+                <!-- JS에서 동적으로 생성 -->
+            </div>
+
+            <!-- 1-8. Life Tool: Vacation Plan -->
             <div id="vacation-plan-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
                 <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
                     <div>
@@ -1247,51 +1263,51 @@
 
             <!-- 2. 포트폴리오 뷰 -->
             <div id="portfolio-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
-                <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                <div class="mb-3 md:mb-4 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-2 md:gap-3">
                     <div>
-                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Finance Tool</p>
+                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-0.5">Finance Tool</p>
                         <h2 class="text-xl md:text-2xl font-bold text-gray-900">포트폴리오</h2>
-                        <p class="text-xs md:text-sm text-gray-500 mt-1">현재 보유자산, 구성, 유동성 상태를 한 번에 점검합니다.</p>
+                        <p class="text-xs md:text-sm text-gray-500 mt-0.5">현재 보유자산, 구성, 유동성 상태를 한 번에 점검합니다.</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">최신 보유 기준</span>
-                        <span class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-xl whitespace-nowrap">유동성 점검</span>
+                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1.5 rounded-lg whitespace-nowrap">최신 보유 기준</span>
+                        <span class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1.5 rounded-lg whitespace-nowrap">유동성 점검</span>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5 mb-5 md:mb-6">
                     <!-- 좌측: 자산 요약 및 차트 -->
-                    <div class="lg:col-span-1 flex flex-col gap-6">
-                        <div class="bg-gray-800 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+                    <div class="lg:col-span-1 flex flex-col gap-4">
+                        <div class="bg-gray-800 rounded-2xl p-4 md:p-5 text-white shadow-lg relative overflow-hidden">
                             <div class="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-white opacity-5 rounded-full pointer-events-none"></div>
                             <p class="text-gray-300 font-medium text-sm mb-1">총 순자산 (Net Worth)</p>
                             <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">자산 요약</p>
-                            <h3 class="text-3xl font-bold mb-4" id="pf-networth">0원</h3>
-                            <div class="space-y-2 text-sm border-t border-gray-700 pt-4">
+                            <h3 class="text-2xl md:text-3xl font-bold mb-3" id="pf-networth">0원</h3>
+                            <div class="space-y-1.5 text-sm border-t border-gray-700 pt-3">
                                 <div class="flex justify-between text-gray-300"><span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-blue-400"></div>현금+안전</span> <span id="pf-safe-sum">0원</span></div>
                                 <div class="flex justify-between text-gray-300"><span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-purple-400"></div>투자</span> <span id="pf-invest-sum">0원</span></div>
                                 <div class="flex justify-between text-red-300"><span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-red-400"></div>부채 (-)</span> <span id="pf-debt-sum">0원</span></div>
-                                <div class="border-t border-gray-700 pt-2 mt-2"></div>
+                                <div class="border-t border-gray-700 pt-1.5 mt-1.5"></div>
                                 <div class="flex justify-between text-emerald-300 font-bold"><span class="flex items-center gap-2"><i class="fas fa-coins text-xs"></i>즉시 가용 자산</span> <span id="pf-liquid-sum">0원</span></div>
                                 <div class="flex justify-between text-gray-400 text-[11px]"><span class="flex items-center gap-2"><i class="fas fa-lock text-[10px]"></i>묶인 돈 (만기 등)</span> <span id="pf-tied-sum">0원</span></div>
                             </div>
                         </div>
 
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-                            <h3 class="text-base font-bold text-gray-800 mb-4">자산 구성 비율</h3>
+                        <div class="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                            <h3 class="text-base font-bold text-gray-800 mb-2">자산 구성 비율</h3>
                             <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Primary Visual</p>
-                            <div class="relative h-64 md:h-72 w-full">
+                            <div class="relative h-56 md:h-64 w-full">
                                 <canvas id="portfolioChart"></canvas>
                             </div>
-                            <p class="text-xs text-gray-400 text-center mt-4">* 부채를 제외한 보유 자산 기준</p>
+                            <p class="text-xs text-gray-400 text-center mt-2">* 부채를 제외한 보유 자산 기준</p>
                         </div>
 
                     </div>
 
                     <!-- 우측: 계좌 리스트 (아코디언) -->
-                    <div class="lg:col-span-2 bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Detail / Action</p>
+                    <div class="lg:col-span-2 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Detail / Action</p>
                         <!-- 💡 헤더 업데이트: 포트폴리오 금액 수정 버튼 추가 -->
-                        <div class="flex justify-between items-center mb-6 flex-wrap gap-2">
+                        <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                             <h3 class="text-lg font-bold text-gray-800">상세 계좌 및 투자 내역</h3>
                             <div class="flex items-center gap-2">
                                 <button onclick="openPortfolioEditModal()" class="text-xs text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition whitespace-nowrap shrink-0">
@@ -1302,20 +1318,20 @@
                         </div>
                         
                         <!-- 과거 데이터 조회 시 덮이는 레이어 (스냅샷 뷰어) -->
-                        <div id="portfolio-past-notice" class="hidden flex-1 flex flex-col items-center justify-center py-12 text-center">
-                            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mb-4 text-2xl">
+                        <div id="portfolio-past-notice" class="hidden flex-1 flex flex-col items-center justify-center py-8 text-center">
+                            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mb-3 text-2xl">
                                 <i class="fas fa-history"></i>
                             </div>
                             <h4 class="text-lg font-bold text-gray-700 mb-2">과거 스냅샷 뷰어</h4>
                             <p class="text-sm text-gray-500 max-w-xs mx-auto" id="portfolio-past-notice-text">
                                 상세 포트폴리오는 '현재 달' 기준으로만 갱신/관리됩니다. 과거는 총액 비율만 표시됩니다.
                             </p>
-                            <button onclick="if(!document.getElementById('btn-next-month').disabled){ const keys = getMonthKeys(); currentMonthKey = keys[keys.length - 1]; renderSections({ financeSummary: true, portfolio: true }); }" class="mt-4 text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-4 py-2 rounded-full transition-colors">
+                            <button onclick="if(!document.getElementById('btn-next-month').disabled){ const keys = getMonthKeys(); currentMonthKey = keys[keys.length - 1]; renderSections({ financeSummary: true, portfolio: true }); }" class="mt-3 text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-4 py-2 rounded-full transition-colors">
                                 현재 포트폴리오 보기 &rarr;
                             </button>
                         </div>
 
-                        <div class="space-y-4" id="portfolio-accordion-wrapper">
+                        <div class="space-y-3" id="portfolio-accordion-wrapper">
                             <!-- JS에서 동적으로 생성 -->
                         </div>
                     </div>
@@ -1572,7 +1588,6 @@
                                         <p class="text-[10px] font-bold text-indigo-500 mb-1">Phase 2</p>
                                         <h4 class="font-bold text-gray-800 text-sm md:text-base">부동산 청약 자금</h4>
                                     </div>
-                                    <span class="text-xs font-bold text-gray-800 bg-white px-2 py-1 rounded border border-gray-200">목표: 8억</span>
                                 </div>
                                 <div class="grid grid-cols-2 gap-2 mb-2">
                                     <div class="bg-white/80 border border-gray-100 rounded-lg px-2.5 py-1.5">
@@ -1773,7 +1788,7 @@
                         <div class="flex justify-between items-end mb-2">
                             <div class="flex items-end gap-2">
                                 <h3 class="text-2xl font-bold" id="re-total-ready">0원</h3>
-                                <span class="text-xs md:text-sm font-medium text-indigo-200 mb-1">/ 목표 8억</span>
+                                <span class="text-xs md:text-sm font-medium text-indigo-200 mb-1" id="re-target-budget-label">/ 목표 8억</span>
                             </div>
                         </div>
                         <!-- 다중 세그먼트 프로그레스 바 -->
@@ -1789,12 +1804,55 @@
                         <div class="flex justify-between mt-1.5">
                             <div class="flex flex-col">
                                 <p class="text-[11px] font-bold text-emerald-300" id="re-saved-text">모은돈 0원</p>
-                                <p class="text-[9px] text-indigo-200/70 mt-0.5">DSR 40%, 주담대 6% 가정</p>
+                                <p class="text-[9px] text-indigo-200/70 mt-0.5" id="re-assumption-text">DSR 40%, 스트레스 6% 가정</p>
                             </div>
                             <p class="text-[11px] font-bold text-indigo-200" id="re-progress-text">0% 달성</p>
                         </div>
                     </div>
 
+                </div>
+                <!-- 청약 자금 / DSR 시뮬레이터 -->
+                <div class="bg-white rounded-xl p-3 md:p-4 shadow-sm border border-gray-100 mb-4">
+                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+                        <div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h3 class="text-sm md:text-base font-bold text-gray-800 flex items-center gap-2">
+                                    <i class="fas fa-calculator text-indigo-500"></i> 청약 자금 시뮬레이터
+                                </h3>
+                                <span id="re-analysis-status"></span>
+                            </div>
+                        </div>
+                        <button id="re-analysis-settings" type="button" class="self-start text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 px-2.5 py-1.5 rounded-lg transition flex items-center gap-1">
+                            <i class="fas fa-sliders"></i> 가정 설정
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+                        <div class="border border-gray-100 rounded-lg p-3 bg-gray-50/70 min-w-0">
+                            <p class="text-[10px] text-gray-400 font-bold mb-1">준비 청약</p>
+                            <p class="text-sm md:text-lg font-black text-gray-900 truncate" id="re-analysis-target-name">고양창릉 S2/S3/S4</p>
+                            <p class="text-[10px] text-gray-500 mt-1">예상분양가 <span class="font-bold text-gray-700" id="re-analysis-target-budget">0원</span></p>
+                        </div>
+                        <div class="border border-gray-100 rounded-lg p-3 bg-gray-50/70 min-w-0">
+                            <p class="text-[10px] text-gray-400 font-bold mb-1">DSR 기준 계획대출</p>
+                            <p class="text-sm md:text-lg font-black text-indigo-700 truncate" id="re-analysis-planned-loan">0원</p>
+                            <p class="text-[10px] text-gray-500 mt-1">한도상 <span class="font-bold text-gray-700" id="re-analysis-max-loan">0원</span></p>
+                        </div>
+                        <div class="border border-gray-100 rounded-lg p-3 bg-gray-50/70 min-w-0">
+                            <p class="text-[10px] text-gray-400 font-bold mb-1">월 상환 추정</p>
+                            <p class="text-sm md:text-lg font-black text-gray-900 truncate" id="re-analysis-monthly-payment">0원</p>
+                            <p class="text-[10px] text-gray-500 mt-1">DSR 적용 <span class="font-bold text-gray-700" id="re-analysis-stressed-payment">0원</span></p>
+                        </div>
+                        <div class="border border-gray-100 rounded-lg p-3 bg-gray-50/70 min-w-0">
+                            <div class="flex items-center justify-between gap-2 mb-1">
+                                <p class="text-[10px] text-gray-400 font-bold">DSR 추정</p>
+                            <p class="text-xs font-black text-gray-900" id="re-analysis-dsr">0%</p>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                <div class="h-full bg-emerald-500 transition-all duration-500" id="re-analysis-dsr-bar" style="width: 0%"></div>
+                            </div>
+                            <p class="text-[10px] text-gray-500 mt-1 truncate" id="re-analysis-income-meta">연소득 가정 0원</p>
+                        </div>
+                    </div>
                 </div>
                 <!-- 하단: 그리드 뷰 (일정 1 : 지도 2) -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 flex-1">
@@ -1993,6 +2051,63 @@
         </div>
     </div>
     
+    <!-- 청약 자금 분석 가정 모달 -->
+    <div id="re-analysis-modal" class="fixed inset-0 z-[100] hidden flex flex-col justify-end md:justify-center items-center modal-overlay md:p-4">
+        <div class="bg-white md:rounded-2xl rounded-t-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] md:max-h-[85vh]">
+            <div class="px-4 md:px-5 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50 sticky top-0 z-10 shrink-0">
+                <div>
+                    <h3 class="text-base md:text-lg font-bold text-gray-800"><i class="fas fa-sliders text-indigo-500 mr-1.5"></i>청약 자금 분석 가정</h3>
+                </div>
+                <button onclick="closeRealEstateAssumptionModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <div class="p-4 md:p-5 overflow-y-auto flex-1 space-y-4 bg-gray-50/50">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label class="min-w-0 sm:col-span-2">
+                        <span class="block text-xs text-gray-500 font-bold mb-1">준비 청약</span>
+                        <input id="re-input-target-name" type="text" class="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm font-bold text-gray-800 bg-white focus:ring-1 focus:ring-indigo-500 outline-none">
+                    </label>
+                    <label class="min-w-0">
+                        <span class="block text-xs text-gray-500 font-bold mb-1">예상분양가(만원)</span>
+                        <input id="re-input-target-budget" type="number" min="0" step="100" class="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm font-bold text-right text-gray-800 bg-white focus:ring-1 focus:ring-indigo-500 outline-none">
+                    </label>
+                    <label class="min-w-0">
+                        <span class="block text-xs text-gray-500 font-bold mb-1">연소득 가정(만원)</span>
+                        <input id="re-input-annual-income" type="number" min="0" step="100" class="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm font-bold text-right text-gray-800 bg-white focus:ring-1 focus:ring-indigo-500 outline-none">
+                    </label>
+                    <label class="min-w-0">
+                        <span class="block text-xs text-gray-500 font-bold mb-1">기존 월 원리금(만원)</span>
+                        <input id="re-input-existing-debt" type="number" min="0" step="10" class="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm font-bold text-right text-gray-800 bg-white focus:ring-1 focus:ring-indigo-500 outline-none">
+                    </label>
+                    <label class="min-w-0">
+                        <span class="block text-xs text-gray-500 font-bold mb-1">대출 금리(%)</span>
+                        <input id="re-input-rate" type="number" min="0" step="0.1" class="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm font-bold text-right text-gray-800 bg-white focus:ring-1 focus:ring-indigo-500 outline-none">
+                    </label>
+                    <label class="min-w-0">
+                        <span class="block text-xs text-gray-500 font-bold mb-1">스트레스 가산금리(%)</span>
+                        <input id="re-input-stress-rate" type="number" min="0" step="0.1" class="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm font-bold text-right text-gray-800 bg-white focus:ring-1 focus:ring-indigo-500 outline-none">
+                    </label>
+                    <label class="min-w-0">
+                        <span class="block text-xs text-gray-500 font-bold mb-1">상환 만기(년)</span>
+                        <input id="re-input-term-years" type="number" min="1" step="1" class="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm font-bold text-right text-gray-800 bg-white focus:ring-1 focus:ring-indigo-500 outline-none">
+                    </label>
+                    <label class="min-w-0">
+                        <span class="block text-xs text-gray-500 font-bold mb-1">DSR 한도(%)</span>
+                        <input id="re-input-dsr-limit" type="number" min="0" max="100" step="1" class="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm font-bold text-right text-gray-800 bg-white focus:ring-1 focus:ring-indigo-500 outline-none">
+                    </label>
+                </div>
+            </div>
+            <div class="px-4 md:px-5 py-3 border-t border-gray-100 flex justify-between gap-2 bg-white pb-safe shrink-0">
+                <button id="re-analysis-reset" type="button" class="px-3 py-2 text-xs md:text-sm font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition">기본값</button>
+                <div class="flex justify-end gap-2">
+                    <button onclick="closeRealEstateAssumptionModal()" class="px-3 py-2 text-xs md:text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">닫기</button>
+                    <button onclick="applyRealEstateAssumptionModal()" class="px-3 py-2 text-xs md:text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm flex items-center gap-2 transition-colors">
+                        <i class="fas fa-check"></i> 적용
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 거래 내역 추가 모달 -->
     <div id="tx-modal" class="fixed inset-0 z-[100] hidden flex flex-col justify-end md:justify-center items-center modal-overlay md:p-4">
         <div class="bg-white md:rounded-2xl rounded-t-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] md:max-h-full">
@@ -2135,6 +2250,6 @@
     <!-- Toast Message Container -->
     <div id="toast-container" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[90%] md:w-auto max-w-sm"></div>
 
-    <script src="./js/features/appShell.js?v=20260614-tool-home-button"></script>
+    <script src="./js/features/appShell.js?v=20260622-health-tracker"></script>
 </body>
 </html>

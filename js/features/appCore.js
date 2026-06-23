@@ -87,7 +87,25 @@
         realEstatePriceRefs: '*'
     };
 
-    const ALL_DATA_TABLES = ['transactions', 'assets', 'portfolios', 'cards', 'insurances', 'quant_strategy_rules', 'portfolio_market_prices', 'real_estate_subscription_sites', 'real_estate_housing_types', 'real_estate_competition', 'real_estate_price_refs'];
+    const DEFAULT_DATA_TABLES = ['transactions', 'assets', 'portfolios', 'cards', 'insurances', 'quant_strategy_rules', 'portfolio_market_prices', 'real_estate_subscription_sites'];
+    const REAL_ESTATE_DETAIL_TABLES = ['real_estate_housing_types', 'real_estate_competition', 'real_estate_price_refs'];
+    const ALL_DATA_TABLES = [...DEFAULT_DATA_TABLES, ...REAL_ESTATE_DETAIL_TABLES];
+    const OPTIONAL_DATA_TABLES = new Set(['cards', 'insurances', 'quant_strategy_rules', 'portfolio_market_prices', 'real_estate_subscription_sites', 'real_estate_housing_types', 'real_estate_competition', 'real_estate_price_refs']);
+    const DATA_TABLE_QUERIES = {
+        transactions: (client) => client.from('transactions').select(SUPABASE_COLUMNS.transactions).order('date', { ascending: true }),
+        assets: (client) => client.from('assets').select(SUPABASE_COLUMNS.assets).order('year', { ascending: true }).order('month', { ascending: true }),
+        portfolios: (client) => client.from('portfolios').select(SUPABASE_COLUMNS.portfolios),
+        cards: (client) => client.from('cards').select(SUPABASE_COLUMNS.cards),
+        insurances: (client) => client.from('insurances').select(SUPABASE_COLUMNS.insurances),
+        quant_strategy_rules: (client) => client.from('quant_strategy_rules').select(SUPABASE_COLUMNS.quantStrategyRules).order('display_order', { ascending: true }),
+        portfolio_market_prices: (client) => client.from('portfolio_market_prices').select(SUPABASE_COLUMNS.marketPrices).order('ticker', { ascending: true }),
+        real_estate_subscription_sites: (client) => client.from('real_estate_subscription_sites').select(SUPABASE_COLUMNS.realEstateSubscriptions).order('priority_order', { ascending: true }).order('block', { ascending: true }),
+        real_estate_housing_types: (client) => client.from('real_estate_housing_types').select(SUPABASE_COLUMNS.realEstateHousingTypes),
+        real_estate_competition: (client) => client.from('real_estate_competition').select(SUPABASE_COLUMNS.realEstateCompetition),
+        real_estate_price_refs: (client) => client.from('real_estate_price_refs').select(SUPABASE_COLUMNS.realEstatePriceRefs).order('deal_date', { ascending: false })
+    };
+    let supabaseClient = null;
+    let supabaseClientSignature = '';
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
@@ -305,7 +323,12 @@
 
     function getSupabaseClient() {
         if (!userUrls.webapp || !userUrls.supabaseKey) throw new Error('URL_MISSING');
-        return supabase.createClient(userUrls.webapp, userUrls.supabaseKey);
+        const signature = `${userUrls.webapp}|${userUrls.supabaseKey}`;
+        if (!supabaseClient || supabaseClientSignature !== signature) {
+            supabaseClient = supabase.createClient(userUrls.webapp, userUrls.supabaseKey);
+            supabaseClientSignature = signature;
+        }
+        return supabaseClient;
     }
 
     function formatTransactionRows(rows = []) {
@@ -552,20 +575,11 @@
         return myCharts[chartKey];
     }
 
-    async function fetchRemoteTables(tables = ALL_DATA_TABLES) {
+    async function fetchRemoteTables(tables = DEFAULT_DATA_TABLES) {
         const _supabase = getSupabaseClient();
         const queries = tables.map(table => {
-            if (table === 'transactions') return _supabase.from('transactions').select(SUPABASE_COLUMNS.transactions).order('date', { ascending: true });
-            if (table === 'assets') return _supabase.from('assets').select(SUPABASE_COLUMNS.assets).order('year', { ascending: true }).order('month', { ascending: true });
-            if (table === 'portfolios') return _supabase.from('portfolios').select(SUPABASE_COLUMNS.portfolios);
-            if (table === 'cards') return _supabase.from('cards').select(SUPABASE_COLUMNS.cards);
-            if (table === 'insurances') return _supabase.from('insurances').select(SUPABASE_COLUMNS.insurances);
-            if (table === 'quant_strategy_rules') return _supabase.from('quant_strategy_rules').select(SUPABASE_COLUMNS.quantStrategyRules).order('display_order', { ascending: true });
-            if (table === 'portfolio_market_prices') return _supabase.from('portfolio_market_prices').select(SUPABASE_COLUMNS.marketPrices).order('ticker', { ascending: true });
-            if (table === 'real_estate_subscription_sites') return _supabase.from('real_estate_subscription_sites').select(SUPABASE_COLUMNS.realEstateSubscriptions).order('priority_order', { ascending: true }).order('block', { ascending: true });
-            if (table === 'real_estate_housing_types') return _supabase.from('real_estate_housing_types').select(SUPABASE_COLUMNS.realEstateHousingTypes);
-            if (table === 'real_estate_competition') return _supabase.from('real_estate_competition').select(SUPABASE_COLUMNS.realEstateCompetition);
-            if (table === 'real_estate_price_refs') return _supabase.from('real_estate_price_refs').select(SUPABASE_COLUMNS.realEstatePriceRefs).order('deal_date', { ascending: false });
+            const queryBuilder = DATA_TABLE_QUERIES[table];
+            if (queryBuilder) return queryBuilder(_supabase);
             throw new Error(`UNKNOWN_TABLE: ${table}`);
         });
 
@@ -575,12 +589,13 @@
         responses.forEach((res, index) => {
             const table = tables[index];
             if (res.error) {
-                if (table === 'cards' || table === 'insurances' || table === 'quant_strategy_rules' || table === 'portfolio_market_prices' || table.startsWith('real_estate_')) {
+                if (OPTIONAL_DATA_TABLES.has(table)) {
                     console.warn(`${table} 로딩 실패:`, res.error.message);
                 } else {
                     throw res.error;
                 }
             }
+            if (res.error && OPTIONAL_DATA_TABLES.has(table)) return;
 
             if (table === 'transactions') patch.tx = formatTransactionRows(res.data || []);
             if (table === 'assets') patch.asset = formatAssetRows(res.data || []);
@@ -810,7 +825,7 @@
     // ==========================================
     // Fetch 데이터 (GET & Background Sync)
     // ==========================================
-    async function fetchSheetData(isAutoSync = true, tables = ALL_DATA_TABLES) {
+    async function fetchSheetData(isAutoSync = true, tables = DEFAULT_DATA_TABLES) {
         const syncIcon = document.getElementById('sync-icon');
         const syncStatus = document.getElementById('sync-status');
         const sidebarSync = document.getElementById('sidebar-sync-status');

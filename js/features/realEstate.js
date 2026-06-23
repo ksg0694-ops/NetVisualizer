@@ -165,24 +165,8 @@
         }
         renderRealEstateMapLayers(subscriptionSites);
 
-        const { cashAndSafe, expectedLoan, totalReady, savedPct, loanPct, totalPct } = getRealEstateFundingStatus();
-
-        const readyEl = document.getElementById('re-total-ready');
-        if (readyEl) {
-            readyEl.textContent = totalReady.toLocaleString() + '원';
-
-            document.getElementById('re-progress-saved').style.width = Math.min(100, savedPct) + '%';
-            document.getElementById('re-progress-saved').textContent = savedPct > 5 ? '모은돈' : '';
-
-            document.getElementById('re-progress-loan').style.width = Math.min(100 - savedPct, loanPct) + '%';
-
-            document.getElementById('re-saved-text').textContent = '모은돈: ' + cashAndSafe.toLocaleString() + '원';
-            document.getElementById('re-progress-text').textContent = '총 ' + totalPct.toFixed(1) + '% 달성';
-        }
-
-        if(document.getElementById('re-expected-loan')) {
-            document.getElementById('re-expected-loan').textContent = expectedLoan.toLocaleString() + '원';
-            document.getElementById('re-total-available').textContent = totalReady.toLocaleString() + '원';
+        if (typeof renderRealEstateAnalysis === 'function') {
+            renderRealEstateAnalysis();
         }
     }
 

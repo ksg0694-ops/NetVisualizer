@@ -86,14 +86,14 @@
                         const accountTotal = items.reduce((acc, item) => acc + Number(item.amount || 0), 0);
                         return `
                             <div class="rounded-xl border border-purple-100 overflow-hidden bg-white">
-                                <div class="px-3 py-2 bg-purple-50/50 border-b border-purple-100 flex items-center justify-between gap-3">
+                                <div class="px-3 py-1.5 bg-purple-50/50 border-b border-purple-100 flex items-center justify-between gap-3">
                                     <div class="min-w-0">
                                         <p class="text-xs font-bold text-gray-800 truncate">${escapeHtml(accountName)}</p>
                                         <p class="text-[10px] text-gray-400">${items.length}개 자산</p>
                                     </div>
                                     <p class="text-xs font-black text-purple-700 whitespace-nowrap">${accountTotal.toLocaleString()}원</p>
                                 </div>
-                                <div class="p-3 space-y-2">
+                                <div class="p-2.5 space-y-1.5">
                                     ${items.map(renderPortfolioItemRow).join('')}
                                 </div>
                             </div>
@@ -102,21 +102,21 @@
                 };
                 const itemHtml = `
                 <div class="border border-gray-100 rounded-xl overflow-hidden shadow-sm">
-                    <div class="w-full flex justify-between items-center p-4 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer" onclick="toggleAccordion(this)">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full ${groupData.bg} ${groupData.color} flex items-center justify-center text-sm">
+                    <div class="w-full flex justify-between items-center p-3 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer" onclick="toggleAccordion(this)">
+                        <div class="flex items-center gap-2">
+                            <div class="w-7 h-7 rounded-full ${groupData.bg} ${groupData.color} flex items-center justify-center text-xs">
                                 <i class="fas ${isDebt ? 'fa-credit-card' : (groupName.includes('투자') ? 'fa-chart-line' : (groupName.includes('안전') ? 'fa-lock' : 'fa-coins'))}"></i>
                             </div>
                             <span class="font-bold text-gray-800 text-sm md:text-base">${safeGroupName}</span>
-                            ${groupName.includes('투자') ? `<button onclick="event.stopPropagation(); renderInvestDetail('${jsGroupName}'); switchView('invest-detail-view');" class="ml-2 text-[10px] bg-purple-50 text-purple-600 border border-purple-200 px-2 py-0.5 rounded font-bold hover:bg-purple-100 transition-colors z-10">상세보기 <i class="fas fa-chevron-right ml-1 text-[8px]"></i></button>` : ''}
+                            ${groupName.includes('투자') ? `<button onclick="event.stopPropagation(); switchView('invest-detail-view'); renderInvestDetail('${jsGroupName}');" class="ml-1.5 text-[10px] bg-purple-50 text-purple-600 border border-purple-200 px-1.5 py-0.5 rounded font-bold hover:bg-purple-100 transition-colors z-10">상세보기 <i class="fas fa-chevron-right ml-1 text-[8px]"></i></button>` : ''}
                         </div>
-                        <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2 md:gap-3">
                             <span class="font-bold ${isDebt ? 'text-red-500' : 'text-gray-800'} text-sm md:text-base">${sum.toLocaleString()}원</span>
                             <i class="fas fa-chevron-down text-gray-400 accordion-icon text-sm"></i>
                         </div>
                     </div>
                     <div class="accordion-content bg-white">
-                        <div class="p-4 space-y-3 border-t border-gray-100">
+                        <div class="p-3 space-y-2 border-t border-gray-100">
                             ${groupData.items.length > 0 ? (isInvestGroup ? renderInvestmentAccountRows() : groupData.items.map(renderPortfolioItemRow).join('')) : '<p class="text-sm text-gray-400 text-center py-2">등록된 내역이 없습니다.</p>'}
                         </div>
                     </div>
