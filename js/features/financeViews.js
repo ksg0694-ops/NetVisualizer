@@ -142,7 +142,7 @@
         return model;
     }
 
-    function renderFinanceSummaryKpis({ assetModel, totalIncome, totalExpense, currentBalance, periodLabel = '올해' }) {
+    function renderFinanceSummaryKpis({ assetModel, periodLabel = '올해' }) {
         const setText = (id, text) => {
             const el = document.getElementById(id);
             if (el) el.textContent = text;
@@ -166,22 +166,6 @@
         setHtml('finance-kpi-funding-progress', `<span class="text-indigo-500">${fundingPct.toFixed(1)}</span>%`);
         setText('finance-kpi-funding-meta', `${formatWon(fundingStatus.totalReady)} / ${formatWon(fundingStatus.targetBudget)}`);
         setProgressBar('finance-kpi-funding-bar', fundingPct);
-
-        const cashflowClass = currentBalance >= 0 ? 'text-emerald-600' : 'text-red-500';
-        setHtml('finance-kpi-cashflow', `<span class="${cashflowClass}">${formatSignedWon(currentBalance)}</span>`);
-        setHtml('finance-kpi-cashflow-meta', `
-            <div class="flex justify-between gap-2"><span>${periodLabel} 수입</span><span class="font-semibold text-gray-500">${formatWon(totalIncome)}</span></div>
-            <div class="flex justify-between gap-2"><span>${periodLabel} 지출</span><span class="font-semibold text-gray-500">${formatWon(totalExpense)}</span></div>
-        `);
-
-        const savingRate = totalIncome > 0 ? (currentBalance / totalIncome) * 100 : 0;
-        const savingClass = savingRate >= 0 ? 'text-sky-600' : 'text-red-500';
-        setHtml('finance-kpi-saving-rate', `<span class="${savingClass}">${savingRate.toFixed(1)}</span>%`);
-        setHtml('finance-kpi-saving-meta', `
-            <div class="flex justify-between gap-2"><span>${periodLabel} 잉여</span><span class="font-semibold text-gray-500">${formatSignedWon(currentBalance)}</span></div>
-            <div class="flex justify-between gap-2"><span>${periodLabel} 수입</span><span class="font-semibold text-gray-500">${formatWon(totalIncome)}</span></div>
-        `);
-        setProgressBar('finance-kpi-saving-bar', savingRate);
     }
 
     function applyAssetStateForMonth(db, monthKey) {
@@ -227,7 +211,7 @@
         return [...head, { category: '기타', amount: etcAmount }];
     }
 
-    function renderCategoryBreakdownList(containerId, items = [], total = 0, accentClass = 'text-gray-600') {
+    function renderCategoryBreakdownList(containerId, items = [], total = 0, accentClass = 'text-gray-600', options = {}) {
         const container = document.getElementById(containerId);
         if (!container) return;
         if (!items.length || total <= 0) {
@@ -237,6 +221,18 @@
 
         container.innerHTML = items.map(item => {
             const pct = total > 0 ? (item.amount / total) * 100 : 0;
+            if (options.compact) {
+                return `
+                    <div class="min-w-0">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="font-semibold text-gray-600 truncate">${escapeHtml(item.category)}</span>
+                            <span class="font-bold ${accentClass} whitespace-nowrap">${pct.toFixed(0)}%</span>
+                        </div>
+                        <div class="text-gray-400 truncate">${formatWon(item.amount)}</div>
+                    </div>
+                `;
+            }
+
             return `
                 <div class="min-w-0">
                     <div class="flex items-center justify-between gap-2">
@@ -282,28 +278,66 @@
         };
     }
 
+    function renderCategoryDoughnutBlock({ chartKey, chartId, listId, chartItems, listItems, total, colors, accentClass, compact = false }) {
+        const chartData = chartItems || [];
+        const listData = listItems || chartData;
+        if (chartData.length && document.getElementById(chartId)) {
+            renderOrUpdateChart(chartKey, chartId, createCategoryDoughnutConfig(chartData, colors));
+        } else {
+            destroyChart(chartKey);
+        }
+
+        renderCategoryBreakdownList(listId, listData, total, accentClass, { compact });
+    }
+
+    function expandChartColors(colors = [], count = 0) {
+        if (!colors.length) return [];
+        return Array.from({ length: count }, (_, idx) => colors[idx % colors.length]);
+    }
+
     function renderCashFlowCategoryAnalysis(txData = []) {
-        const incomeItems = getCashFlowCategoryBreakdown(txData, '수입', 5);
-        const expenseItems = getCashFlowCategoryBreakdown(txData, '지출', 5);
-        const incomeTotal = incomeItems.reduce((sum, item) => sum + item.amount, 0);
-        const expenseTotal = expenseItems.reduce((sum, item) => sum + item.amount, 0);
+        const incomeDetailItems = getCashFlowCategoryBreakdown(txData, '수입', Number.MAX_SAFE_INTEGER);
+        const expenseDetailItems = getCashFlowCategoryBreakdown(txData, '지출', Number.MAX_SAFE_INTEGER);
+        const incomeMainItems = incomeDetailItems.slice(0, 3);
+        const expenseMainItems = expenseDetailItems.slice(0, 3);
+        const incomeTotal = incomeDetailItems.reduce((sum, item) => sum + item.amount, 0);
+        const expenseTotal = expenseDetailItems.reduce((sum, item) => sum + item.amount, 0);
         const incomeColors = ['#3B82F6', '#60A5FA', '#93C5FD', '#2563EB', '#BFDBFE'];
         const expenseColors = ['#EF4444', '#F97316', '#F59E0B', '#EC4899', '#FCA5A5'];
 
-        if (incomeItems.length && document.getElementById('cashflow-income-category-chart')) {
-            renderOrUpdateChart('cashflowIncomeCategory', 'cashflow-income-category-chart', createCategoryDoughnutConfig(incomeItems, incomeColors));
-        } else {
-            destroyChart('cashflowIncomeCategory');
-        }
+        [
+            ['cashflowIncomeCategory', 'cashflow-income-category-chart', 'cashflow-income-category-list', incomeDetailItems],
+            ['cashflowMainIncomeCategory', 'cashflow-main-income-category-chart', 'cashflow-main-income-category-list', incomeMainItems]
+        ].forEach(([chartKey, chartId, listId, items]) => {
+            renderCategoryDoughnutBlock({
+                chartKey,
+                chartId,
+                listId,
+                chartItems: incomeDetailItems,
+                listItems: items,
+                total: incomeTotal,
+                colors: expandChartColors(incomeColors, incomeDetailItems.length),
+                accentClass: 'text-blue-600',
+                compact: chartKey.includes('Main')
+            });
+        });
 
-        if (expenseItems.length && document.getElementById('cashflow-expense-category-chart')) {
-            renderOrUpdateChart('cashflowExpenseCategory', 'cashflow-expense-category-chart', createCategoryDoughnutConfig(expenseItems, expenseColors));
-        } else {
-            destroyChart('cashflowExpenseCategory');
-        }
-
-        renderCategoryBreakdownList('cashflow-income-category-list', incomeItems, incomeTotal, 'text-blue-600');
-        renderCategoryBreakdownList('cashflow-expense-category-list', expenseItems, expenseTotal, 'text-red-600');
+        [
+            ['cashflowExpenseCategory', 'cashflow-expense-category-chart', 'cashflow-expense-category-list', expenseDetailItems],
+            ['cashflowMainExpenseCategory', 'cashflow-main-expense-category-chart', 'cashflow-main-expense-category-list', expenseMainItems]
+        ].forEach(([chartKey, chartId, listId, items]) => {
+            renderCategoryDoughnutBlock({
+                chartKey,
+                chartId,
+                listId,
+                chartItems: expenseDetailItems,
+                listItems: items,
+                total: expenseTotal,
+                colors: expandChartColors(expenseColors, expenseDetailItems.length),
+                accentClass: 'text-red-600',
+                compact: chartKey.includes('Main')
+            });
+        });
     }
 
     function getLocalTodayParts() {
@@ -724,25 +758,12 @@
         const db = monthlyDB[currentMonthKey];
         applyAssetStateForMonth(db, currentMonthKey);
 
-        const { year, totalIncome, totalExpense } = getYearToDateCashFlowStats(currentMonthKey);
-        const currentBalance = totalIncome - totalExpense;
+        const { year } = getYearToDateCashFlowStats(currentMonthKey);
 
-        if (document.getElementById('card-total')) document.getElementById('card-total').textContent = `${currentBalance.toLocaleString()}원`;
         if (document.getElementById('card-asset')) document.getElementById('card-asset').textContent = `${db.asset.toLocaleString()}원`;
 
-        const budgetStatus = document.getElementById('card-budget-status');
-        if (budgetStatus) {
-            if (currentBalance >= 0) {
-                budgetStatus.innerHTML = '<i class="fas fa-check-circle"></i> 흑자';
-                budgetStatus.className = 'text-[10px] md:text-xs text-indigo-100 flex items-center gap-1 mb-1 whitespace-nowrap shrink-0';
-            } else {
-                budgetStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i> 적자';
-                budgetStatus.className = 'text-[10px] md:text-xs text-red-200 flex items-center gap-1 mb-1 whitespace-nowrap shrink-0';
-            }
-        }
-
         const assetModel = renderAssetTrend(db);
-        renderFinanceSummaryKpis({ assetModel, totalIncome, totalExpense, currentBalance, periodLabel: `${year}년` });
+        renderFinanceSummaryKpis({ assetModel, periodLabel: `${year}년` });
     }
 
     function renderCashFlow() {
@@ -758,18 +779,11 @@
         if (manageTitle) manageTitle.textContent = `${db.title} 거래 내역`;
 
         const { totalIncome, totalExpense } = getCashFlowStats(txData);
-        const currentBalance = totalIncome - totalExpense;
-        const cashflowClass = currentBalance >= 0 ? 'text-emerald-600' : 'text-red-500';
 
         const selectedIncome = document.getElementById('cashflow-selected-income');
         const selectedExpense = document.getElementById('cashflow-selected-expense');
-        const selectedNet = document.getElementById('cashflow-selected-net');
         if (selectedIncome) selectedIncome.textContent = formatWon(totalIncome);
         if (selectedExpense) selectedExpense.textContent = formatWon(totalExpense);
-        if (selectedNet) {
-            selectedNet.innerHTML = `<span class="${cashflowClass}">${formatSignedWon(currentBalance)}</span>`;
-            selectedNet.className = `text-xs sm:text-sm md:text-xl font-bold truncate ${cashflowClass}`;
-        }
 
         const manageList = document.getElementById('manageTransactionList');
         if (manageList) manageList.innerHTML = '';

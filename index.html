@@ -186,10 +186,10 @@
             
             <!-- 1. 대시보드 뷰 -->
             <div id="dashboard-view" class="view-section block max-w-6xl mx-auto">
-                <div class="mb-3 md:mb-4 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-2">
+                <div class="mb-3 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-2">
                     <div>
                         <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-0.5">Finance</p>
-                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">Finance Cockpit</h2>
+                        <h2 class="text-lg md:text-2xl font-bold text-gray-900">Finance Cockpit</h2>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg">최신</span>
@@ -197,106 +197,81 @@
                     </div>
                 </div>
 
-                <div class="mb-3 md:mb-4">
-                    <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl p-3 md:p-4 text-white shadow-md shadow-indigo-100 relative overflow-hidden flex flex-col justify-between">
-                        <div class="absolute top-0 right-0 -mt-5 -mr-5 w-20 h-20 bg-white opacity-10 rounded-full pointer-events-none"></div>
-                        <div class="flex justify-between items-center relative z-10">
-                            <div>
+                <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)] gap-3 mb-4">
+                    <section class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col min-w-0">
+                        <div class="flex flex-col md:flex-row md:justify-between md:items-start mb-2 gap-2">
+                            <div class="min-w-0">
+                                <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">Wealth Timeline</p>
+                                <h3 class="text-base md:text-lg font-bold text-gray-900 truncate" id="dashboard-asset-title">자산 흐름</h3>
+                            </div>
+                            <span class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-lg whitespace-nowrap w-fit" id="dashboard-asset-diff"><i class="fas fa-arrow-up"></i> 계산중</span>
+                        </div>
+                        <div class="relative h-[240px] sm:h-[280px] md:h-[360px] lg:h-[420px] w-full">
+                            <canvas id="dashboardAssetChart"></canvas>
+                        </div>
+                    </section>
+
+                    <aside class="grid grid-cols-2 gap-2 md:gap-3 lg:block lg:space-y-3 min-w-0">
+                        <section class="col-span-2 lg:col-span-1 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl p-3 md:p-4 text-white shadow-md shadow-indigo-100 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 bg-white opacity-10 rounded-full pointer-events-none"></div>
+                            <div class="relative z-10">
                                 <p class="text-indigo-100 font-medium text-[11px] md:text-sm mb-0.5">현재 총 자산</p>
-                                <h3 class="text-lg md:text-2xl font-bold truncate" id="card-asset">0원</h3>
+                                <h3 class="text-lg md:text-3xl font-black truncate" id="card-asset">0원</h3>
+                                <p class="hidden sm:block text-[10px] md:text-xs text-indigo-100 mt-1.5">목표와 청약 준비 상태를 한 화면에서 점검합니다.</p>
                             </div>
-                            <div class="text-right border-l border-indigo-400/50 pl-3">
-                                <p class="text-[10px] md:text-xs text-indigo-100 mb-0.5">올해 잉여 자금</p>
-                                <div class="flex items-center justify-end gap-1.5">
-                                    <h3 class="text-sm md:text-lg font-bold text-white truncate" id="card-total">0원</h3>
-                                    <p class="text-[10px] md:text-xs text-indigo-100 flex items-center gap-1 whitespace-nowrap shrink-0" id="card-budget-status"><i class="fas fa-check-circle"></i> 흑자</p>
-                                </div>
+                        </section>
+
+                        <section class="bg-white p-2.5 md:p-3 rounded-xl shadow-sm border border-gray-100 min-w-0">
+                            <div class="flex items-center justify-between gap-2 mb-1.5">
+                                <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">목표자산 달성률</p>
+                                <i class="fas fa-bullseye text-amber-400"></i>
                             </div>
-                        </div>
-                    </div>
-                </div>
+                            <h3 class="text-base md:text-xl font-bold text-gray-900" id="finance-kpi-asset-progress">0%</h3>
+                            <p class="text-[10px] md:text-xs text-gray-400 mt-0.5 truncate" id="finance-kpi-asset-meta">0원 / 250,000,000원</p>
+                            <div class="w-full bg-gray-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
+                                <div class="h-full bg-amber-500 transition-all duration-700 ease-out" id="finance-kpi-asset-bar" style="width: 0%"></div>
+                            </div>
+                        </section>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 mb-3 md:mb-4">
-                    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500 min-w-0">
-                        <div class="flex items-center justify-between gap-2 mb-2">
-                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">목표자산 달성률</p>
-                            <i class="fas fa-bullseye text-amber-400"></i>
-                        </div>
-                        <h3 class="text-lg md:text-xl font-bold text-gray-900" id="finance-kpi-asset-progress">0%</h3>
-                        <p class="text-[10px] md:text-xs text-gray-400 mt-0.5 truncate" id="finance-kpi-asset-meta">0원 / 250,000,000원</p>
-                        <div class="w-full bg-gray-100 rounded-full h-1.5 mt-2 overflow-hidden">
-                            <div class="h-full bg-amber-500 transition-all duration-700 ease-out" id="finance-kpi-asset-bar" style="width: 0%"></div>
-                        </div>
-                    </div>
-                    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-indigo-500 min-w-0">
-                        <div class="flex items-center justify-between gap-2 mb-2">
-                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">청약 준비율</p>
-                            <i class="fas fa-home text-indigo-400"></i>
-                        </div>
-                        <h3 class="text-lg md:text-xl font-bold text-gray-900" id="finance-kpi-funding-progress">0%</h3>
-                        <p class="text-[10px] md:text-xs text-gray-400 mt-0.5 truncate" id="finance-kpi-funding-meta">0원 / 800,000,000원</p>
-                        <div class="w-full bg-gray-100 rounded-full h-1.5 mt-2 overflow-hidden">
-                            <div class="h-full bg-indigo-500 transition-all duration-700 ease-out" id="finance-kpi-funding-bar" style="width: 0%"></div>
-                        </div>
-                    </div>
-                    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-emerald-500 min-w-0">
-                        <div class="flex items-center justify-between gap-2 mb-2">
-                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">올해 잉여자금</p>
-                            <i class="fas fa-wallet text-emerald-400"></i>
-                        </div>
-                        <h3 class="text-lg md:text-xl font-bold text-gray-900 truncate" id="finance-kpi-cashflow">0원</h3>
-                        <div class="text-[10px] md:text-xs text-gray-400 mt-1 space-y-0.5" id="finance-kpi-cashflow-meta">
-                            <div class="flex justify-between gap-2"><span>수입</span><span class="font-semibold text-gray-500">0원</span></div>
-                            <div class="flex justify-between gap-2"><span>지출</span><span class="font-semibold text-gray-500">0원</span></div>
-                        </div>
-                    </div>
-                    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-sky-500 min-w-0">
-                        <div class="flex items-center justify-between gap-2 mb-2">
-                            <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">올해 잉여율</p>
-                            <i class="fas fa-piggy-bank text-sky-400"></i>
-                        </div>
-                        <h3 class="text-lg md:text-xl font-bold text-gray-900" id="finance-kpi-saving-rate">0%</h3>
-                        <div class="text-[10px] md:text-xs text-gray-400 mt-1 space-y-0.5" id="finance-kpi-saving-meta">
-                            <div class="flex justify-between gap-2"><span>잉여</span><span class="font-semibold text-gray-500">0원</span></div>
-                            <div class="flex justify-between gap-2"><span>수입</span><span class="font-semibold text-gray-500">0원</span></div>
-                        </div>
-                        <div class="w-full bg-gray-100 rounded-full h-1.5 mt-2 overflow-hidden">
-                            <div class="h-full bg-sky-500 transition-all duration-700 ease-out" id="finance-kpi-saving-bar" style="width: 0%"></div>
-                        </div>
-                    </div>
-                </div>
+                        <section class="bg-white p-2.5 md:p-3 rounded-xl shadow-sm border border-gray-100 min-w-0">
+                            <div class="flex items-center justify-between gap-2 mb-1.5">
+                                <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">청약 준비율</p>
+                                <i class="fas fa-home text-indigo-400"></i>
+                            </div>
+                            <h3 class="text-base md:text-xl font-bold text-gray-900" id="finance-kpi-funding-progress">0%</h3>
+                            <p class="text-[10px] md:text-xs text-gray-400 mt-0.5 truncate" id="finance-kpi-funding-meta">0원 / 800,000,000원</p>
+                            <div class="w-full bg-gray-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
+                                <div class="h-full bg-indigo-500 transition-all duration-700 ease-out" id="finance-kpi-funding-bar" style="width: 0%"></div>
+                            </div>
+                        </section>
 
-                <div class="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col min-w-0 mb-4 md:mb-5">
-                    <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-3 gap-2">
-                        <div>
-                            <h3 class="text-base md:text-lg font-bold text-gray-800 truncate" id="dashboard-asset-title">자산 흐름</h3>
-                        </div>
-                        <span class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg whitespace-nowrap w-fit" id="dashboard-asset-diff"><i class="fas fa-arrow-up"></i> 계산중</span>
-                    </div>
-                    <div class="relative h-[340px] md:h-[420px] w-full">
-                        <canvas id="dashboardAssetChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="mb-2 flex items-center justify-between gap-3">
-                    <h3 class="text-sm md:text-base font-bold text-gray-800">Next Actions</h3>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6">
-                    <button onclick="switchView('stats-view')" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-left hover:border-emerald-200 hover:shadow-md transition-all">
-                        <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2"><i class="fas fa-money-bill-transfer"></i></div>
-                        <h4 class="text-sm font-bold text-gray-800 mb-1">현금 흐름 확인</h4>
-                        <p class="text-xs text-gray-500 leading-relaxed">선택 월 거래와 올해 월 흐름을 비교합니다.</p>
-                    </button>
-                    <button onclick="switchView('portfolio-view')" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-left hover:border-indigo-200 hover:shadow-md transition-all">
-                        <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2"><i class="fas fa-briefcase"></i></div>
-                        <h4 class="text-sm font-bold text-gray-800 mb-1">포트폴리오 점검</h4>
-                        <p class="text-xs text-gray-500 leading-relaxed">현재 보유 비중과 부채/현금 상태를 확인합니다.</p>
-                    </button>
-                    <button onclick="switchView('realestate-view')" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-left hover:border-amber-200 hover:shadow-md transition-all">
-                        <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center mb-2"><i class="fas fa-home"></i></div>
-                        <h4 class="text-sm font-bold text-gray-800 mb-1">청약 준비 확인</h4>
-                        <p class="text-xs text-gray-500 leading-relaxed">자금 준비율과 주요 분양 일정을 점검합니다.</p>
-                    </button>
+                        <section class="col-span-2 lg:col-span-1 bg-white p-2.5 md:p-3 rounded-xl shadow-sm border border-gray-100 min-w-0">
+                            <h3 class="text-xs md:text-sm font-bold text-gray-800 mb-2">Next Actions</h3>
+                            <div class="grid grid-cols-3 gap-2 lg:grid-cols-1">
+                                <button onclick="switchView('stats-view')" class="w-full flex flex-col lg:flex-row items-center lg:items-center gap-1.5 lg:gap-3 text-center lg:text-left rounded-lg border border-gray-100 bg-gray-50/70 px-2 py-2 hover:border-emerald-200 hover:bg-emerald-50 transition-all">
+                                    <span class="w-7 h-7 lg:w-8 lg:h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0"><i class="fas fa-money-bill-transfer"></i></span>
+                                    <span class="min-w-0">
+                                        <span class="block text-[11px] md:text-sm font-bold text-gray-800 truncate">현금흐름</span>
+                                        <span class="hidden lg:block text-[10px] md:text-xs text-gray-500 truncate">월별 수입과 지출 구조 보기</span>
+                                    </span>
+                                </button>
+                                <button onclick="switchView('portfolio-view')" class="w-full flex flex-col lg:flex-row items-center lg:items-center gap-1.5 lg:gap-3 text-center lg:text-left rounded-lg border border-gray-100 bg-gray-50/70 px-2 py-2 hover:border-indigo-200 hover:bg-indigo-50 transition-all">
+                                    <span class="w-7 h-7 lg:w-8 lg:h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0"><i class="fas fa-briefcase"></i></span>
+                                    <span class="min-w-0">
+                                        <span class="block text-[11px] md:text-sm font-bold text-gray-800 truncate">포트폴리오</span>
+                                        <span class="hidden lg:block text-[10px] md:text-xs text-gray-500 truncate">보유 비중과 투자 상태 확인</span>
+                                    </span>
+                                </button>
+                                <button onclick="switchView('realestate-view')" class="w-full flex flex-col lg:flex-row items-center lg:items-center gap-1.5 lg:gap-3 text-center lg:text-left rounded-lg border border-gray-100 bg-gray-50/70 px-2 py-2 hover:border-amber-200 hover:bg-amber-50 transition-all">
+                                    <span class="w-7 h-7 lg:w-8 lg:h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0"><i class="fas fa-home"></i></span>
+                                    <span class="min-w-0">
+                                        <span class="block text-[11px] md:text-sm font-bold text-gray-800 truncate">청약</span>
+                                        <span class="hidden lg:block text-[10px] md:text-xs text-gray-500 truncate">자금 준비율과 분양 일정 보기</span>
+                                    </span>
+                                </button>
+                            </div>
+                        </section>
+                    </aside>
                 </div>
             </div>
 
@@ -1360,18 +1335,36 @@
                 </div>
 
                 <div id="stats-main-content" class="flex flex-col w-full">
-                    <div class="grid grid-cols-3 gap-2 md:gap-4 mb-3 md:mb-4">
-                        <div class="bg-white p-2.5 md:p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-blue-500 min-w-0">
-                            <p class="text-[10px] md:text-sm font-semibold text-gray-500 mb-0.5 md:mb-1 truncate">수입</p>
-                            <h3 class="text-xs sm:text-sm md:text-xl font-bold text-blue-600 truncate" id="cashflow-selected-income">0원</h3>
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-2 md:gap-4 mb-3 md:mb-4 items-stretch">
+                        <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-blue-500 min-w-0 min-h-[168px] flex flex-col">
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <div class="min-w-0">
+                                    <p class="text-[10px] md:text-sm font-semibold text-gray-500 mb-0.5 truncate">수입</p>
+                                    <h3 class="text-sm md:text-xl font-bold text-blue-600 truncate" id="cashflow-selected-income">0원</h3>
+                                </div>
+                                <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded shrink-0">Income</span>
+                            </div>
+                            <div class="grid grid-cols-[92px_minmax(0,1fr)] md:grid-cols-[108px_minmax(0,1fr)] gap-3 items-center flex-1 min-h-[112px]">
+                                <div class="relative h-24 md:h-28 self-center">
+                                    <canvas id="cashflow-main-income-category-chart"></canvas>
+                                </div>
+                                <div id="cashflow-main-income-category-list" class="space-y-1 text-[10px] md:text-xs min-w-0 max-h-28 overflow-hidden"></div>
+                            </div>
                         </div>
-                        <div class="bg-white p-2.5 md:p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-red-500 min-w-0">
-                            <p class="text-[10px] md:text-sm font-semibold text-gray-500 mb-0.5 md:mb-1 truncate">지출</p>
-                            <h3 class="text-xs sm:text-sm md:text-xl font-bold text-red-500 truncate" id="cashflow-selected-expense">0원</h3>
-                        </div>
-                        <div class="bg-white p-2.5 md:p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-emerald-500 min-w-0">
-                            <p class="text-[10px] md:text-sm font-semibold text-gray-500 mb-0.5 md:mb-1 truncate">잉여</p>
-                            <h3 class="text-xs sm:text-sm md:text-xl font-bold text-emerald-600 truncate" id="cashflow-selected-net">0원</h3>
+                        <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-red-500 min-w-0 min-h-[168px] flex flex-col">
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <div class="min-w-0">
+                                    <p class="text-[10px] md:text-sm font-semibold text-gray-500 mb-0.5 truncate">지출</p>
+                                    <h3 class="text-sm md:text-xl font-bold text-red-500 truncate" id="cashflow-selected-expense">0원</h3>
+                                </div>
+                                <span class="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded shrink-0">Expense</span>
+                            </div>
+                            <div class="grid grid-cols-[92px_minmax(0,1fr)] md:grid-cols-[108px_minmax(0,1fr)] gap-3 items-center flex-1 min-h-[112px]">
+                                <div class="relative h-24 md:h-28 self-center">
+                                    <canvas id="cashflow-main-expense-category-chart"></canvas>
+                                </div>
+                                <div id="cashflow-main-expense-category-list" class="space-y-1 text-[10px] md:text-xs min-w-0 max-h-28 overflow-hidden"></div>
+                            </div>
                         </div>
                     </div>
 
