@@ -73,16 +73,15 @@
                 `;
                 const renderInvestmentAccountRows = () => {
                     const accountGroups = {};
+                    const accountOrderMap = getPortfolioAccountOrderMap(groupData.items);
                     groupData.items.forEach(item => {
-                        const accountName = String(item.accountName || '').trim() || '계좌 미지정';
+                        const accountName = getPortfolioAccountDisplayName(item);
                         if (!accountGroups[accountName]) accountGroups[accountName] = [];
                         accountGroups[accountName].push(item);
                     });
-                    return Object.entries(accountGroups).sort(([a], [b]) => {
-                        if (a === '계좌 미지정') return 1;
-                        if (b === '계좌 미지정') return -1;
-                        return a.localeCompare(b, 'ko-KR');
-                    }).map(([accountName, items]) => {
+                    return Object.entries(accountGroups)
+                    .sort(([a], [b]) => comparePortfolioAccounts(a, b, accountOrderMap))
+                    .map(([accountName, items]) => {
                         const accountTotal = items.reduce((acc, item) => acc + Number(item.amount || 0), 0);
                         return `
                             <div class="rounded-xl border border-purple-100 overflow-hidden bg-white">

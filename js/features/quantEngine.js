@@ -349,23 +349,16 @@
             return `<option value="${escapeAttr(key)}" ${selected}>${escapeHtml(meta.label)}</option>`;
         }).join('');
         const getAccountKey = (item) => {
-            const explicitAccount = String(item.accountName || '').trim();
-            if (explicitAccount) return explicitAccount;
-            const groupText = String(item.groupName || '').toLowerCase();
-            if (item.classification?.assetType === 'pension' || groupText.includes('연금') || groupText.includes('퇴직') || groupText.includes('irp')) return '연금';
-            return '계좌 미지정';
+            return getPortfolioAccountDisplayName(item);
         };
         const accountGroups = {};
+        const accountOrderMap = getPortfolioAccountOrderMap(editableItems.map(({ item }) => item));
         editableItems.forEach(entry => {
             const key = getAccountKey(entry.item);
             if (!accountGroups[key]) accountGroups[key] = [];
             accountGroups[key].push(entry);
         });
-        const accountEntries = Object.entries(accountGroups).sort(([a], [b]) => {
-            if (a === '계좌 미지정') return 1;
-            if (b === '계좌 미지정') return -1;
-            return a.localeCompare(b, 'ko-KR');
-        });
+        const accountEntries = Object.entries(accountGroups).sort(([a], [b]) => comparePortfolioAccounts(a, b, accountOrderMap));
 
         if (editableItems.length === 0) {
             container.innerHTML = `
@@ -404,9 +397,12 @@
                     ${accountEntries.map(([accountName, rows], accountIndex) => {
                         const accountTotal = rows.reduce((sum, { item }) => sum + Number(item.amount || 0), 0);
                         const accountSectionId = `invest-holding-account-${accountIndex}`;
+                        const jsAccountName = escapeJsString(accountName);
+                        const isFirstAccount = accountIndex === 0;
+                        const isLastAccount = accountIndex === accountEntries.length - 1;
                         return `
                             <div class="bg-white rounded-xl shadow-sm border border-purple-100 overflow-hidden">
-                                <button type="button" onclick="togglePortfolioEditSection('${accountSectionId}', this)" class="w-full px-3 py-2 bg-white hover:bg-purple-50/60 flex items-center justify-between gap-3 text-left transition-colors">
+                                <div onclick="togglePortfolioEditSection('${accountSectionId}', this)" class="w-full px-3 py-2 bg-white hover:bg-purple-50/60 flex items-center justify-between gap-3 text-left transition-colors cursor-pointer">
                                     <div class="flex items-center gap-2 min-w-0">
                                         <div class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center"><i class="fas fa-wallet text-[10px]"></i></div>
                                         <div class="min-w-0">
@@ -416,9 +412,17 @@
                                     </div>
                                     <div class="flex items-center gap-2 shrink-0">
                                         <p class="text-xs font-black text-gray-800 whitespace-nowrap">${accountTotal.toLocaleString()}원</p>
+                                        <div class="flex items-center gap-1" onclick="event.stopPropagation()">
+                                            <button type="button" title="계좌 위로 이동" aria-label="계좌 위로 이동" onclick="reorderPortfolioAccount('${jsAccountName}', -1)" ${isFirstAccount ? 'disabled' : ''} class="w-6 h-6 rounded-md border border-purple-100 bg-white text-purple-500 hover:bg-purple-50 disabled:opacity-30 disabled:hover:bg-white transition-colors">
+                                                <i class="fas fa-arrow-up text-[9px]"></i>
+                                            </button>
+                                            <button type="button" title="계좌 아래로 이동" aria-label="계좌 아래로 이동" onclick="reorderPortfolioAccount('${jsAccountName}', 1)" ${isLastAccount ? 'disabled' : ''} class="w-6 h-6 rounded-md border border-purple-100 bg-white text-purple-500 hover:bg-purple-50 disabled:opacity-30 disabled:hover:bg-white transition-colors">
+                                                <i class="fas fa-arrow-down text-[9px]"></i>
+                                            </button>
+                                        </div>
                                         <i class="fas fa-chevron-down text-[10px] text-purple-300 transition-transform"></i>
                                     </div>
-                                </button>
+                                </div>
                                 <div id="${accountSectionId}" class="hidden border-t border-purple-100 p-2 space-y-1.5 bg-purple-50/20">
                                     ${rows.map(({ item, index }) => {
                                         const strategyTag = item.strategyTag || inferStrategyTag(item);
@@ -467,6 +471,61 @@
             </div>
         `;
     }
+
+    window.reorderPortfolioAccount = async function(accountName, direction) {
+        const rows = (activeQuantHoldingItems || activeInvestProcessedItems || [])
+            .filter(item => !!item.id)
+            .map(item => ({ item, accountName: getPortfolioAccountDisplayName(item) }));
+        const accountOrderMap = getPortfolioAccountOrderMap(rows.map(({ item }) => item));
+        const accountNames = [...new Set(rows.map(row => row.accountName))]
+            .sort((a, b) => comparePortfolioAccounts(a, b, accountOrderMap));
+        const fromIndex = accountNames.indexOf(accountName);
+        const toIndex = fromIndex + Number(direction || 0);
+
+        if (fromIndex === -1 || toIndex < 0 || toIndex >= accountNames.length) return;
+
+        [accountNames[fromIndex], accountNames[toIndex]] = [accountNames[toIndex], accountNames[fromIndex]];
+        const nextOrderMap = saveStoredPortfolioAccountOrder(accountNames);
+
+        rows.forEach(({ item, accountName: rowAccountName }) => {
+            if (Number.isFinite(Number(nextOrderMap[rowAccountName]))) item.accountOrder = nextOrderMap[rowAccountName];
+        });
+
+        const status = document.getElementById('invest-quant-status');
+        if (status) status.textContent = '계좌 순서 저장 중';
+        renderQuantHoldingEditor(activeQuantHoldingItems || activeInvestProcessedItems || []);
+
+        try {
+            const _supabase = getSupabaseClient();
+            const updates = accountNames
+                .filter(name => name !== PORTFOLIO_UNASSIGNED_ACCOUNT && Number.isFinite(Number(nextOrderMap[name])))
+                .map(name => {
+                    const ids = rows
+                        .filter(row => row.accountName === name)
+                        .map(row => row.item.id)
+                        .filter(Boolean);
+                    return { name, ids, accountOrder: nextOrderMap[name] };
+                })
+                .filter(update => update.ids.length > 0);
+
+            for (const update of updates) {
+                const { error } = await _supabase
+                    .from('portfolios')
+                    .update({ account_order: update.accountOrder })
+                    .in('id', update.ids);
+                if (error) throw error;
+            }
+
+            if (status) status.textContent = '계좌 순서 저장됨';
+            showToast('계좌 순서를 저장했습니다.', 'info', 1600);
+            await fetchSheetData(false, ['portfolios']);
+            if (activeInvestGroupName) renderInvestDetail(activeInvestGroupName);
+        } catch (error) {
+            if (status) status.textContent = '계좌 순서 로컬 저장됨';
+            showToast('현재 브라우저에 계좌 순서를 저장했습니다. Supabase 컬럼 적용 후에는 기기 간 동기화됩니다.', 'warning', 3200);
+            console.warn('Account order DB save skipped:', error);
+        }
+    };
 
     window.markQuantHoldingsDirty = function() {
         const status = document.getElementById('invest-quant-status');

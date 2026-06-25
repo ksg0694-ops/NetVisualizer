@@ -125,6 +125,61 @@
             .replace(/\n/g, '\\n');
     }
 
+    const PORTFOLIO_ACCOUNT_ORDER_KEY = 'netvisualizer_portfolio_account_order_v1';
+    const PORTFOLIO_UNASSIGNED_ACCOUNT = '계좌 미지정';
+
+    function getStoredPortfolioAccountOrder() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(PORTFOLIO_ACCOUNT_ORDER_KEY) || '{}');
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (error) {
+            return {};
+        }
+    }
+
+    function saveStoredPortfolioAccountOrder(accountNames = []) {
+        const order = {};
+        accountNames
+            .filter(name => name && name !== PORTFOLIO_UNASSIGNED_ACCOUNT)
+            .forEach((name, index) => { order[name] = (index + 1) * 10; });
+        localStorage.setItem(PORTFOLIO_ACCOUNT_ORDER_KEY, JSON.stringify(order));
+        return order;
+    }
+
+    function getPortfolioAccountOrderMap(items = []) {
+        const order = {};
+        items.forEach(item => {
+            const accountName = getPortfolioAccountDisplayName(item);
+            const accountOrder = Number(item.accountOrder);
+            if (!accountName || accountName === PORTFOLIO_UNASSIGNED_ACCOUNT || !Number.isFinite(accountOrder)) return;
+            order[accountName] = Number.isFinite(order[accountName]) ? Math.min(order[accountName], accountOrder) : accountOrder;
+        });
+        return { ...order, ...getStoredPortfolioAccountOrder() };
+    }
+
+    function getPortfolioAccountDisplayName(item = {}) {
+        const explicitAccount = String(item.accountName || '').trim();
+        if (explicitAccount) return explicitAccount;
+
+        const groupText = String(item.groupName || '').toLowerCase();
+        if (item.classification?.assetType === 'pension' || includesAny(groupText, ['연금', '퇴직', 'irp'])) return '연금';
+        return PORTFOLIO_UNASSIGNED_ACCOUNT;
+    }
+
+    function comparePortfolioAccounts(a, b, orderMap = {}) {
+        if (a === PORTFOLIO_UNASSIGNED_ACCOUNT && b !== PORTFOLIO_UNASSIGNED_ACCOUNT) return 1;
+        if (b === PORTFOLIO_UNASSIGNED_ACCOUNT && a !== PORTFOLIO_UNASSIGNED_ACCOUNT) return -1;
+
+        const aOrder = Number(orderMap[a]);
+        const bOrder = Number(orderMap[b]);
+        const hasAOrder = Number.isFinite(aOrder);
+        const hasBOrder = Number.isFinite(bOrder);
+        if (hasAOrder && hasBOrder && aOrder !== bOrder) return aOrder - bOrder;
+        if (hasAOrder && !hasBOrder) return -1;
+        if (!hasAOrder && hasBOrder) return 1;
+        return String(a).localeCompare(String(b), 'ko-KR');
+    }
+
     const ASSET_CLASS_META = {
         account: {
             label: '계좌/현금성', shortLabel: '계좌', icon: 'fa-wallet',
@@ -344,7 +399,7 @@
     }
 
     function formatPortfolioRows(rows = []) {
-        const pfFormat = [["대분류 (Drop-down)","계좌/자산명 (Text)","통화/형태 (Text)","만기일 (Date/Text)","금액 (Number)", "주식수", "id", "asset_type", "instrument_type", "ticker", "risk_bucket", "classification_source", "classification_updated_at", "strategy_tag", "avg_buy_price", "account_name"]];
+        const pfFormat = [["대분류 (Drop-down)","계좌/자산명 (Text)","통화/형태 (Text)","만기일 (Date/Text)","금액 (Number)", "주식수", "id", "asset_type", "instrument_type", "ticker", "risk_bucket", "classification_source", "classification_updated_at", "strategy_tag", "avg_buy_price", "account_name", "account_order"]];
         rows.forEach(r => pfFormat.push([
             r.group_name,
             r.name,
@@ -361,7 +416,8 @@
             r.classification_updated_at || '',
             r.strategy_tag || '',
             r.avg_buy_price ?? '',
-            r.account_name || ''
+            r.account_name || '',
+            r.account_order ?? ''
         ]));
         return pfFormat;
     }
@@ -785,6 +841,8 @@
             const avgBuyPriceStr = row.length > 14 ? String(row[14] || '').replace(/[^0-9.-]/g, '') : '';
             const avgBuyPrice = avgBuyPriceStr ? parseFloat(avgBuyPriceStr) : null;
             const accountName = row.length > 15 ? row[15] : '';
+            const accountOrderRaw = row.length > 16 ? String(row[16] || '').replace(/[^0-9.-]/g, '') : '';
+            const accountOrder = accountOrderRaw ? Number(accountOrderRaw) : null;
 
             if (isNaN(amount) || !name) return;
 
@@ -795,7 +853,7 @@
                 dynamicPortfolioData[group] = { color: isDebtColor.c, bg: isDebtColor.b, isDebt: isDebt, items: [] };
                 if(!isDebt) colorIdx++;
             }
-            const item = { id, name, amount: isDebt && amount > 0 ? -amount : amount, currency, maturity, shares, assetType, instrumentType, ticker, riskBucket, classificationSource, classificationUpdatedAt, strategyTag, avgBuyPrice, accountName };
+            const item = { id, name, amount: isDebt && amount > 0 ? -amount : amount, currency, maturity, shares, assetType, instrumentType, ticker, riskBucket, classificationSource, classificationUpdatedAt, strategyTag, avgBuyPrice, accountName, accountOrder };
             item.classification = classifyPortfolioItem(group, item);
             dynamicPortfolioData[group].items.push(item);
             hasData = true;

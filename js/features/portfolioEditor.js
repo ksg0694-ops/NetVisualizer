@@ -33,6 +33,7 @@
             if (Number(item.shares || 0) > 0) return false;
             if (classification.assetType === 'debt') return true;
             if (classification.assetType === 'pension' || includesAny(groupText, ['연금', '퇴직', 'irp'])) return true;
+            if (classification.assetType === 'other' || includesAny(groupText, ['기타', '미분류'])) return true;
             if (classification.assetType !== 'account') return false;
             if (includesAny(groupText, ['투자', '주식', 'etf', '펀드'])) return false;
             return true;
@@ -43,17 +44,19 @@
             if (classification.assetType === 'debt' || includesAny(groupText, ['부채', '대출', '마이너스'])) return '부채';
             if (classification.assetType === 'pension' || includesAny(groupText, ['연금', '퇴직', 'irp'])) return '연금';
             if (includesAny(groupText, ['안전', '예금', '적금', 'cma', '파킹', 'rp', '발행어음', '채권'])) return '안전';
+            if (classification.assetType === 'other' || includesAny(groupText, ['기타', '미분류'])) return '기타';
             return '현금';
         };
         const bucketMeta = {
             '현금': { icon: 'fa-wallet', color: 'blue', label: '현금 / 계좌' },
             '안전': { icon: 'fa-shield-alt', color: 'emerald', label: '안전자산' },
             '연금': { icon: 'fa-piggy-bank', color: 'pink', label: '연금' },
-            '부채': { icon: 'fa-credit-card', color: 'red', label: '부채' }
+            '부채': { icon: 'fa-credit-card', color: 'red', label: '부채' },
+            '기타': { icon: 'fa-coins', color: 'gray', label: '기타' }
         };
 
-        // 1. 편집 대상은 현금/안전/연금/부채로 묶고, 투자 보유정보는 별도 섹션에서 관리한다.
-        const editBuckets = { '현금': [], '안전': [], '연금': [], '부채': [] };
+        // 1. 편집 대상은 현금/안전/연금/부채/기타로 묶고, 투자 보유정보는 별도 섹션에서 관리한다.
+        const editBuckets = { '현금': [], '안전': [], '연금': [], '부채': [], '기타': [] };
         const quantItems = [];
         for (let i = 1; i < workingPortfolioData.length; i++) {
             const row = workingPortfolioData[i];
@@ -76,7 +79,8 @@
                 classificationUpdatedAt: row[12] || '',
                 strategyTag: row[13] || '',
                 avgBuyPrice: row[14] || '',
-                accountName: row[15] || ''
+                accountName: row[15] || '',
+                accountOrder: row[16] || ''
             };
             editItem.classification = classifyPortfolioItem(groupName, editItem);
             if (isQuickEditableItem(editItem)) editBuckets[getEditableBucket(editItem)].push(editItem);
@@ -94,31 +98,32 @@
                 <div class="px-3 md:px-4 py-2.5 bg-indigo-50/60 border-b border-indigo-100 flex items-center justify-between gap-3">
                     <div class="min-w-0">
                         <h4 class="text-sm font-bold text-gray-900">빠른 금액 수정</h4>
-                        <p class="text-[10px] text-gray-500 truncate">현금/안전/연금/부채 금액을 입력</p>
+                        <p class="text-[10px] text-gray-500 truncate">현금/안전/연금/부채/기타 금액을 입력</p>
                     </div>
                     <div class="text-right shrink-0">
                         <p class="text-[9px] font-bold text-indigo-500">편집 순액</p>
                         <p class="text-sm font-black text-indigo-800">${editableTotal.toLocaleString()}원</p>
                     </div>
                 </div>
-                <div class="grid grid-cols-4 divide-x divide-indigo-50 text-center">
+                <div class="grid grid-cols-5 divide-x divide-indigo-50 text-center">
                     <div class="px-2 py-2"><p class="text-[9px] text-gray-400 font-bold">현금</p><p class="text-xs font-bold text-blue-700">${editBuckets['현금'].length}</p></div>
                     <div class="px-2 py-2"><p class="text-[9px] text-gray-400 font-bold">안전</p><p class="text-xs font-bold text-emerald-700">${editBuckets['안전'].length}</p></div>
                     <div class="px-2 py-2"><p class="text-[9px] text-gray-400 font-bold">연금</p><p class="text-xs font-bold text-pink-700">${editBuckets['연금'].length}</p></div>
                     <div class="px-2 py-2"><p class="text-[9px] text-gray-400 font-bold">부채</p><p class="text-xs font-bold text-red-700">${editBuckets['부채'].length}</p></div>
+                    <div class="px-2 py-2"><p class="text-[9px] text-gray-400 font-bold">기타</p><p class="text-xs font-bold text-gray-700">${editBuckets['기타'].length}</p></div>
                 </div>
             </div>
         `);
 
-        ['현금', '안전', '연금', '부채'].forEach((bucketName) => {
+        ['현금', '안전', '연금', '부채', '기타'].forEach((bucketName) => {
             const items = editBuckets[bucketName];
             const meta = bucketMeta[bucketName];
             const color = meta.color;
             const bucketTotal = items.reduce((sum, item) => sum + getAmountNumber(item.amount), 0);
-            const borderClass = color === 'red' ? 'border-red-100' : (color === 'pink' ? 'border-pink-100' : (color === 'emerald' ? 'border-emerald-100' : 'border-blue-100'));
-            const bgClass = color === 'red' ? 'bg-red-50/50' : (color === 'pink' ? 'bg-pink-50/50' : (color === 'emerald' ? 'bg-emerald-50/50' : 'bg-blue-50/50'));
-            const iconClass = color === 'red' ? 'text-red-600 bg-red-100' : (color === 'pink' ? 'text-pink-600 bg-pink-100' : (color === 'emerald' ? 'text-emerald-600 bg-emerald-100' : 'text-blue-600 bg-blue-100'));
-            const buttonClass = color === 'red' ? 'text-red-600 bg-red-50 hover:bg-red-100 border-red-100' : (color === 'pink' ? 'text-pink-600 bg-pink-50 hover:bg-pink-100 border-pink-100' : (color === 'emerald' ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border-emerald-100' : 'text-blue-600 bg-blue-50 hover:bg-blue-100 border-blue-100'));
+            const borderClass = color === 'red' ? 'border-red-100' : (color === 'pink' ? 'border-pink-100' : (color === 'emerald' ? 'border-emerald-100' : (color === 'gray' ? 'border-gray-200' : 'border-blue-100')));
+            const bgClass = color === 'red' ? 'bg-red-50/50' : (color === 'pink' ? 'bg-pink-50/50' : (color === 'emerald' ? 'bg-emerald-50/50' : (color === 'gray' ? 'bg-gray-50/70' : 'bg-blue-50/50')));
+            const iconClass = color === 'red' ? 'text-red-600 bg-red-100' : (color === 'pink' ? 'text-pink-600 bg-pink-100' : (color === 'emerald' ? 'text-emerald-600 bg-emerald-100' : (color === 'gray' ? 'text-gray-600 bg-gray-100' : 'text-blue-600 bg-blue-100')));
+            const buttonClass = color === 'red' ? 'text-red-600 bg-red-50 hover:bg-red-100 border-red-100' : (color === 'pink' ? 'text-pink-600 bg-pink-50 hover:bg-pink-100 border-pink-100' : (color === 'emerald' ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border-emerald-100' : (color === 'gray' ? 'text-gray-600 bg-gray-50 hover:bg-gray-100 border-gray-200' : 'text-blue-600 bg-blue-50 hover:bg-blue-100 border-blue-100')));
             const jsGroupName = escapeJsString(bucketName);
             const sectionId = `pf-edit-section-${bucketName}`;
 
@@ -363,7 +368,8 @@
                     classificationSource: workingPortfolioData[i][11] || '',
                     strategyTag: workingPortfolioData[i][13] || '',
                     avgBuyPrice: workingPortfolioData[i][14] || '',
-                    accountName: workingPortfolioData[i][15] || ''
+                    accountName: workingPortfolioData[i][15] || '',
+                    accountOrder: workingPortfolioData[i][16] || ''
                 };
                 const classification = classifyPortfolioItem(payload.group_name, classificationItem);
                 const strategyTag = workingPortfolioData[i][13] || inferStrategyTag({ ...classificationItem, classification });
@@ -377,6 +383,8 @@
                 payload.strategy_tag = INVEST_STRATEGY_META[strategyTag] ? strategyTag : 'other';
                 payload.avg_buy_price = avgBuyPriceRaw ? parseFloat(avgBuyPriceRaw) : null;
                 payload.account_name = workingPortfolioData[i][15] || null;
+                const accountOrderRaw = String(workingPortfolioData[i][16] || '').replace(/[^0-9.-]/g, '');
+                if (accountOrderRaw) payload.account_order = Number(accountOrderRaw);
 
                 if (rowId) {
                     payload.id = rowId;

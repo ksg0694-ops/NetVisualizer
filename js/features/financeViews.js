@@ -355,51 +355,127 @@
         };
     }
 
+    function getCashFlowPeriodRange(monthKey) {
+        const [yearText, monthText] = String(monthKey || '').split('-');
+        const year = Number(yearText);
+        const month = Number(monthText);
+        if (!year || !month) return null;
+
+        const previousYear = month === 1 ? year - 1 : year;
+        const previousMonth = month === 1 ? 12 : month - 1;
+        const startKey = getPayday(previousYear, previousMonth);
+        const nextPaydayKey = getPayday(year, month);
+        const endDate = new Date(`${nextPaydayKey}T00:00:00`);
+        endDate.setDate(endDate.getDate() - 1);
+        const endKey = [
+            endDate.getFullYear(),
+            String(endDate.getMonth() + 1).padStart(2, '0'),
+            String(endDate.getDate()).padStart(2, '0')
+        ].join('-');
+        return { startKey, endKey };
+    }
+
+    function getScheduledDatesInRange(payDay, startKey, endKey) {
+        const dates = [];
+        const start = new Date(`${startKey}T00:00:00`);
+        const end = new Date(`${endKey}T00:00:00`);
+        const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+        const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+
+        while (cursor <= endMonth) {
+            const year = cursor.getFullYear();
+            const month = cursor.getMonth() + 1;
+            const lastDay = new Date(year, month, 0).getDate();
+            const dueDay = Math.min(Number(payDay), lastDay);
+            const dueKey = `${year}-${String(month).padStart(2, '0')}-${String(dueDay).padStart(2, '0')}`;
+            if (dueKey >= startKey && dueKey <= endKey) dates.push(dueKey);
+            cursor.setMonth(cursor.getMonth() + 1);
+        }
+
+        return dates;
+    }
+
+    function getAllCashFlowTransactions() {
+        return Object.values(monthlyDB || {}).flatMap(db => db?.transactions || []);
+    }
+
+    function isFixedCostTransaction(tx) {
+        return tx?.type === '지출' && String(tx.cat || '').trim() === '고정비';
+    }
+
+    function isInsurancePaidForDueDate(ins, dueDateKey, amount) {
+        const dueMonth = String(dueDateKey || '').slice(0, 7);
+        const description = String(ins.description || ins.name || '').trim();
+        const company = String(ins.company || '').trim();
+        const category = String(ins.category || '').trim();
+        return getAllCashFlowTransactions().some(tx => {
+            if (tx.type !== '지출' || String(tx.date || '').slice(0, 7) !== dueMonth) return false;
+            const amountDiff = Math.abs(Math.abs(Number(tx.amount) || 0) - amount);
+            if (amountDiff > 2) return false;
+            const txText = `${tx.cat || ''} ${tx.subcat || ''} ${tx.memo || ''} ${tx.method || ''}`;
+            return String(tx.subcat || '').includes('보험')
+                || (description && txText.includes(description))
+                || (company && txText.includes(company))
+                || (category && txText.includes(category));
+        });
+    }
+
     function getRemainingFixedCostItems(monthKey, txData = []) {
         const today = getLocalTodayParts();
-        if (monthKey !== today.monthKey) return { isCurrentMonth: false, items: [], total: 0 };
+        const todayPeriod = getMonthKeyAndPeriod(today.dateKey);
+        const period = getCashFlowPeriodRange(monthKey);
+        if (!period) return { isCurrentPeriod: false, items: [], total: 0, paidTotal: 0, scheduledTotal: 0 };
 
-        const paidKeys = new Set(txData
-            .filter(tx => tx.type === '지출')
-            .map(tx => `${tx.date}|${Math.abs(Number(tx.amount) || 0)}|${String(tx.memo || '').trim()}`));
+        const paidItems = txData
+            .filter(isFixedCostTransaction)
+            .map(tx => ({
+                label: String(tx.memo || tx.subcat || '고정비').trim(),
+                meta: `${tx.subcat || '고정비'} · ${tx.date}${tx.method ? ` · ${tx.method}` : ''}`,
+                amount: Math.abs(Number(tx.amount) || 0),
+                dueDateKey: tx.date,
+                status: 'paid'
+            }));
 
-        const items = (addonInsurances || []).map(ins => {
+        const isCurrentPeriod = monthKey === todayPeriod.monthKey;
+        const scheduledItems = isCurrentPeriod ? (addonInsurances || []).flatMap(ins => {
             const payDay = Number(ins.pay_day || ins.payDay || 0);
             const amount = Math.abs(Number(ins.monthly_payment || ins.monthlyPayment || 0));
-            if (!payDay || !amount) return null;
+            if (!payDay || !amount) return [];
 
-            const dueDay = Math.min(payDay, new Date(today.year, Number(today.month), 0).getDate());
-            if (dueDay < today.day) return null;
-
-            const dueDateKey = `${today.monthKey}-${String(dueDay).padStart(2, '0')}`;
             const start = ins.start_date ? String(ins.start_date).slice(0, 10) : '';
             const end = ins.end_date ? String(ins.end_date).slice(0, 10) : '';
-            if (start && dueDateKey < start) return null;
-            if (end && dueDateKey > end) return null;
-
             const description = String(ins.description || ins.name || '보험료').trim();
             const company = String(ins.company || '').trim();
-            const exactPaidKey = `${dueDateKey}|${amount}|${description}`;
-            const looksPaid = paidKeys.has(exactPaidKey) || txData.some(tx => (
-                tx.type === '지출'
-                && tx.date === dueDateKey
-                && Math.abs(Number(tx.amount) || 0) === amount
-                && (!description || String(tx.memo || '').includes(description) || (company && String(tx.memo || '').includes(company)))
-            ));
-            if (looksPaid) return null;
 
-            const dueDate = new Date(today.year, Number(today.month) - 1, dueDay);
-            const diffDays = Math.max(0, Math.ceil((dueDate - today.date) / 86400000));
-            return {
-                label: description,
-                meta: company || '보험',
-                amount,
-                dueDateKey,
-                diffDays
-            };
-        }).filter(Boolean).sort((a, b) => a.dueDateKey.localeCompare(b.dueDateKey));
+            return getScheduledDatesInRange(payDay, period.startKey, period.endKey)
+                .filter(dueDateKey => (!start || dueDateKey >= start) && (!end || dueDateKey <= end))
+                .filter(dueDateKey => !isInsurancePaidForDueDate(ins, dueDateKey, amount))
+                .map(dueDateKey => {
+                    const dueDate = new Date(`${dueDateKey}T00:00:00`);
+                    const diffDays = Math.ceil((dueDate - today.date) / 86400000);
+                    return {
+                        label: description,
+                        meta: `${company || '보험'} · ${dueDateKey}`,
+                        amount,
+                        dueDateKey,
+                        diffDays,
+                        status: diffDays < 0 ? 'overdue' : 'scheduled'
+                    };
+                });
+        }) : [];
 
-        return { isCurrentMonth: true, items, total: items.reduce((sum, item) => sum + item.amount, 0) };
+        const items = [...paidItems, ...scheduledItems]
+            .sort((a, b) => a.dueDateKey.localeCompare(b.dueDateKey) || a.label.localeCompare(b.label, 'ko-KR'));
+        const paidTotal = paidItems.reduce((sum, item) => sum + item.amount, 0);
+        const scheduledTotal = scheduledItems.reduce((sum, item) => sum + item.amount, 0);
+
+        return {
+            isCurrentPeriod,
+            items,
+            total: paidTotal + scheduledTotal,
+            paidTotal,
+            scheduledTotal
+        };
     }
 
     function renderRemainingFixedCosts(monthKey, txData = []) {
@@ -411,28 +487,26 @@
         const result = getRemainingFixedCostItems(monthKey, txData);
         totalEl.textContent = formatWon(result.total);
 
-        if (!result.isCurrentMonth) {
-            panel.className = 'border border-gray-100 rounded-xl p-3 min-w-0 bg-gray-50/60';
-            list.innerHTML = '<p class="text-gray-400">이번 달 상세 내역에서만 예정 고정비를 표시합니다.</p>';
-            return;
-        }
-
         panel.className = result.items.length
             ? 'border border-amber-100 rounded-xl p-3 min-w-0 bg-amber-50/30'
             : 'border border-gray-100 rounded-xl p-3 min-w-0 bg-white';
 
         if (!result.items.length) {
-            list.innerHTML = '<p class="text-gray-400">남은 보험 납입 예정이 없습니다.</p>';
+            list.innerHTML = '<p class="text-gray-400">고정비로 분류된 지출이나 남은 납입 예정이 없습니다.</p>';
             return;
         }
 
         list.innerHTML = result.items.map(item => `
-            <div class="flex items-center justify-between gap-2 bg-white border border-amber-100 rounded-lg px-2.5 py-1.5">
+            <div class="flex items-center justify-between gap-2 bg-white border ${item.status === 'overdue' ? 'border-rose-100' : 'border-amber-100'} rounded-lg px-2.5 py-1.5">
                 <div class="min-w-0">
                     <p class="font-bold text-gray-700 truncate">${escapeHtml(item.label)}</p>
-                    <p class="text-gray-400 truncate">${escapeHtml(item.meta)} · ${escapeHtml(item.dueDateKey)} · ${item.diffDays === 0 ? '오늘' : `D-${item.diffDays}`}</p>
+                    <p class="text-gray-400 truncate">${escapeHtml(item.meta)} · ${
+                        item.status === 'paid'
+                            ? '반영됨'
+                            : (item.status === 'overdue' ? '확인 필요' : (item.diffDays === 0 ? '오늘 예정' : `D-${item.diffDays}`))
+                    }</p>
                 </div>
-                <span class="font-bold text-amber-700 whitespace-nowrap">${formatWon(item.amount)}</span>
+                <span class="font-bold ${item.status === 'overdue' ? 'text-rose-700' : 'text-amber-700'} whitespace-nowrap">${formatWon(item.amount)}</span>
             </div>
         `).join('');
     }
