@@ -23,7 +23,7 @@
     // ==========================================
     let userUrls = {
         webapp: 'https://djwqcewsochlesjcouoi.supabase.co',
-        supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqd3FjZXdzb2NobGVzamNvdW9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyMDQwMjYsImV4cCI6MjA5NTc4MDAyNn0.BaKElHEW0x0q82I38kSkpd4nQbGAJVnT-LNYwLlHZMk'
+        supabaseKey: 'sb_publishable_z6KPFqll3gkD7zSPcGtZxQ_b9Bl96Wi'
     };
     const DEFAULT_WEBAPP_URL = userUrls.webapp;
     const GOOGLE_SHEET_EDIT_URL = 'https://docs.google.com/spreadsheets/d/1pFBp0zYmr1AFykD-a6k44HQicnmS4JtSFIpd_E4gkBU/edit?usp=drive_link';

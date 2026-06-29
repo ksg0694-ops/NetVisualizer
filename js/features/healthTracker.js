@@ -7,6 +7,7 @@
     let isBound = false;
     let remoteAvailable = true;
     let remoteLoadStarted = false;
+    let remoteLoaded = false;
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
@@ -91,14 +92,15 @@
     }
 
     function handleRemoteError(error, context) {
+        remoteLoaded = false;
         if (isMissingTableError(error)) {
             remoteAvailable = false;
             console.warn(`${context}: health weight Supabase table is not ready`, error);
-            renderSyncStatus('로컬 저장', 'text-amber-600 bg-amber-50 border-amber-100');
+            renderSyncStatus('서버 테이블 없음', 'text-red-600 bg-red-50 border-red-100');
             return;
         }
         console.warn(`${context}: health weight sync failed`, error);
-        renderSyncStatus('동기화 확인 필요', 'text-amber-600 bg-amber-50 border-amber-100');
+        renderSyncStatus('서버 저장 실패', 'text-amber-600 bg-amber-50 border-amber-100');
     }
 
     function toRemotePayload(log) {
@@ -123,6 +125,7 @@
     async function loadRemoteLogs() {
         const client = getClient();
         if (!client) return null;
+        renderSyncStatus('서버 확인 중', 'text-sky-600 bg-sky-50 border-sky-100');
         try {
             const { data, error } = await client
                 .from(TABLE_NAME)
@@ -130,15 +133,24 @@
                 .order('log_date', { ascending: true });
             if (error) throw error;
             const remoteLogs = sortLogs((data || []).map(fromRemoteRow).filter(Boolean));
-            if (remoteLogs.length === 0 && logs.length > 0) {
-                await persistAllLogs();
+            const localLogs = getStore();
+            if (remoteLogs.length === 0 && localLogs.length > 0) {
+                logs = localLogs;
+                const migrated = await persistAllLogs();
+                if (migrated) {
+                    render({ skipRemoteLoad: true });
+                    renderSyncStatus('Supabase 저장', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+                    toast('이 기기의 체중 기록을 Supabase로 옮겼습니다.', 'info');
+                    return logs;
+                }
                 return null;
             }
             logs = remoteLogs;
             saveStore(logs);
             if (!logs.some((log) => log.date === selectedDate)) selectedDate = logs[logs.length - 1]?.date || getTodayString();
             render({ skipRemoteLoad: true });
-            renderSyncStatus('Supabase 동기화', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+            remoteLoaded = true;
+            renderSyncStatus('Supabase 저장', 'text-emerald-600 bg-emerald-50 border-emerald-100');
             return logs;
         } catch (error) {
             handleRemoteError(error, 'loadRemoteLogs');
@@ -161,7 +173,8 @@
                 .from(TABLE_NAME)
                 .upsert(toRemotePayload(normalized), { onConflict: 'log_date' });
             if (error) throw error;
-            renderSyncStatus('Supabase 동기화', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+            remoteLoaded = true;
+            renderSyncStatus('Supabase 저장', 'text-emerald-600 bg-emerald-50 border-emerald-100');
             return true;
         } catch (error) {
             handleRemoteError(error, 'persistLog');
@@ -177,6 +190,7 @@
                 .from(TABLE_NAME)
                 .upsert(logs.map(toRemotePayload), { onConflict: 'log_date' });
             if (error) throw error;
+            remoteLoaded = true;
             return true;
         } catch (error) {
             handleRemoteError(error, 'persistAllLogs');
@@ -190,6 +204,7 @@
         try {
             const { error } = await client.from(TABLE_NAME).delete().eq('log_date', date);
             if (error) throw error;
+            remoteLoaded = true;
             return true;
         } catch (error) {
             handleRemoteError(error, 'deleteRemoteLog');
@@ -254,7 +269,7 @@
                     <p class="text-xs md:text-sm text-gray-500 mt-1">체중을 기록하고 일별 변화와 7일 평균을 같이 봅니다.</p>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    <span id="health-sync-badge" class="text-[10px] md:text-xs font-bold text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-lg whitespace-nowrap">로컬 저장</span>
+                    <span id="health-sync-badge" class="text-[10px] md:text-xs font-bold text-sky-600 bg-sky-50 border border-sky-100 px-2.5 py-1 rounded-lg whitespace-nowrap">서버 확인 중</span>
                     <span class="text-[10px] md:text-xs font-bold text-rose-600 bg-rose-50 border border-rose-100 px-2.5 py-1 rounded-lg whitespace-nowrap">7일 평균</span>
                 </div>
             </div>
@@ -487,7 +502,11 @@
         renderChart();
         renderLogList();
         fillForm(getSelectedLog() || { date: selectedDate });
-        renderSyncStatus(remoteAvailable ? '로컬 저장' : '로컬 저장', 'text-amber-600 bg-amber-50 border-amber-100');
+        if (remoteAvailable) {
+            renderSyncStatus(remoteLoaded ? 'Supabase 저장' : '서버 확인 중', remoteLoaded ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-sky-600 bg-sky-50 border-sky-100');
+        } else {
+            renderSyncStatus('서버 테이블 없음', 'text-red-600 bg-red-50 border-red-100');
+        }
         if (!options.skipRemoteLoad) queueRemoteLoad();
     }
 
@@ -503,30 +522,37 @@
         });
     }
 
-    function saveCurrentLog() {
+    async function saveCurrentLog() {
         const nextLog = getFormPayload();
         if (!nextLog) {
             toast('날짜와 체중을 확인해주세요.', 'warning');
             return;
         }
+        renderSyncStatus('서버 저장 중', 'text-sky-600 bg-sky-50 border-sky-100');
+        const synced = await persistLog(nextLog);
         logs = sortLogs([...logs.filter((log) => log.date !== nextLog.date), nextLog]);
         selectedDate = nextLog.date;
         saveStore(logs);
         render({ skipRemoteLoad: true });
-        persistLog(nextLog).then((synced) => {
-            toast(synced ? '체중 기록을 Supabase에 저장했습니다.' : '체중 기록을 이 기기에 저장했습니다.', synced ? 'info' : 'warning');
-        });
+        if (!synced) renderSyncStatus('서버 저장 실패', 'text-amber-600 bg-amber-50 border-amber-100');
+        toast(synced ? '체중 기록을 Supabase에 저장했습니다.' : '서버 저장에 실패해 이 기기에 임시 보관했습니다.', synced ? 'info' : 'warning');
     }
 
-    function deleteLogByDate(date) {
+    async function deleteLogByDate(date) {
         if (!date || !logs.some((log) => log.date === date)) return;
+        renderSyncStatus('서버 삭제 중', 'text-sky-600 bg-sky-50 border-sky-100');
+        const synced = await deleteRemoteLog(date);
+        if (!synced) {
+            toast('서버 삭제에 실패했습니다. 잠시 후 다시 시도해주세요.', 'warning');
+            render({ skipRemoteLoad: true });
+            renderSyncStatus('서버 저장 실패', 'text-amber-600 bg-amber-50 border-amber-100');
+            return;
+        }
         logs = logs.filter((log) => log.date !== date);
         selectedDate = logs[logs.length - 1]?.date || getTodayString();
         saveStore(logs);
         render({ skipRemoteLoad: true });
-        deleteRemoteLog(date).then((synced) => {
-            toast(synced ? '체중 기록을 삭제했습니다.' : '이 기기에서 체중 기록을 삭제했습니다.', synced ? 'info' : 'warning');
-        });
+        toast('체중 기록을 Supabase에서 삭제했습니다.', 'info');
     }
 
     function selectDate(date) {
