@@ -1,5 +1,6 @@
 (function (window) {
     const STORAGE_KEY = 'netvisualizer.life.healthWeight.v1';
+    const PROFILE_KEY = 'netvisualizer.life.healthProfile.v1';
     const TABLE_NAME = 'health_weight_logs';
 
     let logs = [];
@@ -32,6 +33,12 @@
     function parseWeight(value) {
         const number = Number(String(value || '').replace(/[^0-9.]/g, ''));
         if (!Number.isFinite(number) || number <= 0 || number >= 500) return 0;
+        return Math.round(number * 10) / 10;
+    }
+
+    function parseHeight(value) {
+        const number = Number(String(value || '').replace(/[^0-9.]/g, ''));
+        if (!Number.isFinite(number) || number < 100 || number > 230) return 0;
         return Math.round(number * 10) / 10;
     }
 
@@ -72,6 +79,24 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(sortLogs(nextLogs)));
     }
 
+    function getProfile() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}');
+            return {
+                heightCm: parseHeight(parsed.heightCm),
+            };
+        } catch (error) {
+            return { heightCm: 0 };
+        }
+    }
+
+    function saveProfile(nextProfile = {}) {
+        const profile = { ...getProfile(), ...nextProfile };
+        if (!profile.heightCm) delete profile.heightCm;
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+        return getProfile();
+    }
+
     function getClient() {
         if (!remoteAvailable || typeof getSupabaseClient !== 'function') return null;
         try {
@@ -96,11 +121,11 @@
         if (isMissingTableError(error)) {
             remoteAvailable = false;
             console.warn(`${context}: health weight Supabase table is not ready`, error);
-            renderSyncStatus('서버 테이블 없음', 'text-red-600 bg-red-50 border-red-100');
+            renderSyncStatus('Server table missing', 'text-red-600 bg-red-50 border-red-100');
             return;
         }
         console.warn(`${context}: health weight sync failed`, error);
-        renderSyncStatus('서버 저장 실패', 'text-amber-600 bg-amber-50 border-amber-100');
+        renderSyncStatus('Server save failed', 'text-amber-600 bg-amber-50 border-amber-100');
     }
 
     function toRemotePayload(log) {
@@ -125,7 +150,7 @@
     async function loadRemoteLogs() {
         const client = getClient();
         if (!client) return null;
-        renderSyncStatus('서버 확인 중', 'text-sky-600 bg-sky-50 border-sky-100');
+        renderSyncStatus('Checking server', 'text-sky-600 bg-sky-50 border-sky-100');
         try {
             const { data, error } = await client
                 .from(TABLE_NAME)
@@ -138,19 +163,19 @@
                 logs = localLogs;
                 const migrated = await persistAllLogs();
                 if (migrated) {
-                    render({ skipRemoteLoad: true });
-                    renderSyncStatus('Supabase 저장', 'text-emerald-600 bg-emerald-50 border-emerald-100');
-                    toast('이 기기의 체중 기록을 Supabase로 옮겼습니다.', 'info');
+                    render({ skipRemoteLoad: true, preserveSelectedDate: true });
+                    renderSyncStatus('Supabase saved', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+                    toast('Local weight logs were moved to Supabase.', 'info');
                     return logs;
                 }
                 return null;
             }
             logs = remoteLogs;
             saveStore(logs);
-            if (!logs.some((log) => log.date === selectedDate)) selectedDate = logs[logs.length - 1]?.date || getTodayString();
-            render({ skipRemoteLoad: true });
+            if (!selectedDate) selectedDate = getTodayString();
+            render({ skipRemoteLoad: true, preserveSelectedDate: true });
             remoteLoaded = true;
-            renderSyncStatus('Supabase 저장', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+            renderSyncStatus('Supabase saved', 'text-emerald-600 bg-emerald-50 border-emerald-100');
             return logs;
         } catch (error) {
             handleRemoteError(error, 'loadRemoteLogs');
@@ -174,7 +199,7 @@
                 .upsert(toRemotePayload(normalized), { onConflict: 'log_date' });
             if (error) throw error;
             remoteLoaded = true;
-            renderSyncStatus('Supabase 저장', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+            renderSyncStatus('Supabase saved', 'text-emerald-600 bg-emerald-50 border-emerald-100');
             return true;
         } catch (error) {
             handleRemoteError(error, 'persistLog');
@@ -227,6 +252,69 @@
         return `${Number(month)}.${Number(day)}`;
     }
 
+    function calculateBmi(weightKg, heightCm) {
+        if (!weightKg || !heightCm) return null;
+        const heightM = heightCm / 100;
+        return Math.round((weightKg / (heightM * heightM)) * 10) / 10;
+    }
+
+    function getBmiMeta(bmi) {
+        if (!bmi) {
+            return {
+                label: 'Height needed',
+                tone: 'text-gray-600',
+                border: 'border-gray-200',
+                message: 'Enter height once to calculate BMI.',
+            };
+        }
+        if (bmi < 18.5) {
+            return {
+                label: 'Underweight',
+                tone: 'text-sky-700',
+                border: 'border-sky-200',
+                message: 'BMI is below the adult healthy range.',
+            };
+        }
+        if (bmi < 25) {
+            return {
+                label: 'Healthy range',
+                tone: 'text-emerald-700',
+                border: 'border-emerald-200',
+                message: 'BMI is within the adult healthy range.',
+            };
+        }
+        if (bmi < 30) {
+            return {
+                label: 'Overweight',
+                tone: 'text-amber-700',
+                border: 'border-amber-200',
+                message: 'BMI is above the adult healthy range.',
+            };
+        }
+        return {
+            label: 'Obesity range',
+            tone: 'text-rose-700',
+            border: 'border-rose-200',
+            message: 'BMI is in the adult obesity range.',
+        };
+    }
+
+    function getHealthyWeightRange(heightCm) {
+        if (!heightCm) return null;
+        const heightM = heightCm / 100;
+        return {
+            min: Math.round(18.5 * heightM * heightM * 10) / 10,
+            max: Math.round(24.9 * heightM * heightM * 10) / 10,
+        };
+    }
+
+    function getBoundarySignal(latest, healthyRange) {
+        if (!latest || !healthyRange) return 'Enter height';
+        if (latest.weightKg > healthyRange.max) return `${(latest.weightKg - healthyRange.max).toFixed(1)}kg over upper bound`;
+        if (latest.weightKg < healthyRange.min) return `${(healthyRange.min - latest.weightKg).toFixed(1)}kg under lower bound`;
+        return `${(healthyRange.max - latest.weightKg).toFixed(1)}kg below upper bound`;
+    }
+
     function getRollingAverageForDate(log, allLogs) {
         const target = new Date(`${log.date}T00:00:00`);
         const min = new Date(target);
@@ -262,134 +350,155 @@
         const root = document.getElementById('health-view');
         if (!root || document.getElementById('health-weight-chart')) return;
         root.innerHTML = `
-            <div class="mb-3 md:mb-4 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
+            <div class="mb-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
                 <div>
-                    <p class="text-[10px] md:text-xs font-bold text-rose-500 uppercase tracking-wider mb-1">Life Tool</p>
                     <h2 class="text-xl md:text-2xl font-bold text-gray-900">Health</h2>
-                    <p class="text-xs md:text-sm text-gray-500 mt-1">체중을 기록하고 일별 변화와 7일 평균을 같이 봅니다.</p>
+                    <p class="text-xs text-gray-500 mt-1">Weight, BMI, and trend only.</p>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    <span id="health-sync-badge" class="text-[10px] md:text-xs font-bold text-sky-600 bg-sky-50 border border-sky-100 px-2.5 py-1 rounded-lg whitespace-nowrap">서버 확인 중</span>
-                    <span class="text-[10px] md:text-xs font-bold text-rose-600 bg-rose-50 border border-rose-100 px-2.5 py-1 rounded-lg whitespace-nowrap">7일 평균</span>
-                </div>
+                <span id="health-sync-badge" class="text-[10px] font-bold text-sky-600 bg-sky-50 border border-sky-100 px-2.5 py-1 rounded-md whitespace-nowrap w-fit">Checking server</span>
             </div>
 
-            <div class="grid grid-cols-2 xl:grid-cols-4 gap-2 md:gap-3 mb-3 md:mb-4">
-                <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-rose-500 min-w-0">
-                    <p class="text-[10px] md:text-xs font-semibold text-gray-500 truncate">최근 체중</p>
-                    <h3 class="text-lg md:text-xl font-bold text-gray-900 truncate" id="health-current-weight">-</h3>
-                    <p class="text-[10px] text-gray-400 mt-1 truncate" id="health-current-date">기록 없음</p>
-                </div>
-                <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-indigo-500 min-w-0">
-                    <p class="text-[10px] md:text-xs font-semibold text-gray-500 truncate">직전 기록 대비</p>
-                    <h3 class="text-lg md:text-xl font-bold text-gray-900 truncate" id="health-delta-weight">-</h3>
-                    <p class="text-[10px] text-gray-400 mt-1 truncate">낮을수록 감량</p>
-                </div>
-                <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-emerald-500 min-w-0">
-                    <p class="text-[10px] md:text-xs font-semibold text-gray-500 truncate">7일 평균</p>
-                    <h3 class="text-lg md:text-xl font-bold text-gray-900 truncate" id="health-week-average">-</h3>
-                    <p class="text-[10px] text-gray-400 mt-1 truncate">최근 기록일 기준</p>
-                </div>
-                <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-sky-500 min-w-0">
-                    <p class="text-[10px] md:text-xs font-semibold text-gray-500 truncate">기록 수</p>
-                    <h3 class="text-lg md:text-xl font-bold text-gray-900 truncate" id="health-log-count">0회</h3>
-                    <p class="text-[10px] text-gray-400 mt-1 truncate" id="health-range-label">-</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-3 md:gap-4 mb-8">
-                <div class="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100 min-w-0">
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-                        <div>
-                            <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Weight Trend</p>
-                            <h3 class="text-base md:text-lg font-bold text-gray-900">일별 체중 / 7일 평균</h3>
+            <div class="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)] gap-3 md:gap-5 mb-8">
+                <aside class="space-y-3">
+                    <section class="bg-white p-4 rounded-lg border border-gray-100">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-sm font-bold text-gray-900">Today</h3>
+                            <p class="text-[10px] text-gray-400" id="health-latest-label">No weight log yet</p>
                         </div>
-                        <span class="text-[10px] font-bold text-gray-400" id="health-chart-meta">최근 30개 기록</span>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Date</label>
+                                <input id="health-weight-date" type="date" class="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-rose-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Weight (kg)</label>
+                                <input id="health-weight-input" type="number" min="0" step="0.1" inputmode="decimal" class="w-full border border-gray-200 rounded-md px-3 py-2 text-lg font-bold text-right focus:ring-2 focus:ring-rose-500 outline-none" placeholder="72.4">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Memo</label>
+                                <input id="health-weight-note" type="text" class="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-rose-500 outline-none" placeholder="optional">
+                            </div>
+                            <details class="border border-gray-100 rounded-md p-3">
+                                <summary class="cursor-pointer text-[10px] font-bold text-gray-500 uppercase">Profile</summary>
+                                <label class="block mt-3">
+                                    <span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Height (cm)</span>
+                                    <input id="health-height-input" type="number" min="100" max="230" step="0.1" inputmode="decimal" class="w-full border border-gray-200 rounded-md px-3 py-2 text-sm text-right focus:ring-2 focus:ring-rose-500 outline-none" placeholder="175">
+                                </label>
+                            </details>
+                            <div class="grid grid-cols-[1fr_auto] gap-2">
+                                <button type="button" id="health-save-log" class="px-3 py-2 rounded-md bg-rose-600 text-white text-xs font-bold hover:bg-rose-700">Save</button>
+                                <button type="button" id="health-delete-log" class="px-3 py-2 rounded-md bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200">Delete</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="bg-white p-4 rounded-lg border border-gray-100">
+                        <h3 class="text-sm font-bold text-gray-900 mb-3">Summary</h3>
+                        <div class="divide-y divide-gray-100">
+                            <div class="grid grid-cols-[72px_minmax(0,1fr)] gap-3 py-2">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase">BMI</p>
+                                <div>
+                                    <p class="text-lg font-bold text-gray-900 leading-tight" id="health-bmi-value">-</p>
+                                    <p class="text-[11px] font-bold" id="health-bmi-label">Height needed</p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-[72px_minmax(0,1fr)] gap-3 py-2">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase">Range</p>
+                                <div>
+                                    <p class="text-sm font-bold text-gray-900" id="health-boundary-signal">-</p>
+                                    <p class="text-[11px] text-gray-400" id="health-bmi-range-note">BMI 18.5 - 24.9</p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-[72px_minmax(0,1fr)] gap-3 py-2">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase">Trend</p>
+                                <div>
+                                    <p class="text-sm font-bold text-gray-900" id="health-trend-signal">-</p>
+                                    <p class="text-[11px] text-gray-400" id="health-average-signal">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        <p id="health-management-notes" class="mt-3 text-[11px] leading-relaxed text-gray-500"></p>
+                    </section>
+
+                </aside>
+
+                <section class="bg-white p-4 md:p-5 rounded-lg border border-gray-100 min-w-0">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <h3 class="text-sm font-bold text-gray-900">Weight trend</h3>
+                        <span class="text-[10px] font-bold text-gray-400" id="health-chart-meta">30 logs</span>
                     </div>
-                    <div class="relative h-72 md:h-80 w-full">
+                    <div class="relative h-72 md:h-[420px] w-full">
                         <canvas id="health-weight-chart"></canvas>
                         <div id="health-empty-state" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center bg-white/80">
                             <div class="w-12 h-12 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mb-3">
                                 <i class="fas fa-weight-scale"></i>
                             </div>
-                            <p class="text-sm font-bold text-gray-700">아직 체중 기록이 없습니다.</p>
-                            <p class="text-xs text-gray-400 mt-1">오른쪽 입력폼에서 오늘 체중을 저장해보세요.</p>
+                            <p class="text-sm font-bold text-gray-700">No weight logs yet.</p>
+                            <p class="text-xs text-gray-400 mt-1">Save today's weight from the form.</p>
                         </div>
                     </div>
-                </div>
-
-                <div class="space-y-3">
-                    <div class="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100">
-                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Daily Log</p>
-                        <div class="space-y-3">
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Date</label>
-                                <input id="health-weight-date" type="date" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-500 outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Weight (kg)</label>
-                                <input id="health-weight-input" type="number" min="0" step="0.1" inputmode="decimal" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-lg font-bold text-right focus:ring-2 focus:ring-rose-500 outline-none" placeholder="예: 72.4">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Memo</label>
-                                <input id="health-weight-note" type="text" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-500 outline-none" placeholder="예: 운동 후, 공복">
-                            </div>
-                            <div class="grid grid-cols-[1fr_auto] gap-2">
-                                <button type="button" id="health-save-log" class="px-3 py-2 rounded-lg bg-rose-600 text-white text-xs font-bold hover:bg-rose-700">저장</button>
-                                <button type="button" id="health-delete-log" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200">삭제</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100">
-                        <div class="flex items-center justify-between gap-2 mb-3">
-                            <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Recent Logs</p>
-                            <span class="text-[10px] text-gray-400">최근 10개</span>
-                        </div>
-                        <div id="health-log-list" class="space-y-2"></div>
-                    </div>
-                </div>
+                </section>
             </div>
         `;
         isBound = false;
         bindControls();
     }
-
     function fillForm(log) {
         const normalized = normalizeLog(log || {}) || { date: selectedDate || getTodayString(), weightKg: '', note: '' };
         const dateEl = document.getElementById('health-weight-date');
+        const heightEl = document.getElementById('health-height-input');
         const weightEl = document.getElementById('health-weight-input');
         const noteEl = document.getElementById('health-weight-note');
+        const profile = getProfile();
         if (dateEl) dateEl.value = normalized.date || getTodayString();
+        if (heightEl) heightEl.value = profile.heightCm ? profile.heightCm.toFixed(1).replace(/\.0$/, '') : '';
         if (weightEl) weightEl.value = normalized.weightKg ? normalized.weightKg.toFixed(1) : '';
         if (noteEl) noteEl.value = normalized.note || '';
     }
 
     function renderSummary() {
         const { sorted, latest, latestAverage, delta } = getSummary();
-        const currentEl = document.getElementById('health-current-weight');
-        const dateEl = document.getElementById('health-current-date');
-        const deltaEl = document.getElementById('health-delta-weight');
-        const averageEl = document.getElementById('health-week-average');
-        const countEl = document.getElementById('health-log-count');
-        const rangeEl = document.getElementById('health-range-label');
+        const profile = getProfile();
+        const heightCm = profile.heightCm;
+        const bmi = latest ? calculateBmi(latest.weightKg, heightCm) : null;
+        const bmiMeta = getBmiMeta(bmi);
+        const healthyRange = getHealthyWeightRange(heightCm);
 
-        if (currentEl) currentEl.textContent = latest ? formatKg(latest.weightKg) : '-';
-        if (dateEl) dateEl.textContent = latest ? `${latest.date} 기준` : '기록 없음';
-        if (averageEl) averageEl.textContent = latestAverage ? formatKg(latestAverage) : '-';
-        if (countEl) countEl.textContent = `${sorted.length}회`;
-        if (rangeEl) {
-            rangeEl.textContent = sorted.length > 1
-                ? `${formatDateLabel(sorted[0].date)} ~ ${formatDateLabel(sorted[sorted.length - 1].date)}`
-                : (latest ? formatDateLabel(latest.date) : '-');
+        const latestEl = document.getElementById('health-latest-label');
+        const bmiValueEl = document.getElementById('health-bmi-value');
+        const bmiLabelEl = document.getElementById('health-bmi-label');
+        const boundaryEl = document.getElementById('health-boundary-signal');
+        const bmiRangeNoteEl = document.getElementById('health-bmi-range-note');
+        const trendEl = document.getElementById('health-trend-signal');
+        const averageEl = document.getElementById('health-average-signal');
+        const notesEl = document.getElementById('health-management-notes');
+
+        if (latestEl) latestEl.textContent = latest ? `${latest.date} | ${formatKg(latest.weightKg)}` : 'No weight log yet';
+        if (bmiValueEl) bmiValueEl.textContent = bmi ? bmi.toFixed(1) : '-';
+        if (bmiLabelEl) {
+            bmiLabelEl.textContent = bmiMeta.label;
+            bmiLabelEl.className = `text-[11px] font-bold mt-1 ${bmiMeta.tone}`;
         }
-        if (deltaEl) {
+        if (boundaryEl) boundaryEl.textContent = getBoundarySignal(latest, healthyRange);
+        if (bmiRangeNoteEl) bmiRangeNoteEl.textContent = healthyRange ? `range ${healthyRange.min.toFixed(1)} - ${healthyRange.max.toFixed(1)}kg` : 'enter height once';
+        if (trendEl) {
             const sign = delta > 0 ? '+' : '';
-            deltaEl.textContent = sorted.length > 1 ? `${sign}${delta.toFixed(1)}kg` : '-';
-            deltaEl.className = `text-lg md:text-xl font-bold truncate ${delta > 0 ? 'text-rose-600' : delta < 0 ? 'text-emerald-600' : 'text-gray-900'}`;
+            trendEl.textContent = sorted.length > 1 ? `${sign}${delta.toFixed(1)}kg vs previous` : 'Need 2+ logs';
+            trendEl.className = `text-sm font-bold ${delta > 0 ? 'text-rose-700' : delta < 0 ? 'text-emerald-700' : 'text-gray-900'}`;
+        }
+        if (averageEl) averageEl.textContent = latestAverage ? `7-day avg ${latestAverage.toFixed(1)}kg` : '7-day avg waiting';
+        if (notesEl) {
+            let note = !heightCm ? 'Add height once to unlock BMI.' : bmiMeta.message;
+            if (latest && healthyRange && latest.weightKg > healthyRange.max) {
+                note = `${(latest.weightKg - healthyRange.max).toFixed(1)}kg above the BMI healthy-range upper bound.`;
+            } else if (latest && healthyRange && latest.weightKg < healthyRange.min) {
+                note = `${(healthyRange.min - latest.weightKg).toFixed(1)}kg below the BMI healthy-range lower bound.`;
+            } else if (delta > 0.5) {
+                note = 'Weight is up more than 0.5kg from the previous log.';
+            }
+            notesEl.textContent = note;
         }
     }
-
     function renderChart() {
         const sorted = sortLogs(logs).slice(-30);
         const labels = sorted.map((log) => formatDateLabel(log.date));
@@ -398,7 +507,7 @@
         const emptyEl = document.getElementById('health-empty-state');
         const metaEl = document.getElementById('health-chart-meta');
         if (emptyEl) emptyEl.classList.toggle('hidden', sorted.length > 0);
-        if (metaEl) metaEl.textContent = sorted.length > 0 ? `최근 ${sorted.length}개 기록` : '기록 대기';
+        if (metaEl) metaEl.textContent = sorted.length > 0 ? `${sorted.length} logs` : 'Waiting for logs';
 
         const config = {
             type: 'line',
@@ -406,7 +515,7 @@
                 labels,
                 datasets: [
                     {
-                        label: '일별 체중',
+                        label: 'Daily weight',
                         data: daily,
                         borderColor: '#E11D48',
                         backgroundColor: 'rgba(225, 29, 72, 0.12)',
@@ -417,7 +526,7 @@
                         borderWidth: 2,
                     },
                     {
-                        label: '7일 평균',
+                        label: '7-day average',
                         data: averages,
                         borderColor: '#10B981',
                         backgroundColor: 'rgba(16, 185, 129, 0.08)',
@@ -439,7 +548,7 @@
                     },
                     tooltip: {
                         callbacks: {
-                            label: (context) => ` ${context.dataset.label}: ${Number(context.raw || 0).toFixed(1)}kg`,
+                            label: (context) => ' ' + context.dataset.label + ': ' + Number(context.raw || 0).toFixed(1) + 'kg',
                         },
                     },
                 },
@@ -461,57 +570,25 @@
         };
         renderOrUpdateChart('healthWeight', 'health-weight-chart', config);
     }
-
-    function renderLogList() {
-        const container = document.getElementById('health-log-list');
-        if (!container) return;
-        const recent = sortLogs(logs).slice(-10).reverse();
-        if (recent.length === 0) {
-            container.innerHTML = `
-                <div class="border border-dashed border-gray-200 rounded-lg p-4 text-center">
-                    <p class="text-xs font-bold text-gray-600">저장된 체중 기록이 없습니다.</p>
-                    <p class="text-[10px] text-gray-400 mt-1">매일 한 번만 입력해도 추세가 보입니다.</p>
-                </div>
-            `;
-            return;
-        }
-        container.innerHTML = recent.map((log) => {
-            const isActive = log.date === selectedDate;
-            return `
-                <div class="border rounded-lg p-3 ${isActive ? 'border-rose-300 bg-rose-50/40' : 'border-gray-100 bg-white'}">
-                    <div class="flex items-center justify-between gap-3">
-                        <button type="button" data-health-edit="${escapeHtml(log.date)}" class="min-w-0 text-left">
-                            <p class="text-sm font-bold text-gray-900">${formatKg(log.weightKg)}</p>
-                            <p class="text-[10px] text-gray-400 mt-0.5">${escapeHtml(log.date)}</p>
-                        </button>
-                        <button type="button" data-health-delete="${escapeHtml(log.date)}" class="w-7 h-7 rounded-lg bg-gray-50 text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition">
-                            <i class="fas fa-trash text-[10px]"></i>
-                        </button>
-                    </div>
-                    ${log.note ? `<p class="text-[10px] text-gray-500 mt-2 truncate">${escapeHtml(log.note)}</p>` : ''}
-                </div>
-            `;
-        }).join('');
-    }
-
     function render(options = {}) {
         ensureShell();
         logs = getStore();
-        if (!selectedDate) selectedDate = logs[logs.length - 1]?.date || getTodayString();
+        if (!options.preserveSelectedDate) selectedDate = getTodayString();
+        if (!selectedDate) selectedDate = getTodayString();
         renderSummary();
         renderChart();
-        renderLogList();
         fillForm(getSelectedLog() || { date: selectedDate });
         if (remoteAvailable) {
-            renderSyncStatus(remoteLoaded ? 'Supabase 저장' : '서버 확인 중', remoteLoaded ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-sky-600 bg-sky-50 border-sky-100');
+            renderSyncStatus(remoteLoaded ? 'Supabase saved' : 'Checking server', remoteLoaded ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-sky-600 bg-sky-50 border-sky-100');
         } else {
-            renderSyncStatus('서버 테이블 없음', 'text-red-600 bg-red-50 border-red-100');
+            renderSyncStatus('Server table missing', 'text-red-600 bg-red-50 border-red-100');
         }
         if (!options.skipRemoteLoad) queueRemoteLoad();
     }
 
     function getFormPayload() {
         const date = document.getElementById('health-weight-date')?.value || getTodayString();
+        saveHeightFromInput();
         const weightKg = parseWeight(document.getElementById('health-weight-input')?.value);
         const note = document.getElementById('health-weight-note')?.value || '';
         return normalizeLog({
@@ -522,42 +599,48 @@
         });
     }
 
+    function saveHeightFromInput() {
+        const heightCm = parseHeight(document.getElementById('health-height-input')?.value);
+        saveProfile({ heightCm });
+        return heightCm;
+    }
+
     async function saveCurrentLog() {
         const nextLog = getFormPayload();
         if (!nextLog) {
-            toast('날짜와 체중을 확인해주세요.', 'warning');
+            toast('Check the date and weight.', 'warning');
             return;
         }
-        renderSyncStatus('서버 저장 중', 'text-sky-600 bg-sky-50 border-sky-100');
+        renderSyncStatus('Saving server', 'text-sky-600 bg-sky-50 border-sky-100');
         const synced = await persistLog(nextLog);
         logs = sortLogs([...logs.filter((log) => log.date !== nextLog.date), nextLog]);
         selectedDate = nextLog.date;
         saveStore(logs);
-        render({ skipRemoteLoad: true });
-        if (!synced) renderSyncStatus('서버 저장 실패', 'text-amber-600 bg-amber-50 border-amber-100');
-        toast(synced ? '체중 기록을 Supabase에 저장했습니다.' : '서버 저장에 실패해 이 기기에 임시 보관했습니다.', synced ? 'info' : 'warning');
+        render({ skipRemoteLoad: true, preserveSelectedDate: true });
+        if (!synced) renderSyncStatus('Server save failed', 'text-amber-600 bg-amber-50 border-amber-100');
+        toast(synced ? 'Weight log saved to Supabase.' : 'Server save failed. Saved temporarily on this device.', synced ? 'info' : 'warning');
     }
 
     async function deleteLogByDate(date) {
         if (!date || !logs.some((log) => log.date === date)) return;
-        renderSyncStatus('서버 삭제 중', 'text-sky-600 bg-sky-50 border-sky-100');
+        renderSyncStatus('Deleting server', 'text-sky-600 bg-sky-50 border-sky-100');
         const synced = await deleteRemoteLog(date);
         if (!synced) {
-            toast('서버 삭제에 실패했습니다. 잠시 후 다시 시도해주세요.', 'warning');
-            render({ skipRemoteLoad: true });
-            renderSyncStatus('서버 저장 실패', 'text-amber-600 bg-amber-50 border-amber-100');
+            toast('Server delete failed. Try again later.', 'warning');
+            render({ skipRemoteLoad: true, preserveSelectedDate: true });
+            renderSyncStatus('Server save failed', 'text-amber-600 bg-amber-50 border-amber-100');
             return;
         }
         logs = logs.filter((log) => log.date !== date);
         selectedDate = logs[logs.length - 1]?.date || getTodayString();
         saveStore(logs);
-        render({ skipRemoteLoad: true });
-        toast('체중 기록을 Supabase에서 삭제했습니다.', 'info');
+        render({ skipRemoteLoad: true, preserveSelectedDate: true });
+        toast('Weight log deleted from Supabase.', 'info');
     }
 
     function selectDate(date) {
         selectedDate = date || getTodayString();
-        render({ skipRemoteLoad: true });
+        render({ skipRemoteLoad: true, preserveSelectedDate: true });
     }
 
     function bindControls() {
@@ -569,17 +652,12 @@
             deleteLogByDate(date);
         });
         document.getElementById('health-weight-date')?.addEventListener('change', (event) => selectDate(event.target.value));
+        document.getElementById('health-height-input')?.addEventListener('change', () => {
+            saveHeightFromInput();
+            render({ skipRemoteLoad: true, preserveSelectedDate: true });
+        });
         document.getElementById('health-weight-input')?.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') saveCurrentLog();
-        });
-        document.getElementById('health-log-list')?.addEventListener('click', (event) => {
-            const editButton = event.target.closest('[data-health-edit]');
-            const deleteButton = event.target.closest('[data-health-delete]');
-            if (deleteButton) {
-                deleteLogByDate(deleteButton.dataset.healthDelete);
-                return;
-            }
-            if (editButton) selectDate(editButton.dataset.healthEdit);
         });
     }
 

@@ -1,17 +1,17 @@
 // App event binding, navigation, service worker registration, and bootstrapping extracted from index.html.
 // This script intentionally shares the global app state used by the legacy static app.
 
-// PWA ServiceWorker 등록
+// PWA ServiceWorker ?????濡?씀?濾????ㅼ굡???
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('./sw.js')
-                .then(registration => console.log('PWA ServiceWorker 등록 성공'))
-                .catch(error => console.log('PWA ServiceWorker 등록 실패:', error));
+                .then(registration => console.log('PWA ServiceWorker registered'))
+                .catch(error => console.log('PWA ServiceWorker registration failed:', error));
         });
     }
 
     // ==========================================
-    // UI 유틸리티
+    // UI ????鶯ㅺ동????????????좊틣???欲꼲???
     // ==========================================
 
 document.getElementById('btn-sync').addEventListener('click', () => fetchSheetData(false));
@@ -25,9 +25,9 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         const sortIcon = document.querySelector('#btn-sort-tx i');
         const sortText = document.getElementById('sort-tx-text');
         if (txSortOrder === 'desc') {
-            sortIcon.className = 'fas fa-sort-amount-down'; sortText.textContent = '최신순';
+            sortIcon.className = 'fas fa-sort-amount-down'; sortText.textContent = 'Latest';
         } else {
-            sortIcon.className = 'fas fa-sort-amount-up'; sortText.textContent = '과거순';
+            sortIcon.className = 'fas fa-sort-amount-up'; sortText.textContent = 'Oldest';
         }
         renderCashFlow();
     });
@@ -48,17 +48,15 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
 
     const viewContextMeta = {
         'dashboard-view': { label: 'Finance Goal', title: 'Finance Cockpit' },
-        'career-view': { label: 'Career Profile', title: 'Career Profile' },
-        'project-view': { label: 'Career Profile', title: 'Career Profile' },
         'life-view': { label: 'Life Goal', title: 'Life Cockpit' },
         'weekly-timetable-view': { label: 'Life Tool', title: 'Weekly Timetable' },
         'vacation-plan-view': { label: 'Life Tool', title: 'Vacation Plan' },
         'health-view': { label: 'Life Tool', title: 'Health' },
-        'portfolio-view': { label: 'Finance Tool', title: '포트폴리오' },
-        'stats-view': { label: 'Finance Tool', title: '현금 흐름' },
-        'asset-view': { label: 'Finance Tool', title: '장기 자산' },
-        'realestate-view': { label: 'Finance Tool', title: '부동산 / 청약' },
-        'invest-detail-view': { label: 'Finance Tool', title: '투자 상세' }
+        'portfolio-view': { label: 'Finance Tool', title: 'Portfolio' },
+        'stats-view': { label: 'Finance Tool', title: 'Cash Flow' },
+        'asset-view': { label: 'Finance Tool', title: 'Assets' },
+        'realestate-view': { label: 'Finance Tool', title: 'Real Estate' },
+        'invest-detail-view': { label: 'Finance Tool', title: 'Invest Detail' }
     };
 
     const financeToolViews = new Set(['portfolio-view', 'stats-view', 'asset-view', 'realestate-view', 'invest-detail-view']);
@@ -66,18 +64,15 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     const mobileToolNav = document.getElementById('mobile-tool-nav');
     const mobileToolGroups = {
         'dashboard-view': [
-            { target: 'stats-view', icon: 'fa-money-bill-transfer', label: '현금' },
-            { target: 'portfolio-view', icon: 'fa-briefcase', label: '포트폴리오' },
-            { target: 'asset-view', icon: 'fa-chart-area', label: '자산' },
-            { target: 'realestate-view', icon: 'fa-home', label: '부동산' }
-        ],
-        'career-view': [
-            { target: 'career-view', icon: 'fa-id-badge', label: '커리어' }
+            { target: 'stats-view', icon: 'fa-money-bill-transfer', label: 'Cash' },
+            { target: 'portfolio-view', icon: 'fa-briefcase', label: 'Portfolio' },
+            { target: 'asset-view', icon: 'fa-chart-area', label: 'Assets' },
+            { target: 'realestate-view', icon: 'fa-home', label: 'Estate' }
         ],
         'life-view': [
-            { target: 'weekly-timetable-view', icon: 'fa-calendar-week', label: '주간' },
-            { target: 'health-view', icon: 'fa-heart-pulse', label: '건강' },
-            { target: 'vacation-plan-view', icon: 'fa-plane-departure', label: '휴가' }
+            { target: 'weekly-timetable-view', icon: 'fa-calendar-week', label: 'Week' },
+            { target: 'health-view', icon: 'fa-heart-pulse', label: 'Health' },
+            { target: 'vacation-plan-view', icon: 'fa-plane-departure', label: 'Trip' }
         ]
     };
 
@@ -95,29 +90,26 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         button.dataset.target = homeTarget;
         button.classList.toggle('hidden', !shouldShow);
         button.classList.toggle('flex', shouldShow);
-        if (homeTarget === 'dashboard-view') button.title = 'Finance 홈으로';
-        else if (homeTarget === 'life-view') button.title = 'Life 홈으로';
-        else if (homeTarget === 'career-view') button.title = 'Career 홈으로';
-        else button.title = '홈으로';
+        if (homeTarget === 'dashboard-view') button.title = 'Finance Home';
+        else if (homeTarget === 'life-view') button.title = 'Life Home';
+        else button.title = 'Home';
     }
 
     function renderMobileToolNavigation(activeGoalTarget, targetId) {
         if (!mobileToolNav) return;
         let toolItems = mobileToolGroups[activeGoalTarget] || mobileToolGroups['dashboard-view'];
-        if (activeGoalTarget === 'career-view') {
-            toolItems = [{ target: 'career-view', icon: 'fa-id-badge', label: 'Career' }];
-        } else if (activeGoalTarget === 'life-view') {
+        if (activeGoalTarget === 'life-view') {
             toolItems = [
-                { target: 'weekly-timetable-view', icon: 'fa-calendar-week', label: '주간' },
-                { target: 'health-view', icon: 'fa-heart-pulse', label: '건강' },
-                { target: 'vacation-plan-view', icon: 'fa-plane-departure', label: '휴가' }
+                { target: 'weekly-timetable-view', icon: 'fa-calendar-week', label: 'Week' },
+                { target: 'health-view', icon: 'fa-heart-pulse', label: 'Health' },
+                { target: 'vacation-plan-view', icon: 'fa-plane-departure', label: 'Trip' }
             ];
         }
         if (activeGoalTarget === 'life-view') {
             toolItems = [
-                { target: 'weekly-timetable-view', icon: 'fa-calendar-week', label: '주간' },
-                { target: 'health-view', icon: 'fa-heart-pulse', label: '건강' },
-                { target: 'vacation-plan-view', icon: 'fa-plane-departure', label: '휴가' }
+                { target: 'weekly-timetable-view', icon: 'fa-calendar-week', label: 'Week' },
+                { target: 'health-view', icon: 'fa-heart-pulse', label: 'Health' },
+                { target: 'vacation-plan-view', icon: 'fa-plane-departure', label: 'Trip' }
             ];
         }
         mobileToolNav.innerHTML = toolItems.map(item => {
@@ -172,12 +164,12 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         const lifeTitle = document.querySelector('#life-view h2');
         if (lifeTitle) {
             const description = lifeTitle.nextElementSibling;
-            if (description) description.textContent = '주간 시간표와 휴가 계획을 한 곳에서 정리합니다.';
+            if (description) description.textContent = '??????諛몄カ?????댁뢿援?????????? ??? ??????????????????????????????耀붾굝????????????饔낅떽???????';
         }
     }
 
     function switchView(targetId) {
-        if (targetId === 'project-view') targetId = 'career-view';
+        if (targetId === 'project-view' || targetId === 'career-view') targetId = 'dashboard-view';
         if (targetId === 'routine-checklist-view') targetId = 'life-view';
         useMonthScopeForView(targetId);
         activeViewId = targetId;
@@ -195,7 +187,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         Object.values(views).forEach(v => { if(v) v.classList.add('hidden'); });
         if(views[targetId]) views[targetId].classList.remove('hidden');
 
-        // 💡 [수정] FAB 표시 제어: '현금 흐름(stats-view)' 탭에서만 보이게 함
+        // ???[?????怨뚮뼺?됰뗀??? FAB ???????????? '?????????????????stats-view)' ??????饔낅떽????????????怨뺤른??????怨쀫뮡?壤굿??곸읆????ル폆???
         const fab = document.getElementById('fab-add-tx');
         if(fab) {
             if(targetId === 'stats-view') fab.classList.remove('hidden');
