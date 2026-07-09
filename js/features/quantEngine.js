@@ -187,7 +187,7 @@
         if (statusEl) statusEl.textContent = '신호 저장 중';
 
         try {
-            const _supabase = getSupabaseClient();
+            const _supabase = getAuthenticatedSupabaseClient();
             const { error } = await _supabase
                 .from('quant_rebalance_signals')
                 .insert(rows);
@@ -221,12 +221,14 @@
                 .map(item => String(item.ticker || '').trim().toUpperCase())
                 .filter(Boolean)
         )];
-        const prices = dataCache.marketPrices || [];
+        const prices = typeof getMergedMarketPriceRows === 'function'
+            ? getMergedMarketPriceRows()
+            : (dataCache.marketPrices || []);
         const scopedPrices = prices.filter(row => {
             const ticker = String(row.ticker || '').trim().toUpperCase();
             return ticker && (tickers.length === 0 || tickers.includes(ticker));
         });
-        const manualCount = scopedPrices.filter(row => row.source === 'manual').length;
+        const overrideCount = scopedPrices.filter(row => row.sourceScope === 'override').length;
         const apiCount = scopedPrices.filter(row => row.source === 'api').length;
         const latestDate = scopedPrices
             .map(row => row.price_date || '')
@@ -236,7 +238,7 @@
 
         const tickerLabel = tickers.length > 0 ? `${tickers.length}개 ticker` : 'ticker 대기';
         const priceLabel = scopedPrices.length > 0
-            ? `시세 ${scopedPrices.length}건 (수동 ${manualCount} / API ${apiCount})`
+            ? `시세 ${scopedPrices.length}건 (내 override ${overrideCount} / API ${apiCount})`
             : '시세 미입력';
         const latestLabel = latestDate ? `최근 가격일 ${latestDate}` : '가격일 없음';
 
@@ -496,7 +498,7 @@
         renderQuantHoldingEditor(activeQuantHoldingItems || activeInvestProcessedItems || []);
 
         try {
-            const _supabase = getSupabaseClient();
+            const _supabase = getAuthenticatedSupabaseClient();
             const updates = accountNames
                 .filter(name => name !== PORTFOLIO_UNASSIGNED_ACCOUNT && Number.isFinite(Number(nextOrderMap[name])))
                 .map(name => {
@@ -580,7 +582,7 @@
         if (status) status.textContent = '보유 저장 중';
 
         try {
-            const _supabase = getSupabaseClient();
+            const _supabase = getAuthenticatedSupabaseClient();
             for (const update of updates) {
                 const { error } = await _supabase
                     .from('portfolios')
@@ -643,17 +645,21 @@
                 };
             });
 
-            const _supabase = getSupabaseClient();
+            const _supabase = getAuthenticatedSupabaseClient();
+            const overridePayload = payload.map(row => ({
+                ...row,
+                user_id: getCurrentUserId()
+            }));
             const { error } = await _supabase
-                .from('quant_strategy_rules')
-                .upsert(payload, { onConflict: 'strategy_tag' });
+                .from('quant_strategy_rule_overrides')
+                .upsert(overridePayload, { onConflict: 'user_id,strategy_tag' });
             if (error) throw error;
 
-            dataCache.quantRules = payload;
+            dataCache.quantRuleOverrides = overridePayload;
             persistDataCache();
-            parseQuantStrategyRules(payload);
+            parseQuantStrategyRules(dataCache.quantRules, dataCache.quantRuleOverrides);
             if (activeInvestGroupName) renderInvestDetail(activeInvestGroupName);
-            showToast('Quant 전략 설정을 저장했습니다.', 'info', 1800);
+            showToast('내 Quant 전략 override를 저장했습니다.', 'info', 1800);
         } catch (error) {
             console.error('Quant 설정 저장 실패:', error);
             if (status) status.textContent = '저장 실패';
@@ -708,7 +714,7 @@
         if (status) status.textContent = '시세 동기화';
 
         try {
-            const _supabase = getSupabaseClient();
+            const _supabase = getAuthenticatedSupabaseClient();
             const { data, error } = await _supabase.functions.invoke('sync-market-prices', {
                 body: { tickers }
             });
@@ -721,7 +727,7 @@
                 throw new Error(reason);
             }
 
-            const patch = await fetchRemoteTables(['portfolio_market_prices']);
+            const patch = await fetchRemoteTables(['portfolio_market_prices', 'portfolio_market_price_overrides']);
             dataCache = normalizeCache({ ...dataCache, ...patch });
             persistDataCache();
             applyCachedData();
@@ -770,29 +776,35 @@
         };
 
         try {
-            const _supabase = getSupabaseClient();
+            const _supabase = getAuthenticatedSupabaseClient();
+            const dbPayload = {
+                ...payload,
+                user_id: getCurrentUserId()
+            };
             const { error } = await _supabase
-                .from('portfolio_market_prices')
-                .upsert(payload, { onConflict: 'ticker' });
+                .from('portfolio_market_price_overrides')
+                .upsert(dbPayload, { onConflict: 'user_id,ticker' });
             if (error) throw error;
 
             const { error: historyError } = await _supabase
-                .from('portfolio_price_history')
+                .from('portfolio_market_price_override_history')
                 .upsert({
+                    user_id: getCurrentUserId(),
                     ticker: payload.ticker,
                     price: payload.price,
                     currency: payload.currency,
                     price_date: payload.price_date,
                     source: payload.source
-                }, { onConflict: 'ticker,price_date,source' });
+                }, { onConflict: 'user_id,ticker,price_date,source' });
             if (historyError) throw historyError;
 
-            const remaining = (dataCache.marketPrices || []).filter(row => String(row.ticker || '').toUpperCase() !== normalizedTicker);
-            dataCache.marketPrices = [...remaining, payload].sort((a, b) => String(a.ticker).localeCompare(String(b.ticker)));
+            const remaining = (dataCache.marketPriceOverrides || []).filter(row => String(row.ticker || '').toUpperCase() !== normalizedTicker);
+            dataCache.marketPriceOverrides = [...remaining, { ...dbPayload, sourceScope: 'override' }]
+                .sort((a, b) => String(a.ticker).localeCompare(String(b.ticker)));
             persistDataCache();
-            parseMarketPrices(dataCache.marketPrices);
+            parseMarketPrices(dataCache.marketPrices, dataCache.marketPriceOverrides);
             if (activeInvestGroupName) renderInvestDetail(activeInvestGroupName);
-            showToast(`${normalizedTicker} 현재가를 저장했습니다.`, 'info', 1600);
+            showToast(`${normalizedTicker} 내 현재가 override를 저장했습니다.`, 'info', 1600);
         } catch (error) {
             console.error('현재가 저장 실패:', error);
             alert('현재가 저장 실패: ' + error.message);

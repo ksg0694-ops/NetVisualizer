@@ -99,8 +99,9 @@
 
     function getClient() {
         if (!remoteAvailable || typeof getSupabaseClient !== 'function') return null;
+        if (typeof isSignedIn === 'function' && !isSignedIn()) return null;
         try {
-            return getSupabaseClient();
+            return typeof getAuthenticatedSupabaseClient === 'function' ? getAuthenticatedSupabaseClient() : null;
         } catch (error) {
             console.warn('Health Supabase client unavailable', error);
             return null;
@@ -128,6 +129,15 @@
         renderSyncStatus('Server save failed', 'text-amber-600 bg-amber-50 border-amber-100');
     }
 
+    function isMissingCompositeConflictError(error) {
+        const code = String(error?.code || '');
+        const message = String(error?.message || '').toLowerCase();
+        return code === '42P10'
+            || message.includes('no unique or exclusion constraint')
+            || message.includes('on conflict')
+            || message.includes('user_id');
+    }
+
     function toRemotePayload(log) {
         const normalized = normalizeLog(log);
         return {
@@ -145,6 +155,18 @@
             note: row.note,
             updatedAt: row.updated_at,
         });
+    }
+
+    async function upsertRemoteLogs(client, payload) {
+        const { error } = await client
+            .from(TABLE_NAME)
+            .upsert(payload, { onConflict: 'user_id,log_date' });
+        if (!error) return null;
+        if (!isMissingCompositeConflictError(error)) return error;
+        const fallback = await client
+            .from(TABLE_NAME)
+            .upsert(payload, { onConflict: 'log_date' });
+        return fallback.error || null;
     }
 
     async function loadRemoteLogs() {
@@ -194,9 +216,7 @@
         const normalized = normalizeLog(log);
         if (!client || !normalized) return false;
         try {
-            const { error } = await client
-                .from(TABLE_NAME)
-                .upsert(toRemotePayload(normalized), { onConflict: 'log_date' });
+            const error = await upsertRemoteLogs(client, toRemotePayload(normalized));
             if (error) throw error;
             remoteLoaded = true;
             renderSyncStatus('Supabase saved', 'text-emerald-600 bg-emerald-50 border-emerald-100');
@@ -211,9 +231,7 @@
         const client = getClient();
         if (!client || logs.length === 0) return false;
         try {
-            const { error } = await client
-                .from(TABLE_NAME)
-                .upsert(logs.map(toRemotePayload), { onConflict: 'log_date' });
+            const error = await upsertRemoteLogs(client, logs.map(toRemotePayload));
             if (error) throw error;
             remoteLoaded = true;
             return true;
@@ -358,36 +376,36 @@
                 <span id="health-sync-badge" class="text-[10px] font-bold text-sky-600 bg-sky-50 border border-sky-100 px-2.5 py-1 rounded-md whitespace-nowrap w-fit">Checking server</span>
             </div>
 
-            <div class="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)] gap-3 md:gap-5 mb-8">
+            <div class="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-3 md:gap-5 mb-8">
                 <aside class="space-y-3">
-                    <section class="bg-white p-4 rounded-lg border border-gray-100">
-                        <div class="flex items-center justify-between mb-3">
+                    <section class="bg-white p-3 rounded-lg border border-gray-100">
+                        <div class="flex items-center justify-between mb-2.5">
                             <h3 class="text-sm font-bold text-gray-900">Today</h3>
                             <p class="text-[10px] text-gray-400" id="health-latest-label">No weight log yet</p>
                         </div>
-                        <div class="space-y-3">
+                        <div class="space-y-2.5">
                             <div>
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Date</label>
-                                <input id="health-weight-date" type="date" class="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-rose-500 outline-none">
+                                <label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Date</label>
+                                <input id="health-weight-date" type="date" class="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-rose-500 outline-none">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Weight (kg)</label>
-                                <input id="health-weight-input" type="number" min="0" step="0.1" inputmode="decimal" class="w-full border border-gray-200 rounded-md px-3 py-2 text-lg font-bold text-right focus:ring-2 focus:ring-rose-500 outline-none" placeholder="72.4">
+                                <label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Weight (kg)</label>
+                                <input id="health-weight-input" type="number" min="0" step="0.1" inputmode="decimal" class="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-sm font-semibold text-right focus:ring-2 focus:ring-rose-500 outline-none" placeholder="72.4">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Memo</label>
-                                <input id="health-weight-note" type="text" class="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-rose-500 outline-none" placeholder="optional">
+                                <label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Memo</label>
+                                <input id="health-weight-note" type="text" class="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-rose-500 outline-none" placeholder="optional">
                             </div>
-                            <details class="border border-gray-100 rounded-md p-3">
-                                <summary class="cursor-pointer text-[10px] font-bold text-gray-500 uppercase">Profile</summary>
-                                <label class="block mt-3">
-                                    <span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Height (cm)</span>
-                                    <input id="health-height-input" type="number" min="100" max="230" step="0.1" inputmode="decimal" class="w-full border border-gray-200 rounded-md px-3 py-2 text-sm text-right focus:ring-2 focus:ring-rose-500 outline-none" placeholder="175">
+                            <details class="border border-gray-100 rounded-md p-2.5">
+                                <summary class="cursor-pointer text-[9px] font-bold text-gray-500 uppercase">Profile</summary>
+                                <label class="block mt-2.5">
+                                    <span class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Height (cm)</span>
+                                    <input id="health-height-input" type="number" min="100" max="230" step="0.1" inputmode="decimal" class="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-xs text-right focus:ring-2 focus:ring-rose-500 outline-none" placeholder="175">
                                 </label>
                             </details>
                             <div class="grid grid-cols-[1fr_auto] gap-2">
-                                <button type="button" id="health-save-log" class="px-3 py-2 rounded-md bg-rose-600 text-white text-xs font-bold hover:bg-rose-700">Save</button>
-                                <button type="button" id="health-delete-log" class="px-3 py-2 rounded-md bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200">Delete</button>
+                                <button type="button" id="health-save-log" class="px-3 py-1.5 rounded-md bg-rose-600 text-white text-[11px] font-bold hover:bg-rose-700">Save</button>
+                                <button type="button" id="health-delete-log" class="px-3 py-1.5 rounded-md bg-gray-100 text-gray-600 text-[11px] font-bold hover:bg-gray-200">Delete</button>
                             </div>
                         </div>
                     </section>

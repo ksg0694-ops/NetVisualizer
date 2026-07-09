@@ -16,7 +16,6 @@
             main.classList.remove('hidden'); main.classList.add('flex');
         }
     }
-
     function toggleAddonView() {
         const main = document.getElementById('stats-main-content');
         const manage = document.getElementById('stats-manage-content');
@@ -106,5 +105,3 @@
             }, 100);
         }
     }
-
-    // Weekly Timetable behavior lives in js/features/weeklyTimetable.js.

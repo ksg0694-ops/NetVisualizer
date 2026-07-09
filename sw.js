@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smartbook-v2-app-cache-v72';
+const CACHE_NAME = 'smartbook-v2-app-cache-v77';
 const urlsToCache = [
   './',
   './index.html',
@@ -6,7 +6,6 @@ const urlsToCache = [
   './sw.js',
   './js/features/appCore.js',
   './js/features/assetTrend.js',
-  './js/features/weeklyTimetable.js',
   './js/features/quantEngine.js',
   './js/features/realEstate.js',
   './js/features/transactionImport.js',
@@ -14,8 +13,8 @@ const urlsToCache = [
   './js/features/cashflowControls.js',
   './js/features/portfolioViews.js',
   './js/features/financeViews.js',
-  './js/features/vacationPlan.js',
   './js/features/healthTracker.js',
+  './js/features/checklist.js',
   './js/features/appShell.js',
   './img/cards/s_choice.png'
 ];

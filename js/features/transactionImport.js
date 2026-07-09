@@ -697,7 +697,7 @@
         btn.disabled = true;
 
         try {
-            const _supabase = getSupabaseClient();
+            const _supabase = getAuthenticatedSupabaseClient();
             const { data: insertedRows, error } = await _supabase
                 .from('transactions')
                 .insert(readyRows)

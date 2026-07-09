@@ -26,7 +26,6 @@
         supabaseKey: 'sb_publishable_z6KPFqll3gkD7zSPcGtZxQ_b9Bl96Wi'
     };
     const DEFAULT_WEBAPP_URL = userUrls.webapp;
-    const GOOGLE_SHEET_EDIT_URL = 'https://docs.google.com/spreadsheets/d/1pFBp0zYmr1AFykD-a6k44HQicnmS4JtSFIpd_E4gkBU/edit?usp=drive_link';
     const CACHE_KEY = 'smartbook_v2_data_cache_v4';
     const IMPORT_AUDIT_KEY = 'smartbook_v2_tx_import_runs';
 
@@ -50,7 +49,21 @@
     let currentAssetFilter = 'all';
     let txSortOrder = 'asc';
     const myCharts = {};
-    let dataCache = { tx: null, asset: null, portfolio: null, cards: null, insurances: null, quantRules: null, marketPrices: null, realEstateSubscriptions: null, realEstateHousingTypes: null, realEstateCompetition: null, realEstatePriceRefs: null };
+    let dataCache = {
+        tx: null,
+        asset: null,
+        portfolio: null,
+        cards: null,
+        insurances: null,
+        quantRules: null,
+        quantRuleOverrides: null,
+        marketPrices: null,
+        marketPriceOverrides: null,
+        realEstateSubscriptions: null,
+        realEstateHousingTypes: null,
+        realEstateCompetition: null,
+        realEstatePriceRefs: null
+    };
     let sortedMonthKeys = [];
     let activeViewId = 'dashboard-view';
     let activeInvestGroupName = '';
@@ -72,25 +85,95 @@
     let txImportRawRows = null;
     let txImportSourceMeta = null;
     let txImportAuditRuns = [];
+    const AUTH_REQUIRED_FOR_REMOTE = true;
+    let authSession = null;
+    let authUser = null;
+    let authReady = false;
 
     const SUPABASE_COLUMNS = {
-        transactions: 'date,time,type,category,subcategory,memo,amount,currency,method',
-        assets: 'year,month,total_asset,cash,safe,invest,debt',
-        portfolios: '*',
-        cards: '*',
-        insurances: '*',
-        quantStrategyRules: 'strategy_tag,target_pct,band_pct,trigger_label,is_active,display_order,updated_at',
-        marketPrices: 'ticker,price,currency,price_date,source,note,updated_at',
-        realEstateSubscriptions: '*',
-        realEstateHousingTypes: '*',
-        realEstateCompetition: '*',
-        realEstatePriceRefs: '*'
+        transactions: [
+            'date', 'time', 'type', 'category', 'subcategory', 'memo', 'amount', 'currency', 'method'
+        ].join(','),
+        assets: [
+            'year', 'month', 'total_asset', 'cash', 'safe', 'invest', 'debt'
+        ].join(','),
+        portfolios: [
+            'id', 'group_name', 'name', 'currency', 'maturity', 'amount', 'shares',
+            'asset_type', 'instrument_type', 'ticker', 'risk_bucket', 'classification_source',
+            'classification_updated_at', 'strategy_tag', 'avg_buy_price', 'account_name'
+        ].join(','),
+        cards: [
+            'name', 'bank', 'purpose', 'image_data', 'target_amt', 'annual_fee', 'prt_ideal', 'prt_real'
+        ].join(','),
+        insurances: [
+            'category', 'description', 'company', 'monthly_payment', 'pay_day', 'start_date', 'end_date'
+        ].join(','),
+        quantStrategyRules: [
+            'strategy_tag', 'target_pct', 'band_pct', 'trigger_label', 'is_active', 'display_order', 'updated_at'
+        ].join(','),
+        quantStrategyRuleOverrides: [
+            'user_id', 'strategy_tag', 'target_pct', 'band_pct', 'trigger_label', 'is_active', 'display_order', 'updated_at'
+        ].join(','),
+        marketPrices: [
+            'ticker', 'price', 'currency', 'price_date', 'source', 'note', 'updated_at'
+        ].join(','),
+        marketPriceOverrides: [
+            'user_id', 'ticker', 'price', 'currency', 'price_date', 'source', 'note', 'updated_at'
+        ].join(','),
+        realEstateSubscriptions: [
+            'id', 'block', 'site_name', 'region', 'district', 'supply_count', 'housing_type',
+            'sale_type', 'priority', 'priority_order', 'budget_note', 'key_point', 'target_budget',
+            'expected_notice_month', 'main_subscription_date', 'special_supply_start_date',
+            'special_supply_end_date', 'general_supply_start_date', 'general_supply_end_date',
+            'winner_announcement_date', 'contract_start_date', 'contract_end_date', 'latitude',
+            'longitude', 'color', 'status', 'source', 'source_url', 'source_notice_no',
+            'source_house_manage_no', 'synced_at', 'updated_at'
+        ].join(','),
+        realEstateHousingTypes: [
+            'id', 'subscription_site_id', 'source_notice_no', 'source_house_manage_no', 'model_no',
+            'housing_type', 'exclusive_area', 'supply_area', 'total_supply_count', 'general_supply_count',
+            'special_supply_count', 'special_multi_child_count', 'special_newlywed_count',
+            'special_first_life_count', 'special_elderly_parent_count', 'special_institution_count',
+            'max_sale_price_krw', 'source', 'synced_at', 'updated_at'
+        ].join(','),
+        realEstateCompetition: [
+            'id', 'subscription_site_id', 'source_notice_no', 'source_house_manage_no', 'model_no',
+            'housing_type', 'supply_count', 'rank_no', 'residence_area', 'applications',
+            'competition_rate', 'source', 'synced_at', 'updated_at'
+        ].join(','),
+        realEstatePriceRefs: [
+            'id', 'apartment_name', 'region_code', 'region_name', 'legal_dong', 'deal_date',
+            'deal_amount_krw', 'exclusive_area', 'floor_no', 'build_year', 'latitude',
+            'longitude', 'source', 'synced_at', 'updated_at'
+        ].join(',')
     };
 
-    const DEFAULT_DATA_TABLES = ['transactions', 'assets', 'portfolios', 'cards', 'insurances', 'quant_strategy_rules', 'portfolio_market_prices', 'real_estate_subscription_sites'];
+    const DEFAULT_DATA_TABLES = [
+        'transactions',
+        'assets',
+        'portfolios',
+        'cards',
+        'insurances',
+        'quant_strategy_rules',
+        'quant_strategy_rule_overrides',
+        'portfolio_market_prices',
+        'portfolio_market_price_overrides',
+        'real_estate_subscription_sites'
+    ];
     const REAL_ESTATE_DETAIL_TABLES = ['real_estate_housing_types', 'real_estate_competition', 'real_estate_price_refs'];
     const ALL_DATA_TABLES = [...DEFAULT_DATA_TABLES, ...REAL_ESTATE_DETAIL_TABLES];
-    const OPTIONAL_DATA_TABLES = new Set(['cards', 'insurances', 'quant_strategy_rules', 'portfolio_market_prices', 'real_estate_subscription_sites', 'real_estate_housing_types', 'real_estate_competition', 'real_estate_price_refs']);
+    const OPTIONAL_DATA_TABLES = new Set([
+        'cards',
+        'insurances',
+        'quant_strategy_rules',
+        'quant_strategy_rule_overrides',
+        'portfolio_market_prices',
+        'portfolio_market_price_overrides',
+        'real_estate_subscription_sites',
+        'real_estate_housing_types',
+        'real_estate_competition',
+        'real_estate_price_refs'
+    ]);
     const DATA_TABLE_QUERIES = {
         transactions: (client) => client.from('transactions').select(SUPABASE_COLUMNS.transactions).order('date', { ascending: true }),
         assets: (client) => client.from('assets').select(SUPABASE_COLUMNS.assets).order('year', { ascending: true }).order('month', { ascending: true }),
@@ -98,7 +181,9 @@
         cards: (client) => client.from('cards').select(SUPABASE_COLUMNS.cards),
         insurances: (client) => client.from('insurances').select(SUPABASE_COLUMNS.insurances),
         quant_strategy_rules: (client) => client.from('quant_strategy_rules').select(SUPABASE_COLUMNS.quantStrategyRules).order('display_order', { ascending: true }),
+        quant_strategy_rule_overrides: (client) => client.from('quant_strategy_rule_overrides').select(SUPABASE_COLUMNS.quantStrategyRuleOverrides).order('display_order', { ascending: true }),
         portfolio_market_prices: (client) => client.from('portfolio_market_prices').select(SUPABASE_COLUMNS.marketPrices).order('ticker', { ascending: true }),
+        portfolio_market_price_overrides: (client) => client.from('portfolio_market_price_overrides').select(SUPABASE_COLUMNS.marketPriceOverrides).order('ticker', { ascending: true }),
         real_estate_subscription_sites: (client) => client.from('real_estate_subscription_sites').select(SUPABASE_COLUMNS.realEstateSubscriptions).order('priority_order', { ascending: true }).order('block', { ascending: true }),
         real_estate_housing_types: (client) => client.from('real_estate_housing_types').select(SUPABASE_COLUMNS.realEstateHousingTypes),
         real_estate_competition: (client) => client.from('real_estate_competition').select(SUPABASE_COLUMNS.realEstateCompetition),
@@ -380,10 +465,140 @@
         if (!userUrls.webapp || !userUrls.supabaseKey) throw new Error('URL_MISSING');
         const signature = `${userUrls.webapp}|${userUrls.supabaseKey}`;
         if (!supabaseClient || supabaseClientSignature !== signature) {
-            supabaseClient = supabase.createClient(userUrls.webapp, userUrls.supabaseKey);
+            supabaseClient = supabase.createClient(userUrls.webapp, userUrls.supabaseKey, {
+                auth: {
+                    persistSession: true,
+                    autoRefreshToken: true,
+                    detectSessionInUrl: true
+                }
+            });
             supabaseClientSignature = signature;
         }
         return supabaseClient;
+    }
+
+    function isSignedIn() {
+        return !!authSession?.user;
+    }
+
+    function getCurrentUserId() {
+        return authSession?.user?.id || '';
+    }
+
+    function requireSupabaseSession() {
+        if (!AUTH_REQUIRED_FOR_REMOTE) return authSession;
+        if (!isSignedIn()) {
+            const error = new Error('로그인 후 클라우드 동기화를 사용할 수 있습니다.');
+            error.code = 'AUTH_REQUIRED';
+            throw error;
+        }
+        return authSession;
+    }
+
+    function getAuthenticatedSupabaseClient() {
+        const client = getSupabaseClient();
+        requireSupabaseSession();
+        return client;
+    }
+
+    function updateAuthUi() {
+        const signedIn = isSignedIn();
+        const email = authUser?.email || '';
+        const statusEl = document.getElementById('auth-status');
+        const emailEl = document.getElementById('auth-email');
+        const signInBtn = document.getElementById('btn-auth-sign-in');
+        const signOutBtn = document.getElementById('btn-auth-sign-out');
+        const sidebarSync = document.getElementById('sidebar-sync-status');
+        const syncStatus = document.getElementById('sync-status');
+
+        if (statusEl) {
+            statusEl.className = signedIn
+                ? 'rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700'
+                : 'rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700';
+            statusEl.innerHTML = signedIn
+                ? `<i class="fas fa-lock text-xs mr-1"></i> ${escapeHtml(email)} 계정으로 클라우드 동기화 중`
+                : '<i class="fas fa-unlock-keyhole text-xs mr-1"></i> 로그인하면 개인 클라우드 데이터만 동기화합니다.';
+        }
+        if (emailEl) emailEl.value = emailEl.value || email;
+        if (signInBtn) signInBtn.classList.toggle('hidden', signedIn);
+        if (signOutBtn) signOutBtn.classList.toggle('hidden', !signedIn);
+        if (!signedIn) {
+            if (sidebarSync) sidebarSync.innerHTML = `<i class="fas fa-user-lock text-[10px] text-amber-500"></i> 로그인 필요`;
+            if (syncStatus) {
+                syncStatus.textContent = '로그인 필요';
+                syncStatus.className = "hidden md:inline-block text-xs text-amber-500 font-medium mr-2 max-w-[150px] truncate";
+            }
+        }
+    }
+
+    function setAuthSession(session) {
+        authSession = session || null;
+        authUser = authSession?.user || null;
+        updateAuthUi();
+    }
+
+    async function initAuth() {
+        try {
+            const client = getSupabaseClient();
+            const { data, error } = await client.auth.getSession();
+            if (error) throw error;
+            setAuthSession(data?.session || null);
+            client.auth.onAuthStateChange((_event, session) => {
+                const hadUser = isSignedIn();
+                setAuthSession(session);
+                if (!hadUser && session?.user) fetchSheetData(false);
+            });
+        } catch (error) {
+            console.warn('Supabase Auth 초기화 실패:', error);
+            setAuthSession(null);
+        } finally {
+            authReady = true;
+        }
+    }
+
+    async function sendAuthMagicLink() {
+        const emailEl = document.getElementById('auth-email');
+        const btn = document.getElementById('btn-auth-sign-in');
+        const email = String(emailEl?.value || '').trim();
+        if (!email || !email.includes('@')) {
+            showToast('로그인 이메일을 입력해주세요.', 'warning');
+            return;
+        }
+
+        const originalText = btn?.innerHTML || '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 보내는 중';
+        }
+        try {
+            const redirectTo = window.location.href.split('#')[0];
+            const { error } = await getSupabaseClient().auth.signInWithOtp({
+                email,
+                options: { emailRedirectTo: redirectTo }
+            });
+            if (error) throw error;
+            showToast('로그인 링크를 이메일로 보냈습니다.', 'info', 3500);
+        } catch (error) {
+            console.error('로그인 링크 전송 실패:', error);
+            showToast(`로그인 링크 전송 실패: ${error.message}`, 'error', 4000);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText || '<i class="fas fa-paper-plane"></i> 로그인 링크 받기';
+            }
+        }
+    }
+
+    async function signOutCloud() {
+        try {
+            const { error } = await getSupabaseClient().auth.signOut();
+            if (error) throw error;
+            setAuthSession(null);
+            showToast('로그아웃했습니다. 로컬 캐시만 표시합니다.', 'info');
+        } catch (error) {
+            console.error('로그아웃 실패:', error);
+            showToast(`로그아웃 실패: ${error.message}`, 'error');
+        }
     }
 
     function formatTransactionRows(rows = []) {
@@ -422,43 +637,81 @@
         return pfFormat;
     }
 
-    function parseQuantStrategyRules(rows = []) {
+    function applyQuantRuleRows(targetRules, rows = [], source = 'default') {
+        if (!Array.isArray(rows)) return;
+        rows.forEach(row => {
+            const key = String(row.strategy_tag || '').trim();
+            if (!INVEST_STRATEGY_META[key]) return;
+            const current = targetRules[key] || DEFAULT_QUANT_STRATEGY_RULES[key] || DEFAULT_QUANT_STRATEGY_RULES.other;
+            targetRules[key] = {
+                targetPct: Number(row.target_pct ?? current.targetPct) || 0,
+                bandPct: Number(row.band_pct ?? current.bandPct) || 0,
+                trigger: String(row.trigger_label || current.trigger || ''),
+                isActive: row.is_active !== false,
+                displayOrder: Number(row.display_order ?? current.displayOrder ?? 0) || 0,
+                updatedAt: row.updated_at || '',
+                source
+            };
+        });
+    }
+
+    function parseQuantStrategyRules(rows = [], overrideRows = []) {
         const nextRules = Object.fromEntries(
             Object.entries(DEFAULT_QUANT_STRATEGY_RULES).map(([key, rule]) => [key, { ...rule }])
         );
 
-        if (Array.isArray(rows)) {
-            rows.forEach(row => {
-                const key = String(row.strategy_tag || '').trim();
-                if (!INVEST_STRATEGY_META[key]) return;
-                nextRules[key] = {
-                    targetPct: Number(row.target_pct ?? nextRules[key].targetPct) || 0,
-                    bandPct: Number(row.band_pct ?? nextRules[key].bandPct) || 0,
-                    trigger: String(row.trigger_label || nextRules[key].trigger || ''),
-                    isActive: row.is_active !== false,
-                    displayOrder: Number(row.display_order ?? 0) || 0,
-                    updatedAt: row.updated_at || ''
-                };
-            });
-        }
+        applyQuantRuleRows(nextRules, rows, 'shared');
+        applyQuantRuleRows(nextRules, overrideRows, 'override');
 
         quantStrategyRules = nextRules;
     }
 
-    function parseMarketPrices(rows = []) {
-        marketPriceMap = {};
-        if (!Array.isArray(rows)) return;
+    function normalizeMarketPriceRow(row = {}, sourceScope = 'shared') {
+        const ticker = String(row.ticker || '').trim().toUpperCase();
+        const price = Number(row.price);
+        if (!ticker || !Number.isFinite(price)) return null;
+        return {
+            ...row,
+            ticker,
+            price,
+            currency: String(row.currency || 'KRW').toUpperCase(),
+            price_date: row.price_date || '',
+            source: row.source || (sourceScope === 'override' ? 'manual' : 'api'),
+            note: row.note || '',
+            updated_at: row.updated_at || '',
+            sourceScope
+        };
+    }
 
-        rows.forEach(row => {
-            const ticker = String(row.ticker || '').trim().toUpperCase();
-            const price = Number(row.price);
-            if (!ticker || !Number.isFinite(price)) return;
-            marketPriceMap[ticker] = {
-                ticker,
-                price,
-                currency: String(row.currency || 'KRW').toUpperCase(),
+    function getMergedMarketPriceRows(sharedRows = dataCache.marketPrices, overrideRows = dataCache.marketPriceOverrides) {
+        const merged = new Map();
+        if (Array.isArray(sharedRows)) {
+            sharedRows.forEach(row => {
+                const normalized = normalizeMarketPriceRow(row, 'shared');
+                if (normalized) merged.set(normalized.ticker, normalized);
+            });
+        }
+        if (Array.isArray(overrideRows)) {
+            overrideRows.forEach(row => {
+                const normalized = normalizeMarketPriceRow(row, 'override');
+                if (normalized) merged.set(normalized.ticker, normalized);
+            });
+        }
+        return Array.from(merged.values()).sort((a, b) => a.ticker.localeCompare(b.ticker));
+    }
+
+    function parseMarketPrices(rows = [], overrideRows = []) {
+        marketPriceMap = {};
+
+        getMergedMarketPriceRows(rows, overrideRows).forEach(row => {
+            marketPriceMap[row.ticker] = {
+                ...row,
+                ticker: row.ticker,
+                price: row.price,
+                currency: row.currency,
                 priceDate: row.price_date || '',
-                source: row.source || 'manual',
+                source: row.source,
+                sourceScope: row.sourceScope,
                 note: row.note || '',
                 updatedAt: row.updated_at || ''
             };
@@ -520,7 +773,9 @@
             cards: data.cards || null,
             insurances: data.insurances || null,
             quantRules: data.quantRules || null,
+            quantRuleOverrides: data.quantRuleOverrides || null,
             marketPrices: data.marketPrices || null,
+            marketPriceOverrides: data.marketPriceOverrides || null,
             realEstateSubscriptions: data.realEstateSubscriptions || null,
             realEstateHousingTypes: data.realEstateHousingTypes || null,
             realEstateCompetition: data.realEstateCompetition || null,
@@ -538,8 +793,8 @@
         if (dataCache.portfolio) parsePortfolioData(dataCache.portfolio);
         if (dataCache.cards) addonCards = dataCache.cards;
         if (dataCache.insurances) addonInsurances = dataCache.insurances;
-        parseQuantStrategyRules(dataCache.quantRules);
-        parseMarketPrices(dataCache.marketPrices);
+        parseQuantStrategyRules(dataCache.quantRules, dataCache.quantRuleOverrides);
+        parseMarketPrices(dataCache.marketPrices, dataCache.marketPriceOverrides);
     }
 
     function renderSections({ dashboard = false, financeSummary = false, cashFlow = false, portfolio = false, addons = false, realEstate = false, investDetail = false } = {}) {
@@ -569,7 +824,13 @@
                 tableSet.has('real_estate_competition') ||
                 tableSet.has('real_estate_price_refs')
             ),
-            investDetail: activeViewId === 'invest-detail-view' && (tableSet.has('portfolios') || tableSet.has('quant_strategy_rules') || tableSet.has('portfolio_market_prices'))
+            investDetail: activeViewId === 'invest-detail-view' && (
+                tableSet.has('portfolios') ||
+                tableSet.has('quant_strategy_rules') ||
+                tableSet.has('quant_strategy_rule_overrides') ||
+                tableSet.has('portfolio_market_prices') ||
+                tableSet.has('portfolio_market_price_overrides')
+            )
         };
     }
 
@@ -632,7 +893,7 @@
     }
 
     async function fetchRemoteTables(tables = DEFAULT_DATA_TABLES) {
-        const _supabase = getSupabaseClient();
+        const _supabase = getAuthenticatedSupabaseClient();
         const queries = tables.map(table => {
             const queryBuilder = DATA_TABLE_QUERIES[table];
             if (queryBuilder) return queryBuilder(_supabase);
@@ -659,7 +920,9 @@
             if (table === 'cards') patch.cards = res.data || [];
             if (table === 'insurances') patch.insurances = res.data || [];
             if (table === 'quant_strategy_rules') patch.quantRules = res.data || [];
+            if (table === 'quant_strategy_rule_overrides') patch.quantRuleOverrides = res.data || [];
             if (table === 'portfolio_market_prices') patch.marketPrices = res.data || [];
+            if (table === 'portfolio_market_price_overrides') patch.marketPriceOverrides = res.data || [];
             if (table === 'real_estate_subscription_sites') patch.realEstateSubscriptions = res.data || [];
             if (table === 'real_estate_housing_types') patch.realEstateHousingTypes = res.data || [];
             if (table === 'real_estate_competition') patch.realEstateCompetition = res.data || [];
@@ -890,6 +1153,17 @@
 
         const hasCache = isAutoSync ? loadCachedData() : false;
 
+        if (AUTH_REQUIRED_FOR_REMOTE && !isSignedIn()) {
+            if (!hasCache) renderSections({ dashboard: true, portfolio: true, addons: true });
+            if(syncStatus) {
+                syncStatus.textContent = '로그인 필요';
+                syncStatus.className = "hidden md:inline-block text-xs text-amber-500 font-medium mr-2 max-w-[150px] truncate";
+            }
+            if(sidebarSync) sidebarSync.innerHTML = `<i class="fas fa-user-lock text-[10px] text-amber-500"></i> 로그인 필요`;
+            if(!isAutoSync) showToast('클라우드 동기화는 로그인 후 사용할 수 있습니다.', 'warning', 3000);
+            return;
+        }
+
         if(syncIcon) syncIcon.classList.add('animate-spin-slow');
         if(syncStatus) {
             syncStatus.textContent = hasCache ? '백그라운드 동기화 중...' : '데이터 불러오는 중...';
@@ -974,7 +1248,7 @@
         btn.disabled = true;
 
         try {
-            const _supabase = getSupabaseClient();
+            const _supabase = getAuthenticatedSupabaseClient();
             let timeVal = time;
             if (timeVal && timeVal.split(':').length === 2) timeVal += ':00'; // Make HH:MM into HH:MM:SS
 
@@ -1023,3 +1297,15 @@
     // Transaction import behavior lives in js/features/transactionImport.js.
 
     // Portfolio edit modal behavior lives in js/features/portfolioEditor.js.
+
+    Object.assign(window, {
+        getAuthenticatedSupabaseClient,
+        getCurrentUserId,
+        getMergedMarketPriceRows,
+        initAuth,
+        isSignedIn,
+        parseMarketPrices,
+        parseQuantStrategyRules,
+        sendAuthMagicLink,
+        signOutCloud
+    });
