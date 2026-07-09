@@ -1,8 +1,3 @@
--- NetVisualizer weekly timetable sync model.
--- The current app uses the public anon Supabase client and existing project
--- tables are operated without RLS. Keep the same posture here and revisit RLS
--- in a dedicated security-hardening pass.
-
 create extension if not exists pgcrypto;
 
 create table if not exists public.weekly_timetable_weeks (
@@ -58,4 +53,4 @@ for each row execute function public.set_weekly_timetable_updated_at();
 drop trigger if exists trg_weekly_timetable_templates_updated_at on public.weekly_timetable_templates;
 create trigger trg_weekly_timetable_templates_updated_at
 before update on public.weekly_timetable_templates
-for each row execute function public.set_weekly_timetable_updated_at();
+for each row execute function public.set_weekly_timetable_updated_at();;

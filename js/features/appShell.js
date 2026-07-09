@@ -38,9 +38,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         'dashboard-view': document.getElementById('dashboard-view'), 'portfolio-view': document.getElementById('portfolio-view'),
         'career-view': document.getElementById('career-view'), 'project-view': document.getElementById('project-view'),
         'life-view': document.getElementById('life-view'),
-        'weekly-timetable-view': document.getElementById('weekly-timetable-view'),
         'routine-checklist-view': document.getElementById('routine-checklist-view'),
-        'vacation-plan-view': document.getElementById('vacation-plan-view'),
         'health-view': document.getElementById('health-view'),
         'stats-view': document.getElementById('stats-view'), 'asset-view': document.getElementById('asset-view'),
         'realestate-view': document.getElementById('realestate-view'), 'invest-detail-view': document.getElementById('invest-detail-view')
@@ -49,8 +47,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     const viewContextMeta = {
         'dashboard-view': { label: 'Finance Goal', title: 'Finance Cockpit' },
         'life-view': { label: 'Life Goal', title: 'Life Cockpit' },
-        'weekly-timetable-view': { label: 'Life Tool', title: 'Weekly Timetable' },
-        'vacation-plan-view': { label: 'Life Tool', title: 'Vacation Plan' },
+        'routine-checklist-view': { label: 'Life Tool', title: '할일' },
         'health-view': { label: 'Life Tool', title: 'Health' },
         'portfolio-view': { label: 'Finance Tool', title: 'Portfolio' },
         'stats-view': { label: 'Finance Tool', title: 'Cash Flow' },
@@ -60,7 +57,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     };
 
     const financeToolViews = new Set(['portfolio-view', 'stats-view', 'asset-view', 'realestate-view', 'invest-detail-view']);
-    const lifeToolViews = new Set(['weekly-timetable-view', 'vacation-plan-view', 'health-view']);
+    const lifeToolViews = new Set(['health-view', 'routine-checklist-view']);
     const mobileToolNav = document.getElementById('mobile-tool-nav');
     const mobileToolGroups = {
         'dashboard-view': [
@@ -70,9 +67,8 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
             { target: 'realestate-view', icon: 'fa-home', label: 'Estate' }
         ],
         'life-view': [
-            { target: 'weekly-timetable-view', icon: 'fa-calendar-week', label: 'Week' },
             { target: 'health-view', icon: 'fa-heart-pulse', label: 'Health' },
-            { target: 'vacation-plan-view', icon: 'fa-plane-departure', label: 'Trip' }
+            { target: 'routine-checklist-view', icon: 'fa-list-check', label: '할일' }
         ]
     };
 
@@ -100,16 +96,8 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         let toolItems = mobileToolGroups[activeGoalTarget] || mobileToolGroups['dashboard-view'];
         if (activeGoalTarget === 'life-view') {
             toolItems = [
-                { target: 'weekly-timetable-view', icon: 'fa-calendar-week', label: 'Week' },
                 { target: 'health-view', icon: 'fa-heart-pulse', label: 'Health' },
-                { target: 'vacation-plan-view', icon: 'fa-plane-departure', label: 'Trip' }
-            ];
-        }
-        if (activeGoalTarget === 'life-view') {
-            toolItems = [
-                { target: 'weekly-timetable-view', icon: 'fa-calendar-week', label: 'Week' },
-                { target: 'health-view', icon: 'fa-heart-pulse', label: 'Health' },
-                { target: 'vacation-plan-view', icon: 'fa-plane-departure', label: 'Trip' }
+                { target: 'routine-checklist-view', icon: 'fa-list-check', label: '할일' }
             ];
         }
         mobileToolNav.innerHTML = toolItems.map(item => {
@@ -170,7 +158,6 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
 
     function switchView(targetId) {
         if (targetId === 'project-view' || targetId === 'career-view') targetId = 'dashboard-view';
-        if (targetId === 'routine-checklist-view') targetId = 'life-view';
         useMonthScopeForView(targetId);
         activeViewId = targetId;
         updateAppContext(targetId);
@@ -185,6 +172,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         });
 
         Object.values(views).forEach(v => { if(v) v.classList.add('hidden'); });
+        if (targetId === 'routine-checklist-view') window.ChecklistFeature?.render({ skipRemoteLoad: true });
         if(views[targetId]) views[targetId].classList.remove('hidden');
 
         // ???[?????怨뚮뼺?됰뗀??? FAB ???????????? '?????????????????stats-view)' ??????饔낅떽????????????怨뺤른??????怨쀫뮡?壤굿??곸읆????ル폆???
@@ -205,17 +193,13 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
             else if (targetId === 'stats-view') renderSections({ cashFlow: true });
             else if (targetId === 'asset-view') renderSections({ financeSummary: true });
             else if (targetId === 'realestate-view') renderSections({ realEstate: true });
-            else if (targetId === 'weekly-timetable-view') {
-                window.WeeklyTimetableFeature?.bindControls();
-                window.WeeklyTimetableFeature?.render();
-            }
-            else if (targetId === 'vacation-plan-view') {
-                window.VacationPlanFeature?.bindControls();
-                window.VacationPlanFeature?.render();
-            }
             else if (targetId === 'health-view') {
                 window.HealthTrackerFeature?.bindControls();
                 window.HealthTrackerFeature?.render();
+            }
+            else if (targetId === 'routine-checklist-view') {
+                window.ChecklistFeature?.bindControls();
+                window.ChecklistFeature?.render();
             }
         }, 20);
     }
@@ -297,8 +281,9 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
 
     // Real-estate subscription schedule and map rendering lives in js/features/realEstate.js.
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
         normalizeGoalShellText();
         loadSettings();
+        if (typeof initAuth === 'function') await initAuth();
         fetchSheetData(true);
     });

@@ -1,7 +1,3 @@
--- NetVisualizer vacation plan sync model.
--- Matches the current public anon-client data posture. Revisit RLS policies in
--- a separate security-hardening pass before sharing the app beyond personal use.
-
 create extension if not exists pgcrypto;
 
 create table if not exists public.vacation_plans (
@@ -34,4 +30,4 @@ $$;
 drop trigger if exists trg_vacation_plans_updated_at on public.vacation_plans;
 create trigger trg_vacation_plans_updated_at
 before update on public.vacation_plans
-for each row execute function public.set_vacation_plans_updated_at();
+for each row execute function public.set_vacation_plans_updated_at();;

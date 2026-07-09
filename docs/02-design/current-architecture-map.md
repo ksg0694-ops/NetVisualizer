@@ -93,8 +93,9 @@ flowchart TD
     GoalNav --> CareerGoal["Career Cockpit"]
     GoalNav --> ProjectGoal["Project Cockpit"]
     GoalNav --> LifeGoal["Life Cockpit"]
-    LifeGoal --> LifeTools["Weekly Timetable\nRoutine Checklist\nVacation Plan"]
-    LifeTools --> WeeklyTimetable["ISO week navigation\nhour-slot localStorage editing"]
+    LifeGoal --> LifeTools["Health Tracking\n할일"]
+    LifeTools --> HealthTracker["Weight logs\ntrend and 7-day average"]
+    LifeTools --> Checklist["Local-first to-dos\nnotes, steps, domains\noptional user cloud sync"]
 
     Header["Goal title + time-scope badges"] --> DecisionCards["Decision Cards\nasset goal, housing readiness,\nyear surplus, surplus rate"]
     DecisionCards --> PrimaryVisual["Primary Visual\nasset-flow chart"]
@@ -110,7 +111,7 @@ flowchart TD
     ToolVisual --> ToolDetail["Detail / Action\nlists, edit buttons, schedule, roadmap"]
 ```
 
-This keeps KPI calculation in `index.html` for now. The next architecture step should move Finance summary KPI definitions and future Career/Project/Life goal metrics into small domain modules.
+This keeps KPI calculation in `index.html` for now. The next architecture step should move Finance summary KPI definitions, Health metrics, and to-do summary counts into small domain modules.
 
 ## Current Time Scope
 

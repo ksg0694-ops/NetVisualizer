@@ -238,4 +238,4 @@ on conflict (block, site_name) do update set
   color = excluded.color,
   status = excluded.status,
   source = excluded.source,
-  source_url = excluded.source_url;
+  source_url = excluded.source_url;;

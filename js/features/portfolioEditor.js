@@ -333,7 +333,7 @@
         btn.disabled = true;
 
         try {
-            const _supabase = getSupabaseClient();
+            const _supabase = getAuthenticatedSupabaseClient();
             const existingPayloads = [];
             const newPayloads = [];
             const originalIds = rawPortfolioData.slice(1).map(row => row[6]).filter(Boolean);

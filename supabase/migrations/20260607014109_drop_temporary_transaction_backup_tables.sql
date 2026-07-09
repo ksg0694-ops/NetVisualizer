@@ -1,0 +1,2 @@
+drop table if exists public.transactions_backup_20260607_20251224_replace;
+drop table if exists public.transactions_backup_20260607_20251224_sorted_redo;;
