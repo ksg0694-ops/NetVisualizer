@@ -47,7 +47,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     const viewContextMeta = {
         'dashboard-view': { label: 'Finance Goal', title: 'Finance Cockpit' },
         'life-view': { label: 'Life Goal', title: 'Life Cockpit' },
-        'routine-checklist-view': { label: 'Life Tool', title: '할일' },
+        'routine-checklist-view': { label: 'Life Tool', title: 'To do list' },
         'health-view': { label: 'Life Tool', title: 'Health' },
         'portfolio-view': { label: 'Finance Tool', title: 'Portfolio' },
         'stats-view': { label: 'Finance Tool', title: 'Cash Flow' },
@@ -68,7 +68,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         ],
         'life-view': [
             { target: 'health-view', icon: 'fa-heart-pulse', label: 'Health' },
-            { target: 'routine-checklist-view', icon: 'fa-list-check', label: '할일' }
+            { target: 'routine-checklist-view', icon: 'fa-list-check', label: 'To do' }
         ]
     };
 
@@ -97,7 +97,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         if (activeGoalTarget === 'life-view') {
             toolItems = [
                 { target: 'health-view', icon: 'fa-heart-pulse', label: 'Health' },
-                { target: 'routine-checklist-view', icon: 'fa-list-check', label: '할일' }
+                { target: 'routine-checklist-view', icon: 'fa-list-check', label: 'To do' }
             ];
         }
         mobileToolNav.innerHTML = toolItems.map(item => {

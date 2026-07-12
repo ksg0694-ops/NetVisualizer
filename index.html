@@ -38,7 +38,7 @@
     <script src="./js/features/portfolioViews.js?v=20260626-account-order"></script>
     <script src="./js/features/financeViews.js?v=20260626-fixed-cost-status"></script>
     <script src="./js/features/healthTracker.js?v=20260708-auth-cloud"></script>
-    <script src="./js/features/checklist.js?v=20260710-todo-detail"></script>
+    <script src="./js/features/checklist.js?v=20260712-todo-drag-motion-v7"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -116,7 +116,7 @@
                             <i class="fas fa-heart-pulse w-4 text-center text-xs"></i> <span class="truncate">Health</span>
                         </a>
                         <a href="#" data-target="routine-checklist-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
-                            <i class="fas fa-list-check w-4 text-center text-xs"></i> <span class="truncate">할일</span>
+                            <i class="fas fa-list-check w-4 text-center text-xs"></i> <span class="truncate">To do list</span>
                         </a>
                     </div>
                 </div>
@@ -776,13 +776,13 @@
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <span class="text-[10px] md:text-xs font-bold text-rose-600 bg-rose-50 border border-rose-100 px-3 py-2 rounded-xl whitespace-nowrap">Health Tracking</span>
-                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">할일</span>
+                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">To do list</span>
                     </div>
                 </div>
 
                 <div class="mb-3 flex items-center justify-between gap-3">
                     <h3 class="text-sm md:text-base font-bold text-gray-800">Life Tools</h3>
-                    <span class="text-[10px] md:text-xs text-gray-400">Health / 할일</span>
+                    <span class="text-[10px] md:text-xs text-gray-400">Health / To do list</span>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 mb-8">
                     <button type="button" onclick="switchView('health-view')" class="text-left bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-rose-200 hover:shadow-md transition min-w-0">
@@ -794,7 +794,7 @@
                     <button type="button" onclick="switchView('routine-checklist-view')" class="text-left bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-md transition min-w-0">
                         <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-4"><i class="fas fa-list-check"></i></div>
                         <p class="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-1">Tool 02</p>
-                        <h3 class="text-lg font-bold text-gray-900">할일</h3>
+                        <h3 class="text-lg font-bold text-gray-900">To do list</h3>
                         <p class="text-xs text-gray-500 mt-2 leading-relaxed">메모와 스텝까지 나눠서 관리합니다.</p>
                     </button>
                 </div>
@@ -805,7 +805,7 @@
                 <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
                     <div>
                         <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Life Tool</p>
-                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">할일</h2>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">To do list</h2>
                         <p class="text-xs md:text-sm text-gray-500 mt-1">하루를 망치지 않게 만드는 최소 루틴만 체크합니다.</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
@@ -1867,6 +1867,6 @@
     <!-- Toast Message Container -->
     <div id="toast-container" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[90%] md:w-auto max-w-sm"></div>
 
-    <script src="./js/features/appShell.js?v=20260710-todo-detail"></script>
+    <script src="./js/features/appShell.js?v=20260712-todo-drag-motion-v7"></script>
 </body>
 </html>
