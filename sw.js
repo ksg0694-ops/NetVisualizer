@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smartbook-v2-app-cache-v102';
+const CACHE_NAME = 'smartbook-v2-app-cache-v103';
 const urlsToCache = [
   './',
   './index.html',

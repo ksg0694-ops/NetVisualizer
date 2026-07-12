@@ -28,7 +28,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <!-- Feature modules -->
-    <script src="./js/features/appCore.js?v=20260713-password-auth"></script>
+    <script src="./js/features/appCore.js?v=20260713-local-mode"></script>
     <script src="./js/features/assetTrend.js"></script>
     <script src="./js/features/quantEngine.js?v=20260708-auth-cloud"></script>
     <script src="./js/features/realEstate.js?v=20260621-dsr-target-summary"></script>
@@ -1611,7 +1611,7 @@
             <div class="p-6 overflow-y-auto space-y-5">
                 <div class="text-sm text-gray-600 bg-indigo-50 p-4 rounded-xl border border-indigo-100 leading-relaxed">
                     <strong>데이터베이스 및 클라우드 데이터 관리</strong><br>
-                    로그인하면 개인 클라우드 데이터만 동기화합니다. 기존 로컬 캐시는 로그인 전에도 읽을 수 있습니다.
+                    지금은 로컬 모드로 사용합니다. 클라우드 로그인은 나중에 다시 연결할 수 있습니다.
                 </div>
 
                 <div class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm space-y-3">
@@ -1621,11 +1621,11 @@
                                 <i class="fas fa-user-shield text-indigo-500"></i>
                                 클라우드 로그인
                             </h4>
-                            <p class="text-xs text-gray-500 mt-1">이메일과 비밀번호로 개인 클라우드에 연결합니다.</p>
+                            <p class="text-xs text-gray-500 mt-1">지금은 로컬 모드로 사용하고, 클라우드 동기화는 잠시 보류합니다.</p>
                         </div>
                     </div>
                     <div id="auth-status" class="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                        <i class="fas fa-unlock-keyhole text-xs mr-1"></i> 로그인하면 개인 클라우드 데이터만 동기화합니다.
+                        <i class="fas fa-hard-drive text-xs mr-1"></i> 지금은 로컬 모드입니다. 클라우드 로그인은 잠시 보류 중입니다.
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-2">
                         <input id="auth-email" type="email" autocomplete="email" placeholder="email@example.com" class="min-w-0 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
