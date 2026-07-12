@@ -477,6 +477,35 @@
         return supabaseClient;
     }
 
+    function getAuthRedirectUrl() {
+        const url = new URL(window.location.href);
+        url.hash = '';
+        url.search = '';
+
+        if (url.hostname === 'ksg0694-ops.github.io') {
+            url.pathname = '/NetVisualizer/';
+        } else {
+            url.pathname = url.pathname.replace(/\/index\.html$/i, '/');
+        }
+
+        return url.toString();
+    }
+
+    function cleanAuthCallbackUrl() {
+        if (!window.history?.replaceState) return;
+
+        const authParams = `${window.location.search || ''}&${window.location.hash || ''}`;
+        if (!/(access_token|refresh_token|expires_in|token_type|type=|error=|error_description)/.test(authParams)) {
+            return;
+        }
+
+        const url = new URL(window.location.href);
+        url.hash = '';
+        ['access_token', 'refresh_token', 'expires_in', 'token_type', 'type', 'error', 'error_code', 'error_description']
+            .forEach((key) => url.searchParams.delete(key));
+        window.history.replaceState({}, document.title, url.toString());
+    }
+
     function isSignedIn() {
         return !!authSession?.user;
     }
@@ -543,6 +572,7 @@
             const { data, error } = await client.auth.getSession();
             if (error) throw error;
             setAuthSession(data?.session || null);
+            cleanAuthCallbackUrl();
             client.auth.onAuthStateChange((_event, session) => {
                 const hadUser = isSignedIn();
                 setAuthSession(session);
@@ -571,7 +601,7 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 보내는 중';
         }
         try {
-            const redirectTo = window.location.href.split('#')[0];
+            const redirectTo = getAuthRedirectUrl();
             const { error } = await getSupabaseClient().auth.signInWithOtp({
                 email,
                 options: { emailRedirectTo: redirectTo }
