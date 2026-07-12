@@ -85,7 +85,7 @@
     let txImportRawRows = null;
     let txImportSourceMeta = null;
     let txImportAuditRuns = [];
-    const AUTH_REQUIRED_FOR_REMOTE = true;
+    const AUTH_REQUIRED_FOR_REMOTE = false;
     const CLOUD_AUTH_PAUSED = true;
     let authSession = null;
     let authUser = null;
@@ -516,12 +516,12 @@
     }
 
     function requireSupabaseSession() {
+        if (!AUTH_REQUIRED_FOR_REMOTE) return authSession;
         if (CLOUD_AUTH_PAUSED) {
             const error = new Error('클라우드 로그인은 잠시 보류 중입니다. 로컬 모드로 계속 사용할 수 있습니다.');
             error.code = 'AUTH_PAUSED';
             throw error;
         }
-        if (!AUTH_REQUIRED_FOR_REMOTE) return authSession;
         if (!isSignedIn()) {
             const error = new Error('로그인 후 클라우드 동기화를 사용할 수 있습니다.');
             error.code = 'AUTH_REQUIRED';
@@ -550,14 +550,14 @@
 
         if (CLOUD_AUTH_PAUSED) {
             if (statusEl) {
-                statusEl.className = 'rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600';
-                statusEl.innerHTML = '<i class="fas fa-hard-drive text-xs mr-1"></i> 지금은 로컬 모드입니다. 클라우드 로그인은 잠시 보류 중입니다.';
+                statusEl.className = 'rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700';
+                statusEl.innerHTML = '<i class="fas fa-database text-xs mr-1"></i> 로그인 없이 서버 데이터에 연결합니다.';
             }
             [emailEl, passwordEl, passwordSignInBtn, passwordSignUpBtn, signOutBtn].forEach((el) => el?.classList.add('hidden'));
-            if (sidebarSync) sidebarSync.innerHTML = `<i class="fas fa-hard-drive text-[10px] text-slate-500"></i> 로컬 모드`;
+            if (sidebarSync) sidebarSync.innerHTML = `<i class="fas fa-database text-[10px] text-emerald-500"></i> 서버 연결`;
             if (syncStatus) {
-                syncStatus.textContent = '로컬 모드';
-                syncStatus.className = "hidden md:inline-block text-xs text-slate-500 font-medium mr-2 max-w-[150px] truncate";
+                syncStatus.textContent = '서버 연결';
+                syncStatus.className = "hidden md:inline-block text-xs text-emerald-500 font-medium mr-2 max-w-[150px] truncate";
             }
             return;
         }
@@ -1290,17 +1290,6 @@
         const sidebarSync = document.getElementById('sidebar-sync-status');
 
         const hasCache = isAutoSync ? loadCachedData() : false;
-
-        if (CLOUD_AUTH_PAUSED) {
-            if (!hasCache) renderSections({ dashboard: true, portfolio: true, addons: true });
-            if(syncStatus) {
-                syncStatus.textContent = '로컬 모드';
-                syncStatus.className = "hidden md:inline-block text-xs text-slate-500 font-medium mr-2 max-w-[150px] truncate";
-            }
-            if(sidebarSync) sidebarSync.innerHTML = `<i class="fas fa-hard-drive text-[10px] text-slate-500"></i> 로컬 모드`;
-            if(!isAutoSync) showToast('지금은 로컬 모드입니다. 클라우드 동기화는 나중에 다시 연결할 수 있습니다.', 'info', 3500);
-            return;
-        }
 
         if (AUTH_REQUIRED_FOR_REMOTE && !isSignedIn()) {
             if (!hasCache) renderSections({ dashboard: true, portfolio: true, addons: true });

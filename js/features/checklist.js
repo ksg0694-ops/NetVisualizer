@@ -640,7 +640,6 @@
 
     function getClient() {
         if (!remoteAvailable || typeof getAuthenticatedSupabaseClient !== 'function') return null;
-        if (typeof isSignedIn === 'function' && !isSignedIn()) return null;
         try {
             return getAuthenticatedSupabaseClient();
         } catch (error) {
@@ -681,7 +680,6 @@
         const userId = typeof getCurrentUserId === 'function' ? getCurrentUserId() : null;
         const payload = {
             id: normalized.id,
-            user_id: userId,
             title: normalized.title,
             note: normalized.note || null,
             category: normalized.category,
@@ -694,6 +692,7 @@
             created_at: normalized.createdAt,
             updated_at: normalized.updatedAt,
         };
+        if (userId) payload.user_id = userId;
         if (remoteSupportsDisplayOrder) payload.display_order = normalized.displayOrder;
         return payload;
     }

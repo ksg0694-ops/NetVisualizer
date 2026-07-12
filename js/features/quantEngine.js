@@ -646,10 +646,11 @@
             });
 
             const _supabase = getAuthenticatedSupabaseClient();
-            const overridePayload = payload.map(row => ({
+            const userId = getCurrentUserId();
+            const overridePayload = payload.map(row => userId ? ({
                 ...row,
-                user_id: getCurrentUserId()
-            }));
+                user_id: userId
+            }) : row);
             const { error } = await _supabase
                 .from('quant_strategy_rule_overrides')
                 .upsert(overridePayload, { onConflict: 'user_id,strategy_tag' });
@@ -777,25 +778,33 @@
 
         try {
             const _supabase = getAuthenticatedSupabaseClient();
-            const dbPayload = {
+            const userId = getCurrentUserId();
+            const dbPayload = userId ? {
                 ...payload,
-                user_id: getCurrentUserId()
-            };
+                user_id: userId
+            } : payload;
             const { error } = await _supabase
                 .from('portfolio_market_price_overrides')
                 .upsert(dbPayload, { onConflict: 'user_id,ticker' });
             if (error) throw error;
 
+            const historyPayload = userId ? {
+                user_id: userId,
+                ticker: payload.ticker,
+                price: payload.price,
+                currency: payload.currency,
+                price_date: payload.price_date,
+                source: payload.source
+            } : {
+                ticker: payload.ticker,
+                price: payload.price,
+                currency: payload.currency,
+                price_date: payload.price_date,
+                source: payload.source
+            };
             const { error: historyError } = await _supabase
                 .from('portfolio_market_price_override_history')
-                .upsert({
-                    user_id: getCurrentUserId(),
-                    ticker: payload.ticker,
-                    price: payload.price,
-                    currency: payload.currency,
-                    price_date: payload.price_date,
-                    source: payload.source
-                }, { onConflict: 'user_id,ticker,price_date,source' });
+                .upsert(historyPayload, { onConflict: 'user_id,ticker,price_date,source' });
             if (historyError) throw historyError;
 
             const remaining = (dataCache.marketPriceOverrides || []).filter(row => String(row.ticker || '').toUpperCase() !== normalizedTicker);

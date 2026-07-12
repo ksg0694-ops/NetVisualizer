@@ -99,7 +99,6 @@
 
     function getClient() {
         if (!remoteAvailable || typeof getSupabaseClient !== 'function') return null;
-        if (typeof isSignedIn === 'function' && !isSignedIn()) return null;
         try {
             return typeof getAuthenticatedSupabaseClient === 'function' ? getAuthenticatedSupabaseClient() : null;
         } catch (error) {
