@@ -28,7 +28,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <!-- Feature modules -->
-    <script src="./js/features/appCore.js?v=20260713-auth-redirect"></script>
+    <script src="./js/features/appCore.js?v=20260713-password-auth"></script>
     <script src="./js/features/assetTrend.js"></script>
     <script src="./js/features/quantEngine.js?v=20260708-auth-cloud"></script>
     <script src="./js/features/realEstate.js?v=20260621-dsr-target-summary"></script>
@@ -1621,16 +1621,20 @@
                                 <i class="fas fa-user-shield text-indigo-500"></i>
                                 클라우드 로그인
                             </h4>
-                            <p class="text-xs text-gray-500 mt-1">Supabase Auth 이메일 링크로 로그인합니다.</p>
+                            <p class="text-xs text-gray-500 mt-1">이메일과 비밀번호로 개인 클라우드에 연결합니다.</p>
                         </div>
                     </div>
                     <div id="auth-status" class="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
                         <i class="fas fa-unlock-keyhole text-xs mr-1"></i> 로그인하면 개인 클라우드 데이터만 동기화합니다.
                     </div>
-                    <div class="flex flex-col sm:flex-row gap-2">
-                        <input id="auth-email" type="email" autocomplete="email" placeholder="email@example.com" class="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                        <button id="btn-auth-sign-in" type="button" onclick="sendAuthMagicLink()" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 transition flex items-center justify-center gap-2">
-                            <i class="fas fa-paper-plane"></i> 로그인 링크 받기
+                    <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-2">
+                        <input id="auth-email" type="email" autocomplete="email" placeholder="email@example.com" class="min-w-0 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                        <input id="auth-password" type="password" autocomplete="current-password" placeholder="password" class="min-w-0 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" onkeydown="if(event.key==='Enter') signInWithPassword()">
+                        <button id="btn-auth-password-sign-in" type="button" onclick="signInWithPassword()" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 transition flex items-center justify-center gap-2 whitespace-nowrap">
+                            <i class="fas fa-right-to-bracket"></i> 로그인
+                        </button>
+                        <button id="btn-auth-password-sign-up" type="button" onclick="signUpWithPassword()" class="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-100 transition flex items-center justify-center gap-2 whitespace-nowrap">
+                            <i class="fas fa-user-plus"></i> 계정 만들기
                         </button>
                         <button id="btn-auth-sign-out" type="button" onclick="signOutCloud()" class="hidden rounded-xl bg-gray-800 px-4 py-2 text-sm font-bold text-white hover:bg-gray-900 transition flex items-center justify-center gap-2">
                             <i class="fas fa-right-from-bracket"></i> 로그아웃

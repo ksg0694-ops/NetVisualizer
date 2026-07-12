@@ -535,7 +535,9 @@
         const email = authUser?.email || '';
         const statusEl = document.getElementById('auth-status');
         const emailEl = document.getElementById('auth-email');
-        const signInBtn = document.getElementById('btn-auth-sign-in');
+        const passwordEl = document.getElementById('auth-password');
+        const passwordSignInBtn = document.getElementById('btn-auth-password-sign-in');
+        const passwordSignUpBtn = document.getElementById('btn-auth-password-sign-up');
         const signOutBtn = document.getElementById('btn-auth-sign-out');
         const sidebarSync = document.getElementById('sidebar-sync-status');
         const syncStatus = document.getElementById('sync-status');
@@ -549,7 +551,9 @@
                 : '<i class="fas fa-unlock-keyhole text-xs mr-1"></i> 로그인하면 개인 클라우드 데이터만 동기화합니다.';
         }
         if (emailEl) emailEl.value = emailEl.value || email;
-        if (signInBtn) signInBtn.classList.toggle('hidden', signedIn);
+        if (passwordEl) passwordEl.classList.toggle('hidden', signedIn);
+        if (passwordSignInBtn) passwordSignInBtn.classList.toggle('hidden', signedIn);
+        if (passwordSignUpBtn) passwordSignUpBtn.classList.toggle('hidden', signedIn);
         if (signOutBtn) signOutBtn.classList.toggle('hidden', !signedIn);
         if (!signedIn) {
             if (sidebarSync) sidebarSync.innerHTML = `<i class="fas fa-user-lock text-[10px] text-amber-500"></i> 로그인 필요`;
@@ -557,6 +561,46 @@
                 syncStatus.textContent = '로그인 필요';
                 syncStatus.className = "hidden md:inline-block text-xs text-amber-500 font-medium mr-2 max-w-[150px] truncate";
             }
+        }
+    }
+
+    function getAuthCredentials() {
+        const emailEl = document.getElementById('auth-email');
+        const passwordEl = document.getElementById('auth-password');
+        const email = String(emailEl?.value || '').trim();
+        const password = String(passwordEl?.value || '');
+
+        if (!email || !email.includes('@')) {
+            showToast('로그인 이메일을 입력해주세요.', 'warning');
+            return null;
+        }
+        if (password.length < 6) {
+            showToast('비밀번호는 6자 이상으로 입력해주세요.', 'warning');
+            return null;
+        }
+        return { email, password };
+    }
+
+    function setPasswordAuthLoading(isLoading, activeButtonId = '') {
+        const signInBtn = document.getElementById('btn-auth-password-sign-in');
+        const signUpBtn = document.getElementById('btn-auth-password-sign-up');
+        const buttons = [signInBtn, signUpBtn].filter(Boolean);
+
+        buttons.forEach((button) => {
+            button.disabled = isLoading;
+            button.classList.toggle('opacity-70', isLoading);
+            button.classList.toggle('cursor-wait', isLoading);
+        });
+
+        if (signInBtn) {
+            signInBtn.innerHTML = isLoading && activeButtonId === signInBtn.id
+                ? '<i class="fas fa-spinner fa-spin"></i> 로그인 중'
+                : '<i class="fas fa-right-to-bracket"></i> 로그인';
+        }
+        if (signUpBtn) {
+            signUpBtn.innerHTML = isLoading && activeButtonId === signUpBtn.id
+                ? '<i class="fas fa-spinner fa-spin"></i> 생성 중'
+                : '<i class="fas fa-user-plus"></i> 계정 만들기';
         }
     }
 
@@ -616,6 +660,44 @@
                 btn.disabled = false;
                 btn.innerHTML = originalText || '<i class="fas fa-paper-plane"></i> 로그인 링크 받기';
             }
+        }
+    }
+
+    async function signInWithPassword() {
+        const credentials = getAuthCredentials();
+        if (!credentials) return;
+
+        setPasswordAuthLoading(true, 'btn-auth-password-sign-in');
+        try {
+            const { data, error } = await getSupabaseClient().auth.signInWithPassword(credentials);
+            if (error) throw error;
+            setAuthSession(data?.session || null);
+            showToast('로그인했습니다.', 'success');
+            if (data?.session?.user) fetchSheetData(false);
+        } catch (error) {
+            console.error('비밀번호 로그인 실패:', error);
+            showToast(`로그인 실패: ${error.message}`, 'error', 4500);
+        } finally {
+            setPasswordAuthLoading(false);
+        }
+    }
+
+    async function signUpWithPassword() {
+        const credentials = getAuthCredentials();
+        if (!credentials) return;
+
+        setPasswordAuthLoading(true, 'btn-auth-password-sign-up');
+        try {
+            const { data, error } = await getSupabaseClient().auth.signUp(credentials);
+            if (error) throw error;
+            setAuthSession(data?.session || null);
+            showToast(data?.session ? '계정을 만들고 로그인했습니다.' : '계정을 만들었습니다. 이제 로그인해주세요.', 'success', 3500);
+            if (data?.session?.user) fetchSheetData(false);
+        } catch (error) {
+            console.error('비밀번호 계정 생성 실패:', error);
+            showToast(`계정 생성 실패: ${error.message}`, 'error', 4500);
+        } finally {
+            setPasswordAuthLoading(false);
         }
     }
 
@@ -1337,5 +1419,7 @@
         parseMarketPrices,
         parseQuantStrategyRules,
         sendAuthMagicLink,
+        signInWithPassword,
+        signUpWithPassword,
         signOutCloud
     });
