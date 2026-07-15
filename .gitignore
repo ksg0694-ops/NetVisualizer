@@ -11,3 +11,6 @@ supabase/functions/.env.*
 
 # External MCP/runtime checkouts
 tools/external/
+
+# Local Node toolchain
+node_modules/

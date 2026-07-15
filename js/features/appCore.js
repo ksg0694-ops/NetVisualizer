@@ -27,7 +27,9 @@
     };
     const DEFAULT_WEBAPP_URL = userUrls.webapp;
     const CACHE_KEY = 'smartbook_v2_data_cache_v4';
+    const CACHE_META_KEY = 'smartbook_v2_data_cache_meta_v1';
     const IMPORT_AUDIT_KEY = 'smartbook_v2_tx_import_runs';
+    let lastFinanceDataSyncAt = localStorage.getItem(CACHE_META_KEY) || '';
 
     function loadSettings() {
         // 설정 로드 로직 제거됨 (URL 하드코딩 사용)
@@ -194,13 +196,11 @@
     let supabaseClientSignature = '';
 
     function escapeHtml(value) {
-        return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
-            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-        }[ch]));
+        return window.AppUtils.escapeHtml(value);
     }
 
     function escapeAttr(value) {
-        return escapeHtml(value).replace(/`/g, '&#96;');
+        return window.AppUtils.escapeAttr(value);
     }
 
     function escapeJsString(value) {
@@ -923,7 +923,16 @@
 
     function persistDataCache() {
         localStorage.setItem(CACHE_KEY, JSON.stringify(dataCache));
+        lastFinanceDataSyncAt = new Date().toISOString();
+        localStorage.setItem(CACHE_META_KEY, lastFinanceDataSyncAt);
     }
+
+    window.getFinanceDataSyncMeta = function() {
+        return {
+            updatedAt: lastFinanceDataSyncAt,
+            source: lastFinanceDataSyncAt ? 'sync-or-cache' : 'unknown',
+        };
+    };
 
     function applyCachedData() {
         if (dataCache.tx) parseTxData(dataCache.tx);
@@ -1117,7 +1126,13 @@
         const nDate = new Date(parseInt(nextParts[0], 10), parseInt(nextParts[1], 10) - 1, parseInt(nextParts[2], 10));
         nDate.setDate(nDate.getDate() - 1);
         const periodStr = `${parseInt(prevParts[1],10)}/${parseInt(prevParts[2],10)} ~ ${nDate.getMonth() + 1}/${nDate.getDate()}`;
-        return { monthKey, periodStr, title: `${accountY}년 ${accountM}월` };
+        return {
+            monthKey,
+            periodStr,
+            periodStart: prevPaydayStr,
+            periodEnd: window.AppUtils.toLocalDateString(nDate),
+            title: `${accountY}년 ${accountM}월`,
+        };
     }
 
     // ==========================================
@@ -1145,9 +1160,9 @@
             let method = row.length > 8 ? row[8] : (row[7] || '');
 
             const tx = { date: dateStr, time, type, cat, subcat, memo, amount, method };
-            const { monthKey, title, periodStr } = getMonthKeyAndPeriod(dateStr);
+            const { monthKey, title, periodStr, periodStart, periodEnd } = getMonthKeyAndPeriod(dateStr);
 
-            if (!monthlyDB[monthKey]) monthlyDB[monthKey] = { title: title, periodStr: periodStr, transactions: [] };
+            if (!monthlyDB[monthKey]) monthlyDB[monthKey] = { title, periodStr, periodStart, periodEnd, transactions: [] };
             monthlyDB[monthKey].transactions.push(tx);
         });
 
@@ -1315,6 +1330,10 @@
             persistDataCache();
             applyCachedData();
             renderSections(getRenderTargetsForTables(tables));
+            const personalCfoView = document.getElementById('personal-cfo-view');
+            if (tables.includes('portfolios') && personalCfoView && !personalCfoView.classList.contains('hidden')) {
+                window.PersonalCfoFeature?.render({ skipRemoteLoad: true });
+            }
 
             const now = new Date();
             const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -1322,7 +1341,7 @@
                 syncStatus.textContent = `최신 갱신: ${timeStr}`;
                 syncStatus.className = "hidden md:inline-block text-xs text-gray-400 font-medium mr-2 max-w-[150px] truncate";
             }
-            if(sidebarSync) sidebarSync.innerHTML = `<i class="fas fa-check-circle text-[10px]"></i> 실시간 동기화됨`;
+            if(sidebarSync) sidebarSync.innerHTML = `<i class="fas fa-check-circle text-[10px]"></i> 최근 동기화됨`;
 
             if(!isAutoSync) showToast('최신 데이터가 동기화되었습니다.', 'info');
 

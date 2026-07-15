@@ -11,13 +11,7 @@
     let remoteLoaded = false;
 
     function escapeHtml(value) {
-        return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;',
-        }[ch]));
+        return window.AppUtils.escapeHtml(value);
     }
 
     function toast(message, type = 'info', duration = 1600) {
@@ -121,11 +115,11 @@
         if (isMissingTableError(error)) {
             remoteAvailable = false;
             console.warn(`${context}: health weight Supabase table is not ready`, error);
-            renderSyncStatus('Server table missing', 'text-red-600 bg-red-50 border-red-100');
+            renderSyncStatus('서버 테이블 없음', 'text-red-600 bg-red-50 border-red-100');
             return;
         }
         console.warn(`${context}: health weight sync failed`, error);
-        renderSyncStatus('Server save failed', 'text-amber-600 bg-amber-50 border-amber-100');
+        renderSyncStatus('서버 저장 실패', 'text-amber-600 bg-amber-50 border-amber-100');
     }
 
     function isMissingCompositeConflictError(error) {
@@ -171,7 +165,7 @@
     async function loadRemoteLogs() {
         const client = getClient();
         if (!client) return null;
-        renderSyncStatus('Checking server', 'text-sky-600 bg-sky-50 border-sky-100');
+        renderSyncStatus('서버 확인 중', 'text-sky-600 bg-sky-50 border-sky-100');
         try {
             const { data, error } = await client
                 .from(TABLE_NAME)
@@ -185,8 +179,9 @@
                 const migrated = await persistAllLogs();
                 if (migrated) {
                     render({ skipRemoteLoad: true, preserveSelectedDate: true });
-                    renderSyncStatus('Supabase saved', 'text-emerald-600 bg-emerald-50 border-emerald-100');
-                    toast('Local weight logs were moved to Supabase.', 'info');
+                    renderSyncStatus('서버 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+                    toast('로컬 체중 기록을 서버로 옮겼습니다.', 'info');
+                    window.LifeDashboardFeature?.render();
                     return logs;
                 }
                 return null;
@@ -196,7 +191,8 @@
             if (!selectedDate) selectedDate = getTodayString();
             render({ skipRemoteLoad: true, preserveSelectedDate: true });
             remoteLoaded = true;
-            renderSyncStatus('Supabase saved', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+            renderSyncStatus('서버 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+            window.LifeDashboardFeature?.render();
             return logs;
         } catch (error) {
             handleRemoteError(error, 'loadRemoteLogs');
@@ -218,7 +214,7 @@
             const error = await upsertRemoteLogs(client, toRemotePayload(normalized));
             if (error) throw error;
             remoteLoaded = true;
-            renderSyncStatus('Supabase saved', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+            renderSyncStatus('서버 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
             return true;
         } catch (error) {
             handleRemoteError(error, 'persistLog');
@@ -278,41 +274,41 @@
     function getBmiMeta(bmi) {
         if (!bmi) {
             return {
-                label: 'Height needed',
+                label: '키 입력 필요',
                 tone: 'text-gray-600',
                 border: 'border-gray-200',
-                message: 'Enter height once to calculate BMI.',
+                message: '키를 한 번 입력하면 BMI를 계산합니다.',
             };
         }
         if (bmi < 18.5) {
             return {
-                label: 'Underweight',
+                label: '저체중 범위',
                 tone: 'text-sky-700',
                 border: 'border-sky-200',
-                message: 'BMI is below the adult healthy range.',
+                message: 'BMI가 성인 건강 범위보다 낮습니다.',
             };
         }
         if (bmi < 25) {
             return {
-                label: 'Healthy range',
+                label: '건강 범위',
                 tone: 'text-emerald-700',
                 border: 'border-emerald-200',
-                message: 'BMI is within the adult healthy range.',
+                message: 'BMI가 성인 건강 범위 안에 있습니다.',
             };
         }
         if (bmi < 30) {
             return {
-                label: 'Overweight',
+                label: '과체중 범위',
                 tone: 'text-amber-700',
                 border: 'border-amber-200',
-                message: 'BMI is above the adult healthy range.',
+                message: 'BMI가 성인 건강 범위보다 높습니다.',
             };
         }
         return {
-            label: 'Obesity range',
+            label: '비만 범위',
             tone: 'text-rose-700',
             border: 'border-rose-200',
-            message: 'BMI is in the adult obesity range.',
+            message: 'BMI가 성인 비만 범위에 있습니다.',
         };
     }
 
@@ -326,10 +322,10 @@
     }
 
     function getBoundarySignal(latest, healthyRange) {
-        if (!latest || !healthyRange) return 'Enter height';
-        if (latest.weightKg > healthyRange.max) return `${(latest.weightKg - healthyRange.max).toFixed(1)}kg over upper bound`;
-        if (latest.weightKg < healthyRange.min) return `${(healthyRange.min - latest.weightKg).toFixed(1)}kg under lower bound`;
-        return `${(healthyRange.max - latest.weightKg).toFixed(1)}kg below upper bound`;
+        if (!latest || !healthyRange) return '키 입력 필요';
+        if (latest.weightKg > healthyRange.max) return `상한보다 ${(latest.weightKg - healthyRange.max).toFixed(1)}kg 높음`;
+        if (latest.weightKg < healthyRange.min) return `하한보다 ${(healthyRange.min - latest.weightKg).toFixed(1)}kg 낮음`;
+        return `상한까지 ${(healthyRange.max - latest.weightKg).toFixed(1)}kg`;
     }
 
     function getRollingAverageForDate(log, allLogs) {
@@ -369,65 +365,65 @@
         root.innerHTML = `
             <div class="mb-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
                 <div>
-                    <h2 class="text-xl md:text-2xl font-bold text-gray-900">Health</h2>
-                    <p class="text-xs text-gray-500 mt-1">Weight, BMI, and trend only.</p>
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-900">건강 기록</h2>
+                    <p class="text-xs text-gray-500 mt-1">체중, BMI, 최근 변화만 간단히 확인합니다.</p>
                 </div>
-                <span id="health-sync-badge" class="text-[10px] font-bold text-sky-600 bg-sky-50 border border-sky-100 px-2.5 py-1 rounded-md whitespace-nowrap w-fit">Checking server</span>
+                <span id="health-sync-badge" class="text-[10px] font-bold text-sky-600 bg-sky-50 border border-sky-100 px-2.5 py-1 rounded-md whitespace-nowrap w-fit">서버 확인 중</span>
             </div>
 
             <div class="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-3 md:gap-5 mb-8">
                 <aside class="space-y-3">
                     <section class="bg-white p-3 rounded-lg border border-gray-100">
                         <div class="flex items-center justify-between mb-2.5">
-                            <h3 class="text-sm font-bold text-gray-900">Today</h3>
-                            <p class="text-[10px] text-gray-400" id="health-latest-label">No weight log yet</p>
+                            <h3 class="text-sm font-bold text-gray-900">오늘 기록</h3>
+                            <p class="text-[10px] text-gray-400" id="health-latest-label">아직 체중 기록이 없습니다</p>
                         </div>
                         <div class="space-y-2.5">
                             <div>
-                                <label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Date</label>
+                                <label for="health-weight-date" class="block text-[10px] font-bold text-gray-500 mb-1">날짜</label>
                                 <input id="health-weight-date" type="date" class="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-rose-500 outline-none">
                             </div>
                             <div>
-                                <label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Weight (kg)</label>
-                                <input id="health-weight-input" type="number" min="0" step="0.1" inputmode="decimal" class="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-sm font-semibold text-right focus:ring-2 focus:ring-rose-500 outline-none" placeholder="72.4">
+                                <label for="health-weight-input" class="block text-[10px] font-bold text-gray-500 mb-1">체중 (kg)</label>
+                                <input id="health-weight-input" type="number" min="0" step="0.1" inputmode="decimal" class="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-sm font-semibold text-right focus:ring-2 focus:ring-rose-500 outline-none" placeholder="예: 62.9">
                             </div>
                             <div>
-                                <label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Memo</label>
-                                <input id="health-weight-note" type="text" class="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-rose-500 outline-none" placeholder="optional">
+                                <label for="health-weight-note" class="block text-[10px] font-bold text-gray-500 mb-1">메모</label>
+                                <input id="health-weight-note" type="text" class="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-rose-500 outline-none" placeholder="선택 입력">
                             </div>
                             <details class="border border-gray-100 rounded-md p-2.5">
-                                <summary class="cursor-pointer text-[9px] font-bold text-gray-500 uppercase">Profile</summary>
-                                <label class="block mt-2.5">
-                                    <span class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Height (cm)</span>
+                                <summary class="cursor-pointer text-[10px] font-bold text-gray-500">신체 정보</summary>
+                                <label for="health-height-input" class="block mt-2.5">
+                                    <span class="block text-[10px] font-bold text-gray-500 mb-1">키 (cm)</span>
                                     <input id="health-height-input" type="number" min="100" max="230" step="0.1" inputmode="decimal" class="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-xs text-right focus:ring-2 focus:ring-rose-500 outline-none" placeholder="175">
                                 </label>
                             </details>
                             <div class="grid grid-cols-[1fr_auto] gap-2">
-                                <button type="button" id="health-save-log" class="px-3 py-1.5 rounded-md bg-rose-600 text-white text-[11px] font-bold hover:bg-rose-700">Save</button>
-                                <button type="button" id="health-delete-log" class="px-3 py-1.5 rounded-md bg-gray-100 text-gray-600 text-[11px] font-bold hover:bg-gray-200">Delete</button>
+                                <button type="button" id="health-save-log" class="px-3 py-1.5 rounded-md bg-rose-600 text-white text-[11px] font-bold hover:bg-rose-700">저장</button>
+                                <button type="button" id="health-delete-log" class="px-3 py-1.5 rounded-md bg-white border border-gray-200 text-gray-500 text-[11px] font-bold hover:border-rose-200 hover:text-rose-600">삭제</button>
                             </div>
                         </div>
                     </section>
 
                     <section class="bg-white p-4 rounded-lg border border-gray-100">
-                        <h3 class="text-sm font-bold text-gray-900 mb-3">Summary</h3>
+                        <h3 class="text-sm font-bold text-gray-900 mb-3">요약</h3>
                         <div class="divide-y divide-gray-100">
                             <div class="grid grid-cols-[72px_minmax(0,1fr)] gap-3 py-2">
                                 <p class="text-[10px] font-bold text-gray-400 uppercase">BMI</p>
                                 <div>
                                     <p class="text-lg font-bold text-gray-900 leading-tight" id="health-bmi-value">-</p>
-                                    <p class="text-[11px] font-bold" id="health-bmi-label">Height needed</p>
+                                    <p class="text-[11px] font-bold" id="health-bmi-label">키 입력 필요</p>
                                 </div>
                             </div>
                             <div class="grid grid-cols-[72px_minmax(0,1fr)] gap-3 py-2">
-                                <p class="text-[10px] font-bold text-gray-400 uppercase">Range</p>
+                                <p class="text-[10px] font-bold text-gray-400">건강 범위</p>
                                 <div>
                                     <p class="text-sm font-bold text-gray-900" id="health-boundary-signal">-</p>
                                     <p class="text-[11px] text-gray-400" id="health-bmi-range-note">BMI 18.5 - 24.9</p>
                                 </div>
                             </div>
                             <div class="grid grid-cols-[72px_minmax(0,1fr)] gap-3 py-2">
-                                <p class="text-[10px] font-bold text-gray-400 uppercase">Trend</p>
+                                <p class="text-[10px] font-bold text-gray-400">최근 변화</p>
                                 <div>
                                     <p class="text-sm font-bold text-gray-900" id="health-trend-signal">-</p>
                                     <p class="text-[11px] text-gray-400" id="health-average-signal">-</p>
@@ -441,8 +437,8 @@
 
                 <section class="bg-white p-4 md:p-5 rounded-lg border border-gray-100 min-w-0">
                     <div class="flex items-center justify-between gap-2 mb-3">
-                        <h3 class="text-sm font-bold text-gray-900">Weight trend</h3>
-                        <span class="text-[10px] font-bold text-gray-400" id="health-chart-meta">30 logs</span>
+                        <h3 class="text-sm font-bold text-gray-900">체중 추이</h3>
+                        <span class="text-[10px] font-bold text-gray-400" id="health-chart-meta">최근 30건</span>
                     </div>
                     <div class="relative h-72 md:h-[420px] w-full">
                         <canvas id="health-weight-chart"></canvas>
@@ -450,8 +446,8 @@
                             <div class="w-12 h-12 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mb-3">
                                 <i class="fas fa-weight-scale"></i>
                             </div>
-                            <p class="text-sm font-bold text-gray-700">No weight logs yet.</p>
-                            <p class="text-xs text-gray-400 mt-1">Save today's weight from the form.</p>
+                            <p class="text-sm font-bold text-gray-700">아직 체중 기록이 없습니다.</p>
+                            <p class="text-xs text-gray-400 mt-1">왼쪽 입력란에서 오늘 체중을 저장하세요.</p>
                         </div>
                     </div>
                 </section>
@@ -490,28 +486,28 @@
         const averageEl = document.getElementById('health-average-signal');
         const notesEl = document.getElementById('health-management-notes');
 
-        if (latestEl) latestEl.textContent = latest ? `${latest.date} | ${formatKg(latest.weightKg)}` : 'No weight log yet';
+        if (latestEl) latestEl.textContent = latest ? `${latest.date} · ${formatKg(latest.weightKg)}` : '아직 체중 기록이 없습니다';
         if (bmiValueEl) bmiValueEl.textContent = bmi ? bmi.toFixed(1) : '-';
         if (bmiLabelEl) {
             bmiLabelEl.textContent = bmiMeta.label;
             bmiLabelEl.className = `text-[11px] font-bold mt-1 ${bmiMeta.tone}`;
         }
         if (boundaryEl) boundaryEl.textContent = getBoundarySignal(latest, healthyRange);
-        if (bmiRangeNoteEl) bmiRangeNoteEl.textContent = healthyRange ? `range ${healthyRange.min.toFixed(1)} - ${healthyRange.max.toFixed(1)}kg` : 'enter height once';
+        if (bmiRangeNoteEl) bmiRangeNoteEl.textContent = healthyRange ? `${healthyRange.min.toFixed(1)} - ${healthyRange.max.toFixed(1)}kg` : '키를 한 번 입력하세요';
         if (trendEl) {
             const sign = delta > 0 ? '+' : '';
-            trendEl.textContent = sorted.length > 1 ? `${sign}${delta.toFixed(1)}kg vs previous` : 'Need 2+ logs';
+            trendEl.textContent = sorted.length > 1 ? `이전 기록 대비 ${sign}${delta.toFixed(1)}kg` : '기록 2개 이상 필요';
             trendEl.className = `text-sm font-bold ${delta > 0 ? 'text-rose-700' : delta < 0 ? 'text-emerald-700' : 'text-gray-900'}`;
         }
-        if (averageEl) averageEl.textContent = latestAverage ? `7-day avg ${latestAverage.toFixed(1)}kg` : '7-day avg waiting';
+        if (averageEl) averageEl.textContent = latestAverage ? `7일 평균 ${latestAverage.toFixed(1)}kg` : '7일 평균 계산 대기';
         if (notesEl) {
-            let note = !heightCm ? 'Add height once to unlock BMI.' : bmiMeta.message;
+            let note = !heightCm ? '키를 한 번 입력하면 BMI를 계산합니다.' : bmiMeta.message;
             if (latest && healthyRange && latest.weightKg > healthyRange.max) {
-                note = `${(latest.weightKg - healthyRange.max).toFixed(1)}kg above the BMI healthy-range upper bound.`;
+                note = `BMI 건강 범위 상한보다 ${(latest.weightKg - healthyRange.max).toFixed(1)}kg 높습니다.`;
             } else if (latest && healthyRange && latest.weightKg < healthyRange.min) {
-                note = `${(healthyRange.min - latest.weightKg).toFixed(1)}kg below the BMI healthy-range lower bound.`;
+                note = `BMI 건강 범위 하한보다 ${(healthyRange.min - latest.weightKg).toFixed(1)}kg 낮습니다.`;
             } else if (delta > 0.5) {
-                note = 'Weight is up more than 0.5kg from the previous log.';
+                note = '이전 기록보다 체중이 0.5kg 넘게 증가했습니다.';
             }
             notesEl.textContent = note;
         }
@@ -524,7 +520,7 @@
         const emptyEl = document.getElementById('health-empty-state');
         const metaEl = document.getElementById('health-chart-meta');
         if (emptyEl) emptyEl.classList.toggle('hidden', sorted.length > 0);
-        if (metaEl) metaEl.textContent = sorted.length > 0 ? `${sorted.length} logs` : 'Waiting for logs';
+        if (metaEl) metaEl.textContent = sorted.length > 0 ? `최근 ${sorted.length}건` : '기록 대기';
 
         const config = {
             type: 'line',
@@ -532,7 +528,7 @@
                 labels,
                 datasets: [
                     {
-                        label: 'Daily weight',
+                        label: '일별 체중',
                         data: daily,
                         borderColor: '#E11D48',
                         backgroundColor: 'rgba(225, 29, 72, 0.12)',
@@ -543,7 +539,7 @@
                         borderWidth: 2,
                     },
                     {
-                        label: '7-day average',
+                        label: '7일 평균',
                         data: averages,
                         borderColor: '#10B981',
                         backgroundColor: 'rgba(16, 185, 129, 0.08)',
@@ -596,9 +592,9 @@
         renderChart();
         fillForm(getSelectedLog() || { date: selectedDate });
         if (remoteAvailable) {
-            renderSyncStatus(remoteLoaded ? 'Supabase saved' : 'Checking server', remoteLoaded ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-sky-600 bg-sky-50 border-sky-100');
+            renderSyncStatus(remoteLoaded ? '서버 저장됨' : '서버 확인 중', remoteLoaded ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-sky-600 bg-sky-50 border-sky-100');
         } else {
-            renderSyncStatus('Server table missing', 'text-red-600 bg-red-50 border-red-100');
+            renderSyncStatus('서버 테이블 없음', 'text-red-600 bg-red-50 border-red-100');
         }
         if (!options.skipRemoteLoad) queueRemoteLoad();
     }
@@ -625,34 +621,34 @@
     async function saveCurrentLog() {
         const nextLog = getFormPayload();
         if (!nextLog) {
-            toast('Check the date and weight.', 'warning');
+            toast('날짜와 체중을 확인해주세요.', 'warning');
             return;
         }
-        renderSyncStatus('Saving server', 'text-sky-600 bg-sky-50 border-sky-100');
+        renderSyncStatus('서버 저장 중', 'text-sky-600 bg-sky-50 border-sky-100');
         const synced = await persistLog(nextLog);
         logs = sortLogs([...logs.filter((log) => log.date !== nextLog.date), nextLog]);
         selectedDate = nextLog.date;
         saveStore(logs);
         render({ skipRemoteLoad: true, preserveSelectedDate: true });
-        if (!synced) renderSyncStatus('Server save failed', 'text-amber-600 bg-amber-50 border-amber-100');
-        toast(synced ? 'Weight log saved to Supabase.' : 'Server save failed. Saved temporarily on this device.', synced ? 'info' : 'warning');
+        if (!synced) renderSyncStatus('서버 저장 실패', 'text-amber-600 bg-amber-50 border-amber-100');
+        toast(synced ? '체중 기록을 서버에 저장했습니다.' : '서버 저장에 실패해 이 기기에 임시 저장했습니다.', synced ? 'info' : 'warning');
     }
 
     async function deleteLogByDate(date) {
         if (!date || !logs.some((log) => log.date === date)) return;
-        renderSyncStatus('Deleting server', 'text-sky-600 bg-sky-50 border-sky-100');
+        renderSyncStatus('서버에서 삭제 중', 'text-sky-600 bg-sky-50 border-sky-100');
         const synced = await deleteRemoteLog(date);
         if (!synced) {
-            toast('Server delete failed. Try again later.', 'warning');
+            toast('서버에서 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.', 'warning');
             render({ skipRemoteLoad: true, preserveSelectedDate: true });
-            renderSyncStatus('Server save failed', 'text-amber-600 bg-amber-50 border-amber-100');
+            renderSyncStatus('서버 저장 실패', 'text-amber-600 bg-amber-50 border-amber-100');
             return;
         }
         logs = logs.filter((log) => log.date !== date);
         selectedDate = logs[logs.length - 1]?.date || getTodayString();
         saveStore(logs);
         render({ skipRemoteLoad: true, preserveSelectedDate: true });
-        toast('Weight log deleted from Supabase.', 'info');
+        toast('체중 기록을 삭제했습니다.', 'info');
     }
 
     function selectDate(date) {
@@ -681,5 +677,17 @@
     window.HealthTrackerFeature = {
         bindControls,
         render,
+        getDashboardSnapshot: () => {
+            const storedLogs = getStore();
+            const latest = storedLogs[storedLogs.length - 1] || null;
+            const previous = storedLogs[storedLogs.length - 2] || null;
+            return {
+                latest,
+                loggedToday: latest?.date === getTodayString(),
+                delta: latest && previous ? Math.round((latest.weightKg - previous.weightKg) * 10) / 10 : 0,
+                average: latest ? getRollingAverageForDate(latest, storedLogs) : null,
+            };
+        },
+        refresh: queueRemoteLoad,
     };
 })(window);

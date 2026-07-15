@@ -12,6 +12,7 @@ const files = featureEntries
   .sort();
 
 files.push(path.join(rootDir, 'sw.js'));
+files.push(path.join(rootDir, 'js', 'generated', 'personal-cfo-domain.js'));
 
 let failed = false;
 for (const file of files) {

@@ -25,9 +25,9 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         const sortIcon = document.querySelector('#btn-sort-tx i');
         const sortText = document.getElementById('sort-tx-text');
         if (txSortOrder === 'desc') {
-            sortIcon.className = 'fas fa-sort-amount-down'; sortText.textContent = 'Latest';
+            sortIcon.className = 'fas fa-sort-amount-down'; sortText.textContent = '최신순';
         } else {
-            sortIcon.className = 'fas fa-sort-amount-up'; sortText.textContent = 'Oldest';
+            sortIcon.className = 'fas fa-sort-amount-up'; sortText.textContent = '오래된순';
         }
         renderCashFlow();
     });
@@ -40,35 +40,38 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         'life-view': document.getElementById('life-view'),
         'routine-checklist-view': document.getElementById('routine-checklist-view'),
         'health-view': document.getElementById('health-view'),
+        'personal-cfo-view': document.getElementById('personal-cfo-view'),
         'stats-view': document.getElementById('stats-view'), 'asset-view': document.getElementById('asset-view'),
         'realestate-view': document.getElementById('realestate-view'), 'invest-detail-view': document.getElementById('invest-detail-view')
     };
 
     const viewContextMeta = {
-        'dashboard-view': { label: 'Finance Goal', title: 'Finance Cockpit' },
-        'life-view': { label: 'Life Goal', title: 'Life Cockpit' },
-        'routine-checklist-view': { label: 'Life Tool', title: 'To do list' },
-        'health-view': { label: 'Life Tool', title: 'Health' },
-        'portfolio-view': { label: 'Finance Tool', title: 'Portfolio' },
-        'stats-view': { label: 'Finance Tool', title: 'Cash Flow' },
-        'asset-view': { label: 'Finance Tool', title: 'Assets' },
-        'realestate-view': { label: 'Finance Tool', title: 'Real Estate' },
-        'invest-detail-view': { label: 'Finance Tool', title: 'Invest Detail' }
+        'dashboard-view': { label: '재무 목표', title: '재무 홈' },
+        'life-view': { label: '생활 관리', title: '생활 홈' },
+        'routine-checklist-view': { label: '생활 도구', title: '할 일' },
+        'health-view': { label: '생활 도구', title: '건강 기록' },
+        'personal-cfo-view': { label: '재무 도구', title: '개인 CFO' },
+        'portfolio-view': { label: '재무 도구', title: '포트폴리오' },
+        'stats-view': { label: '재무 도구', title: '현금흐름' },
+        'asset-view': { label: '재무 도구', title: '자산 추이' },
+        'realestate-view': { label: '재무 도구', title: '부동산·청약' },
+        'invest-detail-view': { label: '재무 도구', title: '투자 상세' }
     };
 
-    const financeToolViews = new Set(['portfolio-view', 'stats-view', 'asset-view', 'realestate-view', 'invest-detail-view']);
+    const financeToolViews = new Set(['personal-cfo-view', 'portfolio-view', 'stats-view', 'asset-view', 'realestate-view', 'invest-detail-view']);
     const lifeToolViews = new Set(['health-view', 'routine-checklist-view']);
     const mobileToolNav = document.getElementById('mobile-tool-nav');
     const mobileToolGroups = {
         'dashboard-view': [
-            { target: 'stats-view', icon: 'fa-money-bill-transfer', label: 'Cash' },
-            { target: 'portfolio-view', icon: 'fa-briefcase', label: 'Portfolio' },
-            { target: 'asset-view', icon: 'fa-chart-area', label: 'Assets' },
-            { target: 'realestate-view', icon: 'fa-home', label: 'Estate' }
+            { target: 'personal-cfo-view', icon: 'fa-diagram-project', label: '재무맵' },
+            { target: 'stats-view', icon: 'fa-money-bill-transfer', label: '현금흐름' },
+            { target: 'portfolio-view', icon: 'fa-briefcase', label: '포트폴리오' },
+            { target: 'asset-view', icon: 'fa-chart-area', label: '자산추이' },
+            { target: 'realestate-view', icon: 'fa-home', label: '청약' }
         ],
         'life-view': [
-            { target: 'health-view', icon: 'fa-heart-pulse', label: 'Health' },
-            { target: 'routine-checklist-view', icon: 'fa-list-check', label: 'To do' }
+            { target: 'health-view', icon: 'fa-heart-pulse', label: '건강' },
+            { target: 'routine-checklist-view', icon: 'fa-list-check', label: '할 일' }
         ]
     };
 
@@ -80,15 +83,21 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
 
     function updateGoalHomeButton(targetId) {
         const button = document.getElementById('btn-goal-home');
+        const label = document.getElementById('btn-goal-home-label');
         if (!button) return;
         const homeTarget = resolveActiveGoalTarget(targetId);
         const shouldShow = homeTarget !== targetId;
         button.dataset.target = homeTarget;
         button.classList.toggle('hidden', !shouldShow);
         button.classList.toggle('flex', shouldShow);
-        if (homeTarget === 'dashboard-view') button.title = 'Finance Home';
-        else if (homeTarget === 'life-view') button.title = 'Life Home';
-        else button.title = 'Home';
+        const homeLabel = homeTarget === 'dashboard-view'
+            ? '재무 홈'
+            : homeTarget === 'life-view'
+                ? '생활 홈'
+                : '홈';
+        if (label) label.textContent = homeLabel;
+        button.title = `${homeLabel}으로 돌아가기`;
+        button.setAttribute('aria-label', button.title);
     }
 
     function renderMobileToolNavigation(activeGoalTarget, targetId) {
@@ -96,8 +105,8 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         let toolItems = mobileToolGroups[activeGoalTarget] || mobileToolGroups['dashboard-view'];
         if (activeGoalTarget === 'life-view') {
             toolItems = [
-                { target: 'health-view', icon: 'fa-heart-pulse', label: 'Health' },
-                { target: 'routine-checklist-view', icon: 'fa-list-check', label: 'To do' }
+                { target: 'health-view', icon: 'fa-heart-pulse', label: '건강' },
+                { target: 'routine-checklist-view', icon: 'fa-list-check', label: '할 일' }
             ];
         }
         mobileToolNav.innerHTML = toolItems.map(item => {
@@ -106,7 +115,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
             return `
                 <a href="#" data-target="${item.target}" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full ${stateClasses} transition-colors min-w-0">
                     <i class="fas ${item.icon} text-lg mb-1"></i>
-                    <span class="text-[9px] font-medium truncate max-w-full px-1">${item.label}</span>
+                    <span class="text-[10px] font-medium truncate max-w-full px-1">${item.label}</span>
                 </a>
             `;
         }).join('');
@@ -172,7 +181,9 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         });
 
         Object.values(views).forEach(v => { if(v) v.classList.add('hidden'); });
+        if (targetId === 'life-view') window.LifeDashboardFeature?.render();
         if (targetId === 'routine-checklist-view') window.ChecklistFeature?.render({ skipRemoteLoad: true });
+        if (targetId === 'personal-cfo-view') window.PersonalCfoFeature?.render();
         if(views[targetId]) views[targetId].classList.remove('hidden');
 
         // ???[?????怨뚮뼺?됰뗀??? FAB ???????????? '?????????????????stats-view)' ??????饔낅떽????????????怨뺤른??????怨쀫뮡?壤굿??곸읆????ル폆???
@@ -189,9 +200,11 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
 
         setTimeout(() => {
             if (targetId === 'dashboard-view') renderSections({ financeSummary: true, portfolio: true });
+            else if (targetId === 'life-view') window.LifeDashboardFeature?.render();
             else if (targetId === 'portfolio-view') renderSections({ portfolio: true });
             else if (targetId === 'stats-view') renderSections({ cashFlow: true });
             else if (targetId === 'asset-view') renderSections({ financeSummary: true });
+            else if (targetId === 'personal-cfo-view') window.PersonalCfoFeature?.render();
             else if (targetId === 'realestate-view') renderSections({ realEstate: true });
             else if (targetId === 'health-view') {
                 window.HealthTrackerFeature?.bindControls();

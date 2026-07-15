@@ -236,8 +236,11 @@
     }
 
     async function parseSpreadsheetImportFile(file) {
+        if (!window.XLSX && window.AppAssets?.ensureXlsx) {
+            await window.AppAssets.ensureXlsx();
+        }
         if (!window.XLSX) {
-            throw new Error('엑셀 파서가 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.');
+            throw new Error('엑셀 파서를 불러오지 못했습니다. 네트워크 연결을 확인해주세요.');
         }
 
         const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });

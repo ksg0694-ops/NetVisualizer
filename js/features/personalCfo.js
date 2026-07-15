@@ -1,0 +1,825 @@
+(function (window) {
+    const TABLE_NAME = 'personal_cfo_snapshots';
+    const STORAGE_KEY = 'netvisualizer.personalCfo.snapshot.v2';
+    const SNAPSHOT_KEY = 'default';
+    const SCHEMA_VERSION = 2;
+    const visibleProjectIds = new Set(['project:changneung', 'project:online-master']);
+    const legacyMockAccountIds = new Set(['account:payroll', 'account:emergency', 'account:housing', 'account:brokerage']);
+    const legacyMockLiabilityIds = new Set(['liability:credit-card', 'liability:housing-loan']);
+    const domain = window.PersonalCfoDomain;
+    if (!domain) throw new Error('PersonalCfoDomain runtime is not loaded. Run npm run build:cfo-runtime.');
+
+    const defaultSnapshot = domain.personalCfoMockSnapshot;
+    if (!defaultSnapshot) throw new Error('Personal CFO mock snapshot is missing from the TypeScript runtime.');
+    const defaultItemById = new Map(
+        ['incomes', 'accounts', 'assets', 'liabilities', 'budgetBuckets', 'projects', 'risks', 'kpis']
+            .flatMap((collection) => defaultSnapshot[collection] || [])
+            .map((item) => [item.id, item])
+    );
+
+    let currentSnapshot;
+    let remoteAvailable = true;
+    let remoteLoaded = false;
+    let remoteLoadStarted = false;
+    let syncStatusText = '로컬 우선';
+    let syncStatusClasses = 'text-slate-600 bg-slate-50 border-slate-100';
+    let activeGraphMode = 'balanceSheet';
+
+    const typeMeta = {
+        person: { fill: '#334155', stroke: '#0f172a', label: '본인' },
+        income: { fill: '#16a34a', stroke: '#15803d', label: '소득' },
+        account: { fill: '#0284c7', stroke: '#0369a1', label: '계좌' },
+        asset: { fill: '#4f46e5', stroke: '#4338ca', label: '자산' },
+        liability: { fill: '#dc2626', stroke: '#b91c1c', label: '부채' },
+        budgetBucket: { fill: '#d97706', stroke: '#b45309', label: '바구니' },
+        project: { fill: '#7c3aed', stroke: '#6d28d9', label: '프로젝트' },
+        risk: { fill: '#e11d48', stroke: '#be123c', label: '리스크' },
+        kpi: { fill: '#0d9488', stroke: '#0f766e', label: 'KPI' },
+    };
+    const statusLabels = {
+        active: '진행중',
+        planned: '예정',
+        completed: '완료',
+        paused: '보류',
+    };
+    const riskLevelLabels = {
+        low: '낮음',
+        medium: '보통',
+        high: '높음',
+        critical: '치명적',
+    };
+    const edgeLabels = {
+        FLOWS_TO: '흐름',
+        ALLOCATED_TO: '배분',
+        FUNDS: '자금지원',
+        HEDGES: '완충',
+        EXPOSED_TO: '노출',
+        CONTRIBUTES_TO: '기여',
+        DEPENDS_ON: '의존',
+    };
+    const bucketLabels = {
+        operating: '운영자금',
+        defense: '방어자금',
+        housing: '주거자금',
+        growth: '성장자금',
+        humanCapital: '인적자본',
+        experience: '경험자금',
+    };
+    const graphModeMeta = {
+        cashFlow: {
+            label: '현금 흐름',
+            title: '최근 마감 현금 흐름',
+            description: '수입이 지출·저축 바구니와 미배분 현금으로 이동한 실제 마감월 흐름입니다.',
+        },
+        balanceSheet: {
+            label: '재무상태',
+            title: '현재 재무상태 네트워크',
+            description: '포트폴리오 현재값만 사용해 계좌·자산·부채가 순자산에 기여하는 구조를 보여줍니다.',
+        },
+        strategy: {
+            label: '목표·리스크',
+            title: '목표와 리스크 연결',
+            description: '계획 바구니가 프로젝트를 지원하고 주요 리스크를 완충하는 관계입니다.',
+        },
+    };
+    function clamp(value, min = 0, max = 100) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    function escapeHtml(value) {
+        return window.AppUtils.escapeHtml(value);
+    }
+
+    function cloneSnapshot(value) {
+        return JSON.parse(JSON.stringify(value || defaultSnapshot));
+    }
+
+    function usesOnlyLegacyIds(items, legacyIds) {
+        return items.length > 0 && items.every((item) => legacyIds.has(item?.id));
+    }
+
+    function normalizeSnapshot(raw) {
+        const source = raw && typeof raw === 'object' ? raw : {};
+        const fallback = defaultSnapshot;
+        const sourceAccounts = Array.isArray(source.accounts) ? source.accounts : cloneSnapshot(fallback).accounts;
+        const sourceLiabilities = Array.isArray(source.liabilities) ? source.liabilities : cloneSnapshot(fallback).liabilities;
+        const normalized = {
+            person: source.person && typeof source.person === 'object'
+                ? { id: String(source.person.id || fallback.person.id), label: String(source.person.label || fallback.person.label) }
+                : cloneSnapshot(fallback).person,
+            dataSources: Array.isArray(source.dataSources) ? source.dataSources : cloneSnapshot(fallback).dataSources,
+            incomes: Array.isArray(source.incomes) ? source.incomes : cloneSnapshot(fallback).incomes,
+            accounts: usesOnlyLegacyIds(sourceAccounts, legacyMockAccountIds)
+                ? cloneSnapshot(fallback).accounts
+                : sourceAccounts,
+            assets: Array.isArray(source.assets) ? source.assets : cloneSnapshot(fallback).assets,
+            liabilities: usesOnlyLegacyIds(sourceLiabilities, legacyMockLiabilityIds)
+                ? cloneSnapshot(fallback).liabilities
+                : sourceLiabilities,
+            budgetBuckets: Array.isArray(source.budgetBuckets) ? source.budgetBuckets : cloneSnapshot(fallback).budgetBuckets,
+            projects: (Array.isArray(source.projects) ? source.projects : cloneSnapshot(fallback).projects)
+                .filter((project) => visibleProjectIds.has(project?.id)),
+            risks: Array.isArray(source.risks) ? source.risks : cloneSnapshot(fallback).risks,
+            kpis: Array.isArray(source.kpis) ? source.kpis : cloneSnapshot(fallback).kpis,
+        };
+        if (normalized.person.id === defaultSnapshot.person.id) normalized.person.label = defaultSnapshot.person.label;
+        ['incomes', 'accounts', 'assets', 'liabilities', 'budgetBuckets', 'projects', 'risks', 'kpis'].forEach((collection) => {
+            normalized[collection].forEach((item) => {
+                const defaultItem = defaultItemById.get(item.id) || defaultItemById.get(item.id?.replace('bucket:', ''));
+                item.label = defaultItem?.label || item.label;
+                const defaultRefs = defaultItem?.sourceRefs;
+                if ((!Array.isArray(item.sourceRefs) || item.sourceRefs.length === 0) && defaultRefs) {
+                    item.sourceRefs = cloneSnapshot(defaultRefs);
+                }
+            });
+        });
+        return normalized;
+    }
+
+    function getStore() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+            if (parsed && typeof parsed === 'object') return normalizeSnapshot(parsed);
+        } catch (error) {
+            console.warn('Personal CFO storage parse failed', error);
+        }
+        return normalizeSnapshot(defaultSnapshot);
+    }
+
+    currentSnapshot = getStore();
+
+    function getPortfolioFinanceItems() {
+        if (typeof dynamicPortfolioData === 'undefined' || !dynamicPortfolioData || typeof dynamicPortfolioData !== 'object') {
+            return [];
+        }
+        return Object.entries(dynamicPortfolioData).flatMap(([groupName, group]) => (
+            Array.isArray(group?.items) ? group.items : []
+        ).map((item) => ({
+            id: item.id,
+            groupName,
+            name: String(item.name || ''),
+            amount: Number(item.amount || 0),
+            maturity: String(item.maturity || ''),
+            accountName: String(item.accountName || ''),
+            assetType: String(item.classification?.assetType || item.assetType || ''),
+            instrumentType: String(item.classification?.instrumentType || item.instrumentType || ''),
+        })));
+    }
+
+    function applyPortfolioFinanceData(nextSnapshot) {
+        return domain.applyPortfolioFinanceData(nextSnapshot, getPortfolioFinanceItems());
+    }
+
+    function applyRuntimeFinanceData(nextSnapshot) {
+        const portfolioOverlay = applyPortfolioFinanceData(nextSnapshot);
+        const cashFlowContext = typeof window.getFinanceCashFlowContext === 'function'
+            ? window.getFinanceCashFlowContext()
+            : { periods: [] };
+        return {
+            ...portfolioOverlay,
+            snapshot: domain.applyCashFlowData(
+                portfolioOverlay.snapshot,
+                cashFlowContext.periods || [],
+                window.AppUtils.toLocalDateString(),
+            ),
+            cashFlowContext,
+        };
+    }
+
+    function saveStore(nextSnapshot = currentSnapshot) {
+        const normalized = normalizeSnapshot(nextSnapshot);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+        return normalized;
+    }
+
+    function toast(message, type = 'info', duration = 1600) {
+        if (typeof window.showToast === 'function') window.showToast(message, type, duration);
+    }
+
+    function getCurrentCfoUserId() {
+        return typeof getCurrentUserId === 'function' ? getCurrentUserId() : null;
+    }
+
+    function getClient() {
+        if (!remoteAvailable || typeof getAuthenticatedSupabaseClient !== 'function' || !getCurrentCfoUserId()) return null;
+        try {
+            return getAuthenticatedSupabaseClient();
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function isMissingSchemaError(error) {
+        const code = String(error?.code || '');
+        const message = String(error?.message || '').toLowerCase();
+        return code === '42P01'
+            || code === 'PGRST204'
+            || code === 'PGRST205'
+            || message.includes('could not find')
+            || message.includes('does not exist')
+            || message.includes('schema cache');
+    }
+
+    function renderSyncStatus(text, classes) {
+        syncStatusText = text;
+        syncStatusClasses = classes;
+        const badge = document.getElementById('personal-cfo-sync-badge');
+        if (!badge) return;
+        badge.className = `rounded-md border px-2.5 py-1.5 text-[11px] font-bold ${classes}`;
+        badge.textContent = text;
+    }
+
+    function handleRemoteError(error, context) {
+        remoteLoaded = false;
+        if (isMissingSchemaError(error)) {
+            remoteAvailable = false;
+            console.warn(`${context}: Personal CFO Supabase table is not ready`, error);
+            renderSyncStatus('로컬 전용', 'text-slate-600 bg-slate-50 border-slate-100');
+            return;
+        }
+        console.warn(`${context}: Personal CFO sync failed`, error);
+        renderSyncStatus('동기화 실패', 'text-amber-600 bg-amber-50 border-amber-100');
+    }
+
+    function toRemotePayload(nextSnapshot = currentSnapshot) {
+        const normalized = normalizeSnapshot(nextSnapshot);
+        const userId = getCurrentCfoUserId();
+        const payload = {
+            snapshot_key: SNAPSHOT_KEY,
+            schema_version: SCHEMA_VERSION,
+            snapshot: normalized,
+            updated_at: new Date().toISOString(),
+        };
+        if (userId) payload.user_id = userId;
+        return payload;
+    }
+
+    function fromRemoteRow(row) {
+        return normalizeSnapshot(row?.snapshot);
+    }
+
+    async function persistRemoteSnapshot(nextSnapshot = currentSnapshot, options = {}) {
+        const client = getClient();
+        if (!client) {
+            renderSyncStatus('로컬 전용', 'text-slate-600 bg-slate-50 border-slate-100');
+            return false;
+        }
+        currentSnapshot = saveStore(nextSnapshot);
+        renderSyncStatus('클라우드 저장 중', 'text-sky-600 bg-sky-50 border-sky-100');
+        try {
+            const { error } = await client
+                .from(TABLE_NAME)
+                .upsert(toRemotePayload(currentSnapshot), { onConflict: 'user_id,snapshot_key' });
+            if (error) throw error;
+            remoteLoaded = true;
+            renderSyncStatus('클라우드 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+            if (options.manual) toast('개인 CFO 스냅샷을 클라우드에 저장했습니다.', 'info');
+            return true;
+        } catch (error) {
+            handleRemoteError(error, 'persistRemoteSnapshot');
+            if (options.manual) toast('클라우드 저장에 실패했습니다. 로컬에는 저장되어 있습니다.', 'warning');
+            return false;
+        }
+    }
+
+    async function loadRemoteSnapshot() {
+        const client = getClient();
+        if (!client) {
+            renderSyncStatus('로컬 전용', 'text-slate-600 bg-slate-50 border-slate-100');
+            return null;
+        }
+        renderSyncStatus('클라우드 확인 중', 'text-sky-600 bg-sky-50 border-sky-100');
+        try {
+            const { data, error } = await client
+                .from(TABLE_NAME)
+                .select('snapshot_key,schema_version,snapshot,updated_at')
+                .eq('snapshot_key', SNAPSHOT_KEY)
+                .order('updated_at', { ascending: false })
+                .limit(1);
+            if (error) throw error;
+            const row = Array.isArray(data) ? data[0] : null;
+            if (row?.snapshot) {
+                currentSnapshot = saveStore(fromRemoteRow(row));
+                remoteLoaded = true;
+                render({ skipRemoteLoad: true });
+                renderSyncStatus('클라우드 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+                return currentSnapshot;
+            }
+            await persistRemoteSnapshot(currentSnapshot);
+            return currentSnapshot;
+        } catch (error) {
+            handleRemoteError(error, 'loadRemoteSnapshot');
+            return null;
+        }
+    }
+
+    function queueRemoteLoad() {
+        if (remoteLoadStarted) return;
+        remoteLoadStarted = true;
+        loadRemoteSnapshot();
+    }
+
+    function formatKrw(value) {
+        const sign = value < 0 ? '-' : '';
+        const abs = Math.abs(Number(value || 0));
+        if (abs >= 100000000) return `${sign}${(abs / 100000000).toFixed(2)}억`;
+        if (abs >= 10000) return `${sign}${Math.round(abs / 10000).toLocaleString('ko-KR')}만원`;
+        return `${sign}${Math.round(abs).toLocaleString('ko-KR')}원`;
+    }
+
+    function formatPercent(value) {
+        return `${Number(value || 0).toFixed(1)}%`;
+    }
+
+    function formatMonths(value) {
+        return `${Number(value || 0).toFixed(1)}개월`;
+    }
+
+    function formatMetricValue(value, unit = 'KRW') {
+        if (unit === 'PERCENT') return formatPercent(value);
+        if (unit === 'MONTHS') return formatMonths(value);
+        if (unit === 'SCORE') return `${Math.round(Number(value || 0))}점`;
+        return formatKrw(value);
+    }
+
+    function formatProgress(current, target) {
+        if (!target || target <= 0) return 0;
+        return clamp((current / target) * 100);
+    }
+
+    function truncateLabel(value, limit = 18) {
+        const label = String(value || '');
+        return label.length > limit ? `${label.slice(0, limit - 1)}...` : label;
+    }
+
+    function renderKpiCards(summary) {
+        const cards = [
+            { label: '순자산', value: formatKrw(summary.netWorth), sub: `총자산 ${formatKrw(summary.totalAssets)}`, tone: 'slate' },
+            { label: '마감월 잉여현금', value: formatKrw(summary.monthlyFreeCashFlow), sub: '수입-지출 · 저축 이체 전', tone: summary.monthlyFreeCashFlow >= 0 ? 'emerald' : 'rose' },
+            { label: '계획 저축률', value: formatPercent(summary.savingsRate), sub: '계획 배분 / 마감월 수입', tone: 'emerald' },
+            { label: '고정비·상환율', value: formatPercent(summary.fixedCostRatio), sub: '고정비+부채상환 / 수입', tone: summary.fixedCostRatio <= 50 ? 'sky' : 'amber' },
+            { label: '비상금 커버리지', value: formatMonths(summary.emergencyCoverageMonths), sub: '방어자금으로 버틸 수 있는 기간', tone: summary.emergencyCoverageMonths >= 6 ? 'emerald' : 'amber' },
+            { label: '부채비율', value: formatPercent(summary.debtRatio), sub: `총부채 ${formatKrw(summary.totalLiabilities)}`, tone: summary.debtRatio <= 25 ? 'emerald' : 'rose' },
+        ];
+        const toneClasses = {
+            slate: 'border-slate-200 bg-slate-50 text-slate-700',
+            emerald: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+            sky: 'border-sky-200 bg-sky-50 text-sky-700',
+            amber: 'border-amber-200 bg-amber-50 text-amber-700',
+            rose: 'border-rose-200 bg-rose-50 text-rose-700',
+        };
+        return cards.map((card) => `
+            <article class="rounded-lg border bg-white p-3 shadow-sm min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                    <p class="text-[11px] font-bold text-gray-500">${escapeHtml(card.label)}</p>
+                    <span aria-hidden="true" class="h-2.5 w-2.5 rounded-full border ${toneClasses[card.tone] || toneClasses.slate}"></span>
+                </div>
+                <p class="mt-2 text-lg md:text-xl font-bold text-gray-900 leading-tight">${escapeHtml(card.value)}</p>
+                <p class="mt-1 text-[11px] text-gray-400 truncate">${escapeHtml(card.sub)}</p>
+            </article>
+        `).join('');
+    }
+
+    function getGraphNodeDimensions(node) {
+        return {
+            width: Math.round(Math.min(156, Math.max(96, node.size * 4.2))),
+            height: node.type === 'project' || node.type === 'risk' ? 52 : 46,
+        };
+    }
+
+    function buildGraphEdgeRoutes(edges, nodeById) {
+        const routes = new Map(edges.map((edge) => [edge.id, {
+            sourceIndex: 0,
+            sourceTotal: 1,
+            targetIndex: 0,
+            targetTotal: 1,
+        }]));
+        const outgoing = new Map();
+        const incoming = new Map();
+
+        edges.forEach((edge) => {
+            const source = nodeById.get(edge.source);
+            const target = nodeById.get(edge.target);
+            if (!source || !target) return;
+            const sourceSide = target.x >= source.x ? 'right' : 'left';
+            const targetSide = source.x <= target.x ? 'left' : 'right';
+            const outgoingKey = `${source.id}:${sourceSide}`;
+            const incomingKey = `${target.id}:${targetSide}`;
+            outgoing.set(outgoingKey, [...(outgoing.get(outgoingKey) || []), edge]);
+            incoming.set(incomingKey, [...(incoming.get(incomingKey) || []), edge]);
+        });
+
+        outgoing.forEach((group) => {
+            group.sort((left, right) => {
+                const leftNode = nodeById.get(left.target);
+                const rightNode = nodeById.get(right.target);
+                return (leftNode?.y || 0) - (rightNode?.y || 0) || (leftNode?.x || 0) - (rightNode?.x || 0);
+            });
+            group.forEach((edge, index) => Object.assign(routes.get(edge.id), {
+                sourceIndex: index,
+                sourceTotal: group.length,
+            }));
+        });
+        incoming.forEach((group) => {
+            group.sort((left, right) => {
+                const leftNode = nodeById.get(left.source);
+                const rightNode = nodeById.get(right.source);
+                return (leftNode?.y || 0) - (rightNode?.y || 0) || (leftNode?.x || 0) - (rightNode?.x || 0);
+            });
+            group.forEach((edge, index) => Object.assign(routes.get(edge.id), {
+                targetIndex: index,
+                targetTotal: group.length,
+            }));
+        });
+        return routes;
+    }
+
+    function getGraphPortY(node, index, total) {
+        if (total <= 1) return node.y;
+        const { height } = getGraphNodeDimensions(node);
+        const availableHeight = Math.max(8, height - 16);
+        return node.y - (availableHeight / 2) + ((availableHeight * index) / (total - 1));
+    }
+
+    function buildOrthogonalEdgePath(edge, source, target, route) {
+        const sourceSize = getGraphNodeDimensions(source);
+        const targetSize = getGraphNodeDimensions(target);
+        if (Math.abs(target.x - source.x) < 2) {
+            const movesDown = target.y >= source.y;
+            const fanOffset = (route.sourceIndex - ((route.sourceTotal - 1) / 2)) * 6;
+            const portX = source.x + fanOffset;
+            const sourceY = source.y + (movesDown ? sourceSize.height / 2 : -sourceSize.height / 2);
+            const targetY = target.y + (movesDown ? -targetSize.height / 2 : targetSize.height / 2);
+            return `M ${portX.toFixed(1)} ${sourceY.toFixed(1)} V ${targetY.toFixed(1)}`;
+        }
+        const movesRight = target.x >= source.x;
+        const sourceX = source.x + (movesRight ? sourceSize.width / 2 : -sourceSize.width / 2);
+        const sourceY = getGraphPortY(source, route.sourceIndex, route.sourceTotal);
+
+        if (target.type === 'kpi' && movesRight) {
+            const targetX = target.x;
+            const targetY = target.y - (targetSize.height / 2);
+            const branchX = sourceX + 26 + (route.sourceIndex * 7);
+            const laneY = 8 + (route.sourceIndex * 4);
+            return `M ${sourceX.toFixed(1)} ${sourceY.toFixed(1)} H ${branchX.toFixed(1)} V ${laneY.toFixed(1)} H ${targetX.toFixed(1)} V ${targetY.toFixed(1)}`;
+        }
+
+        const targetX = target.x + (movesRight ? -targetSize.width / 2 : targetSize.width / 2);
+        const targetY = getGraphPortY(target, route.targetIndex, route.targetTotal);
+        if (Math.abs(sourceY - targetY) < 1) {
+            return `M ${sourceX.toFixed(1)} ${sourceY.toFixed(1)} H ${targetX.toFixed(1)}`;
+        }
+        const targetSideChannel = targetX + (movesRight ? -44 : 44);
+        const usesTargetChannel = edge.type === 'FUNDS'
+            || edge.type === 'HEDGES'
+            || (edge.type === 'CONTRIBUTES_TO' && target.type === 'asset');
+        const sourceFan = (route.sourceIndex - ((route.sourceTotal - 1) / 2)) * 5;
+        const targetFan = (route.targetIndex - ((route.targetTotal - 1) / 2)) * 3;
+        const middleX = usesTargetChannel
+            ? targetSideChannel + sourceFan
+            : ((sourceX + targetX) / 2) + sourceFan + targetFan;
+        const snappedMiddleX = Math.round(middleX / 4) * 4;
+        return `M ${sourceX.toFixed(1)} ${sourceY.toFixed(1)} H ${snappedMiddleX.toFixed(1)} V ${targetY.toFixed(1)} H ${targetX.toFixed(1)}`;
+    }
+
+    function renderGraphEdge(edge, nodeById, route) {
+        const source = nodeById.get(edge.source);
+        const target = nodeById.get(edge.target);
+        if (!source || !target) return '';
+        const isHedge = edge.type === 'HEDGES';
+        const isExposure = edge.type === 'EXPOSED_TO';
+        const color = isExposure ? '#fb7185' : isHedge ? '#14b8a6' : '#94a3b8';
+        const markerId = isExposure ? 'personal-cfo-arrow-exposure' : isHedge ? 'personal-cfo-arrow-hedge' : 'personal-cfo-arrow';
+        const amountText = edge.amount === undefined ? '' : formatMetricValue(edge.amount, target.unit);
+        const path = buildOrthogonalEdgePath(edge, source, target, route);
+        return `
+            <path
+                data-cfo-edge="${escapeHtml(edge.id)}"
+                data-edge-type="${escapeHtml(edge.type)}"
+                d="${path}"
+                fill="none"
+                stroke="${color}" stroke-width="${edge.weight}" stroke-linecap="round"
+                stroke-linejoin="round" stroke-opacity="${isExposure ? '0.48' : isHedge ? '0.44' : '0.28'}"
+                ${isHedge ? 'stroke-dasharray="8 6"' : ''}
+                marker-end="url(#${markerId})"
+            >
+                <title>${escapeHtml(edgeLabels[edge.type] || edge.type)} ${escapeHtml(amountText)}</title>
+            </path>
+        `;
+    }
+
+    function renderGraphNode(node) {
+        const meta = typeMeta[node.type] || typeMeta.account;
+        const isHighRisk = Number(node.riskScore || 0) >= 70;
+        const statusText = node.status ? ` / ${node.status}` : '';
+        const hasAmount = node.amount !== undefined && node.amount !== null;
+        const formattedAmount = hasAmount ? formatMetricValue(node.amount, node.unit) : '';
+        const amountText = hasAmount ? ` / ${formattedAmount}` : '';
+        const { width, height } = getGraphNodeDimensions(node);
+        const x = -width / 2;
+        const y = -height / 2;
+        const subLabel = node.status
+            ? statusLabels[node.status] || node.status
+            : (node.riskScore ? `리스크 ${node.riskScore}` : (hasAmount ? formattedAmount : meta.label));
+        return `
+            <g opacity="${node.opacity}" transform="translate(${node.x} ${node.y})">
+                <title>${escapeHtml(`${node.label} / ${meta.label}${statusText}${amountText}`)}</title>
+                ${isHighRisk ? `<rect x="${x - 5}" y="${y - 5}" width="${width + 10}" height="${height + 10}" rx="8" fill="none" stroke="#fb7185" stroke-width="3" stroke-opacity="0.8"></rect>` : ''}
+                <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="6" fill="${meta.fill}" stroke="${meta.stroke}" stroke-width="2"></rect>
+                <text y="-7" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="800" opacity="0.82">${escapeHtml(meta.label.toUpperCase())}</text>
+                <text y="8" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="800">${escapeHtml(truncateLabel(node.label, 18))}</text>
+                <text y="22" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="600" opacity="0.78">${escapeHtml(truncateLabel(subLabel, 20))}</text>
+            </g>
+        `;
+    }
+
+    function renderGraphGuides(graph) {
+        const laneLines = (graph.laneYs || []).map((y) => `
+            <line x1="28" y1="${y}" x2="${graph.width - 28}" y2="${y}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4 8"></line>
+        `).join('');
+        const columns = (graph.columns || []).map((column) => `
+            <line x1="${column.x}" y1="42" x2="${column.x}" y2="${graph.height - 24}" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="3 9" opacity="0.7"></line>
+            <text x="${column.x}" y="25" text-anchor="middle" fill="#64748b" font-size="11" font-weight="800">${escapeHtml(column.label)}</text>
+        `).join('');
+        return `<g aria-hidden="true">${laneLines}${columns}</g>`;
+    }
+
+    function renderFinanceGraph(graph) {
+        const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
+        const edgeRoutes = buildGraphEdgeRoutes(graph.edges, nodeById);
+        const modeMeta = graphModeMeta[graph.mode] || graphModeMeta.cashFlow;
+        const visibleTypes = new Set(graph.nodes.map((node) => node.type));
+        return `
+            <section class="hidden md:block rounded-lg border border-gray-200 bg-white p-3 md:p-4 shadow-sm">
+                <div class="mb-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                    <div class="min-w-0">
+                        <h3 class="text-base font-bold text-gray-900">${escapeHtml(modeMeta.title)}</h3>
+                        <p class="text-xs text-gray-500">${escapeHtml(modeMeta.description)}</p>
+                    </div>
+                    <div class="inline-flex w-fit rounded-md border border-gray-200 bg-gray-50 p-0.5" role="group" aria-label="재무 네트워크 보기">
+                        ${Object.entries(graphModeMeta).map(([mode, meta]) => `
+                            <button type="button" data-cfo-graph-mode="${escapeAttr(mode)}" class="rounded px-2.5 py-1.5 text-[11px] font-bold transition ${graph.mode === mode ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-800'}" aria-pressed="${graph.mode === mode}">${escapeHtml(meta.label)}</button>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="mb-2 hidden md:flex flex-wrap gap-1.5 text-[10px] font-bold">
+                        ${Object.entries(typeMeta).filter(([type]) => visibleTypes.has(type)).map(([, meta]) => `
+                            <span class="inline-flex items-center gap-1 rounded-md border border-gray-100 bg-gray-50 px-2 py-1 text-gray-600">
+                                <span class="h-2 w-2 rounded-full" style="background:${meta.fill}"></span>${escapeHtml(meta.label)}
+                            </span>
+                        `).join('')}
+                </div>
+                <div class="overflow-x-auto rounded-lg border border-gray-100 bg-gray-50">
+                    <svg viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="xMinYMin meet" role="img" aria-label="${escapeAttr(modeMeta.title)}" class="min-w-[900px] w-full h-auto" style="aspect-ratio:${graph.width}/${graph.height}">
+                        <defs>
+                            <marker id="personal-cfo-arrow" markerWidth="10" markerHeight="10" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                                <path d="M0,0 L0,8 L9,4 z" fill="#94a3b8"></path>
+                            </marker>
+                            <marker id="personal-cfo-arrow-exposure" markerWidth="10" markerHeight="10" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                                <path d="M0,0 L0,8 L9,4 z" fill="#fb7185"></path>
+                            </marker>
+                            <marker id="personal-cfo-arrow-hedge" markerWidth="10" markerHeight="10" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                                <path d="M0,0 L0,8 L9,4 z" fill="#14b8a6"></path>
+                            </marker>
+                        </defs>
+                        <rect x="0" y="0" width="${graph.width}" height="${graph.height}" fill="#f8fafc"></rect>
+                        ${renderGraphGuides(graph)}
+                        ${graph.edges.map((edge) => renderGraphEdge(edge, nodeById, edgeRoutes.get(edge.id))).join('')}
+                        ${graph.nodes.map(renderGraphNode).join('')}
+                    </svg>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderMobileFinanceSummary(nextSnapshot) {
+        const assetRows = [
+            ...nextSnapshot.accounts.map((item) => ({ label: item.label, amount: item.balance, type: '계좌' })),
+            ...nextSnapshot.assets.map((item) => ({ label: item.label, amount: item.marketValue, type: '자산' })),
+        ];
+        const liabilityRows = nextSnapshot.liabilities.map((item) => ({
+            label: item.label,
+            amount: item.outstandingBalance,
+            type: '부채',
+        }));
+        const allocationRows = nextSnapshot.budgetBuckets.map((item) => ({
+            label: item.label,
+            amount: nextSnapshot.cashFlow?.bucketOutflows?.[item.id] ?? item.monthlyAllocation,
+            type: nextSnapshot.cashFlow ? '마감월 실제' : '월 계획',
+        }));
+        const renderRows = (rows, amountClass = 'text-gray-900') => rows.map((row) => `
+            <div class="flex items-center justify-between gap-3 border-b border-gray-100 py-2.5 last:border-b-0">
+                <div class="min-w-0">
+                    <p class="text-sm font-bold text-gray-800 truncate">${escapeHtml(row.label)}</p>
+                    <p class="text-[11px] text-gray-400">${escapeHtml(row.type)}</p>
+                </div>
+                <p class="shrink-0 text-sm font-bold ${amountClass}">${escapeHtml(formatKrw(row.amount))}</p>
+            </div>
+        `).join('');
+
+        return `
+            <section class="md:hidden rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                <div class="mb-2">
+                    <h3 class="text-base font-bold text-gray-900">재무 흐름 요약</h3>
+                    <p class="text-xs text-gray-500">모바일에서는 핵심 금액을 목록으로 먼저 보여줍니다.</p>
+                </div>
+                <div class="divide-y-4 divide-gray-50">
+                    <div class="py-2">
+                        <p class="mb-1 text-[11px] font-bold text-indigo-600">자산</p>
+                        ${renderRows(assetRows)}
+                    </div>
+                    <div class="py-2">
+                        <p class="mb-1 text-[11px] font-bold text-rose-600">부채</p>
+                        ${liabilityRows.length ? renderRows(liabilityRows, 'text-rose-700') : '<p class="py-3 text-sm text-gray-400">등록된 부채가 없습니다.</p>'}
+                    </div>
+                    <div class="py-2">
+                        <p class="mb-1 text-[11px] font-bold text-emerald-600">${escapeHtml(nextSnapshot.cashFlow ? `${nextSnapshot.cashFlow.periodLabel} 실제 지출·저축` : '월 자금 배분 계획')}</p>
+                        ${renderRows(allocationRows, 'text-emerald-700')}
+                    </div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderProjectRows(projects) {
+        return projects.map((project) => {
+            const progress = formatProgress(project.currentAmount, project.targetAmount);
+            const rowOpacity = project.status === 'completed' ? 'opacity-55' : '';
+            return `
+                <tr class="${rowOpacity}">
+                    <td class="px-3 py-2 align-top">
+                        <p class="text-sm font-bold text-gray-900">${escapeHtml(project.label)}</p>
+                        <p class="text-[11px] text-gray-400">${escapeHtml(bucketLabels[project.bucketKey] || project.bucketKey)} / ${escapeHtml(statusLabels[project.status] || project.status)}</p>
+                    </td>
+                    <td class="px-3 py-2 align-top text-right text-xs font-semibold text-gray-700">${project.priorityScore}</td>
+                    <td class="px-3 py-2 align-top text-right text-xs text-gray-600">${escapeHtml(formatKrw(project.monthlyBurn))}</td>
+                    <td class="px-3 py-2 align-top min-w-[150px]">
+                        <div class="h-2 rounded-full bg-gray-100 overflow-hidden">
+                            <div class="h-full rounded-full bg-indigo-500" style="width:${progress}%"></div>
+                        </div>
+                        <p class="mt-1 text-[11px] text-gray-400">${progress.toFixed(1)}%</p>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function renderRiskRows(risks) {
+        const levelClasses = {
+            low: 'text-emerald-700 bg-emerald-50 border-emerald-100',
+            medium: 'text-amber-700 bg-amber-50 border-amber-100',
+            high: 'text-rose-700 bg-rose-50 border-rose-100',
+            critical: 'text-red-800 bg-red-50 border-red-200',
+        };
+        return risks.map((risk) => `
+            <tr>
+                <td class="px-3 py-2 align-top">
+                    <p class="text-sm font-bold text-gray-900">${escapeHtml(risk.label)}</p>
+                    <p class="text-[11px] text-gray-400">완충: ${escapeHtml(bucketLabels[risk.mitigatedByBucket] || '없음')}</p>
+                </td>
+                <td class="px-3 py-2 align-top">
+                    <span class="inline-flex rounded-md border px-2 py-1 text-[11px] font-bold ${levelClasses[risk.level] || levelClasses.medium}">
+                        ${escapeHtml(riskLevelLabels[risk.level] || risk.level)}
+                    </span>
+                </td>
+                <td class="px-3 py-2 align-top text-right text-xs text-gray-600">${escapeHtml(formatKrw(risk.exposureAmount))}</td>
+                <td class="px-3 py-2 align-top text-right text-xs font-semibold text-gray-800">${risk.score}</td>
+            </tr>
+        `).join('');
+    }
+
+
+
+
+
+
+
+
+
+
+    function renderTables(model) {
+        return `
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <section class="rounded-lg border border-gray-200 bg-white p-3 md:p-4 shadow-sm min-w-0">
+                    <div class="mb-3 flex items-center justify-between gap-3">
+                        <h3 class="text-base font-bold text-gray-900">프로젝트 포트폴리오</h3>
+                        <span class="rounded-md bg-indigo-50 px-2 py-1 text-[11px] font-bold text-indigo-700">${model.projectsByPriority.length}개</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[560px] text-left">
+                            <thead>
+                                <tr class="border-b border-gray-100 text-[10px] font-bold text-gray-400">
+                                    <th class="px-3 py-2">프로젝트</th>
+                                    <th class="px-3 py-2 text-right">점수</th>
+                                    <th class="px-3 py-2 text-right">월 소진</th>
+                                    <th class="px-3 py-2">자금 충족</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">${renderProjectRows(model.projectsByPriority)}</tbody>
+                        </table>
+                    </div>
+                </section>
+                <section class="rounded-lg border border-gray-200 bg-white p-3 md:p-4 shadow-sm min-w-0">
+                    <div class="mb-3 flex items-center justify-between gap-3">
+                        <h3 class="text-base font-bold text-gray-900">리스크 대시보드</h3>
+                        <span class="rounded-md bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-700">점수순</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[520px] text-left">
+                            <thead>
+                                <tr class="border-b border-gray-100 text-[10px] font-bold text-gray-400">
+                                    <th class="px-3 py-2">리스크</th>
+                                    <th class="px-3 py-2">수준</th>
+                                    <th class="px-3 py-2 text-right">노출액</th>
+                                    <th class="px-3 py-2 text-right">점수</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">${renderRiskRows(model.risksByScore)}</tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        `;
+    }
+
+    function render(options = {}) {
+        const root = document.getElementById('personal-cfo-view');
+        if (!root) return;
+        const portfolioOverlay = applyRuntimeFinanceData(currentSnapshot);
+        const model = domain.createPersonalCfoPageModel(portfolioOverlay.snapshot, activeGraphMode);
+        const officialSnapshot = typeof getOfficialFinanceSnapshot === 'function' ? getOfficialFinanceSnapshot() : null;
+        const dataBadge = portfolioOverlay.hasPortfolioData
+            ? `${window.FinanceModel.getSourceBadge(officialSnapshot)} · 자산 ${portfolioOverlay.accountItemCount + portfolioOverlay.assetItemCount}개 · 부채 ${portfolioOverlay.liabilityItemCount}개`
+            : '계좌·부채 기준 데이터';
+        const dataBadgeClasses = portfolioOverlay.hasPortfolioData
+            ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
+            : 'border-gray-200 bg-white text-gray-600';
+        root.innerHTML = `
+            <div class="mb-3 flex items-center justify-end gap-2">
+                <div class="flex flex-wrap justify-end gap-2">
+                    <span id="personal-cfo-sync-badge" class="rounded-md border px-2.5 py-1.5 text-[11px] font-bold ${syncStatusClasses}">${escapeHtml(syncStatusText)}</span>
+                    <span class="rounded-md border px-2.5 py-1.5 text-[11px] font-bold ${dataBadgeClasses}">${escapeHtml(dataBadge)}</span>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-4">
+                ${renderKpiCards(model.summary)}
+            </div>
+            <div class="space-y-4 pb-10">
+                ${renderMobileFinanceSummary(portfolioOverlay.snapshot)}
+                ${renderFinanceGraph(model.graph)}
+                ${renderTables(model)}
+            </div>
+        `;
+        renderSyncStatus(syncStatusText, syncStatusClasses);
+        root.querySelectorAll('[data-cfo-graph-mode]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const nextMode = button.dataset.cfoGraphMode;
+                if (!graphModeMeta[nextMode] || nextMode === activeGraphMode) return;
+                activeGraphMode = nextMode;
+                render({ skipRemoteLoad: true });
+            });
+        });
+        if (!options.skipRemoteLoad) queueRemoteLoad();
+    }
+
+    window.PersonalCfoFeature = {
+        render,
+        getDashboardSnapshot: () => {
+            const portfolioOverlay = applyRuntimeFinanceData(currentSnapshot);
+            const model = domain.createPersonalCfoPageModel(portfolioOverlay.snapshot, activeGraphMode);
+            return {
+                summary: model.summary,
+                projects: model.projectsByPriority.map((project) => ({
+                    id: project.id,
+                    label: project.label,
+                    priorityScore: project.priorityScore,
+                    statusLabel: statusLabels[project.status] || project.status,
+                    fundingPercent: formatProgress(project.currentAmount, project.targetAmount),
+                })),
+            };
+        },
+        getSnapshot: () => cloneSnapshot(currentSnapshot),
+        setSnapshot: (nextSnapshot) => {
+            currentSnapshot = saveStore(nextSnapshot);
+            render({ skipRemoteLoad: true });
+            return cloneSnapshot(currentSnapshot);
+        },
+        saveCurrentSnapshot: () => persistRemoteSnapshot(currentSnapshot, { manual: true }),
+        getPortfolioOverlay: () => applyRuntimeFinanceData(currentSnapshot),
+        createPersonalCfoPageModel: domain.createPersonalCfoPageModel,
+        buildFinanceGraphFromSnapshot: domain.buildFinanceGraphFromSnapshot,
+        calculations: {
+            calculateTotalAssets: domain.calculateTotalAssets,
+            calculateTotalLiabilities: domain.calculateTotalLiabilities,
+            calculateNetWorth: domain.calculateNetWorth,
+            calculateMonthlyFreeCashFlow: domain.calculateMonthlyFreeCashFlow,
+            calculateSavingsRate: domain.calculateSavingsRate,
+            calculateFixedCostRatio: domain.calculateFixedCostRatio,
+            calculateDebtRatio: domain.calculateDebtRatio,
+            calculateEmergencyCoverageMonths: domain.calculateEmergencyCoverageMonths,
+            calculateProjectBurnRate: domain.calculateProjectBurnRate,
+            calculateRiskScore: domain.calculateRiskScore,
+            calculateProjectPriorityScore: domain.calculateProjectPriorityScore,
+        },
+    };
+})(window);

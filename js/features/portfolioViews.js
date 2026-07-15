@@ -133,7 +133,16 @@
             document.getElementById('portfolio-past-notice-text').textContent = `해당 월의 자산 구성 스냅샷 데이터가 존재하지 않습니다.`;
         }
 
-        document.getElementById('pf-networth').textContent = (totalCashAndSafe + totalInvest + totalDebt).toLocaleString() + '원';
+        const officialSnapshot = isLatestMonth && typeof getOfficialFinanceSnapshot === 'function'
+            ? getOfficialFinanceSnapshot()
+            : null;
+        const displayedNetWorth = officialSnapshot?.source === 'portfolio'
+            ? officialSnapshot.netWorth
+            : totalCashAndSafe + totalInvest + totalDebt;
+        const sourceBadge = document.getElementById('portfolio-data-source-badge');
+        if (sourceBadge && officialSnapshot) sourceBadge.textContent = window.FinanceModel.getSourceBadge(officialSnapshot);
+
+        document.getElementById('pf-networth').textContent = displayedNetWorth.toLocaleString() + '원';
         document.getElementById('pf-safe-sum').textContent = totalCashAndSafe.toLocaleString() + '원';
         document.getElementById('pf-invest-sum').textContent = totalInvest.toLocaleString() + '원';
         document.getElementById('pf-debt-sum').textContent = totalDebt.toLocaleString() + '원';

@@ -1,13 +1,66 @@
 # Current Architecture Map
 
-Date: 2026-06-06
-Branch: `codex/asset-trend-redesign`
+Date: 2026-07-16
+Branch: `main` (working tree)
 
 ## Purpose
 
 This document maps the current NetVisualizer structure before any architecture redesign. It describes what exists today, not the desired future shape.
 
-The current app is a static PWA built around one large `index.html` file. Most UI, state, Supabase reads/writes, parsing, chart rendering, transaction import, portfolio editing, real-estate views, and Quant workflows are implemented in that single file. The main exception is the Supabase Edge Function for market price sync. The first redesign slice now extracts long-term asset trend model logic into `js/features/assetTrend.js` and starts a visible two-level workspace layout.
+## 2026-07-15 Runtime Boundary Update
+
+The app still runs as a static classic-JavaScript PWA, but the first high-risk shared rules now have explicit owners.
+
+| Concern | Runtime owner | Rule |
+| --- | --- | --- |
+| HTML escaping, date/money formatting, lazy assets | `js/shared/appUtils.js` | Feature files call `window.AppUtils` or `window.AppAssets`; do not add another formatter or CDN loader. |
+| Official assets, liabilities, net worth, source label, decision items | `js/features/financeModel.js` | Finance Home, Portfolio, and Personal CFO use the same portfolio-first snapshot. |
+| Finance dashboard rendering | `js/features/financeViews.js` | Historical asset snapshots remain a trend source, not the official current balance. |
+| Portfolio rendering | `js/features/portfolioViews.js` | Displays the official snapshot and its freshness badge. |
+| Personal CFO domain | `src/features/personal-cfo/` -> `js/generated/personal-cfo-domain.js` | Owns types, mock defaults, portfolio/cash-flow adapters, calculations, scoring, and three graph builders. |
+| Personal CFO renderer | `js/features/personalCfo.js` | Owns DOM/SVG rendering, local/remote snapshot persistence, and graph-mode interaction. It must not duplicate domain calculations. |
+| Life Today dashboard | `js/features/lifeDashboard.js` | Reads public snapshots from Checklist, Health, and Personal CFO modules. |
+| Todo and Health persistence | `js/features/checklist.js`, `js/features/healthTracker.js` | Feature modules own their local/server state and expose read-only dashboard snapshots. |
+
+Current script order is contractual: `appUtils` -> `financeModel` -> generated Personal CFO domain -> `appCore` -> feature renderers -> `appShell`. `tools/check-ui-contract.mjs` verifies the critical order.
+
+SheetJS and Leaflet are no longer startup dependencies. `AppAssets.ensureXlsx()` loads SheetJS only when importing a workbook, and `AppAssets.ensureLeaflet()` loads the map runtime only when opening Real Estate.
+
+The Personal CFO TypeScript tree is now the browser domain runtime. Vite builds it as an IIFE bundle so the static PWA can load `window.PersonalCfoDomain` without converting the whole app at once. `tools/check-personal-cfo-runtime.mjs` protects open/closed period selection, portfolio classification, net-worth math, graph-mode separation, and flow conservation.
+
+Authentication is intentionally undecided. The current anonymous Supabase mode is acceptable only for local, single-user use and must not be treated as safe for a public deployment.
+
+The current app remains a static PWA with a large `index.html`, but runtime behavior is split across feature files and the first generated TypeScript domain bundle. Supabase reads still enter through `appCore.js` as legacy two-dimensional arrays; replacing that boundary with object repositories is the next architecture priority.
+
+## 2026-07-16 Personal CFO Runtime
+
+```mermaid
+flowchart LR
+    Supabase["Supabase portfolios + transactions"] --> Core["appCore.js\nlegacy table adapters"]
+    Core --> PortfolioState["dynamicPortfolioData"]
+    Core --> PeriodState["monthlyDB\npayday accounting periods"]
+    PortfolioState --> PortfolioAdapter["portfolioAdapter.ts"]
+    PeriodState --> CashFlowAdapter["cashFlowAdapter.ts"]
+    Mock["mockData.ts\nplans, projects, risks"] --> Snapshot["PersonalCfoSnapshot"]
+    PortfolioAdapter --> Snapshot
+    CashFlowAdapter --> Snapshot
+    Snapshot --> Calculations["calculations.ts"]
+    Snapshot --> Graphs["graphBuilder.ts"]
+    Calculations --> Renderer["personalCfo.js"]
+    Graphs --> Renderer
+```
+
+The graph has three explicit modes:
+
+| Mode | Data scope | Rule |
+| --- | --- | --- |
+| `balanceSheet` | Current portfolio balances | Default view. Account, asset, and liability stocks contribute to or reduce net worth. Income flows are excluded. |
+| `cashFlow` | Latest closed payday period | Income is allocated to actual expense/saving buckets, debt repayment, and residual cash. Open periods are excluded. |
+| `strategy` | Manual plan snapshot | Budget buckets fund two projects and hedge risks. It is a planning model, not a statement of actual balances. |
+
+Every desktop graph uses explicit vertical columns. Cash-flow and strategy targets also use horizontal lanes, so same-lane edges render as straight lines and all other connections use right-angle routing. Column headings and subtle guide lines are part of the SVG contract.
+
+Finance Home follows a decision hierarchy: current net worth, latest closed free cash flow, asset-goal progress, housing self-funding, and at most three action items. Housing self-funding excludes pension, discounts market investments by 10%, and subtracts debt. Loan capacity is secondary context and is not counted as saved money.
 
 ## File-Level Map
 
@@ -111,7 +164,7 @@ flowchart TD
     ToolVisual --> ToolDetail["Detail / Action\nlists, edit buttons, schedule, roadmap"]
 ```
 
-This keeps KPI calculation in `index.html` for now. The next architecture step should move Finance summary KPI definitions, Health metrics, and to-do summary counts into small domain modules.
+Finance summary rules now live in `financeModel.js`, `financeViews.js`, and the Personal CFO TypeScript domain. Health and to-do modules expose dashboard snapshots instead of allowing Life Home to read their internal state directly.
 
 ## Current Time Scope
 

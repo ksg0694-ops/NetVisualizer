@@ -142,7 +142,7 @@
         return model;
     }
 
-    function renderFinanceSummaryKpis({ assetModel, periodLabel = '올해' }) {
+    function renderFinanceSummaryKpis({ assetModel, officialSnapshot, periodLabel = '올해' }) {
         const setText = (id, text) => {
             const el = document.getElementById(id);
             if (el) el.textContent = text;
@@ -154,17 +154,17 @@
 
         setText('finance-period-badge', `${periodLabel} 누적`);
 
-        const assetPct = Number(assetModel?.goalPercentage || 0);
-        const currentAsset = Number(assetModel?.currentAsset || 0);
+        const currentAsset = Number(officialSnapshot?.netWorth ?? assetModel?.currentAsset ?? 0);
         const targetAsset = Number(assetModel?.targetGoalAsset || 250000000);
+        const assetPct = targetAsset > 0 ? Math.max(0, Math.min(100, (currentAsset / targetAsset) * 100)) : 0;
         setHtml('finance-kpi-asset-progress', `<span class="text-amber-500">${assetPct.toFixed(1)}</span>%`);
         setText('finance-kpi-asset-meta', `${formatWon(currentAsset)} / ${formatWon(targetAsset)}`);
         setProgressBar('finance-kpi-asset-bar', assetPct);
 
         const fundingStatus = getRealEstateFundingStatus();
-        const fundingPct = Number(fundingStatus.totalPct || 0);
+        const fundingPct = Number(fundingStatus.savedPct || 0);
         setHtml('finance-kpi-funding-progress', `<span class="text-indigo-500">${fundingPct.toFixed(1)}</span>%`);
-        setText('finance-kpi-funding-meta', `${formatWon(fundingStatus.totalReady)} / ${formatWon(fundingStatus.targetBudget)}`);
+        setText('finance-kpi-funding-meta', `${formatWon(fundingStatus.selfFunding)} / ${formatWon(fundingStatus.targetBudget)}`);
         setProgressBar('finance-kpi-funding-bar', fundingPct);
     }
 
@@ -191,6 +191,102 @@
             else if (item.type === '지출') acc.totalExpense += Math.abs(item.amount);
             return acc;
         }, { totalIncome: 0, totalExpense: 0 });
+    }
+
+    function getCashFlowPeriods() {
+        return Object.entries(monthlyDB || {}).map(([key, db]) => ({
+            key,
+            label: db?.title || key,
+            startDate: db?.periodStart || '',
+            endDate: db?.periodEnd || '',
+            transactions: (db?.transactions || []).map((item) => ({
+                date: item.date,
+                type: item.type,
+                category: item.cat,
+                subcategory: item.subcat,
+                memo: item.memo,
+                amount: Number(item.amount || 0),
+                method: item.method,
+            })),
+        })).filter((period) => period.startDate && period.endDate);
+    }
+
+    function getFinanceCashFlowContext() {
+        const today = window.AppUtils.toLocalDateString();
+        const periods = getCashFlowPeriods();
+        const summary = window.PersonalCfoDomain?.selectLatestClosedCashFlow(periods, today);
+        const latestTransactionDate = periods
+            .flatMap((period) => period.transactions.map((item) => item.date))
+            .filter(Boolean)
+            .sort()
+            .pop() || '';
+        const staleDays = latestTransactionDate
+            ? Math.max(0, Math.floor((Date.parse(`${today}T00:00:00`) - Date.parse(`${latestTransactionDate}T00:00:00`)) / 86400000))
+            : null;
+        return { periods, summary, latestTransactionDate, staleDays };
+    }
+
+    window.getFinanceCashFlowContext = getFinanceCashFlowContext;
+
+    function renderFinanceClosedCashFlow(context) {
+        const summary = context?.summary;
+        const sourceBadge = document.getElementById('finance-cashflow-source-badge');
+        const periodEl = document.getElementById('finance-closed-cashflow-period');
+        const freeCashEl = document.getElementById('finance-closed-free-cash');
+        const metaEl = document.getElementById('finance-closed-cashflow-meta');
+        if (!summary) {
+            if (sourceBadge) sourceBadge.textContent = '현금흐름 데이터 없음';
+            if (periodEl) periodEl.textContent = '-';
+            if (freeCashEl) freeCashEl.textContent = '-';
+            if (metaEl) metaEl.textContent = '마감된 기간을 찾지 못했습니다.';
+            return;
+        }
+        if (sourceBadge) {
+            const staleText = Number(context.staleDays) >= 7 ? ` · ${context.staleDays}일 전` : '';
+            sourceBadge.textContent = `거래 ${context.latestTransactionDate}${staleText}`;
+            sourceBadge.className = Number(context.staleDays) >= 7
+                ? 'text-[10px] md:text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg'
+                : 'text-[10px] md:text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg';
+        }
+        if (periodEl) periodEl.textContent = `${summary.periodLabel} 마감`;
+        if (freeCashEl) {
+            freeCashEl.textContent = formatWon(summary.freeCashFlow);
+            freeCashEl.className = `text-base md:text-xl font-bold ${summary.freeCashFlow >= 0 ? 'text-emerald-700' : 'text-rose-700'}`;
+        }
+        if (metaEl) metaEl.textContent = `수입 ${formatWon(summary.totalIncome)} · 지출 ${formatWon(summary.totalExpense)}`;
+    }
+
+    function getOfficialFinanceSnapshot() {
+        const syncMeta = typeof getFinanceDataSyncMeta === 'function' ? getFinanceDataSyncMeta() : {};
+        return window.FinanceModel.buildOfficialSnapshot({
+            portfolioData: dynamicPortfolioData,
+            assetHistory: dynamicAssetHistory,
+            asOf: syncMeta.updatedAt || '',
+        });
+    }
+
+    window.getOfficialFinanceSnapshot = getOfficialFinanceSnapshot;
+
+    function renderFinanceDecisionInbox({ snapshot, cashFlow, fundingStatus }) {
+        const container = document.getElementById('finance-decision-inbox');
+        if (!container) return;
+        const toneClasses = {
+            emerald: 'border-emerald-100 bg-emerald-50 text-emerald-700',
+            amber: 'border-amber-100 bg-amber-50 text-amber-700',
+            rose: 'border-rose-100 bg-rose-50 text-rose-700',
+            indigo: 'border-indigo-100 bg-indigo-50 text-indigo-700',
+            slate: 'border-gray-200 bg-gray-50 text-gray-700',
+        };
+        const items = window.FinanceModel.buildDecisionItems({ snapshot, cashFlow, fundingStatus });
+        container.innerHTML = items.map((item) => `
+            <button type="button" onclick="switchView('${escapeAttr(item.target)}')" class="w-full flex items-start gap-2.5 rounded-lg border px-2.5 py-2 text-left transition hover:brightness-[0.98] ${toneClasses[item.tone] || toneClasses.slate}">
+                <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/70" aria-hidden="true"><i class="fas ${escapeAttr(item.icon)} text-xs"></i></span>
+                <span class="min-w-0">
+                    <span class="block text-[11px] md:text-xs font-bold leading-snug">${escapeHtml(item.title)}</span>
+                    <span class="mt-0.5 block text-[10px] leading-snug opacity-75">${escapeHtml(item.detail)}</span>
+                </span>
+            </button>
+        `).join('');
     }
 
     function getCashFlowCategoryBreakdown(txData = [], type = '지출', limit = 5) {
@@ -524,7 +620,7 @@
         targetName: '고양창릉 S2/S3/S4',
         targetBudget: 800000000,
         annualIncome: null,
-        existingMonthlyDebt: 0,
+        existingMonthlyDebt: null,
         mortgageRatePct: 4.5,
         stressRatePct: 1.5,
         termYears: 30,
@@ -561,31 +657,57 @@
         return Math.max(0, Math.min(100, Number.isFinite(number) ? number : fallback));
     }
 
+    function median(values = []) {
+        const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+        if (!sorted.length) return 0;
+        const middle = Math.floor(sorted.length / 2);
+        return sorted.length % 2
+            ? sorted[middle]
+            : (sorted[middle - 1] + sorted[middle]) / 2;
+    }
+
     function getYearCashFlowRunRate(referenceMonthKey) {
         const monthKey = referenceMonthKey || getLatestMonthKey();
         const year = String(monthKey || '').slice(0, 4);
-        const keys = getYearMonthKeys(monthKey)
-            .filter(key => key.startsWith(`${year}-`) && (!monthKey || key <= monthKey));
+        const today = window.AppUtils.toLocalDateString();
+        const periods = getCashFlowPeriods()
+            .filter(period => period.key.startsWith(`${year}-`)
+                && (!monthKey || period.key <= monthKey)
+                && period.endDate < today)
+            .sort((a, b) => a.key.localeCompare(b.key));
 
-        const stats = keys.reduce((acc, key) => {
-            const monthStats = getCashFlowStats(monthlyDB[key]?.transactions || []);
+        const stats = periods.reduce((acc, period) => {
+            const monthStats = getCashFlowStats(period.transactions);
             acc.totalIncome += monthStats.totalIncome;
             acc.totalExpense += monthStats.totalExpense;
             return acc;
         }, { totalIncome: 0, totalExpense: 0 });
 
-        const observedMonths = Math.max(1, keys.length || Number(String(monthKey).slice(5, 7)) || 1);
+        const regularMonthlyIncomes = periods.map((period) => period.transactions
+            .filter(item => item.type === '수입'
+                && Number(item.amount) > 0
+                && !/성과|상여|보너스|인센티브/i.test(`${item.category || ''} ${item.subcategory || ''} ${item.memo || ''}`))
+            .reduce((sum, item) => sum + Number(item.amount || 0), 0))
+            .filter(value => value > 0);
+        const monthlyFreeCashFlows = periods.map((period) => {
+            const monthStats = getCashFlowStats(period.transactions);
+            return monthStats.totalIncome - monthStats.totalExpense;
+        });
+        const observedMonths = Math.max(1, periods.length);
         const avgMonthlyIncome = stats.totalIncome / observedMonths;
-        const avgMonthlySaving = (stats.totalIncome - stats.totalExpense) / observedMonths;
+        const avgMonthlySaving = median(monthlyFreeCashFlows);
+        const regularMonthlyIncome = median(regularMonthlyIncomes) || avgMonthlyIncome;
 
         return {
             year,
             observedMonths,
+            periodKeys: periods.map(period => period.key),
             totalIncome: stats.totalIncome,
             totalExpense: stats.totalExpense,
             avgMonthlyIncome,
             avgMonthlySaving,
-            annualizedIncome: Math.round(avgMonthlyIncome * 12)
+            regularMonthlyIncome,
+            annualizedIncome: Math.round(regularMonthlyIncome * 12)
         };
     }
 
@@ -602,13 +724,18 @@
     function getRealEstateAnalysisAssumptions() {
         const overrides = loadRealEstateAnalysisOverrides();
         const runRate = getYearCashFlowRunRate(currentMonthKey);
+        const latestClosedCashFlow = getFinanceCashFlowContext().summary;
         const annualIncome = overrides.annualIncome ?? REAL_ESTATE_ANALYSIS_DEFAULTS.annualIncome ?? runRate.annualizedIncome;
+        const existingMonthlyDebt = overrides.existingMonthlyDebt
+            ?? REAL_ESTATE_ANALYSIS_DEFAULTS.existingMonthlyDebt
+            ?? latestClosedCashFlow?.debtRepayment
+            ?? 0;
 
         return {
             targetName: String(overrides.targetName || REAL_ESTATE_ANALYSIS_DEFAULTS.targetName).trim() || REAL_ESTATE_ANALYSIS_DEFAULTS.targetName,
             targetBudget: Math.max(0, Number(overrides.targetBudget ?? REAL_ESTATE_ANALYSIS_DEFAULTS.targetBudget) || 0),
             annualIncome: Math.max(0, Number(annualIncome) || 0),
-            existingMonthlyDebt: Math.max(0, Number(overrides.existingMonthlyDebt ?? REAL_ESTATE_ANALYSIS_DEFAULTS.existingMonthlyDebt) || 0),
+            existingMonthlyDebt: Math.max(0, Number(existingMonthlyDebt) || 0),
             mortgageRatePct: Math.max(0, Number(overrides.mortgageRatePct ?? REAL_ESTATE_ANALYSIS_DEFAULTS.mortgageRatePct) || 0),
             stressRatePct: Math.max(0, Number(overrides.stressRatePct ?? REAL_ESTATE_ANALYSIS_DEFAULTS.stressRatePct) || 0),
             termYears: Math.max(1, Number(overrides.termYears ?? REAL_ESTATE_ANALYSIS_DEFAULTS.termYears) || 30),
@@ -720,7 +847,7 @@
         const annualDebtService = (stressedMonthlyPayment + assumptions.existingMonthlyDebt) * 12;
         const dsrPct = assumptions.annualIncome > 0 ? (annualDebtService / assumptions.annualIncome) * 100 : 0;
         const requiredEquity = Math.max(0, assumptions.targetBudget - plannedLoan);
-        const equityShortfall = Math.max(0, requiredEquity - funding.cashAndSafe);
+        const equityShortfall = Math.max(0, requiredEquity - funding.selfFunding);
         const totalShortfall = Math.max(0, assumptions.targetBudget - funding.totalReady);
         const loanCapacityGap = Math.max(0, funding.fundingGapBeforeLoan - debtCapacity.maxLoanByDsr);
         const monthsToReady = equityShortfall > 0 && runRate.avgMonthlySaving > 0
@@ -788,7 +915,7 @@
         setElementWidth('re-progress-saved', funding.savedPct);
         setElementText('re-progress-saved', funding.savedPct > 5 ? '모은돈' : '');
         setElementWidth('re-progress-loan', Math.min(100 - funding.savedPct, funding.loanPct));
-        setElementText('re-saved-text', `모은돈: ${formatWon(funding.cashAndSafe)}`);
+        setElementText('re-saved-text', `자기자금: ${formatWon(funding.selfFunding)}`);
         setElementText('re-progress-text', `총 ${funding.totalPct.toFixed(1)}% 달성`);
         setElementText('re-assumption-text', `DSR ${assumptions.dsrLimitPct.toFixed(0)}% 기준 자동대출`);
 
@@ -806,7 +933,7 @@
             dsrBar.className = `h-full transition-all duration-500 ${model.dsrPct > assumptions.dsrLimitPct ? 'bg-rose-500' : (model.dsrPct > assumptions.dsrLimitPct * 0.85 ? 'bg-amber-500' : 'bg-emerald-500')}`;
         }
 
-        setElementText('re-analysis-income-meta', `연소득 가정 ${formatWon(assumptions.annualIncome)} · 기존 월 원리금 ${formatWon(assumptions.existingMonthlyDebt)}`);
+        setElementText('re-analysis-income-meta', `마감 ${runRate.observedMonths}개월 급여 중앙값 연환산 ${formatWon(assumptions.annualIncome)} · 최근 월 원리금 ${formatWon(assumptions.existingMonthlyDebt)}`);
 
         setElementHtml('re-analysis-status', `<span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] md:text-xs font-bold ${status.className}"><i class="fas ${status.icon}"></i>${status.label}</span>`);
     }
@@ -833,11 +960,25 @@
         applyAssetStateForMonth(db, currentMonthKey);
 
         const { year } = getYearToDateCashFlowStats(currentMonthKey);
+        const officialSnapshot = getOfficialFinanceSnapshot();
+        const sourceBadge = document.getElementById('finance-data-source-badge');
+        if (sourceBadge) sourceBadge.textContent = window.FinanceModel.getSourceBadge(officialSnapshot);
 
-        if (document.getElementById('card-asset')) document.getElementById('card-asset').textContent = `${db.asset.toLocaleString()}원`;
+        if (document.getElementById('card-asset')) document.getElementById('card-asset').textContent = `${officialSnapshot.netWorth.toLocaleString()}원`;
 
         const assetModel = renderAssetTrend(db);
-        renderFinanceSummaryKpis({ assetModel, periodLabel: `${year}년` });
+        renderFinanceSummaryKpis({ assetModel, officialSnapshot, periodLabel: `${year}년` });
+        const fundingStatus = getRealEstateFundingStatus();
+        const cashFlowContext = getFinanceCashFlowContext();
+        renderFinanceClosedCashFlow(cashFlowContext);
+        renderFinanceDecisionInbox({
+            snapshot: officialSnapshot,
+            cashFlow: cashFlowContext.summary
+                ? { ...cashFlowContext.summary, staleDays: cashFlowContext.staleDays, latestTransactionDate: cashFlowContext.latestTransactionDate }
+                : getCashFlowStats(db.transactions),
+            fundingStatus,
+        });
+        updateFinanceRoadmap(officialSnapshot.netWorth);
     }
 
     function renderCashFlow() {
@@ -1023,32 +1164,51 @@
     }
 
     function getRealEstateFundingStatus() {
-        let cashAndSafe = 0;
+        let liquidAndSafe = 0;
+        let housingFunds = 0;
+        let discountedInvestments = 0;
+        let restrictedFunds = 0;
+        let debt = 0;
         if (dynamicPortfolioData) {
             Object.entries(dynamicPortfolioData).forEach(([groupName, groupData]) => {
-                const sum = groupData.items.reduce((acc, curr) => acc + curr.amount, 0);
-                if (groupData.isDebt) {
-                    cashAndSafe += sum; // 부채 (음수)
-                } else if (groupName.includes('투자')) {
-                    cashAndSafe += (sum * 0.9); // 투자자산 * 0.9
-                } else {
-                    cashAndSafe += sum; // 안전자산(현금) 및 기타
-                }
+                groupData.items.forEach((item) => {
+                    const amount = Number(item.amount || 0);
+                    const assetType = item.classification?.assetType || item.assetType || '';
+                    const searchText = `${groupName} ${item.name || ''} ${assetType}`.toLowerCase();
+                    if (groupData.isDebt || assetType === 'debt' || amount < 0) {
+                        debt += Math.min(0, amount);
+                    } else if (/연금|퇴직|irp|pension/.test(searchText)) {
+                        restrictedFunds += amount;
+                    } else if (/전세|보증금|청약|주택드림|housing/.test(searchText)) {
+                        housingFunds += amount;
+                    } else if (/투자|주식|etf|펀드|stock|fund|bond/.test(searchText)) {
+                        discountedInvestments += amount * 0.9;
+                    } else {
+                        liquidAndSafe += amount;
+                    }
+                });
             });
         }
 
         const assumptions = getRealEstateAnalysisAssumptions();
         const debtCapacity = getRealEstateDebtCapacity(assumptions);
         const targetBudget = assumptions.targetBudget;
-        const fundingGapBeforeLoan = Math.max(0, targetBudget - cashAndSafe);
+        const selfFunding = Math.max(0, liquidAndSafe + housingFunds + discountedInvestments + debt);
+        const fundingGapBeforeLoan = Math.max(0, targetBudget - selfFunding);
         const expectedLoan = Math.min(fundingGapBeforeLoan, debtCapacity.maxLoanByDsr);
-        const totalReady = cashAndSafe + expectedLoan;
-        const savedPct = targetBudget > 0 ? (cashAndSafe / targetBudget) * 100 : 0;
+        const totalReady = selfFunding + expectedLoan;
+        const savedPct = targetBudget > 0 ? (selfFunding / targetBudget) * 100 : 0;
         const loanPct = targetBudget > 0 ? (expectedLoan / targetBudget) * 100 : 0;
         const totalPct = Math.min(100, Math.max(0, savedPct + loanPct));
 
         return {
-            cashAndSafe,
+            cashAndSafe: selfFunding,
+            selfFunding,
+            liquidAndSafe,
+            housingFunds,
+            discountedInvestments,
+            restrictedFunds,
+            debt,
             targetBudget,
             expectedLoan,
             totalReady,

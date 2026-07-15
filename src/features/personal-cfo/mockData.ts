@@ -1,0 +1,329 @@
+import type { PersonalCfoSnapshot, PersonalCfoSourceRef } from './types';
+
+const defaultSourceRefs: Record<string, PersonalCfoSourceRef[]> = {
+  'income:salary': [{ sourceId: 'source:cashflow', entityType: 'income', entityId: 'salary', field: 'monthlyAmount' }],
+  'account:portfolio:operating': [{ sourceId: 'source:portfolio', entityType: 'portfolio', field: 'amount' }],
+  'account:portfolio:defense': [{ sourceId: 'source:portfolio', entityType: 'portfolio', field: 'amount' }],
+  'account:portfolio:housing': [{ sourceId: 'source:portfolio', entityType: 'portfolio', field: 'amount' }],
+  'account:portfolio:growth': [{ sourceId: 'source:portfolio', entityType: 'portfolio', field: 'amount' }],
+  'asset:etf': [{ sourceId: 'source:portfolio', entityType: 'asset', entityId: 'etf', field: 'marketValue' }],
+  'asset:pension': [{ sourceId: 'source:portfolio', entityType: 'asset', entityId: 'pension', field: 'marketValue' }],
+  'asset:housing-deposit': [{ sourceId: 'source:cashflow', entityType: 'asset', entityId: 'housing-deposit', field: 'marketValue' }],
+  'liability:portfolio:workplace-loan': [{ sourceId: 'source:portfolio', entityType: 'portfolio', field: 'amount' }],
+  operating: [
+    { sourceId: 'source:cashflow', entityType: 'budgetBucket', entityId: 'operating', field: 'monthlyAllocation' },
+    { sourceId: 'source:manual', entityType: 'budgetBucket', entityId: 'operating', field: 'targetBalance' },
+  ],
+  defense: [
+    { sourceId: 'source:cashflow', entityType: 'budgetBucket', entityId: 'defense', field: 'monthlyAllocation' },
+    { sourceId: 'source:manual', entityType: 'budgetBucket', entityId: 'defense', field: 'targetBalance' },
+  ],
+  housing: [
+    { sourceId: 'source:cashflow', entityType: 'budgetBucket', entityId: 'housing', field: 'monthlyAllocation' },
+    { sourceId: 'source:manual', entityType: 'budgetBucket', entityId: 'housing', field: 'targetBalance' },
+  ],
+  growth: [
+    { sourceId: 'source:portfolio', entityType: 'budgetBucket', entityId: 'growth', field: 'currentBalance' },
+    { sourceId: 'source:manual', entityType: 'budgetBucket', entityId: 'growth', field: 'targetBalance' },
+  ],
+  humanCapital: [{ sourceId: 'source:life-todos', entityType: 'budgetBucket', entityId: 'humanCapital', field: 'projectBudget' }],
+  experience: [{ sourceId: 'source:manual', entityType: 'budgetBucket', entityId: 'experience', field: 'monthlyAllocation' }],
+  'project:changneung': [{ sourceId: 'source:life-todos', entityType: 'project', entityId: 'changneung', field: 'status' }],
+  'project:online-master': [{ sourceId: 'source:life-todos', entityType: 'project', entityId: 'online-master', field: 'status' }],
+  'risk:job-loss': [{ sourceId: 'source:manual', entityType: 'risk', entityId: 'job-loss', field: 'exposureAmount' }],
+  'risk:interest-rate': [{ sourceId: 'source:cashflow', entityType: 'risk', entityId: 'interest-rate', field: 'exposureAmount' }],
+  'risk:market-drawdown': [{ sourceId: 'source:portfolio', entityType: 'risk', entityId: 'market-drawdown', field: 'exposureAmount' }],
+  'risk:health': [{ sourceId: 'source:manual', entityType: 'risk', entityId: 'health', field: 'impact' }],
+  'risk:liquidity': [{ sourceId: 'source:cashflow', entityType: 'risk', entityId: 'liquidity', field: 'exposureAmount' }],
+  'kpi:net-worth': [{ sourceId: 'source:portfolio', entityType: 'kpi', entityId: 'net-worth', field: 'calculatedValue' }],
+  'kpi:free-cash-flow': [{ sourceId: 'source:cashflow', entityType: 'kpi', entityId: 'free-cash-flow', field: 'calculatedValue' }],
+  'kpi:savings-rate': [{ sourceId: 'source:cashflow', entityType: 'kpi', entityId: 'savings-rate', field: 'calculatedValue' }],
+  'kpi:fixed-cost-ratio': [{ sourceId: 'source:cashflow', entityType: 'kpi', entityId: 'fixed-cost-ratio', field: 'calculatedValue' }],
+  'kpi:emergency-coverage': [{ sourceId: 'source:cashflow', entityType: 'kpi', entityId: 'emergency-coverage', field: 'calculatedValue' }],
+  'kpi:debt-ratio': [{ sourceId: 'source:cashflow', entityType: 'kpi', entityId: 'debt-ratio', field: 'calculatedValue' }],
+};
+
+const sourceRefCollections = ['incomes', 'accounts', 'assets', 'liabilities', 'budgetBuckets', 'projects', 'risks', 'kpis'] as const;
+
+function withDefaultSourceRefs(snapshot: PersonalCfoSnapshot): PersonalCfoSnapshot {
+  sourceRefCollections.forEach((collection) => {
+    snapshot[collection].forEach((item) => {
+      const refs = defaultSourceRefs[item.id];
+      if (refs) item.sourceRefs = refs;
+    });
+  });
+  return snapshot;
+}
+
+export const personalCfoMockSnapshot: PersonalCfoSnapshot = withDefaultSourceRefs({
+  person: {
+    id: 'person:me',
+    label: '나',
+  },
+  dataSources: [
+    {
+      id: 'source:manual',
+      label: '수동 입력',
+      type: 'manual',
+      description: '오늘은 목업 데이터를 직접 바꾸는 단계입니다.',
+    },
+    {
+      id: 'source:cashflow',
+      label: '현금흐름 데이터',
+      type: 'financeData',
+      description: '나중에 거래/카드/보험/자산 테이블에서 월 소득과 고정비를 가져옵니다.',
+    },
+    {
+      id: 'source:portfolio',
+      label: '포트폴리오 데이터',
+      type: 'portfolioData',
+      description: 'Supabase portfolios의 계좌, 자산, 부채 평가액을 연결합니다.',
+    },
+    {
+      id: 'source:life-todos',
+      label: '할일/프로젝트 데이터',
+      type: 'todoData',
+      description: '부동산 청약과 온라인 석사 준비 프로젝트를 연결합니다.',
+    },
+  ],
+  incomes: [
+    {
+      id: 'income:salary',
+      label: '월급',
+      monthlyAmount: 4_200_000,
+      stabilityScore: 78,
+    },
+  ],
+  accounts: [
+    {
+      id: 'account:portfolio:operating',
+      label: '생활계좌 3개',
+      balance: 1_000_000,
+      liquidityScore: 95,
+      bucketKey: 'operating',
+    },
+    {
+      id: 'account:portfolio:defense',
+      label: '안전자산 계좌 5개',
+      balance: 101_084_176,
+      liquidityScore: 70,
+      bucketKey: 'defense',
+    },
+    {
+      id: 'account:portfolio:housing',
+      label: '청약통장 1개',
+      balance: 10_000_000,
+      liquidityScore: 60,
+      bucketKey: 'housing',
+    },
+    {
+      id: 'account:portfolio:growth',
+      label: '증권계좌 현금 5개',
+      balance: 4_910_842,
+      liquidityScore: 85,
+      bucketKey: 'growth',
+    },
+  ],
+  assets: [
+    {
+      id: 'asset:etf',
+      label: 'ETF 포트폴리오',
+      marketValue: 42_000_000,
+      bucketKey: 'growth',
+      volatilityScore: 52,
+    },
+    {
+      id: 'asset:pension',
+      label: '연금/퇴직 준비',
+      marketValue: 18_000_000,
+      bucketKey: 'growth',
+      volatilityScore: 30,
+    },
+    {
+      id: 'asset:housing-deposit',
+      label: '전월세 보증금',
+      marketValue: 80_000_000,
+      bucketKey: 'housing',
+      volatilityScore: 18,
+    },
+  ],
+  liabilities: [
+    {
+      id: 'liability:portfolio:workplace-loan',
+      label: 'e프리미엄 직장인론',
+      outstandingBalance: 65_000_000,
+      monthlyPayment: 0,
+      interestRate: 0,
+      riskScore: 73,
+    },
+  ],
+  budgetBuckets: [
+    {
+      id: 'operating',
+      label: '운영자금',
+      monthlyAllocation: 1_250_000,
+      currentBalance: 3_200_000,
+      fixedCostAmount: 1_150_000,
+      targetBalance: 4_000_000,
+    },
+    {
+      id: 'defense',
+      label: '방어자금',
+      monthlyAllocation: 300_000,
+      currentBalance: 12_000_000,
+      fixedCostAmount: 180_000,
+      targetBalance: 15_000_000,
+    },
+    {
+      id: 'housing',
+      label: '주거자금',
+      monthlyAllocation: 650_000,
+      currentBalance: 34_000_000,
+      fixedCostAmount: 420_000,
+      targetBalance: 80_000_000,
+    },
+    {
+      id: 'growth',
+      label: '성장자금',
+      monthlyAllocation: 500_000,
+      currentBalance: 64_800_000,
+      fixedCostAmount: 0,
+      targetBalance: 150_000_000,
+    },
+    {
+      id: 'humanCapital',
+      label: '인적자본',
+      monthlyAllocation: 220_000,
+      currentBalance: 1_800_000,
+      fixedCostAmount: 120_000,
+      targetBalance: 6_000_000,
+    },
+    {
+      id: 'experience',
+      label: '경험자금',
+      monthlyAllocation: 180_000,
+      currentBalance: 2_400_000,
+      fixedCostAmount: 0,
+      targetBalance: 5_000_000,
+    },
+  ],
+  projects: [
+    {
+      id: 'project:changneung',
+      label: '부동산 청약 준비',
+      bucketKey: 'housing',
+      status: 'active',
+      monthlyBurn: 650_000,
+      targetAmount: 80_000_000,
+      currentAmount: 34_000_000,
+      strategicImportance: 96,
+      urgency: 82,
+      expectedReturn: 68,
+      riskReduction: 74,
+    },
+    {
+      id: 'project:online-master',
+      label: '온라인 석사 준비',
+      bucketKey: 'humanCapital',
+      status: 'planned',
+      monthlyBurn: 250_000,
+      targetAmount: 12_000_000,
+      currentAmount: 600_000,
+      strategicImportance: 78,
+      urgency: 48,
+      expectedReturn: 76,
+      riskReduction: 44,
+    },
+  ],
+  risks: [
+    {
+      id: 'risk:job-loss',
+      label: '실직/소득 공백',
+      level: 'high',
+      likelihood: 38,
+      impact: 92,
+      exposureAmount: 18_000_000,
+      mitigatedByBucket: 'defense',
+    },
+    {
+      id: 'risk:interest-rate',
+      label: '금리 상승',
+      level: 'medium',
+      likelihood: 45,
+      impact: 70,
+      exposureAmount: 35_000_000,
+      mitigatedByBucket: 'housing',
+    },
+    {
+      id: 'risk:market-drawdown',
+      label: '투자자산 하락',
+      level: 'medium',
+      likelihood: 48,
+      impact: 66,
+      exposureAmount: 60_000_000,
+      mitigatedByBucket: 'growth',
+    },
+    {
+      id: 'risk:health',
+      label: '건강/컨디션 저하',
+      level: 'medium',
+      likelihood: 30,
+      impact: 72,
+      exposureAmount: 8_000_000,
+      mitigatedByBucket: 'defense',
+    },
+    {
+      id: 'risk:liquidity',
+      label: '현금 유동성 부족',
+      level: 'high',
+      likelihood: 42,
+      impact: 86,
+      exposureAmount: 12_000_000,
+      mitigatedByBucket: 'operating',
+    },
+  ],
+  kpis: [
+    {
+      id: 'kpi:net-worth',
+      label: '순자산',
+      currentValue: 0,
+      targetValue: 250_000_000,
+      unit: 'KRW',
+    },
+    {
+      id: 'kpi:savings-rate',
+      label: '저축률',
+      currentValue: 0,
+      targetValue: 35,
+      unit: 'PERCENT',
+    },
+    {
+      id: 'kpi:free-cash-flow',
+      label: '월 잉여현금흐름',
+      currentValue: 0,
+      targetValue: 700_000,
+      unit: 'KRW',
+    },
+    {
+      id: 'kpi:fixed-cost-ratio',
+      label: '고정비율',
+      currentValue: 0,
+      targetValue: 50,
+      unit: 'PERCENT',
+    },
+    {
+      id: 'kpi:emergency-coverage',
+      label: '비상금 커버리지',
+      currentValue: 0,
+      targetValue: 6,
+      unit: 'MONTHS',
+    },
+    {
+      id: 'kpi:debt-ratio',
+      label: '부채비율',
+      currentValue: 0,
+      targetValue: 25,
+      unit: 'PERCENT',
+    },
+  ],
+});

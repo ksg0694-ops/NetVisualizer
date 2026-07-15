@@ -53,17 +53,11 @@
     let pointerDrag = null;
 
     function escapeHtml(value) {
-        return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;',
-        }[ch]));
+        return window.AppUtils.escapeHtml(value);
     }
 
     function escapeAttr(value) {
-        return escapeHtml(value).replace(/`/g, '&#96;');
+        return window.AppUtils.escapeAttr(value);
     }
 
     function toast(message, type = 'info', duration = 1600) {
@@ -242,7 +236,7 @@
         }
         list.innerHTML = titles.map((title, index) => `
             <div data-step-editor-item="${index}" class="flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-700 transition">
-                <button type="button" data-step-editor-drag-handle class="flex h-6 w-5 shrink-0 cursor-grab items-center justify-center text-gray-300 hover:text-gray-600 active:cursor-grabbing" title="Move" aria-label="Move">
+                <button type="button" data-step-editor-drag-handle class="flex h-6 w-5 shrink-0 cursor-grab items-center justify-center text-gray-300 hover:text-gray-600 active:cursor-grabbing" title="스텝 순서 이동" aria-label="스텝 순서 이동">
                     <i class="fas fa-grip-vertical text-xs"></i>
                 </button>
                 <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-white text-[10px] font-bold text-gray-400">${index + 1}</span>
@@ -731,7 +725,7 @@
             }
             if (error) throw error;
             remoteLoaded = true;
-            renderSyncStatus('Cloud saved', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+            renderSyncStatus('서버 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
             return true;
         } catch (error) {
             handleRemoteError(error, 'persistRemoteTask');
@@ -754,7 +748,7 @@
             }
             if (error) throw error;
             remoteLoaded = true;
-            renderSyncStatus('Cloud saved', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+            renderSyncStatus('서버 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
             return true;
         } catch (error) {
             handleRemoteError(error, 'persistAllRemote');
@@ -779,10 +773,10 @@
     async function loadRemoteTasks() {
         const client = getClient();
         if (!client) {
-            renderSyncStatus('Local only', 'text-slate-600 bg-slate-50 border-slate-100');
+            renderSyncStatus('로컬 저장', 'text-slate-600 bg-slate-50 border-slate-100');
             return null;
         }
-        renderSyncStatus('Checking cloud', 'text-sky-600 bg-sky-50 border-sky-100');
+        renderSyncStatus('서버 확인 중', 'text-sky-600 bg-sky-50 border-sky-100');
         try {
             let { data, error } = await client
                 .from(TABLE_NAME)
@@ -806,7 +800,8 @@
             if (localTasks.length > 0) await persistAllRemote();
             remoteLoaded = true;
             render({ skipRemoteLoad: true });
-            renderSyncStatus('Cloud saved', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+            renderSyncStatus('서버 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+            window.LifeDashboardFeature?.render();
             return tasks;
         } catch (error) {
             handleRemoteError(error, 'loadRemoteTasks');
@@ -880,17 +875,17 @@
         const titleClass = task.completed ? 'line-through text-gray-400' : 'text-gray-900';
         const domainBadge = `<span class="shrink-0 font-bold border px-1.5 py-0.5 rounded text-[10px] bg-white/75 ${TONE_CLASSES[domain.tone] || TONE_CLASSES.slate}">${escapeHtml(domain.label)}</span>`;
         const stepBadge = stepSummary.total
-            ? `<span>${stepSummary.done}/${stepSummary.total} step</span>`
+            ? `<span>${stepSummary.done}/${stepSummary.total} 스텝</span>`
             : '';
         return `
             <article data-checklist-open="${escapeAttr(task.id)}" class="group cursor-pointer rounded-md border px-2.5 py-2 transition ${selectedClass} ${doneClass}">
                 <div class="flex min-w-0 items-start gap-2">
-                    <button type="button" data-checklist-drag-handle class="mt-0.5 flex h-6 w-5 shrink-0 cursor-grab items-center justify-center text-gray-400 hover:text-gray-700 active:cursor-grabbing" title="Move" aria-label="Move">
+                    <button type="button" data-checklist-drag-handle class="mt-0.5 flex h-6 w-5 shrink-0 cursor-grab items-center justify-center text-gray-400 hover:text-gray-700 active:cursor-grabbing" title="할 일 순서 이동" aria-label="할 일 순서 이동">
                         <i class="fas fa-grip-vertical text-xs"></i>
                     </button>
                     <input type="checkbox" data-checklist-toggle="${escapeAttr(task.id)}" ${task.completed ? 'checked' : ''} class="mt-0.5 h-4 w-4 rounded border-gray-300 accent-indigo-600 shrink-0">
                     <p class="min-w-0 flex-1 truncate text-[13px] font-bold leading-5 ${titleClass}">${escapeHtml(task.title)}</p>
-                    <button type="button" data-checklist-delete="${escapeAttr(task.id)}" class="-mt-0.5 shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 text-gray-400 hover:text-rose-500 transition px-1 py-0.5" title="Delete">
+                    <button type="button" data-checklist-delete="${escapeAttr(task.id)}" class="-mt-0.5 shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 text-gray-400 hover:text-rose-500 transition px-1 py-0.5" title="삭제" aria-label="${escapeAttr(task.title)} 삭제">
                         <i class="fas fa-trash text-xs"></i>
                     </button>
                 </div>
@@ -911,7 +906,7 @@
         if (visibleTasks.length === 0) {
             list.innerHTML = `
                 <div class="border border-dashed border-gray-200 rounded-lg bg-white px-4 py-8 text-center">
-                    <p class="text-sm font-bold text-gray-700">To do list가 없습니다.</p>
+                    <p class="text-sm font-bold text-gray-700">등록된 할 일이 없습니다.</p>
                     <p class="text-xs text-gray-400 mt-1">지금 떠오른 일을 하나만 남겨두세요.</p>
                 </div>
             `;
@@ -948,9 +943,9 @@
                             <h4 class="text-lg font-black text-gray-900 leading-snug">${escapeHtml(task.title)}</h4>
                             <span class="inline-flex text-[10px] font-bold border px-2 py-0.5 rounded ${TONE_CLASSES[domain.tone] || TONE_CLASSES.slate}">${escapeHtml(domain.label)}</span>
                         </div>
-                        <p class="mt-1 text-[11px] text-gray-400">${escapeHtml(domain.label)} · ${escapeHtml(task.dueDate)} · ${stepSummary.done}/${stepSummary.total} step</p>
+                        <p class="mt-1 text-[11px] text-gray-400">${escapeHtml(domain.label)} · ${escapeHtml(task.dueDate)} · ${stepSummary.done}/${stepSummary.total} 스텝</p>
                     </div>
-                    <button type="button" data-checklist-close-detail class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 hover:text-gray-700" title="Close">
+                    <button type="button" data-checklist-close-detail class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 hover:text-gray-700" title="상세 닫기" aria-label="상세 닫기">
                         <i class="fas fa-xmark text-xs"></i>
                     </button>
                 </div>
@@ -958,7 +953,7 @@
                 <div class="mt-3 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_220px] gap-3">
                     <label class="block">
                         <span class="text-[11px] font-bold text-gray-500">제목</span>
-                        <input id="checklist-detail-title-edit" type="text" value="${escapeAttr(task.title)}" class="mt-1 w-full border border-gray-200 rounded-md px-2.5 py-2 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none bg-white" placeholder="To do">
+                        <input id="checklist-detail-title-edit" type="text" value="${escapeAttr(task.title)}" class="mt-1 w-full border border-gray-200 rounded-md px-2.5 py-2 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none bg-white" placeholder="할 일">
                     </label>
 
                     <div class="grid grid-cols-2 gap-2">
@@ -982,13 +977,13 @@
 
                         <div>
                             <div class="block">
-                                <span class="text-[11px] font-bold text-gray-500">스텝 / Sub tasks</span>
+                                <span class="text-[11px] font-bold text-gray-500">스텝 / 하위 할 일</span>
                                 <div class="mt-1">${renderStepEditor('checklist-detail-steps-edit', stepsToText(task.steps))}</div>
                             </div>
                             <div class="mt-2 space-y-1.5">
                                 ${task.steps.length ? task.steps.map((step, index) => `
                                     <div data-checklist-step-item="${escapeAttr(task.id)}" data-checklist-step-index="${index}" class="flex items-start gap-2 rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-700 transition">
-                                        <button type="button" data-checklist-step-drag-handle class="mt-0.5 flex h-5 w-5 shrink-0 cursor-grab items-center justify-center text-gray-300 hover:text-gray-600 active:cursor-grabbing" title="Move" aria-label="Move">
+                                        <button type="button" data-checklist-step-drag-handle class="mt-0.5 flex h-5 w-5 shrink-0 cursor-grab items-center justify-center text-gray-300 hover:text-gray-600 active:cursor-grabbing" title="순서 이동" aria-label="하위 할 일 순서 이동">
                                             <i class="fas fa-grip-vertical text-xs"></i>
                                         </button>
                                         <input type="checkbox" data-checklist-step-toggle="${escapeAttr(task.id)}" data-step-id="${escapeAttr(step.id)}" ${step.done ? 'checked' : ''} class="mt-0.5 h-3.5 w-3.5 accent-indigo-600 shrink-0">
@@ -1030,7 +1025,7 @@
         if (domainsEl) {
             const allActive = activeDomain === 'all';
             domainsEl.innerHTML = `
-                <button type="button" data-checklist-domain="all" class="px-2.5 py-1.5 rounded-md text-[11px] font-bold border transition ${allActive ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}">All</button>
+                <button type="button" data-checklist-domain="all" class="px-2.5 py-1.5 rounded-md text-[11px] font-bold border transition ${allActive ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}">전체</button>
                 ${DOMAINS.map(renderDomainButton).join('')}
             `;
         }
@@ -1043,18 +1038,18 @@
         root.innerHTML = `
             <div class="mb-3 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
                 <div>
-                    <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Life Tool</p>
-                    <h2 class="text-xl md:text-2xl font-bold text-gray-900">To do list</h2>
-                    <p class="text-xs text-gray-500 mt-1">메모와 스텝까지 정리하는 개인 To do list.</p>
+                    <p class="text-[10px] md:text-xs font-bold text-indigo-500 mb-1">생활 도구</p>
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-900">할 일 보드</h2>
+                    <p class="text-xs text-gray-500 mt-1">메모와 하위 할 일까지 한곳에서 정리합니다.</p>
                 </div>
-                <span id="checklist-sync-badge" class="text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-md whitespace-nowrap w-fit">Local only</span>
+                <span id="checklist-sync-badge" class="text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-md whitespace-nowrap w-fit">로컬 저장</span>
             </div>
 
             <div class="space-y-2.5 md:space-y-3 mb-8">
                 <section class="bg-white p-2.5 md:p-3 rounded-lg border border-gray-100 min-w-0">
                     <div class="flex flex-col gap-2 mb-2.5">
                         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                            <h3 class="text-sm font-bold text-gray-900">Board</h3>
+                            <h3 class="text-sm font-bold text-gray-900">할 일 목록</h3>
                             <div class="flex flex-wrap items-center gap-1.5">
                                 <div id="checklist-filters" class="flex flex-wrap gap-1.5"></div>
                                 <div id="checklist-add-panel"></div>
@@ -1082,20 +1077,20 @@
         const panel = document.getElementById('checklist-add-panel');
         if (!panel) return;
         panel.innerHTML = `
-            <button type="button" data-checklist-toggle-add-form class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm" title="To do list 추가" aria-label="To do list 추가">
+            <button type="button" data-checklist-toggle-add-form class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm" title="할 일 추가" aria-label="할 일 추가">
                 <i class="fas fa-plus text-[11px]"></i>
             </button>
             ${isAddFormOpen ? `
                 <div data-checklist-close-add-form class="fixed inset-0 z-50 flex items-start justify-center bg-gray-950/30 px-4 py-8 backdrop-blur-[1px]">
-                    <div id="checklist-add-form" class="mt-8 w-full max-w-xl rounded-lg border border-gray-200 bg-white shadow-2xl" role="dialog" aria-modal="true" aria-label="새 To do 추가" data-checklist-dialog>
+                    <div id="checklist-add-form" class="mt-8 w-full max-w-xl rounded-lg border border-gray-200 bg-white shadow-2xl" role="dialog" aria-modal="true" aria-label="새 할 일 추가" data-checklist-dialog>
                         <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-                            <p class="text-sm font-black text-gray-900">새 To do</p>
-                            <button type="button" data-checklist-close-add-form class="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="Close">
+                            <p class="text-sm font-black text-gray-900">새 할 일</p>
+                            <button type="button" data-checklist-close-add-form class="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="닫기" aria-label="새 할 일 창 닫기">
                                 <i class="fas fa-xmark text-sm"></i>
                             </button>
                         </div>
                         <div class="space-y-3 px-4 py-4">
-                            <input id="checklist-title-input" type="text" class="w-full border-0 border-b border-gray-200 px-0 py-2 text-lg font-bold focus:border-indigo-500 focus:ring-0 outline-none" placeholder="To do 제목">
+                            <input id="checklist-title-input" type="text" class="w-full border-0 border-b border-gray-200 px-0 py-2 text-lg font-bold focus:border-indigo-500 focus:ring-0 outline-none" placeholder="할 일 제목">
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 <label class="block sm:col-span-1">
@@ -1142,7 +1137,7 @@
         hydrateStepEditors();
         if (isAddFormOpen) document.getElementById('checklist-title-input')?.focus();
         if (remoteAvailable) {
-            if (remoteLoaded) renderSyncStatus('Cloud saved', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+            if (remoteLoaded) renderSyncStatus('서버 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
             else if (getClient()) renderSyncStatus('Checking cloud', 'text-sky-600 bg-sky-50 border-sky-100');
             else renderSyncStatus('Local only', 'text-slate-600 bg-slate-50 border-slate-100');
         }
@@ -1165,7 +1160,7 @@
             displayOrder: getTopDisplayOrder(),
         });
         if (!task) {
-            toast('To do를 입력해주세요.', 'warning');
+            toast('할 일을 입력해주세요.', 'warning');
             return;
         }
         tasks = saveStore([task, ...tasks]);
@@ -1176,7 +1171,7 @@
         if (titleEl) titleEl.value = '';
         if (noteEl) noteEl.value = '';
         if (stepsEl) stepsEl.value = '';
-        toast('To do를 추가했습니다.', 'info');
+        toast('할 일을 추가했습니다.', 'info');
     }
 
     async function toggleTask(id) {
@@ -1214,7 +1209,7 @@
         const stepsEl = document.getElementById('checklist-detail-steps-edit');
         const title = String(titleEl?.value || '').trim();
         if (!title) {
-            toast('To do 제목을 입력해주세요.', 'warning');
+            toast('할 일 제목을 입력해주세요.', 'warning');
             return;
         }
         task.title = title;
@@ -1227,7 +1222,7 @@
         tasks = saveStore(tasks);
         render({ skipRemoteLoad: true });
         await persistRemoteTask(task);
-        toast('To do를 수정했습니다.', 'info');
+        toast('할 일을 수정했습니다.', 'info');
     }
 
     async function deleteTask(id) {
@@ -1508,5 +1503,35 @@
     window.ChecklistFeature = {
         bindControls,
         render,
+        getDashboardSnapshot: () => {
+            const sourceTasks = getStore();
+            const today = todayString();
+            const openTasks = sourceTasks.filter((task) => !task.completed);
+            const dueToday = openTasks.filter((task) => task.dueDate === today).length;
+            const overdue = openTasks.filter((task) => task.dueDate < today).length;
+            return {
+                open: openTasks.length,
+                dueToday,
+                overdue,
+                tasks: openTasks
+                    .slice()
+                    .sort(fallbackTaskCompare)
+                    .slice(0, 5)
+                    .map((task) => ({
+                        id: task.id,
+                        title: task.title,
+                        dueDate: task.dueDate,
+                        domain: task.domain,
+                        domainLabel: getDomain(task.domain).label,
+                        priority: task.priority,
+                    })),
+            };
+        },
+        selectTask: (taskId) => {
+            activeTaskId = String(taskId || '');
+            activeFilter = 'all';
+            render({ skipRemoteLoad: true });
+        },
+        refresh: queueRemoteLoad,
     };
 })(window);

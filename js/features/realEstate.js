@@ -152,9 +152,19 @@
         });
     }
 
-    function renderRealEstate() {
+    async function renderRealEstate() {
         const subscriptionSites = getRealEstateSubscriptionSites();
         renderRealEstateScheduleCards(subscriptionSites);
+
+        try {
+            await window.AppAssets.ensureLeaflet();
+        } catch (error) {
+            console.warn('Leaflet runtime load failed', error);
+            const map = document.getElementById('realestate-map');
+            if (map) map.innerHTML = '<div class="h-full flex items-center justify-center px-4 text-center text-sm text-gray-500">지도를 불러오지 못했습니다. 분양 일정과 자금 분석은 계속 사용할 수 있습니다.</div>';
+            if (typeof renderRealEstateAnalysis === 'function') renderRealEstateAnalysis();
+            return;
+        }
 
         if (!window.reMap) {
             window.reMap = L.map('realestate-map').setView([37.6254, 126.8687], 13);
