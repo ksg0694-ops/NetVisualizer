@@ -113,6 +113,12 @@ export function getBucketFundingProgress(bucket: PersonalCfoBudgetBucket): numbe
 }
 
 export function buildPersonalCfoKpiSummary(snapshot: PersonalCfoSnapshot) {
+  const savingPlanBuckets = snapshot.budgetBuckets.filter((bucket) =>
+    ['defense', 'housing', 'growth', 'humanCapital'].includes(bucket.id),
+  );
+  const emergencyPlanBuckets = snapshot.budgetBuckets.filter((bucket) =>
+    ['operating', 'defense', 'housing'].includes(bucket.id),
+  );
   return {
     totalAssets: calculateTotalAssets(snapshot),
     totalLiabilities: calculateTotalLiabilities(snapshot),
@@ -124,5 +130,11 @@ export function buildPersonalCfoKpiSummary(snapshot: PersonalCfoSnapshot) {
     emergencyCoverageMonths: calculateEmergencyCoverageMonths(snapshot),
     projectBurnRate: calculateProjectBurnRate(snapshot),
     cashFlowReviewStatus: snapshot.cashFlow?.reviewStatus || 'unconfirmed',
+    hasSavingsPlan: savingPlanBuckets.length > 0,
+    hasEmergencyPlan: emergencyPlanBuckets.length > 0,
+    hasPlanningData: snapshot.budgetBuckets.length > 0
+      || snapshot.projects.length > 0
+      || snapshot.risks.length > 0
+      || snapshot.kpis.length > 0,
   };
 }

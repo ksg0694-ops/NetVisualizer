@@ -1,5 +1,5 @@
 export * from './types';
-export * from './mockData';
+export * from './snapshot';
 export * from './calculations';
 export * from './cashFlowAdapter';
 export * from './graphBuilder';

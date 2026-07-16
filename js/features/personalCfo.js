@@ -1,21 +1,13 @@
 (function (window) {
     const TABLE_NAME = 'personal_cfo_snapshots';
-    const STORAGE_KEY = 'netvisualizer.personalCfo.snapshot.v2';
+    const STORAGE_KEY = 'netvisualizer.personalCfo.snapshot.v3';
+    const LEGACY_STORAGE_KEY = 'netvisualizer.personalCfo.snapshot.v2';
     const SNAPSHOT_KEY = 'default';
-    const SCHEMA_VERSION = 2;
-    const visibleProjectIds = new Set(['project:changneung', 'project:online-master']);
-    const legacyMockAccountIds = new Set(['account:payroll', 'account:emergency', 'account:housing', 'account:brokerage']);
-    const legacyMockLiabilityIds = new Set(['liability:credit-card', 'liability:housing-loan']);
+    const SCHEMA_VERSION = 3;
     const domain = window.PersonalCfoDomain;
     if (!domain) throw new Error('PersonalCfoDomain runtime is not loaded. Run npm run build:cfo-runtime.');
 
-    const defaultSnapshot = domain.personalCfoMockSnapshot;
-    if (!defaultSnapshot) throw new Error('Personal CFO mock snapshot is missing from the TypeScript runtime.');
-    const defaultItemById = new Map(
-        ['incomes', 'accounts', 'assets', 'liabilities', 'budgetBuckets', 'projects', 'risks', 'kpis']
-            .flatMap((collection) => defaultSnapshot[collection] || [])
-            .map((item) => [item.id, item])
-    );
+    const emptySnapshot = domain.createEmptyPersonalCfoSnapshot();
 
     let currentSnapshot;
     let remoteAvailable = true;
@@ -97,59 +89,28 @@
     }
 
     function cloneSnapshot(value) {
-        return JSON.parse(JSON.stringify(value || defaultSnapshot));
+        return JSON.parse(JSON.stringify(value ?? emptySnapshot));
     }
 
-    function usesOnlyLegacyIds(items, legacyIds) {
-        return items.length > 0 && items.every((item) => legacyIds.has(item?.id));
-    }
-
-    function normalizeSnapshot(raw) {
-        const source = raw && typeof raw === 'object' ? raw : {};
-        const fallback = defaultSnapshot;
-        const sourceAccounts = Array.isArray(source.accounts) ? source.accounts : cloneSnapshot(fallback).accounts;
-        const sourceLiabilities = Array.isArray(source.liabilities) ? source.liabilities : cloneSnapshot(fallback).liabilities;
-        const normalized = {
-            person: source.person && typeof source.person === 'object'
-                ? { id: String(source.person.id || fallback.person.id), label: String(source.person.label || fallback.person.label) }
-                : cloneSnapshot(fallback).person,
-            dataSources: Array.isArray(source.dataSources) ? source.dataSources : cloneSnapshot(fallback).dataSources,
-            incomes: Array.isArray(source.incomes) ? source.incomes : cloneSnapshot(fallback).incomes,
-            accounts: usesOnlyLegacyIds(sourceAccounts, legacyMockAccountIds)
-                ? cloneSnapshot(fallback).accounts
-                : sourceAccounts,
-            assets: Array.isArray(source.assets) ? source.assets : cloneSnapshot(fallback).assets,
-            liabilities: usesOnlyLegacyIds(sourceLiabilities, legacyMockLiabilityIds)
-                ? cloneSnapshot(fallback).liabilities
-                : sourceLiabilities,
-            budgetBuckets: Array.isArray(source.budgetBuckets) ? source.budgetBuckets : cloneSnapshot(fallback).budgetBuckets,
-            projects: (Array.isArray(source.projects) ? source.projects : cloneSnapshot(fallback).projects)
-                .filter((project) => visibleProjectIds.has(project?.id)),
-            risks: Array.isArray(source.risks) ? source.risks : cloneSnapshot(fallback).risks,
-            kpis: Array.isArray(source.kpis) ? source.kpis : cloneSnapshot(fallback).kpis,
-        };
-        if (normalized.person.id === defaultSnapshot.person.id) normalized.person.label = defaultSnapshot.person.label;
-        ['incomes', 'accounts', 'assets', 'liabilities', 'budgetBuckets', 'projects', 'risks', 'kpis'].forEach((collection) => {
-            normalized[collection].forEach((item) => {
-                const defaultItem = defaultItemById.get(item.id) || defaultItemById.get(item.id?.replace('bucket:', ''));
-                item.label = defaultItem?.label || item.label;
-                const defaultRefs = defaultItem?.sourceRefs;
-                if ((!Array.isArray(item.sourceRefs) || item.sourceRefs.length === 0) && defaultRefs) {
-                    item.sourceRefs = cloneSnapshot(defaultRefs);
-                }
-            });
-        });
-        return normalized;
+    function normalizeSnapshot(raw, schemaVersion = SCHEMA_VERSION) {
+        return domain.normalizePersonalCfoPlanSnapshot(raw, schemaVersion);
     }
 
     function getStore() {
         try {
-            const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-            if (parsed && typeof parsed === 'object') return normalizeSnapshot(parsed);
+            const current = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+            if (current && typeof current === 'object') return normalizeSnapshot(current);
+            const legacy = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) || 'null');
+            if (legacy && typeof legacy === 'object') {
+                const migrated = normalizeSnapshot(legacy, 2);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+                localStorage.removeItem(LEGACY_STORAGE_KEY);
+                return migrated;
+            }
         } catch (error) {
             console.warn('Personal CFO storage parse failed', error);
         }
-        return normalizeSnapshot(defaultSnapshot);
+        return normalizeSnapshot(emptySnapshot);
     }
 
     currentSnapshot = getStore();
@@ -276,7 +237,11 @@
     }
 
     function fromRemoteRow(row) {
-        return normalizeSnapshot(row?.snapshot);
+        const schemaVersion = Number(row?.schema_version || 0);
+        return {
+            snapshot: normalizeSnapshot(row?.snapshot, schemaVersion),
+            needsMigration: schemaVersion < SCHEMA_VERSION,
+        };
     }
 
     async function persistRemoteSnapshot(nextSnapshot = currentSnapshot, options = {}) {
@@ -320,10 +285,12 @@
             if (error) throw error;
             const row = Array.isArray(data) ? data[0] : null;
             if (row?.snapshot) {
-                currentSnapshot = saveStore(fromRemoteRow(row));
+                const remoteSnapshot = fromRemoteRow(row);
+                currentSnapshot = saveStore(remoteSnapshot.snapshot);
                 remoteLoaded = true;
                 render({ skipRemoteLoad: true });
-                renderSyncStatus('클라우드 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+                if (remoteSnapshot.needsMigration) await persistRemoteSnapshot(currentSnapshot);
+                else renderSyncStatus('클라우드 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
                 return currentSnapshot;
             }
             await persistRemoteSnapshot(currentSnapshot);
@@ -380,9 +347,9 @@
         const cards = [
             { label: '순자산', value: formatKrw(summary.netWorth), sub: `총자산 ${formatKrw(summary.totalAssets)}`, tone: 'slate', basis: 'actual' },
             { label: '종료월 잉여현금', value: formatKrw(summary.monthlyFreeCashFlow), sub: `수입-지출 · ${cashFlowReviewLabel}`, tone: summary.monthlyFreeCashFlow >= 0 ? 'emerald' : 'rose', basis: 'actual' },
-            { label: '계획 저축률', value: formatPercent(summary.savingsRate), sub: '계획 배분 / 마감월 수입', tone: 'emerald', basis: 'plan' },
+            { label: '계획 저축률', value: summary.hasSavingsPlan ? formatPercent(summary.savingsRate) : '-', sub: summary.hasSavingsPlan ? '계획 배분 / 종료월 수입' : '자금 배분 계획 없음', tone: summary.hasSavingsPlan ? 'emerald' : 'slate', basis: summary.hasSavingsPlan ? 'plan' : 'unset' },
             { label: '고정비·상환율', value: formatPercent(summary.fixedCostRatio), sub: '고정비+부채상환 / 수입', tone: summary.fixedCostRatio <= 50 ? 'sky' : 'amber', basis: 'actual' },
-            { label: '비상금 커버리지', value: formatMonths(summary.emergencyCoverageMonths), sub: '계획 방어자금 기준 유지 기간', tone: summary.emergencyCoverageMonths >= 6 ? 'emerald' : 'amber', basis: 'plan' },
+            { label: '비상금 커버리지', value: summary.hasEmergencyPlan ? formatMonths(summary.emergencyCoverageMonths) : '-', sub: summary.hasEmergencyPlan ? '계획 방어자금 기준 유지 기간' : '방어자금 계획 없음', tone: summary.hasEmergencyPlan && summary.emergencyCoverageMonths >= 6 ? 'emerald' : summary.hasEmergencyPlan ? 'amber' : 'slate', basis: summary.hasEmergencyPlan ? 'plan' : 'unset' },
             { label: '부채비율', value: formatPercent(summary.debtRatio), sub: `총부채 ${formatKrw(summary.totalLiabilities)}`, tone: summary.debtRatio <= 25 ? 'emerald' : 'rose', basis: 'actual' },
         ];
         const valueClasses = {
@@ -395,12 +362,13 @@
         const basisClasses = {
             actual: 'border-emerald-100 bg-emerald-50 text-emerald-700',
             plan: 'border-amber-100 bg-amber-50 text-amber-700',
+            unset: 'border-gray-200 bg-gray-50 text-gray-500',
         };
         return cards.map((card) => `
             <article class="rounded-lg border bg-white p-3 shadow-sm min-w-0">
                 <div class="flex items-center justify-between gap-2">
                     <p class="text-[11px] font-bold text-gray-500">${escapeHtml(card.label)}</p>
-                    <span class="rounded border px-1.5 py-0.5 text-[9px] font-bold ${basisClasses[card.basis]}">${card.basis === 'plan' ? '계획' : '실제'}</span>
+                    <span class="rounded border px-1.5 py-0.5 text-[9px] font-bold ${basisClasses[card.basis]}">${card.basis === 'plan' ? '계획' : card.basis === 'unset' ? '미설정' : '실제'}</span>
                 </div>
                 <p class="mt-2 text-lg md:text-xl font-bold leading-tight ${valueClasses[card.tone] || valueClasses.slate}">${escapeHtml(card.value)}</p>
                 <p class="mt-1 text-[11px] text-gray-400 truncate">${escapeHtml(card.sub)}</p>
@@ -502,6 +470,9 @@
         const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
         const modeMeta = graphModeMeta[graph.mode] || graphModeMeta.cashFlow;
         const visibleTypes = new Set(graph.nodes.map((node) => node.type));
+        const emptyMessage = graph.nodes.length <= 1
+            ? (graph.mode === 'strategy' ? '등록된 계획 데이터가 없습니다.' : '표시할 실제 재무 데이터가 없습니다.')
+            : '';
         return `
             <section class="hidden md:block rounded-lg border border-gray-200 bg-white p-3 md:p-4 shadow-sm">
                 <div class="mb-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -526,7 +497,9 @@
                         `).join('')}
                 </div>
                 <div class="overflow-x-auto rounded-lg border border-gray-100 bg-gray-50">
-                    <svg viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="xMinYMin meet" role="img" aria-label="${escapeAttr(modeMeta.title)}" class="min-w-[900px] w-full h-auto" style="aspect-ratio:${graph.width}/${graph.height}">
+                    ${emptyMessage ? `
+                        <div class="flex min-h-48 items-center justify-center px-4 text-sm font-semibold text-gray-400">${escapeHtml(emptyMessage)}</div>
+                    ` : `<svg viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="xMinYMin meet" role="img" aria-label="${escapeAttr(modeMeta.title)}" class="min-w-[900px] w-full h-auto" style="aspect-ratio:${graph.width}/${graph.height}">
                         <defs>
                             <marker id="personal-cfo-arrow" markerWidth="10" markerHeight="10" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
                                 <path d="M0,0 L0,8 L9,4 z" fill="#94a3b8"></path>
@@ -542,7 +515,7 @@
                         ${renderGraphGuides(graph)}
                         ${graph.edges.map((edge) => renderGraphEdge(edge, nodeById)).join('')}
                         ${graph.nodes.map(renderGraphNode).join('')}
-                    </svg>
+                    </svg>`}
                 </div>
             </section>
         `;
@@ -558,11 +531,21 @@
             amount: item.outstandingBalance,
             type: '부채',
         }));
-        const allocationRows = nextSnapshot.budgetBuckets.map((item) => ({
-            label: item.label,
-            amount: nextSnapshot.cashFlow?.bucketOutflows?.[item.id] ?? item.monthlyAllocation,
-            type: nextSnapshot.cashFlow ? '마감월 실제' : '월 계획',
-        }));
+        const actualAllocationRows = nextSnapshot.cashFlow
+            ? Object.entries(nextSnapshot.cashFlow.bucketOutflows || {})
+                .filter(([, amount]) => Number(amount) > 0)
+                .map(([key, amount]) => ({ label: bucketLabels[key] || key, amount, type: '종료월 실제' }))
+            : [];
+        if (nextSnapshot.cashFlow?.debtRepayment > 0) {
+            actualAllocationRows.push({ label: '부채 상환', amount: nextSnapshot.cashFlow.debtRepayment, type: '종료월 실제' });
+        }
+        const allocationRows = nextSnapshot.cashFlow
+            ? actualAllocationRows
+            : nextSnapshot.budgetBuckets.map((item) => ({
+                label: item.label,
+                amount: item.monthlyAllocation,
+                type: '월 계획',
+            }));
         const renderRows = (rows, amountClass = 'text-gray-900') => rows.map((row) => `
             <div class="flex items-center justify-between gap-3 border-b border-gray-100 py-2.5 last:border-b-0">
                 <div class="min-w-0">
@@ -582,7 +565,7 @@
                 <div class="divide-y-4 divide-gray-50">
                     <div class="py-2">
                         <p class="mb-1 text-[11px] font-bold text-indigo-600">자산</p>
-                        ${renderRows(assetRows)}
+                        ${assetRows.length ? renderRows(assetRows) : '<p class="py-3 text-sm text-gray-400">등록된 자산이 없습니다.</p>'}
                     </div>
                     <div class="py-2">
                         <p class="mb-1 text-[11px] font-bold text-rose-600">부채</p>
@@ -590,7 +573,7 @@
                     </div>
                     <div class="py-2">
                         <p class="mb-1 text-[11px] font-bold text-emerald-600">${escapeHtml(nextSnapshot.cashFlow ? `${nextSnapshot.cashFlow.periodLabel} 실제 지출·저축` : '월 자금 배분 계획')}</p>
-                        ${renderRows(allocationRows, 'text-emerald-700')}
+                        ${allocationRows.length ? renderRows(allocationRows, 'text-emerald-700') : '<p class="py-3 text-sm text-gray-400">표시할 흐름이 없습니다.</p>'}
                     </div>
                 </div>
             </section>
@@ -598,6 +581,9 @@
     }
 
     function renderProjectRows(projects) {
+        if (!projects.length) {
+            return '<tr><td colspan="4" class="px-3 py-10 text-center text-sm font-semibold text-gray-400">등록된 프로젝트 계획이 없습니다.</td></tr>';
+        }
         return projects.map((project) => {
             const progress = formatProgress(project.currentAmount, project.targetAmount);
             const fundingGap = Math.max(0, project.targetAmount - project.currentAmount);
@@ -628,6 +614,9 @@
     }
 
     function renderRiskRows(risks) {
+        if (!risks.length) {
+            return '<tr><td colspan="4" class="px-3 py-10 text-center text-sm font-semibold text-gray-400">등록된 리스크 계획이 없습니다.</td></tr>';
+        }
         const levelClasses = {
             low: 'text-emerald-700 bg-emerald-50 border-emerald-100',
             medium: 'text-amber-700 bg-amber-50 border-amber-100',
@@ -661,6 +650,13 @@
 
 
     function renderTables(model) {
+        if (!model.projectsByPriority.length && !model.risksByScore.length) {
+            return `
+                <section class="border-t border-gray-200 py-6 text-center">
+                    <p class="text-sm font-semibold text-gray-400">등록된 프로젝트·리스크 계획이 없습니다.</p>
+                </section>
+            `;
+        }
         return `
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 <section class="rounded-lg border border-gray-200 bg-white p-3 md:p-4 shadow-sm min-w-0">
@@ -685,7 +681,7 @@
                 <section class="rounded-lg border border-gray-200 bg-white p-3 md:p-4 shadow-sm min-w-0">
                     <div class="mb-3 flex items-center justify-between gap-3">
                         <h3 class="text-base font-bold text-gray-900">리스크 대시보드</h3>
-                        <span class="rounded-md bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700">계획 점수순</span>
+                        <span class="rounded-md bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700">계획 ${model.risksByScore.length}개</span>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full min-w-[520px] text-left">
@@ -713,16 +709,22 @@
         const officialSnapshot = typeof getOfficialFinanceSnapshot === 'function' ? getOfficialFinanceSnapshot() : null;
         const dataBadge = portfolioOverlay.hasPortfolioData
             ? `${window.FinanceModel.getSourceBadge(officialSnapshot)} · 자산 ${portfolioOverlay.accountItemCount + portfolioOverlay.assetItemCount}개 · 부채 ${portfolioOverlay.liabilityItemCount}개`
-            : '계좌·부채 기준 데이터';
+            : '포트폴리오 데이터 없음';
         const dataBadgeClasses = portfolioOverlay.hasPortfolioData
             ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
             : 'border-gray-200 bg-white text-gray-600';
+        const planningBadge = model.summary.hasPlanningData
+            ? '계획 · 자금 바구니·프로젝트·리스크'
+            : '계획 데이터 없음';
+        const planningBadgeClasses = model.summary.hasPlanningData
+            ? 'border-amber-100 bg-amber-50 text-amber-700'
+            : 'border-gray-200 bg-gray-50 text-gray-500';
         root.innerHTML = `
             <div class="mb-3 flex items-center justify-end gap-2">
                 <div class="flex flex-wrap justify-end gap-2">
                     <span id="personal-cfo-sync-badge" class="rounded-md border px-2.5 py-1.5 text-[11px] font-bold ${syncStatusClasses}">${escapeHtml(syncStatusText)}</span>
                     <span class="rounded-md border px-2.5 py-1.5 text-[11px] font-bold ${dataBadgeClasses}">실제 · ${escapeHtml(dataBadge)}</span>
-                    <span class="rounded-md border border-amber-100 bg-amber-50 px-2.5 py-1.5 text-[11px] font-bold text-amber-700">계획 · 자금 바구니·프로젝트·리스크</span>
+                    <span class="rounded-md border px-2.5 py-1.5 text-[11px] font-bold ${planningBadgeClasses}">${escapeHtml(planningBadge)}</span>
                 </div>
             </div>
             <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-4">

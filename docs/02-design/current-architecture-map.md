@@ -7,6 +7,12 @@ Branch: `main` (working tree)
 
 This document maps the current NetVisualizer structure before any architecture redesign. It describes what exists today, not the desired future shape.
 
+## 2026-07-17 Personal CFO Actual Source Boundary
+
+Personal CFO no longer starts from seed data. `snapshot.ts` creates an empty baseline and normalizes the persisted schema v3 plan snapshot. Accounts, assets, liabilities, income, and cash flow are excluded from plan persistence and are rebuilt from FinanceRepository portfolio rows and payday-period transactions on every render.
+
+Legacy schema v2 snapshots are migrated on read. Known seed buckets, projects, risks, and KPI targets are removed while user-defined plan IDs are preserved. Planning KPIs and strategy views show an explicit unset state until real user plan settings exist.
+
 ## 2026-07-17 Monthly CFO Close Boundary
 
 Cash Flow now has an explicit monthly review and close boundary. `transactions` remains the immutable source ledger for this workflow; user corrections are stored as per-period overlays in `finance_month_closes`. Draft corrections are visible only in the selected Cash Flow review. Finance Home and Personal CFO use classifications only when the close is explicitly confirmed and its source revision still matches the source transactions.
@@ -35,7 +41,7 @@ The app still runs as a static classic-JavaScript PWA, but the first high-risk s
 | Finance period domain | `src/features/finance/paydayAccounting.ts` -> `js/generated/personal-cfo-domain.js` | Owns payday overrides, weekend fallback, and accounting-period boundaries. `appCore.js` only delegates. |
 | Monthly CFO close domain | `src/features/finance/monthlyClose.ts` -> `js/generated/personal-cfo-domain.js` | Owns classification overlays, source revision, close/reopen rules, and confirmed applicability. |
 | Monthly CFO close UI | `js/features/monthlyClose.js` | Owns review controls, pagination, local fallback, and close-state interaction; repository owns cloud writes. |
-| Personal CFO domain | `src/features/personal-cfo/` -> `js/generated/personal-cfo-domain.js` | Owns types, mock defaults, portfolio/cash-flow adapters, calculations, scoring, and three graph builders. |
+| Personal CFO domain | `src/features/personal-cfo/` -> `js/generated/personal-cfo-domain.js` | Owns the empty baseline, schema v3 plan normalization, portfolio/cash-flow adapters, calculations, scoring, and three graph builders. |
 | Personal CFO renderer | `js/features/personalCfo.js` | Owns DOM/SVG rendering, local/remote snapshot persistence, and graph-mode interaction. It must not duplicate domain calculations. |
 | Life Today dashboard | `js/features/lifeDashboard.js` | Reads public snapshots from Checklist and Health only. CFO projects remain inside Finance. |
 | Todo and Health persistence | `js/features/checklist.js`, `js/features/healthTracker.js` | Feature modules own their local/server state and expose read-only dashboard snapshots. |
@@ -59,7 +65,7 @@ flowchart LR
     Repository --> PortfolioAdapter["portfolioAdapter.ts"]
     Payday["finance/paydayAccounting.ts\noverrides + boundaries"] --> PeriodState["payday accounting periods"]
     PeriodState --> CashFlowAdapter["cashFlowAdapter.ts"]
-    Mock["mockData.ts\nplans, projects, risks"] --> Snapshot["PersonalCfoSnapshot"]
+    Empty["snapshot.ts\nempty baseline + plan v3"] --> Snapshot["PersonalCfoSnapshot"]
     PortfolioAdapter --> Snapshot
     CashFlowAdapter --> Snapshot
     Snapshot --> Calculations["calculations.ts"]
@@ -74,7 +80,7 @@ The graph has three explicit modes:
 | --- | --- | --- |
 | `balanceSheet` | Current portfolio balances | Default view. Account, asset, and liability stocks contribute to or reduce net worth. Income flows are excluded. |
 | `cashFlow` | Latest closed payday period | Income is allocated to actual expense/saving buckets, debt repayment, and residual cash. Open periods are excluded. |
-| `strategy` | Manual plan snapshot | Budget buckets fund two projects and hedge risks. It is a planning model, not a statement of actual balances. |
+| `strategy` | User plan snapshot | User-defined budget buckets fund projects and hedge risks. It remains empty until a plan is explicitly saved. |
 
 Every desktop graph uses explicit vertical columns. The first node in each column shares a `y=92` top line. Edges use the node-center port and one shared middle axis; collision-avoidance fan offsets are intentionally disabled, so related arrows may overlap before branching. Column headings and subtle guide lines remain part of the SVG contract.
 

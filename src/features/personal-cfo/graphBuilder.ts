@@ -25,6 +25,17 @@ const bucketNodeByKey: Record<BudgetBucketKey, string> = {
   experience: 'bucket:experience',
 };
 
+const cashFlowBucketMeta: Record<BudgetBucketKey, string> = {
+  operating: '운영자금',
+  defense: '방어자금',
+  housing: '주거자금',
+  growth: '성장자금',
+  humanCapital: '인적자본',
+  experience: '경험자금',
+};
+
+const cashFlowBucketOrder = Object.keys(cashFlowBucketMeta) as BudgetBucketKey[];
+
 function amountToNodeSize(amount = 0): number {
   if (amount <= 0) return 18;
   return Math.round(Math.min(30, 12 + Math.log10(amount) * 2.25));
@@ -67,7 +78,15 @@ function makeEdge(
 function buildCashFlowGraph(snapshot: PersonalCfoSnapshot): PersonalCfoGraph {
   const nodes: PersonalCfoGraphNode[] = [];
   const edges: PersonalCfoGraphEdge[] = [];
-  const bucketAmounts = snapshot.cashFlow?.bucketOutflows;
+  const outflowBuckets = snapshot.cashFlow
+    ? cashFlowBucketOrder
+      .map((id) => ({ id, label: cashFlowBucketMeta[id], amount: snapshot.cashFlow?.bucketOutflows[id] || 0 }))
+      .filter((bucket) => bucket.amount > 0)
+    : snapshot.budgetBuckets.map((bucket) => ({
+      id: bucket.id,
+      label: bucket.label,
+      amount: bucket.monthlyAllocation,
+    }));
   const outflowX = 790;
   const topY = 92;
   const bucketStartY = topY;
@@ -94,8 +113,8 @@ function buildCashFlowGraph(snapshot: PersonalCfoSnapshot): PersonalCfoGraph {
     edges.push(makeEdge(`edge:${income.id}:person`, income.id, snapshot.person.id, 'FLOWS_TO', income.monthlyAmount));
   });
 
-  snapshot.budgetBuckets.forEach((bucket, index) => {
-    const amount = bucketAmounts ? bucketAmounts[bucket.id] : bucket.monthlyAllocation;
+  outflowBuckets.forEach((bucket, index) => {
+    const amount = bucket.amount;
     nodes.push(makeNode({
       id: bucketNodeByKey[bucket.id],
       label: bucket.label,
@@ -118,7 +137,7 @@ function buildCashFlowGraph(snapshot: PersonalCfoSnapshot): PersonalCfoGraph {
       label: '부채 상환',
       type: 'liability',
       x: outflowX,
-      y: bucketStartY + (snapshot.budgetBuckets.length * bucketGap),
+      y: bucketStartY + (outflowBuckets.length * bucketGap),
       amount: debtRepayment,
       riskScore: 62,
     }));
@@ -130,7 +149,7 @@ function buildCashFlowGraph(snapshot: PersonalCfoSnapshot): PersonalCfoGraph {
     label: residual >= 0 ? '저축 후 미배분' : '초과 지출',
     type: residual >= 0 ? 'account' : 'liability',
     x: outflowX,
-    y: bucketStartY + ((snapshot.budgetBuckets.length + (debtRepayment > 0 ? 1 : 0)) * bucketGap),
+    y: bucketStartY + ((outflowBuckets.length + (debtRepayment > 0 ? 1 : 0)) * bucketGap),
     amount: Math.abs(residual),
     riskScore: residual < 0 ? 85 : undefined,
   }));

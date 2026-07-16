@@ -2,6 +2,7 @@ import type {
   BudgetBucketKey,
   PersonalCfoCashFlowSummary,
   PersonalCfoCashFlowReviewStatus,
+  PersonalCfoIncome,
   PersonalCfoSnapshot,
 } from './types';
 
@@ -127,11 +128,23 @@ export function applyCashFlowData(
   const cashFlow = selectLatestClosedCashFlow(periods, today);
   if (!cashFlow) return snapshot;
   const primaryIncome = snapshot.incomes[0];
+  const actualIncome: PersonalCfoIncome = primaryIncome
+    ? { ...primaryIncome, label: `${cashFlow.periodLabel} 수입`, monthlyAmount: cashFlow.totalIncome }
+    : {
+      id: `income:cashflow:${cashFlow.periodKey}`,
+      label: `${cashFlow.periodLabel} 수입`,
+      monthlyAmount: cashFlow.totalIncome,
+      stabilityScore: 100,
+      sourceRefs: [{
+        sourceId: 'source:cashflow',
+        entityType: 'cashFlowPeriod',
+        entityId: cashFlow.periodKey,
+        field: 'totalIncome',
+      }],
+    };
   return {
     ...snapshot,
     cashFlow,
-    incomes: primaryIncome
-      ? [{ ...primaryIncome, label: `${cashFlow.periodLabel} 수입`, monthlyAmount: cashFlow.totalIncome }, ...snapshot.incomes.slice(1)]
-      : snapshot.incomes,
+    incomes: [actualIncome, ...snapshot.incomes.slice(1)],
   };
 }

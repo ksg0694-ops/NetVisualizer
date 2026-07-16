@@ -1,475 +1,90 @@
 var PersonalCfoDomain = (function(exports) {
 	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-	//#region src/features/personal-cfo/mockData.ts
-	var defaultSourceRefs = {
-		"income:salary": [{
-			sourceId: "source:cashflow",
-			entityType: "income",
-			entityId: "salary",
-			field: "monthlyAmount"
-		}],
-		"account:portfolio:operating": [{
-			sourceId: "source:portfolio",
-			entityType: "portfolio",
-			field: "amount"
-		}],
-		"account:portfolio:defense": [{
-			sourceId: "source:portfolio",
-			entityType: "portfolio",
-			field: "amount"
-		}],
-		"account:portfolio:housing": [{
-			sourceId: "source:portfolio",
-			entityType: "portfolio",
-			field: "amount"
-		}],
-		"account:portfolio:growth": [{
-			sourceId: "source:portfolio",
-			entityType: "portfolio",
-			field: "amount"
-		}],
-		"asset:etf": [{
-			sourceId: "source:portfolio",
-			entityType: "asset",
-			entityId: "etf",
-			field: "marketValue"
-		}],
-		"asset:pension": [{
-			sourceId: "source:portfolio",
-			entityType: "asset",
-			entityId: "pension",
-			field: "marketValue"
-		}],
-		"asset:housing-deposit": [{
-			sourceId: "source:cashflow",
-			entityType: "asset",
-			entityId: "housing-deposit",
-			field: "marketValue"
-		}],
-		"liability:portfolio:workplace-loan": [{
-			sourceId: "source:portfolio",
-			entityType: "portfolio",
-			field: "amount"
-		}],
-		operating: [{
-			sourceId: "source:cashflow",
-			entityType: "budgetBucket",
-			entityId: "operating",
-			field: "monthlyAllocation"
-		}, {
-			sourceId: "source:manual",
-			entityType: "budgetBucket",
-			entityId: "operating",
-			field: "targetBalance"
-		}],
-		defense: [{
-			sourceId: "source:cashflow",
-			entityType: "budgetBucket",
-			entityId: "defense",
-			field: "monthlyAllocation"
-		}, {
-			sourceId: "source:manual",
-			entityType: "budgetBucket",
-			entityId: "defense",
-			field: "targetBalance"
-		}],
-		housing: [{
-			sourceId: "source:cashflow",
-			entityType: "budgetBucket",
-			entityId: "housing",
-			field: "monthlyAllocation"
-		}, {
-			sourceId: "source:manual",
-			entityType: "budgetBucket",
-			entityId: "housing",
-			field: "targetBalance"
-		}],
-		growth: [{
-			sourceId: "source:portfolio",
-			entityType: "budgetBucket",
-			entityId: "growth",
-			field: "currentBalance"
-		}, {
-			sourceId: "source:manual",
-			entityType: "budgetBucket",
-			entityId: "growth",
-			field: "targetBalance"
-		}],
-		humanCapital: [{
-			sourceId: "source:manual",
-			entityType: "budgetBucket",
-			entityId: "humanCapital",
-			field: "projectBudget"
-		}],
-		experience: [{
-			sourceId: "source:manual",
-			entityType: "budgetBucket",
-			entityId: "experience",
-			field: "monthlyAllocation"
-		}],
-		"project:changneung": [{
-			sourceId: "source:manual",
-			entityType: "project",
-			entityId: "changneung",
-			field: "plan"
-		}],
-		"project:online-master": [{
-			sourceId: "source:manual",
-			entityType: "project",
-			entityId: "online-master",
-			field: "plan"
-		}],
-		"risk:job-loss": [{
-			sourceId: "source:manual",
-			entityType: "risk",
-			entityId: "job-loss",
-			field: "exposureAmount"
-		}],
-		"risk:interest-rate": [{
-			sourceId: "source:cashflow",
-			entityType: "risk",
-			entityId: "interest-rate",
-			field: "exposureAmount"
-		}],
-		"risk:market-drawdown": [{
-			sourceId: "source:portfolio",
-			entityType: "risk",
-			entityId: "market-drawdown",
-			field: "exposureAmount"
-		}],
-		"risk:health": [{
-			sourceId: "source:manual",
-			entityType: "risk",
-			entityId: "health",
-			field: "impact"
-		}],
-		"risk:liquidity": [{
-			sourceId: "source:cashflow",
-			entityType: "risk",
-			entityId: "liquidity",
-			field: "exposureAmount"
-		}],
-		"kpi:net-worth": [{
-			sourceId: "source:portfolio",
-			entityType: "kpi",
-			entityId: "net-worth",
-			field: "calculatedValue"
-		}],
-		"kpi:free-cash-flow": [{
-			sourceId: "source:cashflow",
-			entityType: "kpi",
-			entityId: "free-cash-flow",
-			field: "calculatedValue"
-		}],
-		"kpi:savings-rate": [{
-			sourceId: "source:cashflow",
-			entityType: "kpi",
-			entityId: "savings-rate",
-			field: "calculatedValue"
-		}],
-		"kpi:fixed-cost-ratio": [{
-			sourceId: "source:cashflow",
-			entityType: "kpi",
-			entityId: "fixed-cost-ratio",
-			field: "calculatedValue"
-		}],
-		"kpi:emergency-coverage": [{
-			sourceId: "source:cashflow",
-			entityType: "kpi",
-			entityId: "emergency-coverage",
-			field: "calculatedValue"
-		}],
-		"kpi:debt-ratio": [{
-			sourceId: "source:cashflow",
-			entityType: "kpi",
-			entityId: "debt-ratio",
-			field: "calculatedValue"
-		}]
+	//#region src/features/personal-cfo/snapshot.ts
+	var CURRENT_SCHEMA_VERSION = 3;
+	var legacySeedIds = {
+		budgetBuckets: /* @__PURE__ */ new Set([
+			"operating",
+			"defense",
+			"housing",
+			"growth",
+			"humanCapital",
+			"experience"
+		]),
+		projects: /* @__PURE__ */ new Set(["project:changneung", "project:online-master"]),
+		risks: /* @__PURE__ */ new Set([
+			"risk:job-loss",
+			"risk:interest-rate",
+			"risk:market-drawdown",
+			"risk:health",
+			"risk:liquidity"
+		]),
+		kpis: /* @__PURE__ */ new Set([
+			"kpi:net-worth",
+			"kpi:savings-rate",
+			"kpi:free-cash-flow",
+			"kpi:fixed-cost-ratio",
+			"kpi:emergency-coverage",
+			"kpi:debt-ratio"
+		])
 	};
-	var sourceRefCollections = [
-		"incomes",
-		"accounts",
-		"assets",
-		"liabilities",
-		"budgetBuckets",
-		"projects",
-		"risks",
-		"kpis"
-	];
-	function withDefaultSourceRefs(snapshot) {
-		sourceRefCollections.forEach((collection) => {
-			snapshot[collection].forEach((item) => {
-				const refs = defaultSourceRefs[item.id];
-				if (refs) item.sourceRefs = refs;
-			});
-		});
-		return snapshot;
+	function clone(value) {
+		return JSON.parse(JSON.stringify(value));
 	}
-	var personalCfoMockSnapshot = withDefaultSourceRefs({
-		person: {
-			id: "person:me",
-			label: "나"
-		},
-		dataSources: [
-			{
-				id: "source:manual",
-				label: "수동 입력",
-				type: "manual",
-				description: "오늘은 목업 데이터를 직접 바꾸는 단계입니다."
+	function record(value) {
+		return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+	}
+	function items(value) {
+		if (!Array.isArray(value)) return [];
+		return clone(value.filter((item) => item && typeof item === "object" && !Array.isArray(item) && String(item.id || "").trim()));
+	}
+	function withoutLegacySeeds(values, ids, schemaVersion) {
+		if (schemaVersion >= CURRENT_SCHEMA_VERSION) return values;
+		return values.filter((item) => !ids.has(String(item.id || "")));
+	}
+	function createEmptyPersonalCfoSnapshot() {
+		return {
+			person: {
+				id: "person:me",
+				label: "나"
 			},
-			{
-				id: "source:cashflow",
-				label: "현금흐름 데이터",
-				type: "financeData",
-				description: "나중에 거래/카드/보험/자산 테이블에서 월 소득과 고정비를 가져옵니다."
-			},
-			{
+			dataSources: [{
 				id: "source:portfolio",
 				label: "포트폴리오 데이터",
 				type: "portfolioData",
-				description: "Supabase portfolios의 계좌, 자산, 부채 평가액을 연결합니다."
-			}
-		],
-		incomes: [{
-			id: "income:salary",
-			label: "월급",
-			monthlyAmount: 42e5,
-			stabilityScore: 78
-		}],
-		accounts: [
-			{
-				id: "account:portfolio:operating",
-				label: "생활계좌 3개",
-				balance: 1e6,
-				liquidityScore: 95,
-				bucketKey: "operating"
+				description: "Finance 포트폴리오의 현재 계좌, 자산, 부채를 사용합니다."
+			}, {
+				id: "source:cashflow",
+				label: "현금흐름 데이터",
+				type: "financeData",
+				description: "최근 종료 급여기간의 거래를 사용합니다."
+			}],
+			incomes: [],
+			accounts: [],
+			assets: [],
+			liabilities: [],
+			budgetBuckets: [],
+			projects: [],
+			risks: [],
+			kpis: []
+		};
+	}
+	function normalizePersonalCfoPlanSnapshot(value, schemaVersion = CURRENT_SCHEMA_VERSION) {
+		const source = record(value);
+		const person = record(source.person);
+		const empty = createEmptyPersonalCfoSnapshot();
+		return {
+			...empty,
+			person: {
+				id: String(person.id || empty.person.id),
+				label: String(person.label || empty.person.label)
 			},
-			{
-				id: "account:portfolio:defense",
-				label: "안전자산 계좌 5개",
-				balance: 101084176,
-				liquidityScore: 70,
-				bucketKey: "defense"
-			},
-			{
-				id: "account:portfolio:housing",
-				label: "청약통장 1개",
-				balance: 1e7,
-				liquidityScore: 60,
-				bucketKey: "housing"
-			},
-			{
-				id: "account:portfolio:growth",
-				label: "증권계좌 현금 5개",
-				balance: 4910842,
-				liquidityScore: 85,
-				bucketKey: "growth"
-			}
-		],
-		assets: [
-			{
-				id: "asset:etf",
-				label: "ETF 포트폴리오",
-				marketValue: 42e6,
-				bucketKey: "growth",
-				volatilityScore: 52
-			},
-			{
-				id: "asset:pension",
-				label: "연금/퇴직 준비",
-				marketValue: 18e6,
-				bucketKey: "growth",
-				volatilityScore: 30
-			},
-			{
-				id: "asset:housing-deposit",
-				label: "전월세 보증금",
-				marketValue: 8e7,
-				bucketKey: "housing",
-				volatilityScore: 18
-			}
-		],
-		liabilities: [{
-			id: "liability:portfolio:workplace-loan",
-			label: "e프리미엄 직장인론",
-			outstandingBalance: 65e6,
-			monthlyPayment: 0,
-			interestRate: 0,
-			riskScore: 73
-		}],
-		budgetBuckets: [
-			{
-				id: "operating",
-				label: "운영자금",
-				monthlyAllocation: 125e4,
-				currentBalance: 32e5,
-				fixedCostAmount: 115e4,
-				targetBalance: 4e6
-			},
-			{
-				id: "defense",
-				label: "방어자금",
-				monthlyAllocation: 3e5,
-				currentBalance: 12e6,
-				fixedCostAmount: 18e4,
-				targetBalance: 15e6
-			},
-			{
-				id: "housing",
-				label: "주거자금",
-				monthlyAllocation: 65e4,
-				currentBalance: 34e6,
-				fixedCostAmount: 42e4,
-				targetBalance: 8e7
-			},
-			{
-				id: "growth",
-				label: "성장자금",
-				monthlyAllocation: 5e5,
-				currentBalance: 648e5,
-				fixedCostAmount: 0,
-				targetBalance: 15e7
-			},
-			{
-				id: "humanCapital",
-				label: "인적자본",
-				monthlyAllocation: 22e4,
-				currentBalance: 18e5,
-				fixedCostAmount: 12e4,
-				targetBalance: 6e6
-			},
-			{
-				id: "experience",
-				label: "경험자금",
-				monthlyAllocation: 18e4,
-				currentBalance: 24e5,
-				fixedCostAmount: 0,
-				targetBalance: 5e6
-			}
-		],
-		projects: [{
-			id: "project:changneung",
-			label: "부동산 청약 준비",
-			bucketKey: "housing",
-			status: "active",
-			monthlyBurn: 65e4,
-			targetAmount: 8e7,
-			currentAmount: 34e6,
-			strategicImportance: 96,
-			urgency: 82,
-			expectedReturn: 68,
-			riskReduction: 74,
-			targetDateLabel: "공고 일정 확정 후 재설정",
-			nextMilestone: "고양창릉 공고·자격 조건 확인",
-			fundingSourceLabel: "주거자금 계획"
-		}, {
-			id: "project:online-master",
-			label: "온라인 석사 준비",
-			bucketKey: "humanCapital",
-			status: "planned",
-			monthlyBurn: 25e4,
-			targetAmount: 12e6,
-			currentAmount: 6e5,
-			strategicImportance: 78,
-			urgency: 48,
-			expectedReturn: 76,
-			riskReduction: 44,
-			targetDateLabel: "2027년 입학 검토",
-			nextMilestone: "지원 학교·총비용 비교",
-			fundingSourceLabel: "인적자본 계획"
-		}],
-		risks: [
-			{
-				id: "risk:job-loss",
-				label: "실직/소득 공백",
-				level: "high",
-				likelihood: 38,
-				impact: 92,
-				exposureAmount: 18e6,
-				mitigatedByBucket: "defense"
-			},
-			{
-				id: "risk:interest-rate",
-				label: "금리 상승",
-				level: "medium",
-				likelihood: 45,
-				impact: 70,
-				exposureAmount: 35e6,
-				mitigatedByBucket: "housing"
-			},
-			{
-				id: "risk:market-drawdown",
-				label: "투자자산 하락",
-				level: "medium",
-				likelihood: 48,
-				impact: 66,
-				exposureAmount: 6e7,
-				mitigatedByBucket: "growth"
-			},
-			{
-				id: "risk:health",
-				label: "건강/컨디션 저하",
-				level: "medium",
-				likelihood: 30,
-				impact: 72,
-				exposureAmount: 8e6,
-				mitigatedByBucket: "defense"
-			},
-			{
-				id: "risk:liquidity",
-				label: "현금 유동성 부족",
-				level: "high",
-				likelihood: 42,
-				impact: 86,
-				exposureAmount: 12e6,
-				mitigatedByBucket: "operating"
-			}
-		],
-		kpis: [
-			{
-				id: "kpi:net-worth",
-				label: "순자산",
-				currentValue: 0,
-				targetValue: 25e7,
-				unit: "KRW"
-			},
-			{
-				id: "kpi:savings-rate",
-				label: "저축률",
-				currentValue: 0,
-				targetValue: 35,
-				unit: "PERCENT"
-			},
-			{
-				id: "kpi:free-cash-flow",
-				label: "월 잉여현금흐름",
-				currentValue: 0,
-				targetValue: 7e5,
-				unit: "KRW"
-			},
-			{
-				id: "kpi:fixed-cost-ratio",
-				label: "고정비율",
-				currentValue: 0,
-				targetValue: 50,
-				unit: "PERCENT"
-			},
-			{
-				id: "kpi:emergency-coverage",
-				label: "비상금 커버리지",
-				currentValue: 0,
-				targetValue: 6,
-				unit: "MONTHS"
-			},
-			{
-				id: "kpi:debt-ratio",
-				label: "부채비율",
-				currentValue: 0,
-				targetValue: 25,
-				unit: "PERCENT"
-			}
-		]
-	});
+			budgetBuckets: withoutLegacySeeds(items(source.budgetBuckets), legacySeedIds.budgetBuckets, schemaVersion),
+			projects: withoutLegacySeeds(items(source.projects), legacySeedIds.projects, schemaVersion),
+			risks: withoutLegacySeeds(items(source.risks), legacySeedIds.risks, schemaVersion),
+			kpis: withoutLegacySeeds(items(source.kpis), legacySeedIds.kpis, schemaVersion)
+		};
+	}
 	//#endregion
 	//#region src/features/personal-cfo/calculations.ts
 	function sum$1(values) {
@@ -547,6 +162,17 @@ var PersonalCfoDomain = (function(exports) {
 		return clamp(bucket.currentBalance / bucket.targetBalance * 100);
 	}
 	function buildPersonalCfoKpiSummary(snapshot) {
+		const savingPlanBuckets = snapshot.budgetBuckets.filter((bucket) => [
+			"defense",
+			"housing",
+			"growth",
+			"humanCapital"
+		].includes(bucket.id));
+		const emergencyPlanBuckets = snapshot.budgetBuckets.filter((bucket) => [
+			"operating",
+			"defense",
+			"housing"
+		].includes(bucket.id));
 		return {
 			totalAssets: calculateTotalAssets(snapshot),
 			totalLiabilities: calculateTotalLiabilities(snapshot),
@@ -557,7 +183,10 @@ var PersonalCfoDomain = (function(exports) {
 			debtRatio: calculateDebtRatio(snapshot),
 			emergencyCoverageMonths: calculateEmergencyCoverageMonths(snapshot),
 			projectBurnRate: calculateProjectBurnRate(snapshot),
-			cashFlowReviewStatus: snapshot.cashFlow?.reviewStatus || "unconfirmed"
+			cashFlowReviewStatus: snapshot.cashFlow?.reviewStatus || "unconfirmed",
+			hasSavingsPlan: savingPlanBuckets.length > 0,
+			hasEmergencyPlan: emergencyPlanBuckets.length > 0,
+			hasPlanningData: snapshot.budgetBuckets.length > 0 || snapshot.projects.length > 0 || snapshot.risks.length > 0 || snapshot.kpis.length > 0
 		};
 	}
 	//#endregion
@@ -635,14 +264,26 @@ var PersonalCfoDomain = (function(exports) {
 		const cashFlow = selectLatestClosedCashFlow(periods, today);
 		if (!cashFlow) return snapshot;
 		const primaryIncome = snapshot.incomes[0];
+		const actualIncome = primaryIncome ? {
+			...primaryIncome,
+			label: `${cashFlow.periodLabel} 수입`,
+			monthlyAmount: cashFlow.totalIncome
+		} : {
+			id: `income:cashflow:${cashFlow.periodKey}`,
+			label: `${cashFlow.periodLabel} 수입`,
+			monthlyAmount: cashFlow.totalIncome,
+			stabilityScore: 100,
+			sourceRefs: [{
+				sourceId: "source:cashflow",
+				entityType: "cashFlowPeriod",
+				entityId: cashFlow.periodKey,
+				field: "totalIncome"
+			}]
+		};
 		return {
 			...snapshot,
 			cashFlow,
-			incomes: primaryIncome ? [{
-				...primaryIncome,
-				label: `${cashFlow.periodLabel} 수입`,
-				monthlyAmount: cashFlow.totalIncome
-			}, ...snapshot.incomes.slice(1)] : snapshot.incomes
+			incomes: [actualIncome, ...snapshot.incomes.slice(1)]
 		};
 	}
 	//#endregion
@@ -655,6 +296,15 @@ var PersonalCfoDomain = (function(exports) {
 		humanCapital: "bucket:humanCapital",
 		experience: "bucket:experience"
 	};
+	var cashFlowBucketMeta = {
+		operating: "운영자금",
+		defense: "방어자금",
+		housing: "주거자금",
+		growth: "성장자금",
+		humanCapital: "인적자본",
+		experience: "경험자금"
+	};
+	var cashFlowBucketOrder = Object.keys(cashFlowBucketMeta);
 	function amountToNodeSize(amount = 0) {
 		if (amount <= 0) return 18;
 		return Math.round(Math.min(30, 12 + Math.log10(amount) * 2.25));
@@ -683,7 +333,15 @@ var PersonalCfoDomain = (function(exports) {
 	function buildCashFlowGraph(snapshot) {
 		const nodes = [];
 		const edges = [];
-		const bucketAmounts = snapshot.cashFlow?.bucketOutflows;
+		const outflowBuckets = snapshot.cashFlow ? cashFlowBucketOrder.map((id) => ({
+			id,
+			label: cashFlowBucketMeta[id],
+			amount: snapshot.cashFlow?.bucketOutflows[id] || 0
+		})).filter((bucket) => bucket.amount > 0) : snapshot.budgetBuckets.map((bucket) => ({
+			id: bucket.id,
+			label: bucket.label,
+			amount: bucket.monthlyAllocation
+		}));
 		const outflowX = 790;
 		const topY = 92;
 		const bucketStartY = topY;
@@ -707,8 +365,8 @@ var PersonalCfoDomain = (function(exports) {
 			}));
 			edges.push(makeEdge(`edge:${income.id}:person`, income.id, snapshot.person.id, "FLOWS_TO", income.monthlyAmount));
 		});
-		snapshot.budgetBuckets.forEach((bucket, index) => {
-			const amount = bucketAmounts ? bucketAmounts[bucket.id] : bucket.monthlyAllocation;
+		outflowBuckets.forEach((bucket, index) => {
+			const amount = bucket.amount;
 			nodes.push(makeNode({
 				id: bucketNodeByKey[bucket.id],
 				label: bucket.label,
@@ -728,7 +386,7 @@ var PersonalCfoDomain = (function(exports) {
 				label: "부채 상환",
 				type: "liability",
 				x: outflowX,
-				y: bucketStartY + snapshot.budgetBuckets.length * bucketGap,
+				y: bucketStartY + outflowBuckets.length * bucketGap,
 				amount: debtRepayment,
 				riskScore: 62
 			}));
@@ -740,7 +398,7 @@ var PersonalCfoDomain = (function(exports) {
 			label: residual >= 0 ? "저축 후 미배분" : "초과 지출",
 			type: residual >= 0 ? "account" : "liability",
 			x: outflowX,
-			y: bucketStartY + (snapshot.budgetBuckets.length + (debtRepayment > 0 ? 1 : 0)) * bucketGap,
+			y: bucketStartY + (outflowBuckets.length + (debtRepayment > 0 ? 1 : 0)) * bucketGap,
 			amount: Math.abs(residual),
 			riskScore: residual < 0 ? 85 : void 0
 		}));
@@ -955,7 +613,7 @@ var PersonalCfoDomain = (function(exports) {
 	}
 	//#endregion
 	//#region src/features/personal-cfo/PersonalCfoPage.tsx
-	function createPersonalCfoPageModel(snapshot = personalCfoMockSnapshot, graphMode = "balanceSheet") {
+	function createPersonalCfoPageModel(snapshot, graphMode = "balanceSheet") {
 		return {
 			snapshot,
 			summary: buildPersonalCfoKpiSummary(snapshot),
@@ -970,7 +628,7 @@ var PersonalCfoDomain = (function(exports) {
 			})).sort((a, b) => b.score - a.score)
 		};
 	}
-	function PersonalCfoPage(snapshot = personalCfoMockSnapshot) {
+	function PersonalCfoPage(snapshot) {
 		const model = createPersonalCfoPageModel(snapshot);
 		return `개인 CFO 대시보드: 노드 ${model.graph.nodes.length}개, 연결 ${model.graph.edges.length}개`;
 	}
@@ -1412,6 +1070,7 @@ var PersonalCfoDomain = (function(exports) {
 	exports.calculateTotalLiabilities = calculateTotalLiabilities;
 	exports.canApplyConfirmedMonthlyClose = canApplyConfirmedMonthlyClose;
 	exports.closeFinanceMonth = closeFinanceMonth;
+	exports.createEmptyPersonalCfoSnapshot = createEmptyPersonalCfoSnapshot;
 	exports.createFinanceMonthlyCloseRecord = createFinanceMonthlyCloseRecord;
 	exports.createMonthlyCloseSourceRevision = createMonthlyCloseSourceRevision;
 	exports.createPersonalCfoPageModel = createPersonalCfoPageModel;
@@ -1420,7 +1079,7 @@ var PersonalCfoDomain = (function(exports) {
 	exports.getPaydayAccountingPeriod = getPaydayAccountingPeriod;
 	exports.getPaydayDate = getPaydayDate;
 	exports.normalizeFinanceMonthlyCloseRecord = normalizeFinanceMonthlyCloseRecord;
-	exports.personalCfoMockSnapshot = personalCfoMockSnapshot;
+	exports.normalizePersonalCfoPlanSnapshot = normalizePersonalCfoPlanSnapshot;
 	exports.reopenFinanceMonth = reopenFinanceMonth;
 	exports.selectLatestClosedCashFlow = selectLatestClosedCashFlow;
 	exports.summarizeCashFlowPeriod = summarizeCashFlowPeriod;

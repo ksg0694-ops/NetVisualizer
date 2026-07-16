@@ -4,7 +4,6 @@ import {
   calculateRiskScore,
 } from './calculations';
 import { buildFinanceGraphFromSnapshot } from './graphBuilder';
-import { personalCfoMockSnapshot } from './mockData';
 import type { PersonalCfoGraphMode, PersonalCfoSnapshot } from './types';
 
 export interface PersonalCfoPageModel {
@@ -16,7 +15,7 @@ export interface PersonalCfoPageModel {
 }
 
 export function createPersonalCfoPageModel(
-  snapshot: PersonalCfoSnapshot = personalCfoMockSnapshot,
+  snapshot: PersonalCfoSnapshot,
   graphMode: PersonalCfoGraphMode = 'balanceSheet',
 ): PersonalCfoPageModel {
   return {
@@ -32,7 +31,7 @@ export function createPersonalCfoPageModel(
   };
 }
 
-export function PersonalCfoPage(snapshot: PersonalCfoSnapshot = personalCfoMockSnapshot): string {
+export function PersonalCfoPage(snapshot: PersonalCfoSnapshot): string {
   const model = createPersonalCfoPageModel(snapshot);
   return `개인 CFO 대시보드: 노드 ${model.graph.nodes.length}개, 연결 ${model.graph.edges.length}개`;
 }

@@ -1,25 +1,25 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Monthly CFO Close v1",
+  "feature": "Personal CFO Actual Source v1",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-07-17T18:30:00+09:00",
+  "updatedAt": "2026-07-17T19:45:00+09:00",
   "status": "completed",
-  "currentFocus": "급여일 회계기간의 거래 분류를 검토하고 명시적으로 확정한 결과만 Finance Home과 Personal CFO 계산에 반영한다.",
+  "currentFocus": "Personal CFO의 seed 데이터를 제거하고 실제 Finance 데이터와 사용자 계획 저장을 분리했다.",
   "completed": [
-    "원본 거래를 유지하는 사용자별 월 마감 분류 오버레이 도메인을 추가했다.",
-    "진행 중 기간과 미분류 거래의 마감을 차단하고 마감 재열기를 지원한다.",
-    "원본 거래 revision이 달라지면 확정 분류를 stale로 처리한다.",
-    "Cash Flow 상단에 분류 수정, 초기화, 페이지네이션, 마감 UI를 구현했다.",
-    "finance_month_closes Supabase 테이블과 repository 조회 및 저장 명령을 추가했다.",
-    "확정 상태를 Finance Home과 Personal CFO KPI 및 네트워크 계산에 전달한다.",
+    "mockData.ts와 personalCfoMockSnapshot 런타임 의존을 제거했다.",
+    "빈 기준 스냅샷과 schema v3 계획 정규화를 추가했다.",
+    "v2 로컬 및 Supabase 스냅샷의 기존 seed 계획을 제거하는 migration을 구현했다.",
+    "계좌, 자산, 부채, 소득, 현금흐름을 실제 Finance 데이터에서만 구성한다.",
+    "실제 종료월 거래에서 소득과 자금 흐름 네트워크 노드를 파생한다.",
+    "계획 KPI, 프로젝트, 리스크, 전략 네트워크에 빈 상태를 추가했다.",
     "도메인, TypeScript, UI, repository, Supabase, 정적 자산 검사를 통과했다."
   ],
   "remaining": [
-    "계획값을 기준일과 변경 이력이 있는 Finance Plan Settings 모델로 이동한다.",
+    "계획값을 기준일과 변경 이력이 있는 Finance Plan Settings 모델로 입력할 수 있게 한다.",
     "여러 포트폴리오 행 저장을 서버 RPC 또는 transaction으로 원자화한다.",
     "로그인과 공개 배포 정책은 실제 사용 환경이 정해진 뒤 결정한다."
   ],
-  "nextStep": "Finance Plan Settings v1에서 mock 계획값을 기준일, 변경 이력, 사용자 override가 있는 설정 모델로 이동한다."
+  "nextStep": "Finance Plan Settings v1에서 빈 계획 상태에 사용자 override와 변경 이력을 연결한다."
 }

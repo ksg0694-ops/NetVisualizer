@@ -8,6 +8,25 @@ vm.runInContext(source, context, { filename: 'personal-cfo-domain.js' });
 
 const domain = context.PersonalCfoDomain;
 assert.ok(domain, 'PersonalCfoDomain global must be generated');
+assert.equal(domain.personalCfoMockSnapshot, undefined, 'mock snapshot must not be part of the runtime');
+const emptySnapshot = domain.createEmptyPersonalCfoSnapshot();
+assert.deepEqual(
+  Array.from(['incomes', 'accounts', 'assets', 'liabilities', 'budgetBuckets', 'projects', 'risks', 'kpis'], (key) => emptySnapshot[key].length),
+  [0, 0, 0, 0, 0, 0, 0, 0],
+);
+const migratedPlan = domain.normalizePersonalCfoPlanSnapshot({
+  accounts: [{ id: 'account:portfolio:operating', balance: 99_000_000 }],
+  budgetBuckets: [{ id: 'defense', label: 'legacy seed' }],
+  projects: [
+    null,
+    {},
+    { id: 'project:changneung', label: 'legacy seed' },
+    { id: 'project:custom', label: '사용자 계획' },
+  ],
+}, 2);
+assert.equal(migratedPlan.accounts.length, 0, 'actual finance rows must not persist in plan snapshots');
+assert.equal(migratedPlan.budgetBuckets.length, 0, 'legacy seed buckets must be removed');
+assert.deepEqual(Array.from(migratedPlan.projects, (project) => project.id), ['project:custom']);
 
 assert.equal(domain.getPaydayDate(2026, 7), '2026-07-24');
 const beforeJulyPayday = domain.getPaydayAccountingPeriod('2026-07-23');
@@ -51,7 +70,7 @@ assert.equal(closedSummary.freeCashFlow, 999_578);
 assert.equal(closedSummary.debtRepayment, 1_269_457);
 assert.equal(closedSummary.savingTransfers, 700_000);
 
-const portfolio = domain.applyPortfolioFinanceData(domain.personalCfoMockSnapshot, [
+const portfolio = domain.applyPortfolioFinanceData(emptySnapshot, [
   { id: 'cash', groupName: '현금 자산', name: '생활계좌', amount: 1_000_000, assetType: 'account' },
   { id: 'deposit', groupName: '기타', name: '전세금', amount: 140_000_000, assetType: 'other' },
   { id: 'loan', groupName: '부채', name: '직장인론', amount: -65_000_000, assetType: 'debt' },
@@ -65,6 +84,9 @@ const model = domain.createPersonalCfoPageModel(actualSnapshot);
 assert.equal(model.graph.mode, 'balanceSheet', 'balance sheet must be the default network mode');
 assert.equal(model.summary.monthlyFreeCashFlow, 999_578);
 assert.equal(model.summary.cashFlowReviewStatus, 'confirmed');
+assert.equal(model.summary.hasPlanningData, false);
+assert.equal(actualSnapshot.incomes.length, 1, 'actual cash flow must create the income node without a seed');
+assert.equal(actualSnapshot.incomes[0].monthlyAmount, closedSummary.totalIncome);
 assert.equal(model.graph.nodes.some((node) => node.type === 'income'), false, 'balance sheet must not mix income flow nodes');
 const balancePerson = model.graph.nodes.find((node) => node.type === 'person');
 const balanceAccounts = model.graph.nodes.filter((node) => node.type === 'account');
@@ -94,12 +116,27 @@ const cashIncome = cashFlowGraph.nodes.find((node) => node.type === 'income');
 assert.equal(cashPerson.y, Math.min(...cashFlowTargets.map((node) => node.y)), 'cash-flow columns must start at the top');
 assert.equal(cashPerson.y, cashIncome.y, 'income and available cash must share the top line');
 
-const strategyGraph = domain.buildFinanceGraphFromSnapshot(actualSnapshot, 'strategy');
+const planningSnapshot = {
+  ...actualSnapshot,
+  budgetBuckets: [{
+    id: 'housing', label: '주거자금', monthlyAllocation: 500_000, currentBalance: 5_000_000, fixedCostAmount: 0, targetBalance: 30_000_000,
+  }],
+  projects: [{
+    id: 'project:custom', label: '사용자 프로젝트', bucketKey: 'housing', status: 'planned', monthlyBurn: 500_000,
+    targetAmount: 30_000_000, currentAmount: 5_000_000, strategicImportance: 80, urgency: 60,
+    expectedReturn: 50, riskReduction: 70,
+  }],
+  risks: [{
+    id: 'risk:custom', label: '사용자 리스크', level: 'medium', likelihood: 40, impact: 70,
+    exposureAmount: 10_000_000, mitigatedByBucket: 'housing',
+  }],
+};
+const strategyGraph = domain.buildFinanceGraphFromSnapshot(planningSnapshot, 'strategy');
 const strategyBuckets = strategyGraph.nodes.filter((node) => node.type === 'budgetBucket');
 const strategyTargets = strategyGraph.nodes.filter((node) => node.type === 'project' || node.type === 'risk');
 assert.equal(new Set(strategyBuckets.map((node) => node.x)).size, 1, 'strategy buckets must share one vertical column');
 assert.equal(new Set(strategyTargets.map((node) => node.x)).size, 1, 'projects and risks must share one target column');
-assert.equal(strategyGraph.laneYs.length, actualSnapshot.budgetBuckets.length);
+assert.equal(strategyGraph.laneYs.length, planningSnapshot.budgetBuckets.length);
 const strategyPerson = strategyGraph.nodes.find((node) => node.type === 'person');
 assert.equal(strategyPerson.y, Math.min(...strategyBuckets.map((node) => node.y)), 'strategy columns must start at the top');
 strategyTargets.forEach((target) => {
