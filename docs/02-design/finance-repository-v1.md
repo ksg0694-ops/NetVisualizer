@@ -27,7 +27,8 @@ flowchart LR
 | Owner | Responsibility |
 | --- | --- |
 | `js/features/financeRepository.js` | Table specs, Supabase reads, object cache, PortfolioDraft creation, mutation payloads, and portfolio write commands |
-| `js/features/appCore.js` | Supabase client/session provider, cache persistence, payday period rule, object rows to legacy render state |
+| `js/features/appCore.js` | Supabase client/session provider, cache persistence, object rows to legacy render state, and thin period-domain delegation |
+| `src/features/finance/paydayAccounting.ts` | Payday overrides, weekend fallback, and accounting-period boundaries |
 | `js/features/financeModel.js` | Net worth and decision calculations from object portfolio rows |
 | `js/features/financeViews.js` | Presentation and chart rendering from model outputs |
 | `js/features/personalCfo.js` | CFO rendering; repository snapshot is preferred over grouped UI state |
@@ -44,4 +45,4 @@ The repository cache and editor draft both store named objects. Old two-dimensio
 
 ## Next Boundary
 
-Move payday accounting-period rules from `appCore.js` into the typed finance domain. Repository data and write boundaries are now explicit; period construction is the next calculation rule still owned by the application shell.
+Add a monthly CFO close layer where transaction classifications can be reviewed and corrected before KPI and cash-flow graph calculation. Multi-row portfolio writes should later be made atomic with a server RPC or transaction boundary.

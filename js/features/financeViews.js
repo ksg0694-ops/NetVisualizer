@@ -287,10 +287,11 @@
         };
         const items = window.FinanceModel.buildDecisionItems({ snapshot, cashFlow, fundingStatus });
         container.innerHTML = items.map((item) => `
-            <button type="button" onclick="switchView('${escapeAttr(item.target)}')" class="w-full flex items-start gap-2.5 rounded-lg border px-2.5 py-2 text-left transition hover:brightness-[0.98] ${toneClasses[item.tone] || toneClasses.slate}">
+            <button type="button" onclick="switchView('${escapeAttr(item.target)}')" class="flex h-full w-full items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition hover:brightness-[0.98] ${toneClasses[item.tone] || toneClasses.slate}">
                 <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/70" aria-hidden="true"><i class="fas ${escapeAttr(item.icon)} text-xs"></i></span>
                 <span class="min-w-0">
-                    <span class="block text-[11px] md:text-xs font-bold leading-snug">${escapeHtml(item.title)}</span>
+                    <span class="mb-0.5 block text-[9px] font-bold opacity-65">${escapeHtml(item.priorityLabel || '확인')}</span>
+                    <span class="block text-[11px] font-bold leading-snug md:text-xs">${escapeHtml(item.title)}</span>
                     <span class="mt-0.5 block text-[10px] leading-snug opacity-75">${escapeHtml(item.detail)}</span>
                 </span>
             </button>

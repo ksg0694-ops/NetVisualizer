@@ -20,37 +20,19 @@
         `;
     }
 
-    function renderProject(project) {
-        return `
-            <button type="button" data-life-project class="w-full text-left border-b border-gray-100 py-3 last:border-b-0 hover:bg-gray-50 transition-colors">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="min-w-0">
-                        <p class="text-sm font-bold text-gray-900 truncate">${utils.escapeHtml(project.label)}</p>
-                        <p class="mt-0.5 text-[11px] text-gray-400">${utils.escapeHtml(project.statusLabel)} · 우선순위 ${project.priorityScore}</p>
-                    </div>
-                    <span class="text-xs font-bold text-indigo-600 whitespace-nowrap">${project.fundingPercent.toFixed(1)}%</span>
-                </div>
-                <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100">
-                    <div class="h-full rounded-full bg-indigo-500" style="width:${Math.min(100, project.fundingPercent)}%"></div>
-                </div>
-            </button>
-        `;
-    }
-
     function getSnapshot() {
         root.ChecklistFeature?.refresh?.();
         root.HealthTrackerFeature?.refresh?.();
         const todo = root.ChecklistFeature?.getDashboardSnapshot?.() || { open: 0, dueToday: 0, overdue: 0, tasks: [] };
         const health = root.HealthTrackerFeature?.getDashboardSnapshot?.() || { latest: null, loggedToday: false, delta: 0 };
-        const cfo = root.PersonalCfoFeature?.getDashboardSnapshot?.() || { projects: [] };
-        return { todo, health, cfo };
+        return { todo, health };
     }
 
     function render() {
         const rootEl = document.getElementById('life-view');
         if (!rootEl) return;
         bindControls(rootEl);
-        const { todo, health, cfo } = getSnapshot();
+        const { todo, health } = getSnapshot();
         const latestWeight = health.latest ? `${health.latest.weightKg.toFixed(1)}kg` : '-';
         const weightMeta = health.loggedToday
             ? '오늘 기록 완료'
@@ -60,14 +42,10 @@
         const taskHtml = todo.tasks.length
             ? todo.tasks.map(renderTask).join('')
             : '<p class="py-8 text-center text-sm text-gray-400">오늘 확인할 할 일이 없습니다.</p>';
-        const projectHtml = cfo.projects.length
-            ? cfo.projects.map(renderProject).join('')
-            : '<p class="py-8 text-center text-sm text-gray-400">연결된 프로젝트가 없습니다.</p>';
-
         rootEl.innerHTML = `
             <div class="mb-4 flex flex-col gap-1">
                 <p class="text-[11px] font-bold text-indigo-500">오늘의 생활 상태</p>
-                <p class="text-sm text-gray-500">할 일과 건강 기록, 진행 중인 프로젝트에서 지금 필요한 것만 모았습니다.</p>
+                <p class="text-sm text-gray-500">할 일과 건강 기록에서 오늘 필요한 것만 모았습니다.</p>
             </div>
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-4">
                 <article class="bg-white border border-gray-200 rounded-lg p-3">
@@ -91,7 +69,7 @@
                     <p class="mt-1 text-[11px] ${health.loggedToday ? 'text-emerald-600' : 'text-gray-400'}">${utils.escapeHtml(weightMeta)}</p>
                 </article>
             </div>
-            <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)] gap-4 pb-8">
+            <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-4 pb-8">
                 <section class="bg-white border border-gray-200 rounded-lg px-4 py-3 min-w-0">
                     <div class="flex items-center justify-between gap-3 border-b border-gray-100 pb-2">
                         <div>
@@ -102,7 +80,7 @@
                     </div>
                     <div>${taskHtml}</div>
                 </section>
-                <div class="space-y-4">
+                <div>
                     <section class="bg-white border border-gray-200 rounded-lg px-4 py-3">
                         <div class="flex items-center justify-between gap-3 border-b border-gray-100 pb-2">
                             <div>
@@ -118,16 +96,6 @@
                             </div>
                             <p class="text-xs font-bold ${health.delta > 0 ? 'text-rose-600' : health.delta < 0 ? 'text-emerald-600' : 'text-gray-400'}">${health.delta ? `${health.delta > 0 ? '+' : ''}${health.delta.toFixed(1)}kg` : '변화 없음'}</p>
                         </div>
-                    </section>
-                    <section class="bg-white border border-gray-200 rounded-lg px-4 py-3">
-                        <div class="flex items-center justify-between gap-3 border-b border-gray-100 pb-2">
-                            <div>
-                                <h3 class="text-sm font-bold text-gray-900">개인 프로젝트</h3>
-                                <p class="text-[11px] text-gray-400">재무 목표와 연결된 진행 상태</p>
-                            </div>
-                            <button type="button" data-life-open-cfo class="text-xs font-bold text-indigo-600 hover:text-indigo-800">재무맵</button>
-                        </div>
-                        <div>${projectHtml}</div>
                     </section>
                 </div>
             </div>
@@ -146,7 +114,6 @@
             }
             if (event.target.closest('[data-life-open-todo]')) root.switchView?.('routine-checklist-view');
             else if (event.target.closest('[data-life-open-health]')) root.switchView?.('health-view');
-            else if (event.target.closest('[data-life-open-cfo], [data-life-project]')) root.switchView?.('personal-cfo-view');
         });
     }
 

@@ -140,6 +140,8 @@
 
         if (number(cashFlow.staleDays) >= 7) {
             items.push({
+                priority: 95,
+                priorityLabel: '점검',
                 tone: 'amber',
                 icon: 'fa-clock-rotate-left',
                 target: 'stats-view',
@@ -149,23 +151,23 @@
         }
 
         if (freeCashFlow < 0) {
-            items.push({ tone: 'rose', icon: 'fa-arrow-trend-down', target: 'stats-view', title: `${cashFlowLabel} 현금흐름이 적자입니다.`, detail: `${Math.abs(freeCashFlow).toLocaleString('ko-KR')}원만큼 지출이 더 많습니다.` });
+            items.push({ priority: 100, priorityLabel: '긴급', tone: 'rose', icon: 'fa-arrow-trend-down', target: 'stats-view', title: `${cashFlowLabel} 현금흐름이 적자입니다.`, detail: `${Math.abs(freeCashFlow).toLocaleString('ko-KR')}원만큼 지출이 더 많습니다.` });
         } else if (income > 0) {
-            items.push({ tone: 'emerald', icon: 'fa-wallet', target: 'stats-view', title: `${cashFlowLabel} 잉여현금을 확인하세요.`, detail: `${freeCashFlow.toLocaleString('ko-KR')}원이 남았습니다.` });
+            items.push({ priority: 30, priorityLabel: '참고', tone: 'emerald', icon: 'fa-wallet', target: 'stats-view', title: `${cashFlowLabel} 잉여현금을 확인하세요.`, detail: `${freeCashFlow.toLocaleString('ko-KR')}원이 남았습니다.` });
         }
         if (expenseRatio >= 70) {
-            items.push({ tone: 'amber', icon: 'fa-gauge-high', target: 'stats-view', title: '지출 비율이 높습니다.', detail: `월수입의 ${expenseRatio.toFixed(1)}%를 사용했습니다.` });
+            items.push({ priority: 90, priorityLabel: '점검', tone: 'amber', icon: 'fa-gauge-high', target: 'stats-view', title: '지출 비율이 높습니다.', detail: `월수입의 ${expenseRatio.toFixed(1)}%를 사용했습니다.` });
         }
         if (debtRatio >= 25) {
-            items.push({ tone: 'rose', icon: 'fa-scale-balanced', target: 'portfolio-view', title: '부채비율 점검이 필요합니다.', detail: `현재 총자산 대비 ${debtRatio.toFixed(1)}%입니다.` });
+            items.push({ priority: 80, priorityLabel: '점검', tone: 'rose', icon: 'fa-scale-balanced', target: 'portfolio-view', title: '부채비율 점검이 필요합니다.', detail: `현재 총자산 대비 ${debtRatio.toFixed(1)}%입니다.` });
         }
         if (fundingPct > 0 && fundingPct < 50) {
-            items.push({ tone: 'indigo', icon: 'fa-house', target: 'realestate-view', title: '청약 자기자금을 점검하세요.', detail: `연금 제외·부채 차감 기준 ${fundingPct.toFixed(1)}%입니다.` });
+            items.push({ priority: 60, priorityLabel: '계획', tone: 'indigo', icon: 'fa-house', target: 'realestate-view', title: '청약 자기자금을 점검하세요.', detail: `연금 제외·부채 차감 기준 ${fundingPct.toFixed(1)}%입니다.` });
         }
         if (!items.length) {
-            items.push({ tone: 'slate', icon: 'fa-clipboard-check', target: 'portfolio-view', title: '이번 달 재무 점검을 시작하세요.', detail: '계좌 잔액과 포트폴리오 기준일을 확인합니다.' });
+            items.push({ priority: 10, priorityLabel: '안내', tone: 'slate', icon: 'fa-clipboard-check', target: 'portfolio-view', title: '이번 달 재무 점검을 시작하세요.', detail: '계좌 잔액과 포트폴리오 기준일을 확인합니다.' });
         }
-        return items.slice(0, 3);
+        return items.sort((a, b) => b.priority - a.priority).slice(0, 3);
     }
 
     root.FinanceModel = Object.freeze({

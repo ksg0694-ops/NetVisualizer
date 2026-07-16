@@ -1,26 +1,25 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "PortfolioDraft v1 and Shared Graph Routes",
+  "feature": "Finance Focus Pass v1",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-07-17T06:23:46+09:00",
+  "updatedAt": "2026-07-17T15:40:00+09:00",
   "status": "completed",
-  "currentFocus": "포트폴리오 편집과 저장을 객체 계약으로 전환하고 Network Graph 화살표의 겹침을 허용했다.",
+  "currentFocus": "재무 홈을 행동 우선으로 정리하고 Personal CFO의 실제 데이터와 계획 모델을 명확히 분리했다.",
   "completed": [
-    "포트폴리오 편집 초안을 이름 있는 객체 필드와 clientKey 기반으로 전환했다.",
-    "편집기의 배열 컬럼 인덱스 접근을 제거했다.",
-    "포트폴리오 mutation payload와 upsert, insert, delete를 FinanceRepository로 이동했다.",
-    "편집기가 Supabase portfolios 테이블을 직접 호출하지 않도록 분리했다.",
-    "그래프 충돌 회피 fan offset과 우회 채널을 제거했다.",
-    "화살표가 공통 중간축을 공유하며 겹친 뒤 분기되도록 단순 직교 라우팅을 적용했다.",
-    "객체 편집, 추가, 삭제를 저장 없이 브라우저에서 검증했다.",
-    "repository, 도메인, TypeScript, UI 계약, Supabase 계약, 정적 자산 검사를 통과했다."
+    "Life 홈에서 Personal CFO 프로젝트 연결과 이동 경로를 제거했다.",
+    "급여일 및 회계기간 계산을 TypeScript 재무 도메인으로 분리했다.",
+    "재무 홈의 확인 항목을 차트 위로 이동하고 중요도순으로 정렬했다.",
+    "Personal CFO KPI와 네트워크에 실제 및 계획 라벨을 추가했다.",
+    "청약과 온라인 석사 프로젝트에 다음 단계, 목표 시점, 자금 부족액을 표시했다.",
+    "도메인, TypeScript, UI, repository, Supabase, 정적 자산 검사를 통과했다."
   ],
   "remaining": [
-    "급여일 회계기간 규칙을 TypeScript 도메인 모듈로 분리한다.",
-    "여러 포트폴리오 쓰기의 서버 원자성을 RPC 또는 transaction으로 강화한다.",
-    "로그인과 공개 배포 정책은 사용 환경이 정해질 때 결정한다."
+    "월간 CFO 마감에서 거래 분류를 검토하고 수정하는 흐름을 설계한다.",
+    "계획값을 기준일과 변경 이력이 있는 설정 모델로 이동한다.",
+    "여러 포트폴리오 행 저장을 서버 RPC 또는 transaction으로 원자화한다.",
+    "로그인과 공개 배포 정책은 사용 환경이 정해진 뒤 결정한다."
   ],
-  "nextStep": "PaydayAccountingPeriod v1을 TypeScript로 분리해 appCore.js에서 재무 기간 계산을 제거한다."
+  "nextStep": "Monthly CFO Close v1에서 거래 분류 검토와 마감 확정 흐름을 설계한다."
 }

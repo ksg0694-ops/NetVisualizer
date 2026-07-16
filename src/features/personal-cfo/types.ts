@@ -111,6 +111,9 @@ export interface PersonalCfoProject {
   urgency: number;
   expectedReturn: number;
   riskReduction: number;
+  targetDateLabel?: string;
+  nextMilestone?: string;
+  fundingSourceLabel?: string;
   sourceRefs?: PersonalCfoSourceRef[];
 }
 

@@ -9,6 +9,16 @@ vm.runInContext(source, context, { filename: 'personal-cfo-domain.js' });
 const domain = context.PersonalCfoDomain;
 assert.ok(domain, 'PersonalCfoDomain global must be generated');
 
+assert.equal(domain.getPaydayDate(2026, 7), '2026-07-24');
+const beforeJulyPayday = domain.getPaydayAccountingPeriod('2026-07-23');
+assert.equal(beforeJulyPayday.monthKey, '2026-07');
+assert.equal(beforeJulyPayday.periodStart, '2026-06-25');
+assert.equal(beforeJulyPayday.periodEnd, '2026-07-23');
+const onJulyPayday = domain.getPaydayAccountingPeriod('2026-07-24');
+assert.equal(onJulyPayday.monthKey, '2026-08');
+assert.equal(onJulyPayday.periodStart, '2026-07-24');
+assert.equal(onJulyPayday.periodEnd, '2026-08-24');
+
 const closedPeriod = {
   key: '2026-06',
   label: '2026년 6월',

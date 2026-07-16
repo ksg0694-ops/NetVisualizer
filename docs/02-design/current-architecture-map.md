@@ -26,9 +26,10 @@ The app still runs as a static classic-JavaScript PWA, but the first high-risk s
 | Official assets, liabilities, net worth, source label, decision items | `js/features/financeModel.js` | Finance Home and Personal CFO use the same repository-row-first snapshot. |
 | Finance dashboard rendering | `js/features/financeViews.js` | Historical asset snapshots remain a trend source, not the official current balance. |
 | Portfolio rendering | `js/features/portfolioViews.js` | Displays the official snapshot and its freshness badge. |
+| Finance period domain | `src/features/finance/paydayAccounting.ts` -> `js/generated/personal-cfo-domain.js` | Owns payday overrides, weekend fallback, and accounting-period boundaries. `appCore.js` only delegates. |
 | Personal CFO domain | `src/features/personal-cfo/` -> `js/generated/personal-cfo-domain.js` | Owns types, mock defaults, portfolio/cash-flow adapters, calculations, scoring, and three graph builders. |
 | Personal CFO renderer | `js/features/personalCfo.js` | Owns DOM/SVG rendering, local/remote snapshot persistence, and graph-mode interaction. It must not duplicate domain calculations. |
-| Life Today dashboard | `js/features/lifeDashboard.js` | Reads public snapshots from Checklist, Health, and Personal CFO modules. |
+| Life Today dashboard | `js/features/lifeDashboard.js` | Reads public snapshots from Checklist and Health only. CFO projects remain inside Finance. |
 | Todo and Health persistence | `js/features/checklist.js`, `js/features/healthTracker.js` | Feature modules own their local/server state and expose read-only dashboard snapshots. |
 
 `tools/check-ui-contract.mjs` verifies the critical script order.
@@ -39,7 +40,7 @@ The Personal CFO TypeScript tree is now the browser domain runtime. Vite builds 
 
 Authentication is intentionally undecided. The current anonymous Supabase mode is acceptable only for local, single-user use and must not be treated as safe for a public deployment.
 
-The current app remains a static PWA with a large `index.html`, but runtime behavior is split across feature files, an object repository, and the generated TypeScript domain bundle. The main remaining finance-shell calculation is payday accounting-period construction.
+The current app remains a static PWA with a large `index.html`, but runtime behavior is split across feature files, an object repository, and the generated TypeScript domain bundle. Payday accounting-period construction has moved out of the shell; the next finance boundary is a user-reviewable monthly close and transaction classification layer.
 
 ## 2026-07-16 Personal CFO Runtime
 
@@ -48,7 +49,7 @@ flowchart LR
     Supabase["Supabase portfolios + transactions"] --> Repository["financeRepository.js\nobject rows"]
     Repository --> Core["appCore.js\nview-state projection"]
     Repository --> PortfolioAdapter["portfolioAdapter.ts"]
-    Repository --> PeriodState["payday accounting periods"]
+    Payday["finance/paydayAccounting.ts\noverrides + boundaries"] --> PeriodState["payday accounting periods"]
     PeriodState --> CashFlowAdapter["cashFlowAdapter.ts"]
     Mock["mockData.ts\nplans, projects, risks"] --> Snapshot["PersonalCfoSnapshot"]
     PortfolioAdapter --> Snapshot
@@ -69,7 +70,9 @@ The graph has three explicit modes:
 
 Every desktop graph uses explicit vertical columns. The first node in each column shares a `y=92` top line. Edges use the node-center port and one shared middle axis; collision-avoidance fan offsets are intentionally disabled, so related arrows may overlap before branching. Column headings and subtle guide lines remain part of the SVG contract.
 
-Finance Home follows a decision hierarchy: current net worth, latest closed free cash flow, asset-goal progress, housing self-funding, and at most three action items. Housing self-funding excludes pension, discounts market investments by 10%, and subtracts debt. Loan capacity is secondary context and is not counted as saved money.
+Finance Home is action-first: at most three decision items are sorted by severity and rendered before the asset chart. Current net worth, latest closed free cash flow, asset-goal progress, and housing self-funding provide supporting context. Housing self-funding excludes pension, discounts market investments by 10%, and subtracts debt. Loan capacity is secondary context and is not counted as saved money.
+
+Personal CFO labels every KPI and graph as either actual data or a planning model. Net worth, closed cash flow, fixed-cost ratio, and debt ratio are actual-data metrics. Savings allocation, emergency coverage, projects, and risk scores are plans until an explicit actual data source replaces them. Life does not consume CFO project state.
 
 ## File-Level Map
 

@@ -921,49 +921,12 @@
     }
 
 
-    const PAYDAYS = {
-        '2025-10': '2025-10-24', '2025-11': '2025-11-25', '2025-12': '2025-12-24',
-        '2026-01': '2026-01-23', '2026-02': '2026-02-25', '2026-03': '2026-03-25',
-        '2026-04': '2026-04-24', '2026-05': '2026-05-22', '2026-06': '2026-06-25',
-        '2026-07': '2026-07-24', '2026-08': '2026-08-25', '2026-09': '2026-09-23',
-        '2026-10': '2026-10-23', '2026-11': '2026-11-25', '2026-12': '2026-12-24',
-        '2027-01': '2027-01-25'
-    };
-
     function getPayday(year, month) {
-        const key = `${year}-${String(month).padStart(2, '0')}`;
-        if (PAYDAYS[key]) return PAYDAYS[key];
-        let d = 25; let date = new Date(year, month - 1, d);
-        if (date.getDay() === 6) d = 24; else if (date.getDay() === 0) d = 23;
-        return `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        return window.PersonalCfoDomain.getPaydayDate(year, month);
     }
 
     function getMonthKeyAndPeriod(dateStr) {
-        const parts = dateStr.split('-');
-        const y = parseInt(parts[0], 10); const m = parseInt(parts[1], 10);
-        const currentPaydayStr = getPayday(y, m);
-        let accountY, accountM, prevPaydayStr, nextPaydayStr;
-
-        if (dateStr >= currentPaydayStr) {
-            accountY = m === 12 ? y + 1 : y; accountM = m === 12 ? 1 : m + 1;
-            prevPaydayStr = currentPaydayStr; nextPaydayStr = getPayday(accountY, accountM);
-        } else {
-            accountY = y; accountM = m;
-            prevPaydayStr = getPayday(m === 1 ? y - 1 : y, m === 1 ? 12 : m - 1); nextPaydayStr = currentPaydayStr;
-        }
-
-        const monthKey = `${accountY}-${String(accountM).padStart(2, '0')}`;
-        const prevParts = prevPaydayStr.split('-'); const nextParts = nextPaydayStr.split('-');
-        const nDate = new Date(parseInt(nextParts[0], 10), parseInt(nextParts[1], 10) - 1, parseInt(nextParts[2], 10));
-        nDate.setDate(nDate.getDate() - 1);
-        const periodStr = `${parseInt(prevParts[1],10)}/${parseInt(prevParts[2],10)} ~ ${nDate.getMonth() + 1}/${nDate.getDate()}`;
-        return {
-            monthKey,
-            periodStr,
-            periodStart: prevPaydayStr,
-            periodEnd: window.AppUtils.toLocalDateString(nDate),
-            title: `${accountY}년 ${accountM}월`,
-        };
+        return window.PersonalCfoDomain.getPaydayAccountingPeriod(dateStr);
     }
 
     window.getFinanceAccountingPeriods = function() {

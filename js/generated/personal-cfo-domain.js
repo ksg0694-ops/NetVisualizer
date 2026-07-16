@@ -96,7 +96,7 @@ var PersonalCfoDomain = (function(exports) {
 			field: "targetBalance"
 		}],
 		humanCapital: [{
-			sourceId: "source:life-todos",
+			sourceId: "source:manual",
 			entityType: "budgetBucket",
 			entityId: "humanCapital",
 			field: "projectBudget"
@@ -108,16 +108,16 @@ var PersonalCfoDomain = (function(exports) {
 			field: "monthlyAllocation"
 		}],
 		"project:changneung": [{
-			sourceId: "source:life-todos",
+			sourceId: "source:manual",
 			entityType: "project",
 			entityId: "changneung",
-			field: "status"
+			field: "plan"
 		}],
 		"project:online-master": [{
-			sourceId: "source:life-todos",
+			sourceId: "source:manual",
 			entityType: "project",
 			entityId: "online-master",
-			field: "status"
+			field: "plan"
 		}],
 		"risk:job-loss": [{
 			sourceId: "source:manual",
@@ -228,12 +228,6 @@ var PersonalCfoDomain = (function(exports) {
 				label: "포트폴리오 데이터",
 				type: "portfolioData",
 				description: "Supabase portfolios의 계좌, 자산, 부채 평가액을 연결합니다."
-			},
-			{
-				id: "source:life-todos",
-				label: "할일/프로젝트 데이터",
-				type: "todoData",
-				description: "부동산 청약과 온라인 석사 준비 프로젝트를 연결합니다."
 			}
 		],
 		incomes: [{
@@ -364,7 +358,10 @@ var PersonalCfoDomain = (function(exports) {
 			strategicImportance: 96,
 			urgency: 82,
 			expectedReturn: 68,
-			riskReduction: 74
+			riskReduction: 74,
+			targetDateLabel: "공고 일정 확정 후 재설정",
+			nextMilestone: "고양창릉 공고·자격 조건 확인",
+			fundingSourceLabel: "주거자금 계획"
 		}, {
 			id: "project:online-master",
 			label: "온라인 석사 준비",
@@ -376,7 +373,10 @@ var PersonalCfoDomain = (function(exports) {
 			strategicImportance: 78,
 			urgency: 48,
 			expectedReturn: 76,
-			riskReduction: 44
+			riskReduction: 44,
+			targetDateLabel: "2027년 입학 검토",
+			nextMilestone: "지원 학교·총비용 비교",
+			fundingSourceLabel: "인적자본 계획"
 		}],
 		risks: [
 			{
@@ -1129,6 +1129,80 @@ var PersonalCfoDomain = (function(exports) {
 		};
 	}
 	//#endregion
+	//#region src/features/finance/paydayAccounting.ts
+	var PAYDAY_OVERRIDES = Object.freeze({
+		"2025-10": "2025-10-24",
+		"2025-11": "2025-11-25",
+		"2025-12": "2025-12-24",
+		"2026-01": "2026-01-23",
+		"2026-02": "2026-02-25",
+		"2026-03": "2026-03-25",
+		"2026-04": "2026-04-24",
+		"2026-05": "2026-05-22",
+		"2026-06": "2026-06-25",
+		"2026-07": "2026-07-24",
+		"2026-08": "2026-08-25",
+		"2026-09": "2026-09-23",
+		"2026-10": "2026-10-23",
+		"2026-11": "2026-11-25",
+		"2026-12": "2026-12-24",
+		"2027-01": "2027-01-25"
+	});
+	function pad(value) {
+		return String(value).padStart(2, "0");
+	}
+	function monthKey(year, month) {
+		return `${year}-${pad(month)}`;
+	}
+	function shiftDate(dateKey, days) {
+		const [year, month, day] = dateKey.split("-").map(Number);
+		const date = new Date(Date.UTC(year, month - 1, day + days));
+		return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+	}
+	function normalizeDateKey(value) {
+		const parts = String(value || "").trim().replace(/[./]/g, "-").replace(/\s/g, "").replace(/-$/, "").split("-").map(Number);
+		if (parts.length < 3 || parts.some((part) => !Number.isFinite(part))) throw new Error(`INVALID_ACCOUNTING_DATE: ${value}`);
+		return `${parts[0]}-${pad(parts[1])}-${pad(parts[2])}`;
+	}
+	function getPaydayDate(year, month) {
+		const override = PAYDAY_OVERRIDES[monthKey(year, month)];
+		if (override) return override;
+		const weekday = new Date(Date.UTC(year, month - 1, 25)).getUTCDay();
+		const day = weekday === 6 ? 24 : weekday === 0 ? 23 : 25;
+		return `${year}-${pad(month)}-${pad(day)}`;
+	}
+	function getPaydayAccountingPeriod(value) {
+		const dateKey = normalizeDateKey(value);
+		const [year, month] = dateKey.split("-").map(Number);
+		const currentPayday = getPaydayDate(year, month);
+		let accountingYear;
+		let accountingMonth;
+		let periodStart;
+		let nextPayday;
+		if (dateKey >= currentPayday) {
+			accountingYear = month === 12 ? year + 1 : year;
+			accountingMonth = month === 12 ? 1 : month + 1;
+			periodStart = currentPayday;
+			nextPayday = getPaydayDate(accountingYear, accountingMonth);
+		} else {
+			accountingYear = year;
+			accountingMonth = month;
+			periodStart = getPaydayDate(month === 1 ? year - 1 : year, month === 1 ? 12 : month - 1);
+			nextPayday = currentPayday;
+		}
+		const periodEnd = shiftDate(nextPayday, -1);
+		const [, startMonth, startDay] = periodStart.split("-").map(Number);
+		const [, endMonth, endDay] = periodEnd.split("-").map(Number);
+		return {
+			monthKey: monthKey(accountingYear, accountingMonth),
+			title: `${accountingYear}년 ${accountingMonth}월`,
+			periodStart,
+			periodEnd,
+			periodStr: `${startMonth}/${startDay} ~ ${endMonth}/${endDay}`
+		};
+	}
+	//#endregion
+	exports.PAYDAY_OVERRIDES = PAYDAY_OVERRIDES;
 	exports.PersonalCfoPage = PersonalCfoPage;
 	exports.applyCashFlowData = applyCashFlowData;
 	exports.applyPortfolioFinanceData = applyPortfolioFinanceData;
@@ -1147,6 +1221,8 @@ var PersonalCfoDomain = (function(exports) {
 	exports.calculateTotalLiabilities = calculateTotalLiabilities;
 	exports.createPersonalCfoPageModel = createPersonalCfoPageModel;
 	exports.getBucketFundingProgress = getBucketFundingProgress;
+	exports.getPaydayAccountingPeriod = getPaydayAccountingPeriod;
+	exports.getPaydayDate = getPaydayDate;
 	exports.personalCfoMockSnapshot = personalCfoMockSnapshot;
 	exports.selectLatestClosedCashFlow = selectLatestClosedCashFlow;
 	exports.summarizeCashFlowPeriod = summarizeCashFlowPeriod;

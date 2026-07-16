@@ -70,16 +70,22 @@
             label: '현금 흐름',
             title: '최근 마감 현금 흐름',
             description: '수입이 지출·저축 바구니와 미배분 현금으로 이동한 실제 마감월 흐름입니다.',
+            dataLabel: '실제 데이터',
+            dataClasses: 'border-emerald-100 bg-emerald-50 text-emerald-700',
         },
         balanceSheet: {
             label: '재무상태',
             title: '현재 재무상태 네트워크',
             description: '포트폴리오 현재값만 사용해 계좌·자산·부채가 순자산에 기여하는 구조를 보여줍니다.',
+            dataLabel: '실제 데이터',
+            dataClasses: 'border-emerald-100 bg-emerald-50 text-emerald-700',
         },
         strategy: {
             label: '목표·리스크',
             title: '목표와 리스크 연결',
             description: '계획 바구니가 프로젝트를 지원하고 주요 리스크를 완충하는 관계입니다.',
+            dataLabel: '계획 모델',
+            dataClasses: 'border-amber-100 bg-amber-50 text-amber-700',
         },
     };
     function clamp(value, min = 0, max = 100) {
@@ -369,27 +375,31 @@
 
     function renderKpiCards(summary) {
         const cards = [
-            { label: '순자산', value: formatKrw(summary.netWorth), sub: `총자산 ${formatKrw(summary.totalAssets)}`, tone: 'slate' },
-            { label: '마감월 잉여현금', value: formatKrw(summary.monthlyFreeCashFlow), sub: '수입-지출 · 저축 이체 전', tone: summary.monthlyFreeCashFlow >= 0 ? 'emerald' : 'rose' },
-            { label: '계획 저축률', value: formatPercent(summary.savingsRate), sub: '계획 배분 / 마감월 수입', tone: 'emerald' },
-            { label: '고정비·상환율', value: formatPercent(summary.fixedCostRatio), sub: '고정비+부채상환 / 수입', tone: summary.fixedCostRatio <= 50 ? 'sky' : 'amber' },
-            { label: '비상금 커버리지', value: formatMonths(summary.emergencyCoverageMonths), sub: '방어자금으로 버틸 수 있는 기간', tone: summary.emergencyCoverageMonths >= 6 ? 'emerald' : 'amber' },
-            { label: '부채비율', value: formatPercent(summary.debtRatio), sub: `총부채 ${formatKrw(summary.totalLiabilities)}`, tone: summary.debtRatio <= 25 ? 'emerald' : 'rose' },
+            { label: '순자산', value: formatKrw(summary.netWorth), sub: `총자산 ${formatKrw(summary.totalAssets)}`, tone: 'slate', basis: 'actual' },
+            { label: '마감월 잉여현금', value: formatKrw(summary.monthlyFreeCashFlow), sub: '수입-지출 · 저축 이체 전', tone: summary.monthlyFreeCashFlow >= 0 ? 'emerald' : 'rose', basis: 'actual' },
+            { label: '계획 저축률', value: formatPercent(summary.savingsRate), sub: '계획 배분 / 마감월 수입', tone: 'emerald', basis: 'plan' },
+            { label: '고정비·상환율', value: formatPercent(summary.fixedCostRatio), sub: '고정비+부채상환 / 수입', tone: summary.fixedCostRatio <= 50 ? 'sky' : 'amber', basis: 'actual' },
+            { label: '비상금 커버리지', value: formatMonths(summary.emergencyCoverageMonths), sub: '계획 방어자금 기준 유지 기간', tone: summary.emergencyCoverageMonths >= 6 ? 'emerald' : 'amber', basis: 'plan' },
+            { label: '부채비율', value: formatPercent(summary.debtRatio), sub: `총부채 ${formatKrw(summary.totalLiabilities)}`, tone: summary.debtRatio <= 25 ? 'emerald' : 'rose', basis: 'actual' },
         ];
-        const toneClasses = {
-            slate: 'border-slate-200 bg-slate-50 text-slate-700',
-            emerald: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-            sky: 'border-sky-200 bg-sky-50 text-sky-700',
-            amber: 'border-amber-200 bg-amber-50 text-amber-700',
-            rose: 'border-rose-200 bg-rose-50 text-rose-700',
+        const valueClasses = {
+            slate: 'text-gray-900',
+            emerald: 'text-emerald-700',
+            sky: 'text-sky-700',
+            amber: 'text-amber-700',
+            rose: 'text-rose-700',
+        };
+        const basisClasses = {
+            actual: 'border-emerald-100 bg-emerald-50 text-emerald-700',
+            plan: 'border-amber-100 bg-amber-50 text-amber-700',
         };
         return cards.map((card) => `
             <article class="rounded-lg border bg-white p-3 shadow-sm min-w-0">
                 <div class="flex items-center justify-between gap-2">
                     <p class="text-[11px] font-bold text-gray-500">${escapeHtml(card.label)}</p>
-                    <span aria-hidden="true" class="h-2.5 w-2.5 rounded-full border ${toneClasses[card.tone] || toneClasses.slate}"></span>
+                    <span class="rounded border px-1.5 py-0.5 text-[9px] font-bold ${basisClasses[card.basis]}">${card.basis === 'plan' ? '계획' : '실제'}</span>
                 </div>
-                <p class="mt-2 text-lg md:text-xl font-bold text-gray-900 leading-tight">${escapeHtml(card.value)}</p>
+                <p class="mt-2 text-lg md:text-xl font-bold leading-tight ${valueClasses[card.tone] || valueClasses.slate}">${escapeHtml(card.value)}</p>
                 <p class="mt-1 text-[11px] text-gray-400 truncate">${escapeHtml(card.sub)}</p>
             </article>
         `).join('');
@@ -493,7 +503,10 @@
             <section class="hidden md:block rounded-lg border border-gray-200 bg-white p-3 md:p-4 shadow-sm">
                 <div class="mb-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                     <div class="min-w-0">
-                        <h3 class="text-base font-bold text-gray-900">${escapeHtml(modeMeta.title)}</h3>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h3 class="text-base font-bold text-gray-900">${escapeHtml(modeMeta.title)}</h3>
+                            <span class="rounded border px-2 py-0.5 text-[10px] font-bold ${modeMeta.dataClasses}">${escapeHtml(modeMeta.dataLabel)}</span>
+                        </div>
                         <p class="text-xs text-gray-500">${escapeHtml(modeMeta.description)}</p>
                     </div>
                     <div class="inline-flex w-fit rounded-md border border-gray-200 bg-gray-50 p-0.5" role="group" aria-label="재무 네트워크 보기">
@@ -584,20 +597,27 @@
     function renderProjectRows(projects) {
         return projects.map((project) => {
             const progress = formatProgress(project.currentAmount, project.targetAmount);
+            const fundingGap = Math.max(0, project.targetAmount - project.currentAmount);
             const rowOpacity = project.status === 'completed' ? 'opacity-55' : '';
             return `
                 <tr class="${rowOpacity}">
                     <td class="px-3 py-2 align-top">
                         <p class="text-sm font-bold text-gray-900">${escapeHtml(project.label)}</p>
                         <p class="text-[11px] text-gray-400">${escapeHtml(bucketLabels[project.bucketKey] || project.bucketKey)} / ${escapeHtml(statusLabels[project.status] || project.status)}</p>
+                        <p class="mt-1 text-[11px] text-gray-600">다음: ${escapeHtml(project.nextMilestone || '계획 보완')}</p>
+                        <p class="text-[10px] text-gray-400">목표 시점: ${escapeHtml(project.targetDateLabel || '미정')}</p>
                     </td>
                     <td class="px-3 py-2 align-top text-right text-xs font-semibold text-gray-700">${project.priorityScore}</td>
-                    <td class="px-3 py-2 align-top text-right text-xs text-gray-600">${escapeHtml(formatKrw(project.monthlyBurn))}</td>
-                    <td class="px-3 py-2 align-top min-w-[150px]">
+                    <td class="px-3 py-2 align-top text-right">
+                        <p class="text-xs text-gray-600">${escapeHtml(formatKrw(project.monthlyBurn))}</p>
+                        <p class="text-[10px] text-gray-400">${escapeHtml(project.fundingSourceLabel || '계획값')}</p>
+                    </td>
+                    <td class="px-3 py-2 align-top min-w-[190px]">
                         <div class="h-2 rounded-full bg-gray-100 overflow-hidden">
                             <div class="h-full rounded-full bg-indigo-500" style="width:${progress}%"></div>
                         </div>
-                        <p class="mt-1 text-[11px] text-gray-400">${progress.toFixed(1)}%</p>
+                        <p class="mt-1 text-[11px] text-gray-500">계획 ${escapeHtml(formatKrw(project.currentAmount))} / ${escapeHtml(formatKrw(project.targetAmount))}</p>
+                        <p class="text-[10px] text-gray-400">${progress.toFixed(1)}% · 부족 ${escapeHtml(formatKrw(fundingGap))}</p>
                     </td>
                 </tr>
             `;
@@ -643,10 +663,10 @@
                 <section class="rounded-lg border border-gray-200 bg-white p-3 md:p-4 shadow-sm min-w-0">
                     <div class="mb-3 flex items-center justify-between gap-3">
                         <h3 class="text-base font-bold text-gray-900">프로젝트 포트폴리오</h3>
-                        <span class="rounded-md bg-indigo-50 px-2 py-1 text-[11px] font-bold text-indigo-700">${model.projectsByPriority.length}개</span>
+                        <span class="rounded-md bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700">계획 ${model.projectsByPriority.length}개</span>
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="w-full min-w-[560px] text-left">
+                        <table class="w-full min-w-[720px] text-left">
                             <thead>
                                 <tr class="border-b border-gray-100 text-[10px] font-bold text-gray-400">
                                     <th class="px-3 py-2">프로젝트</th>
@@ -662,7 +682,7 @@
                 <section class="rounded-lg border border-gray-200 bg-white p-3 md:p-4 shadow-sm min-w-0">
                     <div class="mb-3 flex items-center justify-between gap-3">
                         <h3 class="text-base font-bold text-gray-900">리스크 대시보드</h3>
-                        <span class="rounded-md bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-700">점수순</span>
+                        <span class="rounded-md bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700">계획 점수순</span>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full min-w-[520px] text-left">
@@ -698,7 +718,8 @@
             <div class="mb-3 flex items-center justify-end gap-2">
                 <div class="flex flex-wrap justify-end gap-2">
                     <span id="personal-cfo-sync-badge" class="rounded-md border px-2.5 py-1.5 text-[11px] font-bold ${syncStatusClasses}">${escapeHtml(syncStatusText)}</span>
-                    <span class="rounded-md border px-2.5 py-1.5 text-[11px] font-bold ${dataBadgeClasses}">${escapeHtml(dataBadge)}</span>
+                    <span class="rounded-md border px-2.5 py-1.5 text-[11px] font-bold ${dataBadgeClasses}">실제 · ${escapeHtml(dataBadge)}</span>
+                    <span class="rounded-md border border-amber-100 bg-amber-50 px-2.5 py-1.5 text-[11px] font-bold text-amber-700">계획 · 자금 바구니·프로젝트·리스크</span>
                 </div>
             </div>
             <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-4">
