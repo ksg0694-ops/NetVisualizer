@@ -11,7 +11,7 @@ This document maps the current NetVisualizer structure before any architecture r
 
 `js/features/financeRepository.js` now owns finance-table query specifications, selected columns, optional-table behavior, object-row normalization, and the read-only finance snapshot. `appCore.js` provides the Supabase client and projects repository objects into legacy view state; it no longer builds table queries or converts server rows into spreadsheet-shaped arrays.
 
-Finance Home and Personal CFO calculations prefer repository portfolio rows. The two-dimensional portfolio table exists only behind `toLegacyPortfolioRows()` for the current edit modal. Old cached arrays are migrated when read.
+Finance Home and Personal CFO calculations prefer repository portfolio rows. The portfolio editor uses a named-field `PortfolioDraft` with stable client keys, and all portfolio writes run through repository commands. Old cached arrays are migrated only when read.
 
 Current script order is contractual: `appUtils` -> `financeRepository` -> `financeModel` -> generated Personal CFO domain -> `appCore` -> feature renderers -> `appShell`.
 
@@ -39,7 +39,7 @@ The Personal CFO TypeScript tree is now the browser domain runtime. Vite builds 
 
 Authentication is intentionally undecided. The current anonymous Supabase mode is acceptable only for local, single-user use and must not be treated as safe for a public deployment.
 
-The current app remains a static PWA with a large `index.html`, but runtime behavior is split across feature files, an object repository, and the generated TypeScript domain bundle. The remaining legacy array boundary is the portfolio editor draft model.
+The current app remains a static PWA with a large `index.html`, but runtime behavior is split across feature files, an object repository, and the generated TypeScript domain bundle. The main remaining finance-shell calculation is payday accounting-period construction.
 
 ## 2026-07-16 Personal CFO Runtime
 
@@ -67,7 +67,7 @@ The graph has three explicit modes:
 | `cashFlow` | Latest closed payday period | Income is allocated to actual expense/saving buckets, debt repayment, and residual cash. Open periods are excluded. |
 | `strategy` | Manual plan snapshot | Budget buckets fund two projects and hedge risks. It is a planning model, not a statement of actual balances. |
 
-Every desktop graph uses explicit vertical columns. The first node in each column shares a `y=92` top line. Cash-flow and strategy targets also use horizontal lanes, so same-lane edges render as straight lines and all other connections use right-angle routing. Column headings and subtle guide lines are part of the SVG contract.
+Every desktop graph uses explicit vertical columns. The first node in each column shares a `y=92` top line. Edges use the node-center port and one shared middle axis; collision-avoidance fan offsets are intentionally disabled, so related arrows may overlap before branching. Column headings and subtle guide lines remain part of the SVG contract.
 
 Finance Home follows a decision hierarchy: current net worth, latest closed free cash flow, asset-goal progress, housing self-funding, and at most three action items. Housing self-funding excludes pension, discounts market investments by 10%, and subtracts debt. Loan capacity is secondary context and is not counted as saved money.
 
@@ -399,7 +399,7 @@ Key redesign pressure points:
 
 - `index.html` mixes view markup, state, API access, domain calculations, mutation flows, chart setup, and event binding.
 - Runtime state is mostly global mutable variables, so feature boundaries are implicit.
-- Finance reads now stay as normalized object rows; only the portfolio editor still receives a two-dimensional compatibility draft.
+- Finance reads and portfolio edit drafts stay as named objects. Indexed legacy rows are accepted only while migrating an old cache.
 - Rendering functions depend on shared global state rather than explicit inputs.
 - Mutation flows update remote DB, local cache, parsed state, and UI in the same function.
 - Local cache and local import audit are useful but currently hidden behind direct `localStorage` calls.

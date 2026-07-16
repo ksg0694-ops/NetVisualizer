@@ -16,29 +16,32 @@ flowchart LR
     Snapshot --> Core["appCore.js\nview-state projection"]
     Snapshot --> FinanceModel["financeModel.js\ncurrent balance calculations"]
     Snapshot --> Cfo["Personal CFO adapters\nportfolio + cash-flow"]
-    Core --> LegacyEditor["Portfolio editor adapter\n2D rows only at compatibility edge"]
+    Repository --> Draft["PortfolioDraft\nnamed fields + clientKey"]
+    Draft --> Editor["portfolioEditor.js\nUI interactions only"]
+    Draft --> Commands["Repository commands\nupsert + insert + delete"]
+    Commands --> Supabase
 ```
 
 ## Ownership
 
 | Owner | Responsibility |
 | --- | --- |
-| `js/features/financeRepository.js` | Table specs, selected columns, optional-table policy, Supabase reads, numeric normalization, object cache, read-only snapshot, accounting-period input, legacy portfolio adapter |
+| `js/features/financeRepository.js` | Table specs, Supabase reads, object cache, PortfolioDraft creation, mutation payloads, and portfolio write commands |
 | `js/features/appCore.js` | Supabase client/session provider, cache persistence, payday period rule, object rows to legacy render state |
 | `js/features/financeModel.js` | Net worth and decision calculations from object portfolio rows |
 | `js/features/financeViews.js` | Presentation and chart rendering from model outputs |
 | `js/features/personalCfo.js` | CFO rendering; repository snapshot is preferred over grouped UI state |
 
-## Compatibility Rule
+## PortfolioDraft Rule
 
-The repository cache stores arrays of objects. Old two-dimensional cache rows are accepted and normalized on read. Only `toLegacyPortfolioRows()` may create a two-dimensional portfolio table, because the current portfolio edit modal still edits by column index. New finance calculations must not consume that compatibility table.
+The repository cache and editor draft both store named objects. Old two-dimensional cache rows are accepted only as a read-time migration input. Draft items use a stable `clientKey`, so UI handlers do not depend on the item's array position or database id. `portfolioEditor.js` enriches classification fields, then calls `savePortfolioDraft()`; it does not issue Supabase writes.
 
 ## Quality Gate
 
-- `tools/check-finance-repository.mjs` verifies legacy migration, numeric normalization, snapshot copying, transaction merge, accounting periods, query columns/order, and optional-table errors.
+- `tools/check-finance-repository.mjs` verifies legacy migration, numeric normalization, PortfolioDraft changes, mutation planning, repository write order, query columns/order, and optional-table errors.
 - `tools/check-domain-models.mjs` verifies object portfolio rows produce the same official balance.
 - `tools/check-ui-contract.mjs` enforces repository-before-core script order.
 
 ## Next Boundary
 
-Move portfolio mutation payloads from `portfolioEditor.js` into repository commands, then replace the editor's indexed rows with an object draft model. This is deliberately outside v1 so the read path can stabilize first.
+Move payday accounting-period rules from `appCore.js` into the typed finance domain. Repository data and write boundaries are now explicit; period construction is the next calculation rule still owned by the application shell.

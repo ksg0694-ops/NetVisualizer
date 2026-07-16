@@ -1,26 +1,26 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "FinanceRepository v1 and CFO Top Layout",
+  "feature": "PortfolioDraft v1 and Shared Graph Routes",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-07-17T06:00:41+09:00",
+  "updatedAt": "2026-07-17T06:23:46+09:00",
   "status": "completed",
-  "currentFocus": "재무 데이터 읽기 경계를 객체 기반 repository로 분리하고 CFO Network를 상단 정렬했다.",
+  "currentFocus": "포트폴리오 편집과 저장을 객체 계약으로 전환하고 Network Graph 화살표의 겹침을 허용했다.",
   "completed": [
-    "Supabase 재무 테이블 계약과 조회를 financeRepository.js로 이동했다.",
-    "거래, 자산, 포트폴리오 캐시를 객체 행으로 전환하고 이전 배열 캐시 마이그레이션을 지원했다.",
-    "재무 홈과 개인 CFO 계산이 repository 스냅샷을 우선 사용하도록 변경했다.",
-    "기존 포트폴리오 편집기의 2차원 배열을 호환 어댑터 한 곳으로 제한했다.",
-    "세 CFO Network 모드의 첫 노드를 y=92 상단 기준선에 정렬했다.",
-    "repository, 도메인, TypeScript, UI 계약, Supabase 계약, 정적 자산 검사를 통과했다.",
-    "데스크톱 세 모드와 390px 모바일 레이아웃을 검증했다."
+    "포트폴리오 편집 초안을 이름 있는 객체 필드와 clientKey 기반으로 전환했다.",
+    "편집기의 배열 컬럼 인덱스 접근을 제거했다.",
+    "포트폴리오 mutation payload와 upsert, insert, delete를 FinanceRepository로 이동했다.",
+    "편집기가 Supabase portfolios 테이블을 직접 호출하지 않도록 분리했다.",
+    "그래프 충돌 회피 fan offset과 우회 채널을 제거했다.",
+    "화살표가 공통 중간축을 공유하며 겹친 뒤 분기되도록 단순 직교 라우팅을 적용했다.",
+    "객체 편집, 추가, 삭제를 저장 없이 브라우저에서 검증했다.",
+    "repository, 도메인, TypeScript, UI 계약, Supabase 계약, 정적 자산 검사를 통과했다."
   ],
   "remaining": [
-    "portfolioEditor.js의 인덱스 배열 draft를 객체 draft로 교체한다.",
-    "재무 쓰기 작업을 FinanceRepository command로 이동한다.",
     "급여일 회계기간 규칙을 TypeScript 도메인 모듈로 분리한다.",
+    "여러 포트폴리오 쓰기의 서버 원자성을 RPC 또는 transaction으로 강화한다.",
     "로그인과 공개 배포 정책은 사용 환경이 정해질 때 결정한다."
   ],
-  "nextStep": "PortfolioDraft v1을 설계해 편집과 저장 payload도 객체 계약으로 전환한다."
+  "nextStep": "PaydayAccountingPeriod v1을 TypeScript로 분리해 appCore.js에서 재무 기간 계산을 제거한다."
 }

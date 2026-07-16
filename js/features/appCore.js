@@ -78,7 +78,7 @@
     let dynamicAssetSnapshots = {};
     let dynamicPortfolioData = null;
     let rawPortfolioData = [];
-    let workingPortfolioData = []; // 💡 [신규] 포트폴리오 편집 모달용 상태 (항목 추가/삭제/수정용)
+    let workingPortfolioData = null;
     let originalNetWorthForDiff = 0; // 💡 [신규] 변경된 차액을 계산하기 위한 기준값
     let addonCards = [];
     let addonInsurances = [];
@@ -1054,7 +1054,7 @@
 
     function parsePortfolioData(rows) {
         const portfolioRows = financeRepositoryRuntime.normalizeTableRows('portfolios', rows || []);
-        rawPortfolioData = financeRepositoryRuntime.toLegacyPortfolioRows(portfolioRows);
+        rawPortfolioData = portfolioRows.map((row) => ({ ...row }));
         dynamicPortfolioData = {};
         let hasData = false;
 

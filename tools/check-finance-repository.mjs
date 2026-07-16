@@ -38,10 +38,25 @@ assert.equal(snapshot.transactions.length, 2);
 assert.equal(snapshot.portfolios[0].asset_type, 'debt');
 assert.equal(snapshot.updatedAt, '2026-07-17T00:00:00+09:00');
 
-const editorRows = repository.toLegacyPortfolioRows(normalizedPortfolio);
-assert.equal(editorRows.length, 2);
-assert.equal(editorRows[1][6], 'loan');
-assert.equal(editorRows[1][16], 20);
+const draft = repository.createPortfolioDraft([
+    normalizedPortfolio[0],
+    { id: 'cash', group_name: '현금', name: '생활계좌', amount: 1_000_000, asset_type: 'account' },
+]);
+assert.equal(draft.items.length, 2);
+assert.equal(draft.items[0].groupName, '부채');
+assert.equal(draft.items[0].accountOrder, 20);
+draft.items[0].name = '직장인론 수정';
+draft.items = draft.items.filter((item) => item.id !== 'cash');
+const addedDraftItem = repository.addPortfolioDraftItem(draft, '안전');
+addedDraftItem.name = '새 적금';
+addedDraftItem.amount = 300_000;
+addedDraftItem.assetType = 'account';
+const mutation = repository.buildPortfolioMutation(draft);
+assert.equal(mutation.upserts.length, 1);
+assert.equal(mutation.upserts[0].name, '직장인론 수정');
+assert.equal(mutation.inserts.length, 1);
+assert.equal(mutation.inserts[0].name, '새 적금');
+assert.deepEqual(mutation.removedIds, ['cash']);
 
 const merged = repository.mergeTransactionRows(normalizedTransactions.slice(1), normalizedTransactions.slice(0, 1));
 assert.deepEqual(merged.map((row) => row.date), ['2026-06-25', '2026-06-28']);
@@ -86,5 +101,34 @@ assert.equal(remotePatch.tx[0].amount, -1000);
 assert.equal(Object.hasOwn(remotePatch, 'cards'), false);
 assert.equal(optionalErrors[0].table, 'cards');
 assert.ok(queryLog.some((entry) => entry.table === 'transactions' && entry.action === 'order' && entry.column === 'date'));
+
+const writeLog = [];
+const writeClient = {
+    from(table) {
+        return {
+            async upsert(payload, options) {
+                writeLog.push({ table, action: 'upsert', payload, options });
+                return { error: null };
+            },
+            async insert(payload) {
+                writeLog.push({ table, action: 'insert', payload });
+                return { error: null };
+            },
+            delete() {
+                return {
+                    async in(column, values) {
+                        writeLog.push({ table, action: 'delete', column, values });
+                        return { error: null };
+                    },
+                };
+            },
+        };
+    },
+};
+const writeRepository = repository.createSupabaseFinanceRepository({ getClient: () => writeClient });
+await writeRepository.savePortfolioDraft(draft);
+assert.deepEqual(writeLog.map((entry) => entry.action), ['upsert', 'insert', 'delete']);
+assert.equal(writeLog[0].options.onConflict, 'id');
+assert.deepEqual(writeLog[2].values, ['cash']);
 
 console.log('Finance repository checks ok');

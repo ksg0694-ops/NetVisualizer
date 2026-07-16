@@ -7,6 +7,7 @@ const checklist = await readFile(new URL('../js/features/checklist.js', import.m
 const health = await readFile(new URL('../js/features/healthTracker.js', import.meta.url), 'utf8');
 const cfo = await readFile(new URL('../js/features/personalCfo.js', import.meta.url), 'utf8');
 const financeViews = await readFile(new URL('../js/features/financeViews.js', import.meta.url), 'utf8');
+const portfolioEditor = await readFile(new URL('../js/features/portfolioEditor.js', import.meta.url), 'utf8');
 
 const requiredScripts = [
     './js/shared/appUtils.js',
@@ -38,7 +39,13 @@ assert.ok(cfo.includes('renderMobileFinanceSummary'));
 assert.ok(cfo.includes('getDashboardSnapshot'));
 assert.ok(cfo.includes('const defaultSnapshot = domain.personalCfoMockSnapshot'));
 assert.ok(cfo.includes('domain.createPersonalCfoPageModel(portfolioOverlay.snapshot, activeGraphMode)'));
+assert.ok(cfo.includes('const middleX = Math.round(((sourceX + targetX) / 2) / 4) * 4'));
+assert.ok(!cfo.includes('buildGraphEdgeRoutes'), 'graph edges should share simple routes instead of collision-avoidance fans');
 assert.ok(financeViews.includes('selectLatestClosedCashFlow(periods, today)'));
 assert.ok(financeViews.includes('const selfFunding = Math.max(0, liquidAndSafe + housingFunds + discountedInvestments + debt)'));
+assert.ok(portfolioEditor.includes('createPortfolioDraft(rawPortfolioData)'));
+assert.ok(portfolioEditor.includes('savePortfolioDraft(workingPortfolioData)'));
+assert.ok(!portfolioEditor.includes(".from('portfolios')"), 'portfolio editor must not issue Supabase writes directly');
+assert.ok(!/workingPortfolioData\[[^\]]+\]\[[^\]]+\]/.test(portfolioEditor), 'portfolio draft must not use indexed columns');
 
 console.log('UI runtime contracts ok');

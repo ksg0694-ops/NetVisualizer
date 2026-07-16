@@ -229,19 +229,103 @@
         return snapshot;
     }
 
-    function toLegacyPortfolioRows(rows = []) {
-        const header = [
-            '대분류 (Drop-down)', '계좌/자산명 (Text)', '통화/형태 (Text)', '만기일 (Date/Text)',
-            '금액 (Number)', '주식수', 'id', 'asset_type', 'instrument_type', 'ticker', 'risk_bucket',
-            'classification_source', 'classification_updated_at', 'strategy_tag', 'avg_buy_price',
-            'account_name', 'account_order',
-        ];
-        return [header, ...normalizeTableRows('portfolios', rows).map((row) => [
-            row.group_name, row.name, row.currency, row.maturity, row.amount, row.shares ?? '', row.id,
-            row.asset_type, row.instrument_type, row.ticker, row.risk_bucket, row.classification_source,
-            row.classification_updated_at, row.strategy_tag, row.avg_buy_price ?? '', row.account_name,
-            row.account_order ?? '',
-        ])];
+    function toPortfolioDraftItem(row, clientKey) {
+        return {
+            clientKey,
+            id: row.id || '',
+            groupName: row.group_name || '미분류',
+            name: row.name || '',
+            currency: row.currency || 'KRW',
+            maturity: row.maturity || '',
+            amount: Math.round(finiteNumber(row.amount)),
+            shares: nullableNumber(row.shares),
+            assetType: row.asset_type || '',
+            instrumentType: row.instrument_type || '',
+            ticker: row.ticker || '',
+            riskBucket: row.risk_bucket || '',
+            classificationSource: row.classification_source || '',
+            classificationUpdatedAt: row.classification_updated_at || '',
+            strategyTag: row.strategy_tag || '',
+            avgBuyPrice: nullableNumber(row.avg_buy_price),
+            accountName: row.account_name || '',
+            accountOrder: nullableNumber(row.account_order),
+        };
+    }
+
+    function createPortfolioDraft(rows = []) {
+        const normalized = normalizeTableRows('portfolios', rows);
+        return {
+            originalIds: normalized.map((row) => row.id).filter(Boolean),
+            sourceCount: normalized.length,
+            nextSequence: normalized.length + 1,
+            items: normalized.map((row, index) => toPortfolioDraftItem(row, `row-${index + 1}`)),
+        };
+    }
+
+    function addPortfolioDraftItem(draft, groupName = '기타') {
+        const sequence = Math.max(1, Math.trunc(finiteNumber(draft?.nextSequence, 1)));
+        const item = {
+            clientKey: `new-${sequence}`,
+            id: '',
+            groupName: groupName || '기타',
+            name: groupName === '부채' ? '새 부채' : (groupName === '연금' ? '새 연금' : (groupName === '안전' ? '새 안전자산' : '새 계좌')),
+            currency: 'KRW',
+            maturity: '',
+            amount: 0,
+            shares: null,
+            assetType: '',
+            instrumentType: '',
+            ticker: '',
+            riskBucket: '',
+            classificationSource: '',
+            classificationUpdatedAt: '',
+            strategyTag: '',
+            avgBuyPrice: null,
+            accountName: '',
+            accountOrder: null,
+        };
+        draft.nextSequence = sequence + 1;
+        draft.items.push(item);
+        return item;
+    }
+
+    function toPortfolioPayload(item = {}) {
+        const payload = {
+            group_name: String(item.groupName || '미분류'),
+            name: String(item.name || ''),
+            currency: String(item.currency || 'KRW'),
+            maturity: String(item.maturity || ''),
+            amount: Math.round(finiteNumber(item.amount)),
+            shares: nullableNumber(item.shares),
+            asset_type: String(item.assetType || ''),
+            instrument_type: String(item.instrumentType || ''),
+            ticker: String(item.ticker || '').trim().toUpperCase() || null,
+            risk_bucket: String(item.riskBucket || ''),
+            classification_source: String(item.classificationSource || 'rule'),
+            classification_updated_at: String(item.classificationUpdatedAt || new Date().toISOString()),
+            strategy_tag: String(item.strategyTag || 'other'),
+            avg_buy_price: nullableNumber(item.avgBuyPrice),
+            account_name: String(item.accountName || '').trim() || null,
+        };
+        const accountOrder = nullableNumber(item.accountOrder);
+        if (accountOrder !== null) payload.account_order = accountOrder;
+        if (item.id) payload.id = item.id;
+        return payload;
+    }
+
+    function buildPortfolioMutation(draft = {}) {
+        const items = Array.isArray(draft.items) ? draft.items : [];
+        const originalIds = Array.isArray(draft.originalIds) ? draft.originalIds.filter(Boolean) : [];
+        if (Number(draft.sourceCount || 0) > 0 && originalIds.length === 0) {
+            throw new Error('포트폴리오 row id가 없어 안전 저장을 진행할 수 없습니다. 먼저 최신 동기화를 실행해주세요.');
+        }
+        const payloads = items.map(toPortfolioPayload).filter((item) => item.name);
+        const currentIds = payloads.map((item) => item.id).filter(Boolean);
+        return {
+            upserts: payloads.filter((item) => item.id),
+            inserts: payloads.filter((item) => !item.id),
+            removedIds: originalIds.filter((id) => !currentIds.includes(id)),
+        };
     }
 
     function mergeTransactionRows(currentRows = [], insertedRows = []) {
@@ -300,7 +384,24 @@
             });
             return patch;
         }
-        return Object.freeze({ fetchTables });
+        async function savePortfolioDraft(draft) {
+            const client = options.getClient();
+            const mutation = buildPortfolioMutation(draft);
+            if (mutation.upserts.length > 0) {
+                const { error } = await client.from('portfolios').upsert(mutation.upserts, { onConflict: 'id' });
+                if (error) throw error;
+            }
+            if (mutation.inserts.length > 0) {
+                const { error } = await client.from('portfolios').insert(mutation.inserts);
+                if (error) throw error;
+            }
+            if (mutation.removedIds.length > 0) {
+                const { error } = await client.from('portfolios').delete().in('id', mutation.removedIds);
+                if (error) throw error;
+            }
+            return mutation;
+        }
+        return Object.freeze({ fetchTables, savePortfolioDraft });
     }
 
     root.FinanceRepository = Object.freeze({
@@ -308,12 +409,15 @@
         DEFAULT_DATA_TABLES,
         REAL_ESTATE_DETAIL_TABLES,
         TABLE_SPECS,
+        addPortfolioDraftItem,
         buildAccountingPeriods,
+        buildPortfolioMutation,
+        createPortfolioDraft,
         createSupabaseFinanceRepository,
         getSnapshot,
         mergeTransactionRows,
         normalizeCache,
         normalizeTableRows,
-        toLegacyPortfolioRows,
+        toPortfolioPayload,
     });
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -402,102 +402,28 @@
         };
     }
 
-    function buildGraphEdgeRoutes(edges, nodeById) {
-        const routes = new Map(edges.map((edge) => [edge.id, {
-            sourceIndex: 0,
-            sourceTotal: 1,
-            targetIndex: 0,
-            targetTotal: 1,
-        }]));
-        const outgoing = new Map();
-        const incoming = new Map();
-
-        edges.forEach((edge) => {
-            const source = nodeById.get(edge.source);
-            const target = nodeById.get(edge.target);
-            if (!source || !target) return;
-            const sourceSide = target.x >= source.x ? 'right' : 'left';
-            const targetSide = source.x <= target.x ? 'left' : 'right';
-            const outgoingKey = `${source.id}:${sourceSide}`;
-            const incomingKey = `${target.id}:${targetSide}`;
-            outgoing.set(outgoingKey, [...(outgoing.get(outgoingKey) || []), edge]);
-            incoming.set(incomingKey, [...(incoming.get(incomingKey) || []), edge]);
-        });
-
-        outgoing.forEach((group) => {
-            group.sort((left, right) => {
-                const leftNode = nodeById.get(left.target);
-                const rightNode = nodeById.get(right.target);
-                return (leftNode?.y || 0) - (rightNode?.y || 0) || (leftNode?.x || 0) - (rightNode?.x || 0);
-            });
-            group.forEach((edge, index) => Object.assign(routes.get(edge.id), {
-                sourceIndex: index,
-                sourceTotal: group.length,
-            }));
-        });
-        incoming.forEach((group) => {
-            group.sort((left, right) => {
-                const leftNode = nodeById.get(left.source);
-                const rightNode = nodeById.get(right.source);
-                return (leftNode?.y || 0) - (rightNode?.y || 0) || (leftNode?.x || 0) - (rightNode?.x || 0);
-            });
-            group.forEach((edge, index) => Object.assign(routes.get(edge.id), {
-                targetIndex: index,
-                targetTotal: group.length,
-            }));
-        });
-        return routes;
-    }
-
-    function getGraphPortY(node, index, total) {
-        if (total <= 1) return node.y;
-        const { height } = getGraphNodeDimensions(node);
-        const availableHeight = Math.max(8, height - 16);
-        return node.y - (availableHeight / 2) + ((availableHeight * index) / (total - 1));
-    }
-
-    function buildOrthogonalEdgePath(edge, source, target, route) {
+    function buildOrthogonalEdgePath(source, target) {
         const sourceSize = getGraphNodeDimensions(source);
         const targetSize = getGraphNodeDimensions(target);
         if (Math.abs(target.x - source.x) < 2) {
             const movesDown = target.y >= source.y;
-            const fanOffset = (route.sourceIndex - ((route.sourceTotal - 1) / 2)) * 6;
-            const portX = source.x + fanOffset;
             const sourceY = source.y + (movesDown ? sourceSize.height / 2 : -sourceSize.height / 2);
             const targetY = target.y + (movesDown ? -targetSize.height / 2 : targetSize.height / 2);
-            return `M ${portX.toFixed(1)} ${sourceY.toFixed(1)} V ${targetY.toFixed(1)}`;
+            return `M ${source.x.toFixed(1)} ${sourceY.toFixed(1)} V ${targetY.toFixed(1)}`;
         }
         const movesRight = target.x >= source.x;
         const sourceX = source.x + (movesRight ? sourceSize.width / 2 : -sourceSize.width / 2);
-        const sourceY = getGraphPortY(source, route.sourceIndex, route.sourceTotal);
-
-        if (target.type === 'kpi' && movesRight) {
-            const targetX = target.x;
-            const targetY = target.y - (targetSize.height / 2);
-            const branchX = sourceX + 26 + (route.sourceIndex * 7);
-            const laneY = 8 + (route.sourceIndex * 4);
-            return `M ${sourceX.toFixed(1)} ${sourceY.toFixed(1)} H ${branchX.toFixed(1)} V ${laneY.toFixed(1)} H ${targetX.toFixed(1)} V ${targetY.toFixed(1)}`;
-        }
-
+        const sourceY = source.y;
         const targetX = target.x + (movesRight ? -targetSize.width / 2 : targetSize.width / 2);
-        const targetY = getGraphPortY(target, route.targetIndex, route.targetTotal);
+        const targetY = target.y;
         if (Math.abs(sourceY - targetY) < 1) {
             return `M ${sourceX.toFixed(1)} ${sourceY.toFixed(1)} H ${targetX.toFixed(1)}`;
         }
-        const targetSideChannel = targetX + (movesRight ? -44 : 44);
-        const usesTargetChannel = edge.type === 'FUNDS'
-            || edge.type === 'HEDGES'
-            || (edge.type === 'CONTRIBUTES_TO' && target.type === 'asset');
-        const sourceFan = (route.sourceIndex - ((route.sourceTotal - 1) / 2)) * 5;
-        const targetFan = (route.targetIndex - ((route.targetTotal - 1) / 2)) * 3;
-        const middleX = usesTargetChannel
-            ? targetSideChannel + sourceFan
-            : ((sourceX + targetX) / 2) + sourceFan + targetFan;
-        const snappedMiddleX = Math.round(middleX / 4) * 4;
-        return `M ${sourceX.toFixed(1)} ${sourceY.toFixed(1)} H ${snappedMiddleX.toFixed(1)} V ${targetY.toFixed(1)} H ${targetX.toFixed(1)}`;
+        const middleX = Math.round(((sourceX + targetX) / 2) / 4) * 4;
+        return `M ${sourceX.toFixed(1)} ${sourceY.toFixed(1)} H ${middleX.toFixed(1)} V ${targetY.toFixed(1)} H ${targetX.toFixed(1)}`;
     }
 
-    function renderGraphEdge(edge, nodeById, route) {
+    function renderGraphEdge(edge, nodeById) {
         const source = nodeById.get(edge.source);
         const target = nodeById.get(edge.target);
         if (!source || !target) return '';
@@ -506,7 +432,7 @@
         const color = isExposure ? '#fb7185' : isHedge ? '#14b8a6' : '#94a3b8';
         const markerId = isExposure ? 'personal-cfo-arrow-exposure' : isHedge ? 'personal-cfo-arrow-hedge' : 'personal-cfo-arrow';
         const amountText = edge.amount === undefined ? '' : formatMetricValue(edge.amount, target.unit);
-        const path = buildOrthogonalEdgePath(edge, source, target, route);
+        const path = buildOrthogonalEdgePath(source, target);
         return `
             <path
                 data-cfo-edge="${escapeHtml(edge.id)}"
@@ -561,7 +487,6 @@
 
     function renderFinanceGraph(graph) {
         const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
-        const edgeRoutes = buildGraphEdgeRoutes(graph.edges, nodeById);
         const modeMeta = graphModeMeta[graph.mode] || graphModeMeta.cashFlow;
         const visibleTypes = new Set(graph.nodes.map((node) => node.type));
         return `
@@ -599,7 +524,7 @@
                         </defs>
                         <rect x="0" y="0" width="${graph.width}" height="${graph.height}" fill="#f8fafc"></rect>
                         ${renderGraphGuides(graph)}
-                        ${graph.edges.map((edge) => renderGraphEdge(edge, nodeById, edgeRoutes.get(edge.id))).join('')}
+                        ${graph.edges.map((edge) => renderGraphEdge(edge, nodeById)).join('')}
                         ${graph.nodes.map(renderGraphNode).join('')}
                     </svg>
                 </div>
