@@ -46,7 +46,10 @@ export function calculateSavingsRate(snapshot: PersonalCfoSnapshot): number {
 export function calculateFixedCostRatio(snapshot: PersonalCfoSnapshot): number {
   if (snapshot.cashFlow) {
     if (snapshot.cashFlow.totalIncome <= 0) return 0;
-    return clamp(((snapshot.cashFlow.fixedExpense + snapshot.cashFlow.debtRepayment) / snapshot.cashFlow.totalIncome) * 100);
+    const fixedCashOutflow = snapshot.cashFlow.fixedExpense
+      + snapshot.cashFlow.creditLoanInterest
+      + snapshot.cashFlow.housingLoanPayment;
+    return clamp((fixedCashOutflow / snapshot.cashFlow.totalIncome) * 100);
   }
   const income = sum(snapshot.incomes.map((item) => item.monthlyAmount));
   if (income <= 0) return 0;

@@ -15,7 +15,7 @@
     let remoteLoadStarted = false;
     let syncStatusText = '로컬 우선';
     let syncStatusClasses = 'text-slate-600 bg-slate-50 border-slate-100';
-    let activeGraphMode = 'balanceSheet';
+    let activeGraphMode = 'cashFlow';
 
     const typeMeta = {
         person: { fill: '#334155', stroke: '#0f172a', label: '본인' },
@@ -23,7 +23,7 @@
         account: { fill: '#0284c7', stroke: '#0369a1', label: '계좌' },
         asset: { fill: '#4f46e5', stroke: '#4338ca', label: '자산' },
         liability: { fill: '#dc2626', stroke: '#b91c1c', label: '부채' },
-        budgetBucket: { fill: '#d97706', stroke: '#b45309', label: '바구니' },
+        budgetBucket: { fill: '#d97706', stroke: '#b45309', label: '자금' },
         project: { fill: '#7c3aed', stroke: '#6d28d9', label: '프로젝트' },
         risk: { fill: '#e11d48', stroke: '#be123c', label: '리스크' },
         kpi: { fill: '#0d9488', stroke: '#0f766e', label: 'KPI' },
@@ -60,9 +60,9 @@
     const graphModeMeta = {
         cashFlow: {
             label: '현금 흐름',
-            title: '최근 종료월 현금 흐름',
-            description: '수입이 지출·저축 바구니와 미배분 현금으로 이동한 최근 종료월 흐름입니다.',
-            dataLabel: '실제 데이터',
+            title: '월급 배분 현금 흐름',
+            description: '최근 종료 급여기간의 실제 월급·이자와 개인 배분 규칙을 함께 보여줍니다. 전세대출은 이 흐름에만 반영합니다.',
+            dataLabel: '실제+개인 규칙',
             dataClasses: 'border-emerald-100 bg-emerald-50 text-emerald-700',
         },
         balanceSheet: {
@@ -348,7 +348,7 @@
             { label: '순자산', value: formatKrw(summary.netWorth), sub: `총자산 ${formatKrw(summary.totalAssets)}`, tone: 'slate', basis: 'actual' },
             { label: '종료월 잉여현금', value: formatKrw(summary.monthlyFreeCashFlow), sub: `수입-지출 · ${cashFlowReviewLabel}`, tone: summary.monthlyFreeCashFlow >= 0 ? 'emerald' : 'rose', basis: 'actual' },
             { label: '계획 저축률', value: summary.hasSavingsPlan ? formatPercent(summary.savingsRate) : '-', sub: summary.hasSavingsPlan ? '계획 배분 / 종료월 수입' : '자금 배분 계획 없음', tone: summary.hasSavingsPlan ? 'emerald' : 'slate', basis: summary.hasSavingsPlan ? 'plan' : 'unset' },
-            { label: '고정비·상환율', value: formatPercent(summary.fixedCostRatio), sub: '고정비+부채상환 / 수입', tone: summary.fixedCostRatio <= 50 ? 'sky' : 'amber', basis: 'actual' },
+            { label: '고정 현금유출률', value: formatPercent(summary.fixedCostRatio), sub: '고정비+대출이자+전세대출 / 수입', tone: summary.fixedCostRatio <= 50 ? 'sky' : 'amber', basis: 'actual' },
             { label: '비상금 커버리지', value: summary.hasEmergencyPlan ? formatMonths(summary.emergencyCoverageMonths) : '-', sub: summary.hasEmergencyPlan ? '계획 방어자금 기준 유지 기간' : '방어자금 계획 없음', tone: summary.hasEmergencyPlan && summary.emergencyCoverageMonths >= 6 ? 'emerald' : summary.hasEmergencyPlan ? 'amber' : 'slate', basis: summary.hasEmergencyPlan ? 'plan' : 'unset' },
             { label: '부채비율', value: formatPercent(summary.debtRatio), sub: `총부채 ${formatKrw(summary.totalLiabilities)}`, tone: summary.debtRatio <= 25 ? 'emerald' : 'rose', basis: 'actual' },
         ];
@@ -531,14 +531,16 @@
             amount: item.outstandingBalance,
             type: '부채',
         }));
-        const actualAllocationRows = nextSnapshot.cashFlow
-            ? Object.entries(nextSnapshot.cashFlow.bucketOutflows || {})
-                .filter(([, amount]) => Number(amount) > 0)
-                .map(([key, amount]) => ({ label: bucketLabels[key] || key, amount, type: '종료월 실제' }))
-            : [];
-        if (nextSnapshot.cashFlow?.debtRepayment > 0) {
-            actualAllocationRows.push({ label: '부채 상환', amount: nextSnapshot.cashFlow.debtRepayment, type: '종료월 실제' });
-        }
+        const salaryAllocation = nextSnapshot.cashFlow?.salaryAllocation;
+        const actualAllocationRows = salaryAllocation ? [
+            { label: '청년도약계좌', amount: salaryAllocation.youthSavings, type: '장기목돈' },
+            { label: '연금저축펀드', amount: salaryAllocation.pensionSavings, type: '노후자산' },
+            { label: '신용대출 이자', amount: salaryAllocation.creditLoanInterest, type: '금융비용' },
+            { label: '전세대출', amount: salaryAllocation.housingLoanPayment, type: '현금흐름 전용' },
+            { label: '월급통장 잔액', amount: salaryAllocation.salaryAccountReserve, type: '잔액 목표' },
+            { label: '생활비통장 잔액', amount: salaryAllocation.livingAccountReserve, type: '잔액 목표' },
+            { label: '원화 발행어음', amount: salaryAllocation.safeAssetSweep, type: '안전자산' },
+        ].filter((item) => Number(item.amount) > 0) : [];
         const allocationRows = nextSnapshot.cashFlow
             ? actualAllocationRows
             : nextSnapshot.budgetBuckets.map((item) => ({
@@ -572,7 +574,7 @@
                         ${liabilityRows.length ? renderRows(liabilityRows, 'text-rose-700') : '<p class="py-3 text-sm text-gray-400">등록된 부채가 없습니다.</p>'}
                     </div>
                     <div class="py-2">
-                        <p class="mb-1 text-[11px] font-bold text-emerald-600">${escapeHtml(nextSnapshot.cashFlow ? `${nextSnapshot.cashFlow.periodLabel} 실제 지출·저축` : '월 자금 배분 계획')}</p>
+                        <p class="mb-1 text-[11px] font-bold text-emerald-600">${escapeHtml(nextSnapshot.cashFlow ? `${nextSnapshot.cashFlow.periodLabel} 월급 배분` : '월 자금 배분 계획')}</p>
                         ${allocationRows.length ? renderRows(allocationRows, 'text-emerald-700') : '<p class="py-3 text-sm text-gray-400">표시할 흐름이 없습니다.</p>'}
                     </div>
                 </div>

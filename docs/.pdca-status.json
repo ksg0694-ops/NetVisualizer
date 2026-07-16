@@ -1,25 +1,26 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Personal CFO Actual Source v1",
+  "feature": "Personal CFO Salary Flow v1",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-07-17T19:45:00+09:00",
+  "updatedAt": "2026-07-17T20:42:00+09:00",
   "status": "completed",
-  "currentFocus": "Personal CFO의 seed 데이터를 제거하고 실제 Finance 데이터와 사용자 계획 저장을 분리했다.",
+  "currentFocus": "개인 월급 배분 규칙을 실제 종료 급여기간 데이터와 결합해 현금흐름 그래프로 표현했다.",
   "completed": [
-    "mockData.ts와 personalCfoMockSnapshot 런타임 의존을 제거했다.",
-    "빈 기준 스냅샷과 schema v3 계획 정규화를 추가했다.",
-    "v2 로컬 및 Supabase 스냅샷의 기존 seed 계획을 제거하는 migration을 구현했다.",
-    "계좌, 자산, 부채, 소득, 현금흐름을 실제 Finance 데이터에서만 구성한다.",
-    "실제 종료월 거래에서 소득과 자금 흐름 네트워크 노드를 파생한다.",
-    "계획 KPI, 프로젝트, 리스크, 전략 네트워크에 빈 상태를 추가했다.",
+    "청년도약계좌 중복을 제거해 월 70만원으로 계산한다.",
+    "월급일 부근의 짝 없는 10만원 이체를 연금저축펀드로 계산한다.",
+    "신용대출 이자와 전세대출 현금흐름을 분리했다.",
+    "전세대출은 현금흐름에만 포함하고 부채, 순자산, 부채비율에서 제외했다.",
+    "월급통장과 생활비통장 잔액 목표를 각각 50만원으로 반영했다.",
+    "나머지 월급을 원화 발행어음 배분으로 계산했다.",
+    "월급 배분 현금흐름 그래프를 Personal CFO 기본 보기로 적용했다.",
     "도메인, TypeScript, UI, repository, Supabase, 정적 자산 검사를 통과했다."
   ],
   "remaining": [
-    "계획값을 기준일과 변경 이력이 있는 Finance Plan Settings 모델로 입력할 수 있게 한다.",
-    "여러 포트폴리오 행 저장을 서버 RPC 또는 transaction으로 원자화한다.",
+    "통장별 시점 잔액 데이터가 확보되면 목표 잔액과 실제 보충액을 구분한다.",
+    "월급 배분 규칙 변경이 필요할 때 사용자 override 설정으로 이동한다.",
     "로그인과 공개 배포 정책은 실제 사용 환경이 정해진 뒤 결정한다."
   ],
-  "nextStep": "Finance Plan Settings v1에서 빈 계획 상태에 사용자 override와 변경 이력을 연결한다."
+  "nextStep": "공개 Personal CFO 화면에서 월급 배분 그래프를 검토하고 사용자 피드백을 다음 분류 규칙에 반영한다."
 }

@@ -45,11 +45,14 @@ const closedPeriod = {
   endDate: '2026-06-24',
   closeStatus: 'confirmed',
   transactions: [
-    { date: '2026-05-25', type: '수입', category: '월급', memo: '급여', amount: 3_908_580 },
+    { date: '2026-05-25', type: '수입', category: '급여', memo: '급여', amount: 3_908_580 },
+    { date: '2026-05-25', type: '이체', category: '내계좌이체', memo: '본인', method: '월급통장', amount: -100_000 },
     { date: '2026-06-02', type: '지출', category: '고정비', memo: '통신·보험', amount: -619_682 },
-    { date: '2026-06-10', type: '지출', category: '상환', memo: '직장인론 원리금', amount: -1_269_457 },
+    { date: '2026-06-10', type: '지출', category: '상환', subcategory: '신용대출', memo: '직장인론 이자', amount: -269_457 },
+    { date: '2026-06-10', type: '지출', category: '상환', subcategory: '전세대출', memo: '주거 정산', amount: -1_000_000 },
     { date: '2026-06-15', type: '지출', category: '식비', memo: '생활비', amount: -1_019_863 },
-    { date: '2026-06-20', type: '이체', category: '저축', memo: '청년도약 적금', amount: -700_000 },
+    { date: '2026-05-25', type: '이체', category: '저축', memo: '청년도약계좌', method: '월급통장', amount: -700_000 },
+    { date: '2026-05-25', type: '이체', category: '저축', memo: '월 자동이체', method: '신한 청년도약계좌', amount: -700_000 },
   ],
 };
 const openPeriod = {
@@ -67,8 +70,35 @@ const closedSummary = domain.selectLatestClosedCashFlow([closedPeriod, openPerio
 assert.equal(closedSummary.periodKey, '2026-06', 'open accounting period must not be treated as closed');
 assert.equal(closedSummary.reviewStatus, 'confirmed', 'cash-flow review status must propagate from the close record');
 assert.equal(closedSummary.freeCashFlow, 999_578);
-assert.equal(closedSummary.debtRepayment, 1_269_457);
-assert.equal(closedSummary.savingTransfers, 700_000);
+assert.equal(closedSummary.debtRepayment, 269_457, 'only the bank-loan interest is debt cash flow');
+assert.equal(closedSummary.creditLoanInterest, 269_457);
+assert.equal(closedSummary.housingLoanPayment, 1_000_000, 'housing payment is cash-flow only');
+assert.equal(closedSummary.youthSavings, 700_000, 'the destination-side youth account row must not double count');
+assert.equal(closedSummary.pensionSavings, 100_000);
+assert.equal(closedSummary.savingTransfers, 800_000);
+assert.equal(closedSummary.unallocatedCash, 199_578);
+assert.deepEqual(
+  {
+    salary: closedSummary.salaryAllocation.salaryIncome,
+    youth: closedSummary.salaryAllocation.youthSavings,
+    pension: closedSummary.salaryAllocation.pensionSavings,
+    credit: closedSummary.salaryAllocation.creditLoanInterest,
+    housing: closedSummary.salaryAllocation.housingLoanPayment,
+    salaryReserve: closedSummary.salaryAllocation.salaryAccountReserve,
+    livingReserve: closedSummary.salaryAllocation.livingAccountReserve,
+    note: closedSummary.salaryAllocation.safeAssetSweep,
+  },
+  {
+    salary: 3_908_580,
+    youth: 700_000,
+    pension: 100_000,
+    credit: 269_457,
+    housing: 1_000_000,
+    salaryReserve: 500_000,
+    livingReserve: 500_000,
+    note: 839_123,
+  },
+);
 
 const portfolio = domain.applyPortfolioFinanceData(emptySnapshot, [
   { id: 'cash', groupName: '현금 자산', name: '생활계좌', amount: 1_000_000, assetType: 'account' },
@@ -103,18 +133,21 @@ assert.deepEqual(Array.from(model.graph.columns, (column) => column.label), ['�
 
 const cashFlowGraph = domain.buildFinanceGraphFromSnapshot(actualSnapshot, 'cashFlow');
 const outgoing = cashFlowGraph.edges
-  .filter((edge) => edge.source === actualSnapshot.person.id && edge.amount > 0)
+  .filter((edge) => edge.source === 'flow:salary-allocation' && edge.amount > 0)
   .reduce((sum, edge) => sum + edge.amount, 0);
-assert.equal(outgoing, closedSummary.totalIncome, 'cash-flow graph must conserve the closed-period income');
-assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'liability:monthly-debt-payment' && node.amount === 1_269_457));
-const cashFlowTargets = cashFlowGraph.nodes.filter((node) => node.type === 'budgetBucket'
-  || node.id === 'liability:monthly-debt-payment'
-  || node.id === 'account:unallocated-cash');
+assert.equal(outgoing, closedSummary.salaryAllocation.salaryIncome, 'salary-allocation graph must conserve salary income');
+assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'liability:credit-loan-interest' && node.amount === 269_457));
+assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'bucket:housing-cashflow'
+  && node.type === 'budgetBucket' && node.amount === 1_000_000));
+assert.ok(!cashFlowGraph.nodes.some((node) => node.type === 'liability' && node.amount === 1_000_000), 'housing payment must not become a liability node');
+assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'asset:krw-note' && node.amount === 839_123));
+const cashFlowTargets = cashFlowGraph.nodes.filter((node) => node.x === 790);
 assert.equal(new Set(cashFlowTargets.map((node) => node.x)).size, 1, 'cash-flow outflows must share one vertical column');
 const cashPerson = cashFlowGraph.nodes.find((node) => node.type === 'person');
 const cashIncome = cashFlowGraph.nodes.find((node) => node.type === 'income');
 assert.equal(cashPerson.y, Math.min(...cashFlowTargets.map((node) => node.y)), 'cash-flow columns must start at the top');
 assert.equal(cashPerson.y, cashIncome.y, 'income and available cash must share the top line');
+assert.deepEqual(Array.from(cashFlowGraph.columns, (column) => column.label), ['월급', '배분', '월급 사용처']);
 
 const planningSnapshot = {
   ...actualSnapshot,

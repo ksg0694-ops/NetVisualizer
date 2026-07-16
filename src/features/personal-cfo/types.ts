@@ -139,6 +139,18 @@ export interface PersonalCfoKpi {
 
 export type PersonalCfoCashFlowReviewStatus = 'confirmed' | 'unconfirmed' | 'stale';
 
+export interface PersonalCfoSalaryAllocationSummary {
+  salaryIncome: number;
+  youthSavings: number;
+  pensionSavings: number;
+  creditLoanInterest: number;
+  housingLoanPayment: number;
+  salaryAccountReserve: number;
+  livingAccountReserve: number;
+  safeAssetSweep: number;
+  allocationShortfall: number;
+}
+
 export interface PersonalCfoCashFlowSummary {
   periodKey: string;
   periodLabel: string;
@@ -151,9 +163,14 @@ export interface PersonalCfoCashFlowSummary {
   freeCashFlow: number;
   fixedExpense: number;
   debtRepayment: number;
+  creditLoanInterest: number;
+  housingLoanPayment: number;
+  youthSavings: number;
+  pensionSavings: number;
   savingTransfers: number;
   unallocatedCash: number;
   bucketOutflows: Record<BudgetBucketKey, number>;
+  salaryAllocation: PersonalCfoSalaryAllocationSummary;
 }
 
 export interface PersonalCfoSnapshot {

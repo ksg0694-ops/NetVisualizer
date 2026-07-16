@@ -122,7 +122,7 @@ var PersonalCfoDomain = (function(exports) {
 	function calculateFixedCostRatio(snapshot) {
 		if (snapshot.cashFlow) {
 			if (snapshot.cashFlow.totalIncome <= 0) return 0;
-			return clamp((snapshot.cashFlow.fixedExpense + snapshot.cashFlow.debtRepayment) / snapshot.cashFlow.totalIncome * 100);
+			return clamp((snapshot.cashFlow.fixedExpense + snapshot.cashFlow.creditLoanInterest + snapshot.cashFlow.housingLoanPayment) / snapshot.cashFlow.totalIncome * 100);
 		}
 		const income = sum$1(snapshot.incomes.map((item) => item.monthlyAmount));
 		if (income <= 0) return 0;
@@ -191,6 +191,9 @@ var PersonalCfoDomain = (function(exports) {
 	}
 	//#endregion
 	//#region src/features/personal-cfo/cashFlowAdapter.ts
+	var SALARY_ACCOUNT_TARGET = 5e5;
+	var LIVING_ACCOUNT_TARGET = 5e5;
+	var PENSION_MONTHLY_TRANSFER = 1e5;
 	function sum(values) {
 		return values.reduce((total, value) => total + Number(value || 0), 0);
 	}
@@ -204,6 +207,27 @@ var PersonalCfoDomain = (function(exports) {
 			experience: 0
 		};
 	}
+	function text$1(value) {
+		return String(value || "").trim();
+	}
+	function absoluteAmount(transaction) {
+		return Math.abs(Number(transaction.amount || 0));
+	}
+	function daysFrom(date, startDate) {
+		const dateMs = Date.parse(`${date}T00:00:00Z`);
+		const startMs = Date.parse(`${startDate}T00:00:00Z`);
+		if (!Number.isFinite(dateMs) || !Number.isFinite(startMs)) return Number.POSITIVE_INFINITY;
+		return Math.round((dateMs - startMs) / 864e5);
+	}
+	function calculatePensionTransfer(period) {
+		const paydayTransfers = period.transactions.filter((item) => item.type === "이체" && item.category === "내계좌이체" && Number(item.amount) === -1e5 && /월급통장/u.test(text$1(item.method)) && daysFrom(item.date, period.startDate) >= 0 && daysFrom(item.date, period.startDate) <= 2);
+		const unpairedCount = paydayTransfers.reduce((total, item) => {
+			const pairedIncomeCount = period.transactions.filter((candidate) => candidate.type === "이체" && candidate.date === item.date && Number(candidate.amount) === PENSION_MONTHLY_TRANSFER).length;
+			const sameDayOutflowCount = paydayTransfers.filter((candidate) => candidate.date === item.date).length;
+			return total + Math.max(0, sameDayOutflowCount - pairedIncomeCount);
+		}, 0);
+		return Math.min(PENSION_MONTHLY_TRANSFER, unpairedCount * PENSION_MONTHLY_TRANSFER);
+	}
 	function resolveExpenseBucket(transaction) {
 		const text = `${String(transaction.category || "").trim()} ${String(transaction.subcategory || "").trim()} ${transaction.memo || ""}`;
 		if (/교육|학습|시험|강의|교재/u.test(text)) return "humanCapital";
@@ -212,31 +236,31 @@ var PersonalCfoDomain = (function(exports) {
 		if (/보험|의료|건강|약국|병원/u.test(text)) return "defense";
 		return "operating";
 	}
-	function resolveSavingBucket(transaction) {
-		const text = `${transaction.memo || ""} ${transaction.method || ""}`;
-		if (/청약|주택/u.test(text)) return "housing";
-		if (/증권|ISA|ETF|주식|투자/u.test(text)) return "growth";
-		return "defense";
-	}
 	function summarizeCashFlowPeriod(period) {
 		const bucketOutflows = emptyBucketOutflows();
 		const incomes = period.transactions.filter((item) => item.type === "수입");
 		const expenses = period.transactions.filter((item) => item.type === "지출");
-		const savingTransfers = period.transactions.filter((item) => item.type === "이체" && item.category === "저축" && Number(item.amount) < 0);
+		const youthSavingTransfers = period.transactions.filter((item) => item.type === "이체" && item.category === "저축" && Number(item.amount) < 0 && /청년|도약/u.test(text$1(item.memo)));
 		expenses.forEach((item) => {
 			if (item.category === "상환") return;
 			bucketOutflows[resolveExpenseBucket(item)] += Math.abs(Number(item.amount || 0));
 		});
-		savingTransfers.forEach((item) => {
-			bucketOutflows[resolveSavingBucket(item)] += Math.abs(Number(item.amount || 0));
-		});
 		const totalIncome = sum(incomes.map((item) => Number(item.amount || 0)));
 		const totalExpense = sum(expenses.map((item) => Math.abs(Number(item.amount || 0))));
-		const savingTotal = sum(savingTransfers.map((item) => Math.abs(Number(item.amount || 0))));
-		const fixedExpense = sum(expenses.filter((item) => item.category === "고정비").map((item) => Math.abs(Number(item.amount || 0))));
-		const debtRepayment = sum(expenses.filter((item) => item.category === "상환").map((item) => Math.abs(Number(item.amount || 0))));
+		const salaryIncome = sum(incomes.filter((item) => /급여|월급/u.test(`${text$1(item.category)} ${text$1(item.memo)}`)).map((item) => Number(item.amount || 0))) || totalIncome;
+		const youthSavings = sum(youthSavingTransfers.map(absoluteAmount));
+		const pensionSavings = calculatePensionTransfer(period);
+		const savingTotal = youthSavings + pensionSavings;
+		const fixedExpense = sum(expenses.filter((item) => item.category === "고정비").map(absoluteAmount));
+		const housingLoanPayment = sum(expenses.filter((item) => item.category === "상환" && /전세/u.test(`${text$1(item.subcategory)} ${text$1(item.memo)}`)).map(absoluteAmount));
+		const creditLoanInterest = sum(expenses.filter((item) => item.category === "상환" && !/전세/u.test(`${text$1(item.subcategory)} ${text$1(item.memo)}`)).map(absoluteAmount));
 		const dates = period.transactions.map((item) => item.date).filter(Boolean).sort();
 		const freeCashFlow = totalIncome - totalExpense;
+		const committedSalary = youthSavings + pensionSavings + creditLoanInterest + housingLoanPayment;
+		const availableForAccounts = Math.max(0, salaryIncome - committedSalary);
+		const salaryAccountReserve = Math.min(SALARY_ACCOUNT_TARGET, availableForAccounts);
+		const livingAccountReserve = Math.min(LIVING_ACCOUNT_TARGET, Math.max(0, availableForAccounts - salaryAccountReserve));
+		const safeAssetSweep = Math.max(0, availableForAccounts - salaryAccountReserve - livingAccountReserve);
 		return {
 			periodKey: period.key,
 			periodLabel: period.label,
@@ -248,10 +272,25 @@ var PersonalCfoDomain = (function(exports) {
 			totalExpense,
 			freeCashFlow,
 			fixedExpense,
-			debtRepayment,
+			debtRepayment: creditLoanInterest,
+			creditLoanInterest,
+			housingLoanPayment,
+			youthSavings,
+			pensionSavings,
 			savingTransfers: savingTotal,
 			unallocatedCash: freeCashFlow - savingTotal,
-			bucketOutflows
+			bucketOutflows,
+			salaryAllocation: {
+				salaryIncome,
+				youthSavings,
+				pensionSavings,
+				creditLoanInterest,
+				housingLoanPayment,
+				salaryAccountReserve,
+				livingAccountReserve,
+				safeAssetSweep,
+				allocationShortfall: Math.max(0, committedSalary - salaryIncome)
+			}
 		};
 	}
 	function selectLatestClosedCashFlow(periods, today) {
@@ -296,15 +335,6 @@ var PersonalCfoDomain = (function(exports) {
 		humanCapital: "bucket:humanCapital",
 		experience: "bucket:experience"
 	};
-	var cashFlowBucketMeta = {
-		operating: "운영자금",
-		defense: "방어자금",
-		housing: "주거자금",
-		growth: "성장자금",
-		humanCapital: "인적자본",
-		experience: "경험자금"
-	};
-	var cashFlowBucketOrder = Object.keys(cashFlowBucketMeta);
 	function amountToNodeSize(amount = 0) {
 		if (amount <= 0) return 18;
 		return Math.round(Math.min(30, 12 + Math.log10(amount) * 2.25));
@@ -333,93 +363,136 @@ var PersonalCfoDomain = (function(exports) {
 	function buildCashFlowGraph(snapshot) {
 		const nodes = [];
 		const edges = [];
-		const outflowBuckets = snapshot.cashFlow ? cashFlowBucketOrder.map((id) => ({
-			id,
-			label: cashFlowBucketMeta[id],
-			amount: snapshot.cashFlow?.bucketOutflows[id] || 0
-		})).filter((bucket) => bucket.amount > 0) : snapshot.budgetBuckets.map((bucket) => ({
-			id: bucket.id,
-			label: bucket.label,
-			amount: bucket.monthlyAllocation
-		}));
+		const allocation = snapshot.cashFlow?.salaryAllocation;
+		const salaryIncome = allocation?.salaryIncome ?? snapshot.incomes.reduce((sum, item) => sum + item.monthlyAmount, 0);
+		const salaryId = "income:salary-allocation";
+		const allocationId = "flow:salary-allocation";
 		const outflowX = 790;
 		const topY = 92;
-		const bucketStartY = topY;
-		const bucketGap = 84;
+		const destinationGap = 78;
 		nodes.push(makeNode({
-			id: snapshot.person.id,
-			label: snapshot.person.label,
+			id: salaryId,
+			label: snapshot.cashFlow ? `${snapshot.cashFlow.periodLabel} 월급` : "월급",
+			type: "income",
+			x: 115,
+			y: topY,
+			amount: salaryIncome
+		}));
+		nodes.push(makeNode({
+			id: allocationId,
+			label: "월급 배분",
 			type: "person",
 			x: 390,
 			y: topY,
-			amount: snapshot.cashFlow?.totalIncome ?? snapshot.incomes.reduce((sum, item) => sum + item.monthlyAmount, 0)
+			amount: salaryIncome + (allocation?.allocationShortfall || 0)
 		}));
-		snapshot.incomes.forEach((income, index) => {
+		edges.push(makeEdge("edge:salary:allocation", salaryId, allocationId, "FLOWS_TO", salaryIncome));
+		if (allocation?.allocationShortfall) {
 			nodes.push(makeNode({
-				id: income.id,
-				label: income.label,
-				type: "income",
-				x: 115,
-				y: topY + index * 84,
-				amount: income.monthlyAmount
-			}));
-			edges.push(makeEdge(`edge:${income.id}:person`, income.id, snapshot.person.id, "FLOWS_TO", income.monthlyAmount));
-		});
-		outflowBuckets.forEach((bucket, index) => {
-			const amount = bucket.amount;
-			nodes.push(makeNode({
-				id: bucketNodeByKey[bucket.id],
-				label: bucket.label,
-				type: "budgetBucket",
-				x: outflowX,
-				y: bucketStartY + index * bucketGap,
-				amount,
-				bucketKey: bucket.id
-			}));
-			if (amount > 0) edges.push(makeEdge(`edge:person:${bucket.id}`, snapshot.person.id, bucketNodeByKey[bucket.id], "ALLOCATED_TO", amount));
-		});
-		const residual = snapshot.cashFlow?.unallocatedCash ?? calculateMonthlyFreeCashFlow(snapshot);
-		const debtRepayment = snapshot.cashFlow?.debtRepayment ?? 0;
-		if (debtRepayment > 0) {
-			nodes.push(makeNode({
-				id: "liability:monthly-debt-payment",
-				label: "부채 상환",
+				id: "liability:salary-allocation-shortfall",
+				label: "배분 부족",
 				type: "liability",
-				x: outflowX,
-				y: bucketStartY + outflowBuckets.length * bucketGap,
-				amount: debtRepayment,
-				riskScore: 62
+				x: 115,
+				y: 170,
+				amount: allocation.allocationShortfall,
+				riskScore: 85
 			}));
-			edges.push(makeEdge("edge:person:debt-payment", snapshot.person.id, "liability:monthly-debt-payment", "FLOWS_TO", debtRepayment));
+			edges.push(makeEdge("edge:shortfall:allocation", "liability:salary-allocation-shortfall", allocationId, "EXPOSED_TO", allocation.allocationShortfall));
 		}
-		const residualId = residual >= 0 ? "account:unallocated-cash" : "liability:cash-deficit";
-		nodes.push(makeNode({
-			id: residualId,
-			label: residual >= 0 ? "저축 후 미배분" : "초과 지출",
-			type: residual >= 0 ? "account" : "liability",
-			x: outflowX,
-			y: bucketStartY + (outflowBuckets.length + (debtRepayment > 0 ? 1 : 0)) * bucketGap,
-			amount: Math.abs(residual),
-			riskScore: residual < 0 ? 85 : void 0
-		}));
-		edges.push(residual >= 0 ? makeEdge("edge:person:unallocated", snapshot.person.id, residualId, "FLOWS_TO", residual) : makeEdge("edge:deficit:person", residualId, snapshot.person.id, "EXPOSED_TO", Math.abs(residual)));
+		(allocation ? [
+			{
+				id: "account:youth-savings",
+				label: "청년도약계좌",
+				type: "account",
+				amount: allocation.youthSavings,
+				edgeType: "ALLOCATED_TO",
+				bucketKey: "defense"
+			},
+			{
+				id: "asset:pension-savings",
+				label: "연금저축펀드",
+				type: "asset",
+				amount: allocation.pensionSavings,
+				edgeType: "ALLOCATED_TO",
+				bucketKey: "growth"
+			},
+			{
+				id: "liability:credit-loan-interest",
+				label: "신용대출 이자",
+				type: "liability",
+				amount: allocation.creditLoanInterest,
+				edgeType: "FLOWS_TO",
+				riskScore: 62
+			},
+			{
+				id: "bucket:housing-cashflow",
+				label: "전세대출",
+				type: "budgetBucket",
+				amount: allocation.housingLoanPayment,
+				edgeType: "FLOWS_TO",
+				bucketKey: "housing"
+			},
+			{
+				id: "account:salary-reserve",
+				label: "월급통장 잔액",
+				type: "account",
+				amount: allocation.salaryAccountReserve,
+				edgeType: "ALLOCATED_TO",
+				bucketKey: "operating"
+			},
+			{
+				id: "account:living-reserve",
+				label: "생활비통장 잔액",
+				type: "account",
+				amount: allocation.livingAccountReserve,
+				edgeType: "ALLOCATED_TO",
+				bucketKey: "operating"
+			},
+			{
+				id: "asset:krw-note",
+				label: "원화 발행어음",
+				type: "asset",
+				amount: allocation.safeAssetSweep,
+				edgeType: "ALLOCATED_TO",
+				bucketKey: "defense"
+			}
+		] : snapshot.budgetBuckets.map((bucket) => ({
+			id: bucketNodeByKey[bucket.id],
+			label: bucket.label,
+			type: "budgetBucket",
+			amount: bucket.monthlyAllocation,
+			edgeType: "ALLOCATED_TO",
+			bucketKey: bucket.id
+		}))).filter((destination) => destination.amount > 0).forEach((destination, index) => {
+			nodes.push(makeNode({
+				id: destination.id,
+				label: destination.label,
+				type: destination.type,
+				x: outflowX,
+				y: topY + index * destinationGap,
+				amount: destination.amount,
+				bucketKey: destination.bucketKey,
+				riskScore: destination.riskScore
+			}));
+			edges.push(makeEdge(`edge:allocation:${destination.id}`, allocationId, destination.id, destination.edgeType, destination.amount));
+		});
 		const laneYs = nodes.filter((node) => node.x === outflowX).map((node) => node.y);
 		return {
 			mode: "cashFlow",
 			width: 1020,
-			height: Math.max(620, Math.max(...laneYs) + 72),
+			height: Math.max(650, (laneYs.length ? Math.max(...laneYs) : topY) + 72),
 			columns: [
 				{
 					x: 115,
-					label: "수입"
+					label: "월급"
 				},
 				{
 					x: 390,
-					label: "사용 가능 현금"
+					label: "배분"
 				},
 				{
 					x: outflowX,
-					label: "실제 유출·잔여"
+					label: "월급 사용처"
 				}
 			],
 			laneYs,

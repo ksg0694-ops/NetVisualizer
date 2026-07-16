@@ -1,5 +1,4 @@
 import {
-  calculateMonthlyFreeCashFlow,
   calculateNetWorth,
   calculateRiskScore,
 } from './calculations';
@@ -24,17 +23,6 @@ const bucketNodeByKey: Record<BudgetBucketKey, string> = {
   humanCapital: 'bucket:humanCapital',
   experience: 'bucket:experience',
 };
-
-const cashFlowBucketMeta: Record<BudgetBucketKey, string> = {
-  operating: '운영자금',
-  defense: '방어자금',
-  housing: '주거자금',
-  growth: '성장자금',
-  humanCapital: '인적자본',
-  experience: '경험자금',
-};
-
-const cashFlowBucketOrder = Object.keys(cashFlowBucketMeta) as BudgetBucketKey[];
 
 function amountToNodeSize(amount = 0): number {
   if (amount <= 0) return 18;
@@ -78,84 +66,117 @@ function makeEdge(
 function buildCashFlowGraph(snapshot: PersonalCfoSnapshot): PersonalCfoGraph {
   const nodes: PersonalCfoGraphNode[] = [];
   const edges: PersonalCfoGraphEdge[] = [];
-  const outflowBuckets = snapshot.cashFlow
-    ? cashFlowBucketOrder
-      .map((id) => ({ id, label: cashFlowBucketMeta[id], amount: snapshot.cashFlow?.bucketOutflows[id] || 0 }))
-      .filter((bucket) => bucket.amount > 0)
-    : snapshot.budgetBuckets.map((bucket) => ({
-      id: bucket.id,
-      label: bucket.label,
-      amount: bucket.monthlyAllocation,
-    }));
+  const allocation = snapshot.cashFlow?.salaryAllocation;
+  const salaryIncome = allocation?.salaryIncome
+    ?? snapshot.incomes.reduce((sum, item) => sum + item.monthlyAmount, 0);
+  const salaryId = 'income:salary-allocation';
+  const allocationId = 'flow:salary-allocation';
   const outflowX = 790;
   const topY = 92;
-  const bucketStartY = topY;
-  const bucketGap = 84;
+  const destinationGap = 78;
 
   nodes.push(makeNode({
-    id: snapshot.person.id,
-    label: snapshot.person.label,
+    id: salaryId,
+    label: snapshot.cashFlow ? `${snapshot.cashFlow.periodLabel} 월급` : '월급',
+    type: 'income',
+    x: 115,
+    y: topY,
+    amount: salaryIncome,
+  }));
+  nodes.push(makeNode({
+    id: allocationId,
+    label: '월급 배분',
     type: 'person',
     x: 390,
     y: topY,
-    amount: snapshot.cashFlow?.totalIncome ?? snapshot.incomes.reduce((sum, item) => sum + item.monthlyAmount, 0),
+    amount: salaryIncome + (allocation?.allocationShortfall || 0),
   }));
+  edges.push(makeEdge('edge:salary:allocation', salaryId, allocationId, 'FLOWS_TO', salaryIncome));
 
-  snapshot.incomes.forEach((income, index) => {
+  if (allocation?.allocationShortfall) {
     nodes.push(makeNode({
-      id: income.id,
-      label: income.label,
-      type: 'income',
-      x: 115,
-      y: topY + (index * 84),
-      amount: income.monthlyAmount,
-    }));
-    edges.push(makeEdge(`edge:${income.id}:person`, income.id, snapshot.person.id, 'FLOWS_TO', income.monthlyAmount));
-  });
-
-  outflowBuckets.forEach((bucket, index) => {
-    const amount = bucket.amount;
-    nodes.push(makeNode({
-      id: bucketNodeByKey[bucket.id],
-      label: bucket.label,
-      type: 'budgetBucket',
-      x: outflowX,
-      y: bucketStartY + (index * bucketGap),
-      amount,
-      bucketKey: bucket.id,
-    }));
-    if (amount > 0) {
-      edges.push(makeEdge(`edge:person:${bucket.id}`, snapshot.person.id, bucketNodeByKey[bucket.id], 'ALLOCATED_TO', amount));
-    }
-  });
-
-  const residual = snapshot.cashFlow?.unallocatedCash ?? calculateMonthlyFreeCashFlow(snapshot);
-  const debtRepayment = snapshot.cashFlow?.debtRepayment ?? 0;
-  if (debtRepayment > 0) {
-    nodes.push(makeNode({
-      id: 'liability:monthly-debt-payment',
-      label: '부채 상환',
+      id: 'liability:salary-allocation-shortfall',
+      label: '배분 부족',
       type: 'liability',
-      x: outflowX,
-      y: bucketStartY + (outflowBuckets.length * bucketGap),
-      amount: debtRepayment,
-      riskScore: 62,
+      x: 115,
+      y: topY + destinationGap,
+      amount: allocation.allocationShortfall,
+      riskScore: 85,
     }));
-    edges.push(makeEdge('edge:person:debt-payment', snapshot.person.id, 'liability:monthly-debt-payment', 'FLOWS_TO', debtRepayment));
+    edges.push(makeEdge(
+      'edge:shortfall:allocation',
+      'liability:salary-allocation-shortfall',
+      allocationId,
+      'EXPOSED_TO',
+      allocation.allocationShortfall,
+    ));
   }
-  const residualId = residual >= 0 ? 'account:unallocated-cash' : 'liability:cash-deficit';
-  nodes.push(makeNode({
-    id: residualId,
-    label: residual >= 0 ? '저축 후 미배분' : '초과 지출',
-    type: residual >= 0 ? 'account' : 'liability',
-    x: outflowX,
-    y: bucketStartY + ((outflowBuckets.length + (debtRepayment > 0 ? 1 : 0)) * bucketGap),
-    amount: Math.abs(residual),
-    riskScore: residual < 0 ? 85 : undefined,
+
+  const destinations: Array<{
+    id: string;
+    label: string;
+    type: PersonalCfoNodeType;
+    amount: number;
+    edgeType: PersonalCfoEdgeType;
+    bucketKey?: BudgetBucketKey;
+    riskScore?: number;
+  }> = allocation ? [
+    {
+      id: 'account:youth-savings', label: '청년도약계좌', type: 'account',
+      amount: allocation.youthSavings, edgeType: 'ALLOCATED_TO', bucketKey: 'defense',
+    },
+    {
+      id: 'asset:pension-savings', label: '연금저축펀드', type: 'asset',
+      amount: allocation.pensionSavings, edgeType: 'ALLOCATED_TO', bucketKey: 'growth',
+    },
+    {
+      id: 'liability:credit-loan-interest', label: '신용대출 이자', type: 'liability',
+      amount: allocation.creditLoanInterest, edgeType: 'FLOWS_TO', riskScore: 62,
+    },
+    {
+      id: 'bucket:housing-cashflow', label: '전세대출', type: 'budgetBucket',
+      amount: allocation.housingLoanPayment, edgeType: 'FLOWS_TO', bucketKey: 'housing',
+    },
+    {
+      id: 'account:salary-reserve', label: '월급통장 잔액', type: 'account',
+      amount: allocation.salaryAccountReserve, edgeType: 'ALLOCATED_TO', bucketKey: 'operating',
+    },
+    {
+      id: 'account:living-reserve', label: '생활비통장 잔액', type: 'account',
+      amount: allocation.livingAccountReserve, edgeType: 'ALLOCATED_TO', bucketKey: 'operating',
+    },
+    {
+      id: 'asset:krw-note', label: '원화 발행어음', type: 'asset',
+      amount: allocation.safeAssetSweep, edgeType: 'ALLOCATED_TO', bucketKey: 'defense',
+    },
+  ] : snapshot.budgetBuckets.map((bucket) => ({
+    id: bucketNodeByKey[bucket.id],
+    label: bucket.label,
+    type: 'budgetBucket' as const,
+    amount: bucket.monthlyAllocation,
+    edgeType: 'ALLOCATED_TO' as const,
+    bucketKey: bucket.id,
   }));
-  edges.push(residual >= 0
-    ? makeEdge('edge:person:unallocated', snapshot.person.id, residualId, 'FLOWS_TO', residual)
-    : makeEdge('edge:deficit:person', residualId, snapshot.person.id, 'EXPOSED_TO', Math.abs(residual)));
+
+  destinations.filter((destination) => destination.amount > 0).forEach((destination, index) => {
+    nodes.push(makeNode({
+      id: destination.id,
+      label: destination.label,
+      type: destination.type,
+      x: outflowX,
+      y: topY + (index * destinationGap),
+      amount: destination.amount,
+      bucketKey: destination.bucketKey,
+      riskScore: destination.riskScore,
+    }));
+    edges.push(makeEdge(
+      `edge:allocation:${destination.id}`,
+      allocationId,
+      destination.id,
+      destination.edgeType,
+      destination.amount,
+    ));
+  });
 
   const laneYs = nodes
     .filter((node) => node.x === outflowX)
@@ -163,11 +184,11 @@ function buildCashFlowGraph(snapshot: PersonalCfoSnapshot): PersonalCfoGraph {
   return {
     mode: 'cashFlow',
     width: 1020,
-    height: Math.max(620, Math.max(...laneYs) + 72),
+    height: Math.max(650, (laneYs.length ? Math.max(...laneYs) : topY) + 72),
     columns: [
-      { x: 115, label: '수입' },
-      { x: 390, label: '사용 가능 현금' },
-      { x: outflowX, label: '실제 유출·잔여' },
+      { x: 115, label: '월급' },
+      { x: 390, label: '배분' },
+      { x: outflowX, label: '월급 사용처' },
     ],
     laneYs,
     nodes,
