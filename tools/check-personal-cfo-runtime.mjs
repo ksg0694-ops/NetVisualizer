@@ -24,6 +24,7 @@ const closedPeriod = {
   label: '2026년 6월',
   startDate: '2026-05-25',
   endDate: '2026-06-24',
+  closeStatus: 'confirmed',
   transactions: [
     { date: '2026-05-25', type: '수입', category: '월급', memo: '급여', amount: 3_908_580 },
     { date: '2026-06-02', type: '지출', category: '고정비', memo: '통신·보험', amount: -619_682 },
@@ -45,6 +46,7 @@ const openPeriod = {
 
 const closedSummary = domain.selectLatestClosedCashFlow([closedPeriod, openPeriod], '2026-07-16');
 assert.equal(closedSummary.periodKey, '2026-06', 'open accounting period must not be treated as closed');
+assert.equal(closedSummary.reviewStatus, 'confirmed', 'cash-flow review status must propagate from the close record');
 assert.equal(closedSummary.freeCashFlow, 999_578);
 assert.equal(closedSummary.debtRepayment, 1_269_457);
 assert.equal(closedSummary.savingTransfers, 700_000);
@@ -62,6 +64,7 @@ const actualSnapshot = domain.applyCashFlowData(portfolio.snapshot, [closedPerio
 const model = domain.createPersonalCfoPageModel(actualSnapshot);
 assert.equal(model.graph.mode, 'balanceSheet', 'balance sheet must be the default network mode');
 assert.equal(model.summary.monthlyFreeCashFlow, 999_578);
+assert.equal(model.summary.cashFlowReviewStatus, 'confirmed');
 assert.equal(model.graph.nodes.some((node) => node.type === 'income'), false, 'balance sheet must not mix income flow nodes');
 const balancePerson = model.graph.nodes.find((node) => node.type === 'person');
 const balanceAccounts = model.graph.nodes.filter((node) => node.type === 'account');

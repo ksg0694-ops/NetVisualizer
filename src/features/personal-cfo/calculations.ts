@@ -123,5 +123,6 @@ export function buildPersonalCfoKpiSummary(snapshot: PersonalCfoSnapshot) {
     debtRatio: calculateDebtRatio(snapshot),
     emergencyCoverageMonths: calculateEmergencyCoverageMonths(snapshot),
     projectBurnRate: calculateProjectBurnRate(snapshot),
+    cashFlowReviewStatus: snapshot.cashFlow?.reviewStatus || 'unconfirmed',
   };
 }

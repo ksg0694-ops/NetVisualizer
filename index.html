@@ -24,10 +24,11 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Shared runtime and feature modules -->
     <script src="./js/shared/appUtils.js?v=20260715-foundation-1"></script>
-    <script src="./js/features/financeRepository.js?v=20260717-portfolio-draft-1"></script>
-    <script src="./js/features/financeModel.js?v=20260717-decision-1"></script>
-    <script src="./js/generated/personal-cfo-domain.js?v=20260717-finance-plan-1"></script>
-    <script src="./js/features/appCore.js?v=20260717-payday-domain-1"></script>
+    <script src="./js/features/financeRepository.js?v=20260717-monthly-close-1"></script>
+    <script src="./js/features/financeModel.js?v=20260717-monthly-close-1"></script>
+    <script src="./js/generated/personal-cfo-domain.js?v=20260717-monthly-close-3"></script>
+    <script src="./js/features/monthlyClose.js?v=20260717-monthly-close-5"></script>
+    <script src="./js/features/appCore.js?v=20260717-monthly-close-1"></script>
     <script src="./js/features/assetTrend.js"></script>
     <script src="./js/features/quantEngine.js?v=20260713-public-server"></script>
     <script src="./js/features/realEstate.js?v=20260621-dsr-target-summary"></script>
@@ -35,10 +36,10 @@
     <script src="./js/features/portfolioEditor.js?v=20260717-portfolio-draft-1"></script>
     <script src="./js/features/cashflowControls.js"></script>
     <script src="./js/features/portfolioViews.js?v=20260626-account-order"></script>
-    <script src="./js/features/financeViews.js?v=20260717-decision-1"></script>
+    <script src="./js/features/financeViews.js?v=20260717-monthly-close-2"></script>
     <script src="./js/features/healthTracker.js?v=20260713-public-server"></script>
     <script src="./js/features/checklist.js?v=20260713-public-server"></script>
-    <script src="./js/features/personalCfo.js?v=20260717-actual-plan-1"></script>
+    <script src="./js/features/personalCfo.js?v=20260717-monthly-close-1"></script>
     <script src="./js/features/lifeDashboard.js?v=20260717-finance-scope-1"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
@@ -76,7 +77,7 @@
                     <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
                 </div>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.03.15
+                    version 1.03.16
                 </div>
             </div>
             <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-2 space-y-2">
@@ -231,7 +232,7 @@
 
                         <section class="col-span-2 lg:col-span-1 bg-white p-2.5 md:p-3 rounded-xl shadow-sm border border-gray-100 min-w-0">
                             <div class="flex items-center justify-between gap-2 mb-1.5">
-                                <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">최근 마감 잉여현금</p>
+                                <p class="text-xs md:text-sm font-semibold text-gray-500 truncate">최근 종료월 잉여현금</p>
                                 <span id="finance-closed-cashflow-period" class="text-[10px] font-bold text-gray-400 whitespace-nowrap">확인 중</span>
                             </div>
                             <h3 class="text-base md:text-xl font-bold text-gray-900" id="finance-closed-free-cash">-</h3>
@@ -951,6 +952,7 @@
                 </div>
 
                 <div id="stats-main-content" class="flex flex-col w-full">
+                    <section id="cashflow-month-close-panel" class="mb-3 rounded-lg border border-gray-200 bg-white p-3 shadow-sm md:mb-4 md:p-4"></section>
                     <div class="grid grid-cols-1 xl:grid-cols-2 gap-2 md:gap-4 mb-3 md:mb-4 items-stretch">
                         <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-blue-500 min-w-0 min-h-[168px] flex flex-col">
                             <div class="flex items-center justify-between gap-2 mb-2">

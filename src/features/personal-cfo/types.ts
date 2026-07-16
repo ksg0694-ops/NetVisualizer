@@ -137,12 +137,15 @@ export interface PersonalCfoKpi {
   sourceRefs?: PersonalCfoSourceRef[];
 }
 
+export type PersonalCfoCashFlowReviewStatus = 'confirmed' | 'unconfirmed' | 'stale';
+
 export interface PersonalCfoCashFlowSummary {
   periodKey: string;
   periodLabel: string;
   startDate: string;
   endDate: string;
   latestTransactionDate: string;
+  reviewStatus: PersonalCfoCashFlowReviewStatus;
   totalIncome: number;
   totalExpense: number;
   freeCashFlow: number;

@@ -2,7 +2,7 @@
     const TABLE_SPECS = Object.freeze({
         transactions: {
             cacheKey: 'tx',
-            columns: ['date', 'time', 'type', 'category', 'subcategory', 'memo', 'amount', 'currency', 'method'],
+            columns: ['id', 'date', 'time', 'type', 'category', 'subcategory', 'memo', 'amount', 'currency', 'method'],
             order: [['date', true]],
         },
         assets: {
@@ -51,6 +51,16 @@
             optional: true,
             columns: ['user_id', 'ticker', 'price', 'currency', 'price_date', 'source', 'note', 'updated_at'],
             order: [['ticker', true]],
+        },
+        finance_month_closes: {
+            cacheKey: 'financeMonthCloses',
+            optional: true,
+            columns: [
+                'id', 'user_id', 'period_key', 'period_start', 'period_end', 'status',
+                'classifications', 'transaction_count', 'source_revision', 'reviewed_at',
+                'closed_at', 'created_at', 'updated_at',
+            ],
+            order: [['period_key', true]],
         },
         real_estate_subscription_sites: {
             cacheKey: 'realEstateSubscriptions',
@@ -108,6 +118,7 @@
         'quant_strategy_rule_overrides',
         'portfolio_market_prices',
         'portfolio_market_price_overrides',
+        'finance_month_closes',
         'real_estate_subscription_sites',
     ]);
     const REAL_ESTATE_DETAIL_TABLES = Object.freeze([
@@ -130,6 +141,7 @@
 
     function normalizeTransaction(row = {}) {
         return {
+            id: String(row.id || ''),
             date: String(row.date || ''),
             time: String(row.time || ''),
             type: String(row.type || ''),
@@ -176,13 +188,37 @@
         };
     }
 
+    function normalizeFinanceMonthClose(row = {}) {
+        let classifications = row.classifications;
+        if (typeof classifications === 'string') {
+            try { classifications = JSON.parse(classifications); } catch (_error) { classifications = {}; }
+        }
+        return {
+            id: String(row.id || ''),
+            user_id: String(row.user_id || ''),
+            period_key: String(row.period_key || row.periodKey || ''),
+            period_start: String(row.period_start || row.periodStart || ''),
+            period_end: String(row.period_end || row.periodEnd || ''),
+            status: row.status === 'closed' ? 'closed' : 'open',
+            classifications: classifications && typeof classifications === 'object' && !Array.isArray(classifications)
+                ? { ...classifications }
+                : {},
+            transaction_count: Math.max(0, Math.trunc(finiteNumber(row.transaction_count ?? row.transactionCount))),
+            source_revision: String(row.source_revision || row.sourceRevision || ''),
+            reviewed_at: String(row.reviewed_at || row.reviewedAt || ''),
+            closed_at: String(row.closed_at || row.closedAt || ''),
+            created_at: String(row.created_at || ''),
+            updated_at: String(row.updated_at || row.updatedAt || ''),
+        };
+    }
+
     function fromLegacyRows(table, rows) {
         if (!Array.isArray(rows) || !Array.isArray(rows[0])) return rows;
         const values = rows.slice(1);
         if (table === 'transactions') {
             return values.map((row) => ({
                 date: row[0], time: row[1], type: row[2], category: row[3], subcategory: row[4],
-                memo: row[5], amount: row[6], currency: row[7], method: row[8],
+                memo: row[5], amount: row[6], currency: row[7], method: row[8], id: row[9],
             }));
         }
         if (table === 'assets') {
@@ -207,6 +243,7 @@
         if (table === 'transactions') return source.map(normalizeTransaction).filter((row) => row.date && row.amount !== 0);
         if (table === 'assets') return source.map(normalizeAsset).filter((row) => row.year && row.month);
         if (table === 'portfolios') return source.map(normalizePortfolio).filter((row) => row.name);
+        if (table === 'finance_month_closes') return source.map(normalizeFinanceMonthClose).filter((row) => row.period_key);
         return source.map((row) => ({ ...row }));
     }
 
@@ -333,6 +370,32 @@
             .sort((a, b) => `${a.date} ${a.time || '00:00'}`.localeCompare(`${b.date} ${b.time || '00:00'}`));
     }
 
+    function toFinanceMonthClosePayload(record = {}) {
+        return {
+            period_key: String(record.periodKey || record.period_key || ''),
+            period_start: String(record.periodStart || record.period_start || ''),
+            period_end: String(record.periodEnd || record.period_end || ''),
+            status: record.status === 'closed' ? 'closed' : 'open',
+            classifications: record.classifications && typeof record.classifications === 'object'
+                ? record.classifications
+                : {},
+            transaction_count: Math.max(0, Math.trunc(finiteNumber(record.transactionCount ?? record.transaction_count))),
+            source_revision: String(record.sourceRevision || record.source_revision || ''),
+            reviewed_at: record.reviewedAt || record.reviewed_at || null,
+            closed_at: record.closedAt || record.closed_at || null,
+        };
+    }
+
+    function mergeFinanceMonthCloseRows(currentRows = [], incomingRows = []) {
+        const merged = new Map();
+        [...normalizeTableRows('finance_month_closes', currentRows), ...normalizeTableRows('finance_month_closes', incomingRows)]
+            .forEach((row) => {
+                const current = merged.get(row.period_key);
+                if (!current || String(row.updated_at || '') >= String(current.updated_at || '')) merged.set(row.period_key, row);
+            });
+        return Array.from(merged.values()).sort((a, b) => a.period_key.localeCompare(b.period_key));
+    }
+
     function buildAccountingPeriods(rows = [], resolvePeriod) {
         if (typeof resolvePeriod !== 'function') return [];
         const periods = new Map();
@@ -347,7 +410,9 @@
                 transactions: [],
             };
             current.transactions.push({
+                id: row.id,
                 date: row.date,
+                time: row.time,
                 type: row.type,
                 category: row.category,
                 subcategory: row.subcategory,
@@ -401,7 +466,22 @@
             }
             return mutation;
         }
-        return Object.freeze({ fetchTables, savePortfolioDraft });
+        async function saveFinanceMonthClose(record) {
+            const client = options.getClient();
+            const payload = toFinanceMonthClosePayload(record);
+            if (!payload.period_key || !payload.period_start || !payload.period_end) {
+                throw new Error('INVALID_FINANCE_MONTH_CLOSE');
+            }
+            const columns = TABLE_SPECS.finance_month_closes.columns.join(',');
+            const { data, error } = await client
+                .from('finance_month_closes')
+                .upsert(payload, { onConflict: 'user_id,period_key', defaultToNull: false })
+                .select(columns)
+                .single();
+            if (error) throw error;
+            return normalizeFinanceMonthClose(data || payload);
+        }
+        return Object.freeze({ fetchTables, saveFinanceMonthClose, savePortfolioDraft });
     }
 
     root.FinanceRepository = Object.freeze({
@@ -415,9 +495,11 @@
         createPortfolioDraft,
         createSupabaseFinanceRepository,
         getSnapshot,
+        mergeFinanceMonthCloseRows,
         mergeTransactionRows,
         normalizeCache,
         normalizeTableRows,
+        toFinanceMonthClosePayload,
         toPortfolioPayload,
     });
 })(typeof window !== 'undefined' ? window : globalThis);

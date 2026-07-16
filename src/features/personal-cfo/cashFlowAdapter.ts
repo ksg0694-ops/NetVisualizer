@@ -1,6 +1,7 @@
 import type {
   BudgetBucketKey,
   PersonalCfoCashFlowSummary,
+  PersonalCfoCashFlowReviewStatus,
   PersonalCfoSnapshot,
 } from './types';
 
@@ -19,6 +20,7 @@ export interface CashFlowPeriod {
   label: string;
   startDate: string;
   endDate: string;
+  closeStatus?: PersonalCfoCashFlowReviewStatus;
   transactions: CashFlowTransaction[];
 }
 
@@ -91,6 +93,7 @@ export function summarizeCashFlowPeriod(period: CashFlowPeriod): PersonalCfoCash
     startDate: period.startDate,
     endDate: period.endDate,
     latestTransactionDate: dates[dates.length - 1] || period.endDate,
+    reviewStatus: period.closeStatus || 'unconfirmed',
     totalIncome,
     totalExpense,
     freeCashFlow,

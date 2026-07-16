@@ -197,14 +197,15 @@
         const repositoryPeriods = typeof window.getFinanceAccountingPeriods === 'function'
             ? window.getFinanceAccountingPeriods()
             : [];
-        if (repositoryPeriods.length > 0) return repositoryPeriods;
-        return Object.entries(monthlyDB || {}).map(([key, db]) => ({
+        const periods = repositoryPeriods.length > 0 ? repositoryPeriods : Object.entries(monthlyDB || {}).map(([key, db]) => ({
             key,
             label: db?.title || key,
             startDate: db?.periodStart || '',
             endDate: db?.periodEnd || '',
             transactions: (db?.transactions || []).map((item) => ({
+                id: item.id,
                 date: item.date,
+                time: item.time,
                 type: item.type,
                 category: item.cat,
                 subcategory: item.subcat,
@@ -213,6 +214,7 @@
                 method: item.method,
             })),
         })).filter((period) => period.startDate && period.endDate);
+        return window.MonthlyCloseFeature?.applyToPeriods?.(periods) || periods;
     }
 
     function getFinanceCashFlowContext() {
@@ -252,12 +254,16 @@
                 ? 'text-[10px] md:text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg'
                 : 'text-[10px] md:text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg';
         }
-        if (periodEl) periodEl.textContent = `${summary.periodLabel} 마감`;
+        const reviewLabel = summary.reviewStatus === 'confirmed'
+            ? '분류 확정'
+            : (summary.reviewStatus === 'stale' ? '분류 재확인 필요' : '분류 미확정');
+        const periodSuffix = summary.reviewStatus === 'confirmed' ? '마감' : '기간 종료';
+        if (periodEl) periodEl.textContent = `${summary.periodLabel} ${periodSuffix}`;
         if (freeCashEl) {
             freeCashEl.textContent = formatWon(summary.freeCashFlow);
             freeCashEl.className = `text-base md:text-xl font-bold ${summary.freeCashFlow >= 0 ? 'text-emerald-700' : 'text-rose-700'}`;
         }
-        if (metaEl) metaEl.textContent = `수입 ${formatWon(summary.totalIncome)} · 지출 ${formatWon(summary.totalExpense)}`;
+        if (metaEl) metaEl.textContent = `수입 ${formatWon(summary.totalIncome)} · 지출 ${formatWon(summary.totalExpense)} · ${reviewLabel}`;
     }
 
     function getOfficialFinanceSnapshot() {
@@ -993,7 +999,12 @@
     function renderCashFlow() {
         if(!currentMonthKey || !monthlyDB[currentMonthKey]) return;
         const db = monthlyDB[currentMonthKey];
-        const txData = db.transactions;
+        const sourceTxData = db.transactions;
+        const txData = window.MonthlyCloseFeature?.getEffectiveTransactions?.(
+            currentMonthKey,
+            sourceTxData,
+            { includeDraft: true },
+        ) || sourceTxData;
 
         const displayMonth = document.getElementById('display-month');
         const displayPeriod = document.getElementById('display-period');
@@ -1001,6 +1012,16 @@
         if (displayMonth) displayMonth.textContent = db.title;
         if (displayPeriod) displayPeriod.textContent = db.periodStr;
         if (manageTitle) manageTitle.textContent = `${db.title} 거래 내역`;
+        window.MonthlyCloseFeature?.render?.({
+            periodKey: currentMonthKey,
+            period: {
+                key: currentMonthKey,
+                label: db.title,
+                startDate: db.periodStart,
+                endDate: db.periodEnd,
+            },
+            transactions: sourceTxData,
+        });
 
         const { totalIncome, totalExpense } = getCashFlowStats(txData);
 
@@ -1050,7 +1071,12 @@
         let cumulativeNet = 0;
         getYearMonthKeys(currentMonthKey).forEach(key => {
             const monthDb = monthlyDB[key];
-            const stats = getCashFlowStats(monthDb.transactions);
+            const monthTransactions = window.MonthlyCloseFeature?.getEffectiveTransactions?.(
+                key,
+                monthDb.transactions,
+                { includeDraft: key === currentMonthKey },
+            ) || monthDb.transactions;
+            const stats = getCashFlowStats(monthTransactions);
             const monthlyNet = stats.totalIncome - stats.totalExpense;
             cumulativeNet += monthlyNet;
             trendLabels.push(key.replace('20', '').replace('-', '.'));

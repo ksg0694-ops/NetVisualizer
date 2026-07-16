@@ -1,25 +1,25 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Finance Focus Pass v1",
+  "feature": "Monthly CFO Close v1",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-07-17T15:40:00+09:00",
+  "updatedAt": "2026-07-17T18:30:00+09:00",
   "status": "completed",
-  "currentFocus": "재무 홈을 행동 우선으로 정리하고 Personal CFO의 실제 데이터와 계획 모델을 명확히 분리했다.",
+  "currentFocus": "급여일 회계기간의 거래 분류를 검토하고 명시적으로 확정한 결과만 Finance Home과 Personal CFO 계산에 반영한다.",
   "completed": [
-    "Life 홈에서 Personal CFO 프로젝트 연결과 이동 경로를 제거했다.",
-    "급여일 및 회계기간 계산을 TypeScript 재무 도메인으로 분리했다.",
-    "재무 홈의 확인 항목을 차트 위로 이동하고 중요도순으로 정렬했다.",
-    "Personal CFO KPI와 네트워크에 실제 및 계획 라벨을 추가했다.",
-    "청약과 온라인 석사 프로젝트에 다음 단계, 목표 시점, 자금 부족액을 표시했다.",
+    "원본 거래를 유지하는 사용자별 월 마감 분류 오버레이 도메인을 추가했다.",
+    "진행 중 기간과 미분류 거래의 마감을 차단하고 마감 재열기를 지원한다.",
+    "원본 거래 revision이 달라지면 확정 분류를 stale로 처리한다.",
+    "Cash Flow 상단에 분류 수정, 초기화, 페이지네이션, 마감 UI를 구현했다.",
+    "finance_month_closes Supabase 테이블과 repository 조회 및 저장 명령을 추가했다.",
+    "확정 상태를 Finance Home과 Personal CFO KPI 및 네트워크 계산에 전달한다.",
     "도메인, TypeScript, UI, repository, Supabase, 정적 자산 검사를 통과했다."
   ],
   "remaining": [
-    "월간 CFO 마감에서 거래 분류를 검토하고 수정하는 흐름을 설계한다.",
-    "계획값을 기준일과 변경 이력이 있는 설정 모델로 이동한다.",
+    "계획값을 기준일과 변경 이력이 있는 Finance Plan Settings 모델로 이동한다.",
     "여러 포트폴리오 행 저장을 서버 RPC 또는 transaction으로 원자화한다.",
-    "로그인과 공개 배포 정책은 사용 환경이 정해진 뒤 결정한다."
+    "로그인과 공개 배포 정책은 실제 사용 환경이 정해진 뒤 결정한다."
   ],
-  "nextStep": "Monthly CFO Close v1에서 거래 분류 검토와 마감 확정 흐름을 설계한다."
+  "nextStep": "Finance Plan Settings v1에서 mock 계획값을 기준일, 변경 이력, 사용자 override가 있는 설정 모델로 이동한다."
 }

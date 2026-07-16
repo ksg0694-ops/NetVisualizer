@@ -61,6 +61,7 @@
         quantRuleOverrides: null,
         marketPrices: null,
         marketPriceOverrides: null,
+        financeMonthCloses: null,
         realEstateSubscriptions: null,
         realEstateHousingTypes: null,
         realEstateCompetition: null,
@@ -795,12 +796,29 @@
         return financeRepositoryRuntime.getSnapshot(dataCache, { updatedAt: lastFinanceDataSyncAt });
     };
 
+    window.saveFinanceMonthlyCloseRecord = async function(record) {
+        const saved = await getFinanceRepository().saveFinanceMonthClose(record);
+        dataCache.financeMonthCloses = financeRepositoryRuntime.mergeFinanceMonthCloseRows(
+            dataCache.financeMonthCloses || [],
+            [saved],
+        );
+        persistDataCache();
+        window.MonthlyCloseFeature?.hydrate?.(dataCache.financeMonthCloses);
+        return saved;
+    };
+
+    window.refreshFinanceAfterMonthlyClose = function() {
+        renderSections({ dashboard: true, cashFlow: true });
+        window.PersonalCfoFeature?.render?.({ skipRemoteLoad: true });
+    };
+
     function applyCachedData() {
         if (dataCache.tx) parseTxData(dataCache.tx);
         if (dataCache.asset) parseAssetData(dataCache.asset);
         if (dataCache.portfolio) parsePortfolioData(dataCache.portfolio);
         if (dataCache.cards) addonCards = dataCache.cards;
         if (dataCache.insurances) addonInsurances = dataCache.insurances;
+        window.MonthlyCloseFeature?.hydrate?.(dataCache.financeMonthCloses || []);
         parseQuantStrategyRules(dataCache.quantRules, dataCache.quantRuleOverrides);
         parseMarketPrices(dataCache.marketPrices, dataCache.marketPriceOverrides);
     }
@@ -822,7 +840,7 @@
     function getRenderTargetsForTables(tables) {
         const tableSet = new Set(tables);
         return {
-            dashboard: tableSet.has('transactions') || tableSet.has('assets'),
+            dashboard: tableSet.has('transactions') || tableSet.has('assets') || tableSet.has('finance_month_closes'),
             portfolio: tableSet.has('transactions') || tableSet.has('assets') || tableSet.has('portfolios'),
             addons: tableSet.has('cards') || tableSet.has('insurances'),
             realEstate: activeViewId === 'realestate-view' && (
@@ -956,7 +974,7 @@
             if (amount === 0) return;
             const method = row.method || '';
 
-            const tx = { date: dateStr, time, type, cat, subcat, memo, amount, method };
+            const tx = { id: row.id || '', date: dateStr, time, type, cat, subcat, memo, amount, method };
             const { monthKey, title, periodStr, periodStart, periodEnd } = getMonthKeyAndPeriod(dateStr);
 
             if (!monthlyDB[monthKey]) monthlyDB[monthKey] = { title, periodStr, periodStart, periodEnd, transactions: [] };

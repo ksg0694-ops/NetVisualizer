@@ -5,6 +5,8 @@ await import('../js/features/financeRepository.js');
 const repository = globalThis.FinanceRepository;
 assert.ok(repository, 'FinanceRepository global must be available');
 assert.ok(repository.DEFAULT_DATA_TABLES.includes('transactions'));
+assert.ok(repository.DEFAULT_DATA_TABLES.includes('finance_month_closes'));
+assert.ok(repository.TABLE_SPECS.transactions.columns.includes('id'));
 assert.ok(repository.TABLE_SPECS.portfolios.columns.includes('account_order'));
 
 const legacyTransactions = [
@@ -69,6 +71,18 @@ const periods = repository.buildAccountingPeriods(normalizedTransactions, (date)
 }));
 assert.equal(periods.length, 1);
 assert.equal(periods[0].transactions[1].subcategory, '점심');
+
+const closePayload = repository.toFinanceMonthClosePayload({
+    periodKey: '2026-06', periodStart: '2026-05-25', periodEnd: '2026-06-24', status: 'closed',
+    classifications: { expense: { category: '식비' } }, transactionCount: 2, sourceRevision: '2:test',
+});
+assert.equal(closePayload.period_key, '2026-06');
+assert.equal(closePayload.status, 'closed');
+const mergedCloses = repository.mergeFinanceMonthCloseRows(
+    [{ period_key: '2026-06', status: 'open', updated_at: '2026-06-24T00:00:00Z' }],
+    [{ period_key: '2026-06', status: 'closed', updated_at: '2026-06-25T00:00:00Z' }],
+);
+assert.equal(mergedCloses[0].status, 'closed');
 
 const queryLog = [];
 const responses = {

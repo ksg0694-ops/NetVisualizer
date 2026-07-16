@@ -45,4 +45,6 @@ The repository cache and editor draft both store named objects. Old two-dimensio
 
 ## Next Boundary
 
-Add a monthly CFO close layer where transaction classifications can be reviewed and corrected before KPI and cash-flow graph calculation. Multi-row portfolio writes should later be made atomic with a server RPC or transaction boundary.
+The monthly CFO close boundary is now implemented. `FinanceRepository` reads optional `finance_month_closes` rows, normalizes them into runtime records, and exposes `saveFinanceMonthClose()` as the only cloud write command for the feature. The domain and UI do not issue Supabase queries directly.
+
+The next repository boundary should move multi-row portfolio writes behind a server RPC or transaction so partial saves cannot leave the portfolio in a mixed state.

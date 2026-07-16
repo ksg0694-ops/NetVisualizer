@@ -68,8 +68,8 @@
     const graphModeMeta = {
         cashFlow: {
             label: '현금 흐름',
-            title: '최근 마감 현금 흐름',
-            description: '수입이 지출·저축 바구니와 미배분 현금으로 이동한 실제 마감월 흐름입니다.',
+            title: '최근 종료월 현금 흐름',
+            description: '수입이 지출·저축 바구니와 미배분 현금으로 이동한 최근 종료월 흐름입니다.',
             dataLabel: '실제 데이터',
             dataClasses: 'border-emerald-100 bg-emerald-50 text-emerald-700',
         },
@@ -374,9 +374,12 @@
     }
 
     function renderKpiCards(summary) {
+        const cashFlowReviewLabel = summary.cashFlowReviewStatus === 'confirmed'
+            ? '분류 확정'
+            : (summary.cashFlowReviewStatus === 'stale' ? '분류 재확인 필요' : '분류 미확정');
         const cards = [
             { label: '순자산', value: formatKrw(summary.netWorth), sub: `총자산 ${formatKrw(summary.totalAssets)}`, tone: 'slate', basis: 'actual' },
-            { label: '마감월 잉여현금', value: formatKrw(summary.monthlyFreeCashFlow), sub: '수입-지출 · 저축 이체 전', tone: summary.monthlyFreeCashFlow >= 0 ? 'emerald' : 'rose', basis: 'actual' },
+            { label: '종료월 잉여현금', value: formatKrw(summary.monthlyFreeCashFlow), sub: `수입-지출 · ${cashFlowReviewLabel}`, tone: summary.monthlyFreeCashFlow >= 0 ? 'emerald' : 'rose', basis: 'actual' },
             { label: '계획 저축률', value: formatPercent(summary.savingsRate), sub: '계획 배분 / 마감월 수입', tone: 'emerald', basis: 'plan' },
             { label: '고정비·상환율', value: formatPercent(summary.fixedCostRatio), sub: '고정비+부채상환 / 수입', tone: summary.fixedCostRatio <= 50 ? 'sky' : 'amber', basis: 'actual' },
             { label: '비상금 커버리지', value: formatMonths(summary.emergencyCoverageMonths), sub: '계획 방어자금 기준 유지 기간', tone: summary.emergencyCoverageMonths >= 6 ? 'emerald' : 'amber', basis: 'plan' },

@@ -134,7 +134,8 @@
         const expense = number(cashFlow.totalExpense);
         const freeCashFlow = income - expense;
         const expenseRatio = income > 0 ? (expense / income) * 100 : 0;
-        const cashFlowLabel = cashFlow.periodLabel ? `${cashFlow.periodLabel} 마감` : '이번 달';
+        const cashFlowPeriodState = cashFlow.reviewStatus === 'confirmed' ? '마감' : '기간 종료';
+        const cashFlowLabel = cashFlow.periodLabel ? `${cashFlow.periodLabel} ${cashFlowPeriodState}` : '이번 달';
         const debtRatio = number(snapshot?.debtRatio);
         const fundingPct = number(fundingStatus?.savedPct);
 

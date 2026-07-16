@@ -7,13 +7,19 @@ Branch: `main` (working tree)
 
 This document maps the current NetVisualizer structure before any architecture redesign. It describes what exists today, not the desired future shape.
 
+## 2026-07-17 Monthly CFO Close Boundary
+
+Cash Flow now has an explicit monthly review and close boundary. `transactions` remains the immutable source ledger for this workflow; user corrections are stored as per-period overlays in `finance_month_closes`. Draft corrections are visible only in the selected Cash Flow review. Finance Home and Personal CFO use classifications only when the close is explicitly confirmed and its source revision still matches the source transactions.
+
+The close domain lives in `src/features/finance/monthlyClose.ts`; `js/features/monthlyClose.js` owns browser interaction and local fallback; `financeRepository.js` owns the Supabase read/upsert contract. A completed date range is not automatically a confirmed close. The runtime carries `confirmed`, `unconfirmed`, or `stale` through the cash-flow summary so UI labels and calculations use the same status.
+
 ## 2026-07-17 Finance Repository Boundary
 
 `js/features/financeRepository.js` now owns finance-table query specifications, selected columns, optional-table behavior, object-row normalization, and the read-only finance snapshot. `appCore.js` provides the Supabase client and projects repository objects into legacy view state; it no longer builds table queries or converts server rows into spreadsheet-shaped arrays.
 
 Finance Home and Personal CFO calculations prefer repository portfolio rows. The portfolio editor uses a named-field `PortfolioDraft` with stable client keys, and all portfolio writes run through repository commands. Old cached arrays are migrated only when read.
 
-Current script order is contractual: `appUtils` -> `financeRepository` -> `financeModel` -> generated Personal CFO domain -> `appCore` -> feature renderers -> `appShell`.
+Current script order is contractual: `appUtils` -> `financeRepository` -> `financeModel` -> generated Personal CFO domain -> `monthlyClose` -> `appCore` -> feature renderers -> `appShell`.
 
 ## 2026-07-15 Runtime Boundary Update
 
@@ -27,6 +33,8 @@ The app still runs as a static classic-JavaScript PWA, but the first high-risk s
 | Finance dashboard rendering | `js/features/financeViews.js` | Historical asset snapshots remain a trend source, not the official current balance. |
 | Portfolio rendering | `js/features/portfolioViews.js` | Displays the official snapshot and its freshness badge. |
 | Finance period domain | `src/features/finance/paydayAccounting.ts` -> `js/generated/personal-cfo-domain.js` | Owns payday overrides, weekend fallback, and accounting-period boundaries. `appCore.js` only delegates. |
+| Monthly CFO close domain | `src/features/finance/monthlyClose.ts` -> `js/generated/personal-cfo-domain.js` | Owns classification overlays, source revision, close/reopen rules, and confirmed applicability. |
+| Monthly CFO close UI | `js/features/monthlyClose.js` | Owns review controls, pagination, local fallback, and close-state interaction; repository owns cloud writes. |
 | Personal CFO domain | `src/features/personal-cfo/` -> `js/generated/personal-cfo-domain.js` | Owns types, mock defaults, portfolio/cash-flow adapters, calculations, scoring, and three graph builders. |
 | Personal CFO renderer | `js/features/personalCfo.js` | Owns DOM/SVG rendering, local/remote snapshot persistence, and graph-mode interaction. It must not duplicate domain calculations. |
 | Life Today dashboard | `js/features/lifeDashboard.js` | Reads public snapshots from Checklist and Health only. CFO projects remain inside Finance. |
@@ -40,7 +48,7 @@ The Personal CFO TypeScript tree is now the browser domain runtime. Vite builds 
 
 Authentication is intentionally undecided. The current anonymous Supabase mode is acceptable only for local, single-user use and must not be treated as safe for a public deployment.
 
-The current app remains a static PWA with a large `index.html`, but runtime behavior is split across feature files, an object repository, and the generated TypeScript domain bundle. Payday accounting-period construction has moved out of the shell; the next finance boundary is a user-reviewable monthly close and transaction classification layer.
+The current app remains a static PWA with a large `index.html`, but runtime behavior is split across feature files, an object repository, and the generated TypeScript domain bundle. Payday accounting-period construction and user-reviewable monthly close rules now live outside the shell. The next finance boundary is a versioned planning-settings model.
 
 ## 2026-07-16 Personal CFO Runtime
 
@@ -356,6 +364,7 @@ sequenceDiagram
 | Table | Current use |
 | --- | --- |
 | `transactions` | Cash-flow rows, dashboard income/expense, manual transaction insert, CSV/TSV import insert |
+| `finance_month_closes` | User/period classification overlays, close state, source revision, and review counters |
 | `assets` | Monthly asset trend and dashboard asset cards |
 | `portfolios` | Portfolio accordion, asset classification, Quant metadata, real-estate funding status |
 | `cards` | Cash-flow add-on card list |
