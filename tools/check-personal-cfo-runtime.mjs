@@ -62,6 +62,8 @@ assert.equal(new Set(balanceAssets.map((node) => node.x)).size, 1, 'assets must 
 assert.ok(balanceAccounts.every((node) => node.x < balancePerson.x));
 assert.ok(balanceAssets.every((node) => node.x > balancePerson.x));
 assert.ok(balanceLiabilities.every((node) => node.y > balancePerson.y));
+assert.equal(balancePerson.y, Math.min(...balanceAccounts.map((node) => node.y)), 'balance columns must start on the same top line');
+assert.equal(balancePerson.y, Math.min(...balanceAssets.map((node) => node.y)), 'asset column must start on the same top line');
 assert.deepEqual(Array.from(model.graph.columns, (column) => column.label), ['계좌', '순자산', '보유자산']);
 
 const cashFlowGraph = domain.buildFinanceGraphFromSnapshot(actualSnapshot, 'cashFlow');
@@ -74,6 +76,10 @@ const cashFlowTargets = cashFlowGraph.nodes.filter((node) => node.type === 'budg
   || node.id === 'liability:monthly-debt-payment'
   || node.id === 'account:unallocated-cash');
 assert.equal(new Set(cashFlowTargets.map((node) => node.x)).size, 1, 'cash-flow outflows must share one vertical column');
+const cashPerson = cashFlowGraph.nodes.find((node) => node.type === 'person');
+const cashIncome = cashFlowGraph.nodes.find((node) => node.type === 'income');
+assert.equal(cashPerson.y, Math.min(...cashFlowTargets.map((node) => node.y)), 'cash-flow columns must start at the top');
+assert.equal(cashPerson.y, cashIncome.y, 'income and available cash must share the top line');
 
 const strategyGraph = domain.buildFinanceGraphFromSnapshot(actualSnapshot, 'strategy');
 const strategyBuckets = strategyGraph.nodes.filter((node) => node.type === 'budgetBucket');
@@ -81,6 +87,8 @@ const strategyTargets = strategyGraph.nodes.filter((node) => node.type === 'proj
 assert.equal(new Set(strategyBuckets.map((node) => node.x)).size, 1, 'strategy buckets must share one vertical column');
 assert.equal(new Set(strategyTargets.map((node) => node.x)).size, 1, 'projects and risks must share one target column');
 assert.equal(strategyGraph.laneYs.length, actualSnapshot.budgetBuckets.length);
+const strategyPerson = strategyGraph.nodes.find((node) => node.type === 'person');
+assert.equal(strategyPerson.y, Math.min(...strategyBuckets.map((node) => node.y)), 'strategy columns must start at the top');
 strategyTargets.forEach((target) => {
   const sourceBucket = strategyBuckets.find((bucket) => bucket.bucketKey === target.bucketKey);
   assert.ok(sourceBucket && Math.abs(sourceBucket.y - target.y) <= 32, 'strategy target must stay inside its bucket lane');

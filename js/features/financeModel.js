@@ -30,8 +30,7 @@
             || /부동산|보증금|청약/.test(`${item.groupName} ${item.name || ''}`);
     }
 
-    function buildPortfolioSnapshot(portfolioData, options = {}) {
-        const items = flattenPortfolio(portfolioData);
+    function buildPortfolioSnapshotFromItems(items, options = {}) {
         if (!items.length) return null;
 
         const assets = items.filter((item) => !isDebtItem(item));
@@ -59,6 +58,29 @@
         };
     }
 
+    function buildPortfolioSnapshot(portfolioData, options = {}) {
+        return buildPortfolioSnapshotFromItems(flattenPortfolio(portfolioData), options);
+    }
+
+    function buildPortfolioRowsSnapshot(portfolioRows, options = {}) {
+        if (!Array.isArray(portfolioRows)) return null;
+        const items = portfolioRows.map((row) => {
+            const groupName = String(row?.group_name || '미분류');
+            const amount = number(row?.amount);
+            const assetType = String(row?.asset_type || '').toLowerCase();
+            return {
+                ...row,
+                groupName,
+                groupIsDebt: /부채|대출/.test(groupName),
+                name: String(row?.name || ''),
+                amount: assetType === 'debt' && amount > 0 ? -amount : amount,
+                maturity: String(row?.maturity || ''),
+                assetType,
+            };
+        }).filter((item) => item.name);
+        return buildPortfolioSnapshotFromItems(items, options);
+    }
+
     function buildAssetHistorySnapshot(assetHistory, options = {}) {
         const values = Array.isArray(assetHistory?.data) ? assetHistory.data : [];
         if (!values.length) return null;
@@ -80,7 +102,8 @@
     }
 
     function buildOfficialSnapshot(options = {}) {
-        return buildPortfolioSnapshot(options.portfolioData, { asOf: options.asOf })
+        return buildPortfolioRowsSnapshot(options.portfolioRows, { asOf: options.asOf })
+            || buildPortfolioSnapshot(options.portfolioData, { asOf: options.asOf })
             || buildAssetHistorySnapshot(options.assetHistory, { asOf: options.asOf })
             || {
                 totalAssets: 0,
@@ -147,6 +170,7 @@
 
     root.FinanceModel = Object.freeze({
         buildPortfolioSnapshot,
+        buildPortfolioRowsSnapshot,
         buildAssetHistorySnapshot,
         buildOfficialSnapshot,
         buildDecisionItems,

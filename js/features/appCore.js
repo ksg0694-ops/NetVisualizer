@@ -93,105 +93,12 @@
     let authUser = null;
     let authReady = false;
 
-    const SUPABASE_COLUMNS = {
-        transactions: [
-            'date', 'time', 'type', 'category', 'subcategory', 'memo', 'amount', 'currency', 'method'
-        ].join(','),
-        assets: [
-            'year', 'month', 'total_asset', 'cash', 'safe', 'invest', 'debt'
-        ].join(','),
-        portfolios: [
-            'id', 'group_name', 'name', 'currency', 'maturity', 'amount', 'shares',
-            'asset_type', 'instrument_type', 'ticker', 'risk_bucket', 'classification_source',
-            'classification_updated_at', 'strategy_tag', 'avg_buy_price', 'account_name'
-        ].join(','),
-        cards: [
-            'name', 'bank', 'purpose', 'image_data', 'target_amt', 'annual_fee', 'prt_ideal', 'prt_real'
-        ].join(','),
-        insurances: [
-            'category', 'description', 'company', 'monthly_payment', 'pay_day', 'start_date', 'end_date'
-        ].join(','),
-        quantStrategyRules: [
-            'strategy_tag', 'target_pct', 'band_pct', 'trigger_label', 'is_active', 'display_order', 'updated_at'
-        ].join(','),
-        quantStrategyRuleOverrides: [
-            'user_id', 'strategy_tag', 'target_pct', 'band_pct', 'trigger_label', 'is_active', 'display_order', 'updated_at'
-        ].join(','),
-        marketPrices: [
-            'ticker', 'price', 'currency', 'price_date', 'source', 'note', 'updated_at'
-        ].join(','),
-        marketPriceOverrides: [
-            'user_id', 'ticker', 'price', 'currency', 'price_date', 'source', 'note', 'updated_at'
-        ].join(','),
-        realEstateSubscriptions: [
-            'id', 'block', 'site_name', 'region', 'district', 'supply_count', 'housing_type',
-            'sale_type', 'priority', 'priority_order', 'budget_note', 'key_point', 'target_budget',
-            'expected_notice_month', 'main_subscription_date', 'special_supply_start_date',
-            'special_supply_end_date', 'general_supply_start_date', 'general_supply_end_date',
-            'winner_announcement_date', 'contract_start_date', 'contract_end_date', 'latitude',
-            'longitude', 'color', 'status', 'source', 'source_url', 'source_notice_no',
-            'source_house_manage_no', 'synced_at', 'updated_at'
-        ].join(','),
-        realEstateHousingTypes: [
-            'id', 'subscription_site_id', 'source_notice_no', 'source_house_manage_no', 'model_no',
-            'housing_type', 'exclusive_area', 'supply_area', 'total_supply_count', 'general_supply_count',
-            'special_supply_count', 'special_multi_child_count', 'special_newlywed_count',
-            'special_first_life_count', 'special_elderly_parent_count', 'special_institution_count',
-            'max_sale_price_krw', 'source', 'synced_at', 'updated_at'
-        ].join(','),
-        realEstateCompetition: [
-            'id', 'subscription_site_id', 'source_notice_no', 'source_house_manage_no', 'model_no',
-            'housing_type', 'supply_count', 'rank_no', 'residence_area', 'applications',
-            'competition_rate', 'source', 'synced_at', 'updated_at'
-        ].join(','),
-        realEstatePriceRefs: [
-            'id', 'apartment_name', 'region_code', 'region_name', 'legal_dong', 'deal_date',
-            'deal_amount_krw', 'exclusive_area', 'floor_no', 'build_year', 'latitude',
-            'longitude', 'source', 'synced_at', 'updated_at'
-        ].join(',')
-    };
-
-    const DEFAULT_DATA_TABLES = [
-        'transactions',
-        'assets',
-        'portfolios',
-        'cards',
-        'insurances',
-        'quant_strategy_rules',
-        'quant_strategy_rule_overrides',
-        'portfolio_market_prices',
-        'portfolio_market_price_overrides',
-        'real_estate_subscription_sites'
-    ];
-    const REAL_ESTATE_DETAIL_TABLES = ['real_estate_housing_types', 'real_estate_competition', 'real_estate_price_refs'];
-    const ALL_DATA_TABLES = [...DEFAULT_DATA_TABLES, ...REAL_ESTATE_DETAIL_TABLES];
-    const OPTIONAL_DATA_TABLES = new Set([
-        'cards',
-        'insurances',
-        'quant_strategy_rules',
-        'quant_strategy_rule_overrides',
-        'portfolio_market_prices',
-        'portfolio_market_price_overrides',
-        'real_estate_subscription_sites',
-        'real_estate_housing_types',
-        'real_estate_competition',
-        'real_estate_price_refs'
-    ]);
-    const DATA_TABLE_QUERIES = {
-        transactions: (client) => client.from('transactions').select(SUPABASE_COLUMNS.transactions).order('date', { ascending: true }),
-        assets: (client) => client.from('assets').select(SUPABASE_COLUMNS.assets).order('year', { ascending: true }).order('month', { ascending: true }),
-        portfolios: (client) => client.from('portfolios').select(SUPABASE_COLUMNS.portfolios),
-        cards: (client) => client.from('cards').select(SUPABASE_COLUMNS.cards),
-        insurances: (client) => client.from('insurances').select(SUPABASE_COLUMNS.insurances),
-        quant_strategy_rules: (client) => client.from('quant_strategy_rules').select(SUPABASE_COLUMNS.quantStrategyRules).order('display_order', { ascending: true }),
-        quant_strategy_rule_overrides: (client) => client.from('quant_strategy_rule_overrides').select(SUPABASE_COLUMNS.quantStrategyRuleOverrides).order('display_order', { ascending: true }),
-        portfolio_market_prices: (client) => client.from('portfolio_market_prices').select(SUPABASE_COLUMNS.marketPrices).order('ticker', { ascending: true }),
-        portfolio_market_price_overrides: (client) => client.from('portfolio_market_price_overrides').select(SUPABASE_COLUMNS.marketPriceOverrides).order('ticker', { ascending: true }),
-        real_estate_subscription_sites: (client) => client.from('real_estate_subscription_sites').select(SUPABASE_COLUMNS.realEstateSubscriptions).order('priority_order', { ascending: true }).order('block', { ascending: true }),
-        real_estate_housing_types: (client) => client.from('real_estate_housing_types').select(SUPABASE_COLUMNS.realEstateHousingTypes),
-        real_estate_competition: (client) => client.from('real_estate_competition').select(SUPABASE_COLUMNS.realEstateCompetition),
-        real_estate_price_refs: (client) => client.from('real_estate_price_refs').select(SUPABASE_COLUMNS.realEstatePriceRefs).order('deal_date', { ascending: false })
-    };
+    const financeRepositoryRuntime = window.FinanceRepository;
+    if (!financeRepositoryRuntime) throw new Error('FinanceRepository runtime is not loaded.');
+    const DEFAULT_DATA_TABLES = [...financeRepositoryRuntime.DEFAULT_DATA_TABLES];
+    const REAL_ESTATE_DETAIL_TABLES = [...financeRepositoryRuntime.REAL_ESTATE_DETAIL_TABLES];
+    const ALL_DATA_TABLES = [...financeRepositoryRuntime.ALL_DATA_TABLES];
+    let financeRepository = null;
     let supabaseClient = null;
     let supabaseClientSignature = '';
 
@@ -739,42 +646,6 @@
         }
     }
 
-    function formatTransactionRows(rows = []) {
-        const txFormat = [["날짜","시간","타입","대분류","소분류","내용","금액","화폐","결제수단","메모"]];
-        rows.forEach(r => txFormat.push([r.date, r.time || '', r.type, r.category, r.subcategory, r.memo, String(r.amount), r.currency, r.method, '']));
-        return txFormat;
-    }
-
-    function formatAssetRows(rows = []) {
-        const assetFormat = [["Year","Month","총자산(순자산)","현금성자산","안전자산","투자자산","부채"]];
-        rows.forEach(r => assetFormat.push([String(r.year), `${String(r.month).padStart(2,'0')}월`, String(r.total_asset), String(r.cash), String(r.safe), String(r.invest), String(r.debt)]));
-        return assetFormat;
-    }
-
-    function formatPortfolioRows(rows = []) {
-        const pfFormat = [["대분류 (Drop-down)","계좌/자산명 (Text)","통화/형태 (Text)","만기일 (Date/Text)","금액 (Number)", "주식수", "id", "asset_type", "instrument_type", "ticker", "risk_bucket", "classification_source", "classification_updated_at", "strategy_tag", "avg_buy_price", "account_name", "account_order"]];
-        rows.forEach(r => pfFormat.push([
-            r.group_name,
-            r.name,
-            r.currency,
-            r.maturity || '',
-            String(r.amount),
-            r.shares ? String(r.shares) : '',
-            r.id || '',
-            r.asset_type || '',
-            r.instrument_type || '',
-            r.ticker || '',
-            r.risk_bucket || '',
-            r.classification_source || '',
-            r.classification_updated_at || '',
-            r.strategy_tag || '',
-            r.avg_buy_price ?? '',
-            r.account_name || '',
-            r.account_order ?? ''
-        ]));
-        return pfFormat;
-    }
-
     function applyQuantRuleRows(targetRules, rows = [], source = 'default') {
         if (!Array.isArray(rows)) return;
         rows.forEach(row => {
@@ -904,21 +775,7 @@
     }
 
     function normalizeCache(data = {}) {
-        return {
-            tx: data.tx || null,
-            asset: data.asset || null,
-            portfolio: data.portfolio || null,
-            cards: data.cards || null,
-            insurances: data.insurances || null,
-            quantRules: data.quantRules || null,
-            quantRuleOverrides: data.quantRuleOverrides || null,
-            marketPrices: data.marketPrices || null,
-            marketPriceOverrides: data.marketPriceOverrides || null,
-            realEstateSubscriptions: data.realEstateSubscriptions || null,
-            realEstateHousingTypes: data.realEstateHousingTypes || null,
-            realEstateCompetition: data.realEstateCompetition || null,
-            realEstatePriceRefs: data.realEstatePriceRefs || null
-        };
+        return financeRepositoryRuntime.normalizeCache(data);
     }
 
     function persistDataCache() {
@@ -932,6 +789,10 @@
             updatedAt: lastFinanceDataSyncAt,
             source: lastFinanceDataSyncAt ? 'sync-or-cache' : 'unknown',
         };
+    };
+
+    window.getFinanceDataSnapshot = function() {
+        return financeRepositoryRuntime.getSnapshot(dataCache, { updatedAt: lastFinanceDataSyncAt });
     };
 
     function applyCachedData() {
@@ -1039,52 +900,22 @@
         return myCharts[chartKey];
     }
 
+    function getFinanceRepository() {
+        if (!financeRepository) {
+            financeRepository = financeRepositoryRuntime.createSupabaseFinanceRepository({
+                getClient: getAuthenticatedSupabaseClient,
+                onOptionalError: (table, error) => console.warn(`${table} 로딩 실패:`, error.message),
+            });
+        }
+        return financeRepository;
+    }
+
     async function fetchRemoteTables(tables = DEFAULT_DATA_TABLES) {
-        const _supabase = getAuthenticatedSupabaseClient();
-        const queries = tables.map(table => {
-            const queryBuilder = DATA_TABLE_QUERIES[table];
-            if (queryBuilder) return queryBuilder(_supabase);
-            throw new Error(`UNKNOWN_TABLE: ${table}`);
-        });
-
-        const responses = await Promise.all(queries);
-        const patch = {};
-
-        responses.forEach((res, index) => {
-            const table = tables[index];
-            if (res.error) {
-                if (OPTIONAL_DATA_TABLES.has(table)) {
-                    console.warn(`${table} 로딩 실패:`, res.error.message);
-                } else {
-                    throw res.error;
-                }
-            }
-            if (res.error && OPTIONAL_DATA_TABLES.has(table)) return;
-
-            if (table === 'transactions') patch.tx = formatTransactionRows(res.data || []);
-            if (table === 'assets') patch.asset = formatAssetRows(res.data || []);
-            if (table === 'portfolios') patch.portfolio = formatPortfolioRows(res.data || []);
-            if (table === 'cards') patch.cards = res.data || [];
-            if (table === 'insurances') patch.insurances = res.data || [];
-            if (table === 'quant_strategy_rules') patch.quantRules = res.data || [];
-            if (table === 'quant_strategy_rule_overrides') patch.quantRuleOverrides = res.data || [];
-            if (table === 'portfolio_market_prices') patch.marketPrices = res.data || [];
-            if (table === 'portfolio_market_price_overrides') patch.marketPriceOverrides = res.data || [];
-            if (table === 'real_estate_subscription_sites') patch.realEstateSubscriptions = res.data || [];
-            if (table === 'real_estate_housing_types') patch.realEstateHousingTypes = res.data || [];
-            if (table === 'real_estate_competition') patch.realEstateCompetition = res.data || [];
-            if (table === 'real_estate_price_refs') patch.realEstatePriceRefs = res.data || [];
-        });
-
-        return patch;
+        return getFinanceRepository().fetchTables(tables);
     }
 
     function mergeTransactionRowsIntoCache(rows = []) {
-        const insertedRows = Array.isArray(rows) ? rows : [rows];
-        const currentRows = dataCache.tx ? dataCache.tx.slice(1) : [];
-        const mergedRows = currentRows.concat(formatTransactionRows(insertedRows).slice(1));
-        mergedRows.sort((a, b) => `${a[0]} ${a[1] || '00:00'}`.localeCompare(`${b[0]} ${b[1] || '00:00'}`));
-        dataCache.tx = [formatTransactionRows([])[0], ...mergedRows];
+        dataCache.tx = financeRepositoryRuntime.mergeTransactionRows(dataCache.tx || [], rows);
         persistDataCache();
         applyCachedData();
     }
@@ -1135,29 +966,32 @@
         };
     }
 
+    window.getFinanceAccountingPeriods = function() {
+        return financeRepositoryRuntime.buildAccountingPeriods(dataCache.tx || [], getMonthKeyAndPeriod);
+    };
+
     // ==========================================
     // 데이터 파서
     // ==========================================
     function parseTxData(rows) {
         monthlyDB = {};
         sortedMonthKeys = [];
-        if (!rows || rows.length < 2) return;
+        const transactions = financeRepositoryRuntime.normalizeTableRows('transactions', rows || []);
+        if (transactions.length === 0) return;
 
-        rows.slice(1).forEach(row => {
-            if (!row[0]) return;
-
-            let dateStr = String(row[0]).replace(/[\.\/]/g, '-').replace(/\s/g, '');
+        transactions.forEach(row => {
+            let dateStr = String(row.date || '').replace(/[\.\/]/g, '-').replace(/\s/g, '');
             if(dateStr.endsWith('-')) dateStr = dateStr.slice(0, -1);
             const dateArr = dateStr.split('-');
             if(dateArr.length >= 3) dateStr = `${dateArr[0]}-${dateArr[1].padStart(2, '0')}-${dateArr[2].padStart(2, '0')}`;
             else return;
 
-            const time = row[1] || ''; const type = row[2] || '';
-            const cat = row[3] || '미분류'; const subcat = row[4] || '미분류';
-            const memo = row[5] || '';
-            const amount = Math.round(parseFloat(String(row[6] || '0').replace(/[^0-9.-]/g, ''))) || 0;
-            if (isNaN(amount) || amount === 0) return;
-            let method = row.length > 8 ? row[8] : (row[7] || '');
+            const time = row.time || ''; const type = row.type || '';
+            const cat = row.category || '미분류'; const subcat = row.subcategory || '미분류';
+            const memo = row.memo || '';
+            const amount = Math.round(Number(row.amount || 0));
+            if (amount === 0) return;
+            const method = row.method || '';
 
             const tx = { date: dateStr, time, type, cat, subcat, memo, amount, method };
             const { monthKey, title, periodStr, periodStart, periodEnd } = getMonthKeyAndPeriod(dateStr);
@@ -1176,13 +1010,12 @@
     function parseAssetData(rows) {
         dynamicAssetHistory = { labels: [], data: [] };
         dynamicAssetSnapshots = {};
-        if (!rows || rows.length < 2) return;
+        const assets = financeRepositoryRuntime.normalizeTableRows('assets', rows || []);
+        if (assets.length === 0) return;
 
-        rows.slice(1).forEach(row => {
-            if (row.length < 3) return;
-
-            const yearStr = String(row[0]).replace(/[^0-9]/g, '');
-            const monthStr = String(row[1]).replace(/[^0-9]/g, '');
+        assets.forEach(row => {
+            const yearStr = String(row.year).replace(/[^0-9]/g, '');
+            const monthStr = String(row.month).replace(/[^0-9]/g, '');
             if (!yearStr || !monthStr) return;
 
             const shortYear = yearStr.length === 4 ? yearStr.substring(2, 4) : yearStr;
@@ -1193,13 +1026,13 @@
                 return cleaned === '' ? null : Math.round(parseFloat(cleaned));
             };
 
-            const total = parseAmount(row[2]);
+            const total = parseAmount(row.total_asset);
             if (total === null) return;
 
-            const cash = parseAmount(row[3] || '') || 0;
-            const safe = parseAmount(row[4] || '') || 0;
-            const invest = parseAmount(row[5] || '') || 0;
-            const debt = parseAmount(row[6] || '') || 0;
+            const cash = parseAmount(row.cash) || 0;
+            const safe = parseAmount(row.safe) || 0;
+            const invest = parseAmount(row.invest) || 0;
+            const debt = parseAmount(row.debt) || 0;
 
             dynamicAssetHistory.labels.push(label);
             dynamicAssetHistory.data.push(total);
@@ -1220,11 +1053,12 @@
     }
 
     function parsePortfolioData(rows) {
-        rawPortfolioData = rows || []; // 원본 배열 저장 (수정 및 서버전송 목적)
+        const portfolioRows = financeRepositoryRuntime.normalizeTableRows('portfolios', rows || []);
+        rawPortfolioData = financeRepositoryRuntime.toLegacyPortfolioRows(portfolioRows);
         dynamicPortfolioData = {};
         let hasData = false;
 
-        if (!rows || rows.length < 2) {
+        if (portfolioRows.length === 0) {
             dynamicPortfolioData = null;
             return;
         }
@@ -1236,31 +1070,26 @@
         ];
         let colorIdx = 0;
 
-        rows.slice(1).forEach(row => {
-            if (row.length < 5) return;
-            const group = row[0] || '미분류';
-            const name = row[1];
-            const currency = row[2] || 'KRW';
-            const amountStr = String(row[4] || '0').replace(/[^0-9.-]/g, '');
-            const amount = Math.round(parseFloat(amountStr));
-            const maturity = row[3] || '';
-            const sharesStr = row.length > 5 ? String(row[5] || '').replace(/[^0-9.-]/g, '') : '';
-            const shares = sharesStr ? parseFloat(sharesStr) : null;
-            const id = row.length > 6 ? row[6] : '';
-            const assetType = row.length > 7 ? row[7] : '';
-            const instrumentType = row.length > 8 ? row[8] : '';
-            const ticker = row.length > 9 ? row[9] : '';
-            const riskBucket = row.length > 10 ? row[10] : '';
-            const classificationSource = row.length > 11 ? row[11] : '';
-            const classificationUpdatedAt = row.length > 12 ? row[12] : '';
-            const strategyTag = row.length > 13 ? row[13] : '';
-            const avgBuyPriceStr = row.length > 14 ? String(row[14] || '').replace(/[^0-9.-]/g, '') : '';
-            const avgBuyPrice = avgBuyPriceStr ? parseFloat(avgBuyPriceStr) : null;
-            const accountName = row.length > 15 ? row[15] : '';
-            const accountOrderRaw = row.length > 16 ? String(row[16] || '').replace(/[^0-9.-]/g, '') : '';
-            const accountOrder = accountOrderRaw ? Number(accountOrderRaw) : null;
+        portfolioRows.forEach(row => {
+            const group = row.group_name || '미분류';
+            const name = row.name;
+            const currency = row.currency || 'KRW';
+            const amount = Math.round(Number(row.amount || 0));
+            const maturity = row.maturity || '';
+            const shares = row.shares;
+            const id = row.id || '';
+            const assetType = row.asset_type || '';
+            const instrumentType = row.instrument_type || '';
+            const ticker = row.ticker || '';
+            const riskBucket = row.risk_bucket || '';
+            const classificationSource = row.classification_source || '';
+            const classificationUpdatedAt = row.classification_updated_at || '';
+            const strategyTag = row.strategy_tag || '';
+            const avgBuyPrice = row.avg_buy_price;
+            const accountName = row.account_name || '';
+            const accountOrder = row.account_order;
 
-            if (isNaN(amount) || !name) return;
+            if (!name) return;
 
             const isDebt = group.includes('부채') || group.includes('대출');
 

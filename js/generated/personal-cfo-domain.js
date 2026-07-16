@@ -683,14 +683,15 @@ var PersonalCfoDomain = (function(exports) {
 		const edges = [];
 		const bucketAmounts = snapshot.cashFlow?.bucketOutflows;
 		const outflowX = 790;
-		const bucketStartY = 80;
+		const topY = 92;
+		const bucketStartY = topY;
 		const bucketGap = 84;
 		nodes.push(makeNode({
 			id: snapshot.person.id,
 			label: snapshot.person.label,
 			type: "person",
 			x: 390,
-			y: 355,
+			y: topY,
 			amount: snapshot.cashFlow?.totalIncome ?? snapshot.incomes.reduce((sum, item) => sum + item.monthlyAmount, 0)
 		}));
 		snapshot.incomes.forEach((income, index) => {
@@ -699,7 +700,7 @@ var PersonalCfoDomain = (function(exports) {
 				label: income.label,
 				type: "income",
 				x: 115,
-				y: 355 + index * 84,
+				y: topY + index * 84,
 				amount: income.monthlyAmount
 			}));
 			edges.push(makeEdge(`edge:${income.id}:person`, income.id, snapshot.person.id, "FLOWS_TO", income.monthlyAmount));
@@ -746,7 +747,7 @@ var PersonalCfoDomain = (function(exports) {
 		return {
 			mode: "cashFlow",
 			width: 1020,
-			height: Math.max(720, Math.max(...laneYs) + 70),
+			height: Math.max(620, Math.max(...laneYs) + 72),
 			columns: [
 				{
 					x: 115,
@@ -772,17 +773,18 @@ var PersonalCfoDomain = (function(exports) {
 		const accountX = 170;
 		const personX = 600;
 		const assetX = 1030;
-		const personY = 350;
+		const topY = 92;
+		const personY = topY;
 		const accountYs = [
-			115,
-			270,
-			430,
-			585
+			topY,
+			220,
+			348,
+			476
 		];
 		const assetYs = [
-			170,
-			350,
-			530
+			topY,
+			250,
+			408
 		];
 		nodes.push(makeNode({
 			id: snapshot.person.id,
@@ -798,7 +800,7 @@ var PersonalCfoDomain = (function(exports) {
 				label: account.label,
 				type: "account",
 				x: accountX,
-				y: accountYs[index] ?? 115 + index * 120,
+				y: accountYs[index] ?? topY + index * 128,
 				amount: account.balance,
 				bucketKey: account.bucketKey
 			}));
@@ -810,7 +812,7 @@ var PersonalCfoDomain = (function(exports) {
 				label: asset.label,
 				type: "asset",
 				x: assetX,
-				y: assetYs[index] ?? 170 + index * 150,
+				y: assetYs[index] ?? topY + index * 158,
 				amount: asset.marketValue,
 				bucketKey: asset.bucketKey,
 				riskScore: asset.volatilityScore
@@ -823,7 +825,7 @@ var PersonalCfoDomain = (function(exports) {
 				label: liability.label,
 				type: "liability",
 				x: personX + (index - (snapshot.liabilities.length - 1) / 2) * 180,
-				y: 650,
+				y: 242,
 				amount: liability.outstandingBalance,
 				riskScore: liability.riskScore
 			}));
@@ -832,7 +834,7 @@ var PersonalCfoDomain = (function(exports) {
 		return {
 			mode: "balanceSheet",
 			width: 1200,
-			height: 720,
+			height: 580,
 			columns: [
 				{
 					x: accountX,
@@ -857,7 +859,8 @@ var PersonalCfoDomain = (function(exports) {
 		const personX = 110;
 		const bucketX = 430;
 		const targetX = 900;
-		const bucketStartY = 80;
+		const topY = 92;
+		const bucketStartY = topY;
 		const bucketGap = 110;
 		const bucketYByKey = /* @__PURE__ */ new Map();
 		nodes.push(makeNode({
@@ -865,7 +868,7 @@ var PersonalCfoDomain = (function(exports) {
 			label: snapshot.person.label,
 			type: "person",
 			x: personX,
-			y: 355,
+			y: topY,
 			amount: calculateNetWorth(snapshot)
 		}));
 		snapshot.budgetBuckets.forEach((bucket, index) => {
@@ -923,7 +926,7 @@ var PersonalCfoDomain = (function(exports) {
 		return {
 			mode: "strategy",
 			width: 1080,
-			height: 720,
+			height: Math.max(620, Math.max(...bucketYByKey.values()) + 80),
 			columns: [
 				{
 					x: personX,

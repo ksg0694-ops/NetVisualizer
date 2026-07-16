@@ -1,11 +1,19 @@
 # Current Architecture Map
 
-Date: 2026-07-16
+Date: 2026-07-17
 Branch: `main` (working tree)
 
 ## Purpose
 
 This document maps the current NetVisualizer structure before any architecture redesign. It describes what exists today, not the desired future shape.
+
+## 2026-07-17 Finance Repository Boundary
+
+`js/features/financeRepository.js` now owns finance-table query specifications, selected columns, optional-table behavior, object-row normalization, and the read-only finance snapshot. `appCore.js` provides the Supabase client and projects repository objects into legacy view state; it no longer builds table queries or converts server rows into spreadsheet-shaped arrays.
+
+Finance Home and Personal CFO calculations prefer repository portfolio rows. The two-dimensional portfolio table exists only behind `toLegacyPortfolioRows()` for the current edit modal. Old cached arrays are migrated when read.
+
+Current script order is contractual: `appUtils` -> `financeRepository` -> `financeModel` -> generated Personal CFO domain -> `appCore` -> feature renderers -> `appShell`.
 
 ## 2026-07-15 Runtime Boundary Update
 
@@ -14,7 +22,8 @@ The app still runs as a static classic-JavaScript PWA, but the first high-risk s
 | Concern | Runtime owner | Rule |
 | --- | --- | --- |
 | HTML escaping, date/money formatting, lazy assets | `js/shared/appUtils.js` | Feature files call `window.AppUtils` or `window.AppAssets`; do not add another formatter or CDN loader. |
-| Official assets, liabilities, net worth, source label, decision items | `js/features/financeModel.js` | Finance Home, Portfolio, and Personal CFO use the same portfolio-first snapshot. |
+| Supabase finance reads and object cache | `js/features/financeRepository.js` | Owns table contracts and returns normalized object rows; calculations do not build Supabase queries. |
+| Official assets, liabilities, net worth, source label, decision items | `js/features/financeModel.js` | Finance Home and Personal CFO use the same repository-row-first snapshot. |
 | Finance dashboard rendering | `js/features/financeViews.js` | Historical asset snapshots remain a trend source, not the official current balance. |
 | Portfolio rendering | `js/features/portfolioViews.js` | Displays the official snapshot and its freshness badge. |
 | Personal CFO domain | `src/features/personal-cfo/` -> `js/generated/personal-cfo-domain.js` | Owns types, mock defaults, portfolio/cash-flow adapters, calculations, scoring, and three graph builders. |
@@ -22,7 +31,7 @@ The app still runs as a static classic-JavaScript PWA, but the first high-risk s
 | Life Today dashboard | `js/features/lifeDashboard.js` | Reads public snapshots from Checklist, Health, and Personal CFO modules. |
 | Todo and Health persistence | `js/features/checklist.js`, `js/features/healthTracker.js` | Feature modules own their local/server state and expose read-only dashboard snapshots. |
 
-Current script order is contractual: `appUtils` -> `financeModel` -> generated Personal CFO domain -> `appCore` -> feature renderers -> `appShell`. `tools/check-ui-contract.mjs` verifies the critical order.
+`tools/check-ui-contract.mjs` verifies the critical script order.
 
 SheetJS and Leaflet are no longer startup dependencies. `AppAssets.ensureXlsx()` loads SheetJS only when importing a workbook, and `AppAssets.ensureLeaflet()` loads the map runtime only when opening Real Estate.
 
@@ -30,16 +39,16 @@ The Personal CFO TypeScript tree is now the browser domain runtime. Vite builds 
 
 Authentication is intentionally undecided. The current anonymous Supabase mode is acceptable only for local, single-user use and must not be treated as safe for a public deployment.
 
-The current app remains a static PWA with a large `index.html`, but runtime behavior is split across feature files and the first generated TypeScript domain bundle. Supabase reads still enter through `appCore.js` as legacy two-dimensional arrays; replacing that boundary with object repositories is the next architecture priority.
+The current app remains a static PWA with a large `index.html`, but runtime behavior is split across feature files, an object repository, and the generated TypeScript domain bundle. The remaining legacy array boundary is the portfolio editor draft model.
 
 ## 2026-07-16 Personal CFO Runtime
 
 ```mermaid
 flowchart LR
-    Supabase["Supabase portfolios + transactions"] --> Core["appCore.js\nlegacy table adapters"]
-    Core --> PortfolioState["dynamicPortfolioData"]
-    Core --> PeriodState["monthlyDB\npayday accounting periods"]
-    PortfolioState --> PortfolioAdapter["portfolioAdapter.ts"]
+    Supabase["Supabase portfolios + transactions"] --> Repository["financeRepository.js\nobject rows"]
+    Repository --> Core["appCore.js\nview-state projection"]
+    Repository --> PortfolioAdapter["portfolioAdapter.ts"]
+    Repository --> PeriodState["payday accounting periods"]
     PeriodState --> CashFlowAdapter["cashFlowAdapter.ts"]
     Mock["mockData.ts\nplans, projects, risks"] --> Snapshot["PersonalCfoSnapshot"]
     PortfolioAdapter --> Snapshot
@@ -58,7 +67,7 @@ The graph has three explicit modes:
 | `cashFlow` | Latest closed payday period | Income is allocated to actual expense/saving buckets, debt repayment, and residual cash. Open periods are excluded. |
 | `strategy` | Manual plan snapshot | Budget buckets fund two projects and hedge risks. It is a planning model, not a statement of actual balances. |
 
-Every desktop graph uses explicit vertical columns. Cash-flow and strategy targets also use horizontal lanes, so same-lane edges render as straight lines and all other connections use right-angle routing. Column headings and subtle guide lines are part of the SVG contract.
+Every desktop graph uses explicit vertical columns. The first node in each column shares a `y=92` top line. Cash-flow and strategy targets also use horizontal lanes, so same-lane edges render as straight lines and all other connections use right-angle routing. Column headings and subtle guide lines are part of the SVG contract.
 
 Finance Home follows a decision hierarchy: current net worth, latest closed free cash flow, asset-goal progress, housing self-funding, and at most three action items. Housing self-funding excludes pension, discounts market investments by 10%, and subtracts debt. Loan capacity is secondary context and is not counted as saved money.
 
@@ -195,7 +204,7 @@ flowchart TD
 
     AssetTrendModule["AssetTrendFeature\npure asset trend model"]
 
-    DataAdapter["Data Adapter Functions\nfetchRemoteTables, fetchSheetData,\nformatRows, mergeTransactionRowsIntoCache"]
+    Repository["FinanceRepository\ntable queries, object normalization,\ncache snapshot, compatibility adapter"]
 
     Parsers["Parser / Normalizer Functions\nparseTxData, parseAssetData,\nparsePortfolioData,\nparseQuantStrategyRules,\nparseMarketPrices"]
 
@@ -210,13 +219,13 @@ flowchart TD
     HtmlViews --> Events
     Events --> Mutations
     Events --> Renderers
-    DataAdapter --> Parsers
+    Repository --> Parsers
     Parsers --> State
     State --> AssetTrendModule
     AssetTrendModule --> Renderers
     State --> Renderers
     Renderers --> ChartLayer
-    Mutations --> DataAdapter
+    Mutations --> Repository
     Mutations --> State
 ```
 
@@ -390,7 +399,7 @@ Key redesign pressure points:
 
 - `index.html` mixes view markup, state, API access, domain calculations, mutation flows, chart setup, and event binding.
 - Runtime state is mostly global mutable variables, so feature boundaries are implicit.
-- Supabase row objects are converted into legacy two-dimensional arrays, then parsed back into feature-specific objects.
+- Finance reads now stay as normalized object rows; only the portfolio editor still receives a two-dimensional compatibility draft.
 - Rendering functions depend on shared global state rather than explicit inputs.
 - Mutation flows update remote DB, local cache, parsed state, and UI in the same function.
 - Local cache and local import audit are useful but currently hidden behind direct `localStorage` calls.

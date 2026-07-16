@@ -1,10 +1,11 @@
-const CACHE_NAME = 'smartbook-v2-app-cache-v121';
+const CACHE_NAME = 'smartbook-v2-app-cache-v122';
 const urlsToCache = [
   './',
   './index.html',
   './manifest.json',
   './sw.js',
   './js/shared/appUtils.js',
+  './js/features/financeRepository.js',
   './js/features/financeModel.js',
   './js/generated/personal-cfo-domain.js',
   './js/features/appCore.js',

@@ -36,6 +36,16 @@ const fallback = FinanceModel.buildOfficialSnapshot({ assetHistory: { data: [900
 assert.equal(fallback.source, 'asset-history');
 assert.equal(fallback.netWorth, 1200000);
 
+const rowSnapshot = FinanceModel.buildOfficialSnapshot({
+    portfolioRows: [
+        { group_name: '현금', name: '생활계좌', amount: 1000000, asset_type: 'account' },
+        { group_name: '부채', name: '직장인론', amount: 400000, asset_type: 'debt' },
+    ],
+});
+assert.equal(rowSnapshot.totalAssets, 1000000);
+assert.equal(rowSnapshot.totalLiabilities, 400000);
+assert.equal(rowSnapshot.netWorth, 600000);
+
 const decisions = FinanceModel.buildDecisionItems({
     snapshot,
     cashFlow: { totalIncome: 1000000, totalExpense: 1200000 },

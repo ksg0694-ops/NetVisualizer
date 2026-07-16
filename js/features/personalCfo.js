@@ -149,6 +149,21 @@
     currentSnapshot = getStore();
 
     function getPortfolioFinanceItems() {
+        const financeData = typeof window.getFinanceDataSnapshot === 'function'
+            ? window.getFinanceDataSnapshot()
+            : null;
+        if (Array.isArray(financeData?.portfolios) && financeData.portfolios.length > 0) {
+            return financeData.portfolios.map((item) => ({
+                id: item.id,
+                groupName: String(item.group_name || '미분류'),
+                name: String(item.name || ''),
+                amount: Number(item.amount || 0),
+                maturity: String(item.maturity || ''),
+                accountName: String(item.account_name || ''),
+                assetType: String(item.asset_type || ''),
+                instrumentType: String(item.instrument_type || ''),
+            }));
+        }
         if (typeof dynamicPortfolioData === 'undefined' || !dynamicPortfolioData || typeof dynamicPortfolioData !== 'object') {
             return [];
         }

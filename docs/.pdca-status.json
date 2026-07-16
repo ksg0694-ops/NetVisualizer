@@ -1,25 +1,26 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "CFO Network Lane Layout v1",
+  "feature": "FinanceRepository v1 and CFO Top Layout",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-07-16T07:57:21+09:00",
+  "updatedAt": "2026-07-17T06:00:41+09:00",
   "status": "completed",
-  "currentFocus": "CFO Network를 열과 수평 레인 기준으로 정렬하고 main 배포를 준비했다.",
+  "currentFocus": "재무 데이터 읽기 경계를 객체 기반 repository로 분리하고 CFO Network를 상단 정렬했다.",
   "completed": [
-    "재무상태를 계좌, 순자산, 보유자산 세로열로 정렬했다.",
-    "현금흐름의 지출, 저축, 상환, 잔여 노드를 하나의 유출 세로열로 정렬했다.",
-    "프로젝트와 리스크를 각 자금 바구니의 수평 레인 안에 배치했다.",
-    "같은 레인 연결은 직선, 다른 레인 연결은 직교선으로 라우팅했다.",
-    "그래프에 열 제목과 수직·수평 보조선을 추가했다.",
+    "Supabase 재무 테이블 계약과 조회를 financeRepository.js로 이동했다.",
+    "거래, 자산, 포트폴리오 캐시를 객체 행으로 전환하고 이전 배열 캐시 마이그레이션을 지원했다.",
+    "재무 홈과 개인 CFO 계산이 repository 스냅샷을 우선 사용하도록 변경했다.",
+    "기존 포트폴리오 편집기의 2차원 배열을 호환 어댑터 한 곳으로 제한했다.",
+    "세 CFO Network 모드의 첫 노드를 y=92 상단 기준선에 정렬했다.",
+    "repository, 도메인, TypeScript, UI 계약, Supabase 계약, 정적 자산 검사를 통과했다.",
     "데스크톱 세 모드와 390px 모바일 레이아웃을 검증했다."
   ],
   "remaining": [
-    "appCore.js의 2차원 배열 데이터 계약을 객체 기반 FinanceRepository로 교체한다.",
-    "월간 CFO 마감에서 거래 분류와 반복 규칙을 사용자가 검토·수정할 수 있게 한다.",
-    "프로젝트, 리스크, 비상금 계획값을 실제 데이터와 명시적으로 분리한다.",
+    "portfolioEditor.js의 인덱스 배열 draft를 객체 draft로 교체한다.",
+    "재무 쓰기 작업을 FinanceRepository command로 이동한다.",
+    "급여일 회계기간 규칙을 TypeScript 도메인 모듈로 분리한다.",
     "로그인과 공개 배포 정책은 사용 환경이 정해질 때 결정한다."
   ],
-  "nextStep": "FinanceRepository v1을 설계해 portfolios와 transactions의 원시 Supabase 행을 객체 모델로 직접 전달한다."
+  "nextStep": "PortfolioDraft v1을 설계해 편집과 저장 payload도 객체 계약으로 전환한다."
 }

@@ -1,14 +1,15 @@
 {
   "name": "netvisualizer",
-  "version": "1.3.12",
+  "version": "1.3.13",
   "private": true,
   "type": "module",
   "scripts": {
     "build:cfo-runtime": "vite build --config vite.personal-cfo.config.ts",
-    "check": "npm run build:cfo-runtime && npm run check:manifest && npm run check:js && npm run check:ts && npm run check:domain && npm run check:cfo-runtime && npm run check:ui-contract && npm run check:supabase-contract && npm run check:static-assets",
+    "check": "npm run build:cfo-runtime && npm run check:manifest && npm run check:js && npm run check:ts && npm run check:repository && npm run check:domain && npm run check:cfo-runtime && npm run check:ui-contract && npm run check:supabase-contract && npm run check:static-assets",
     "check:manifest": "node tools/check-manifest.mjs",
     "check:js": "node tools/check-js-syntax.mjs",
     "check:ts": "tsc --noEmit",
+    "check:repository": "node tools/check-finance-repository.mjs",
     "check:domain": "node tools/check-domain-models.mjs",
     "check:cfo-runtime": "node tools/check-personal-cfo-runtime.mjs",
     "check:ui-contract": "node tools/check-ui-contract.mjs",

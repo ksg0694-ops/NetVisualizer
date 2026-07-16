@@ -194,6 +194,10 @@
     }
 
     function getCashFlowPeriods() {
+        const repositoryPeriods = typeof window.getFinanceAccountingPeriods === 'function'
+            ? window.getFinanceAccountingPeriods()
+            : [];
+        if (repositoryPeriods.length > 0) return repositoryPeriods;
         return Object.entries(monthlyDB || {}).map(([key, db]) => ({
             key,
             label: db?.title || key,
@@ -258,7 +262,11 @@
 
     function getOfficialFinanceSnapshot() {
         const syncMeta = typeof getFinanceDataSyncMeta === 'function' ? getFinanceDataSyncMeta() : {};
+        const financeData = typeof window.getFinanceDataSnapshot === 'function'
+            ? window.getFinanceDataSnapshot()
+            : {};
         return window.FinanceModel.buildOfficialSnapshot({
+            portfolioRows: financeData.portfolios,
             portfolioData: dynamicPortfolioData,
             assetHistory: dynamicAssetHistory,
             asOf: syncMeta.updatedAt || '',

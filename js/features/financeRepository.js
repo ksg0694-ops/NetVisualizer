@@ -1,0 +1,319 @@
+(function (root) {
+    const TABLE_SPECS = Object.freeze({
+        transactions: {
+            cacheKey: 'tx',
+            columns: ['date', 'time', 'type', 'category', 'subcategory', 'memo', 'amount', 'currency', 'method'],
+            order: [['date', true]],
+        },
+        assets: {
+            cacheKey: 'asset',
+            columns: ['year', 'month', 'total_asset', 'cash', 'safe', 'invest', 'debt'],
+            order: [['year', true], ['month', true]],
+        },
+        portfolios: {
+            cacheKey: 'portfolio',
+            columns: [
+                'id', 'group_name', 'name', 'currency', 'maturity', 'amount', 'shares',
+                'asset_type', 'instrument_type', 'ticker', 'risk_bucket', 'classification_source',
+                'classification_updated_at', 'strategy_tag', 'avg_buy_price', 'account_name', 'account_order',
+            ],
+        },
+        cards: {
+            cacheKey: 'cards',
+            optional: true,
+            columns: ['name', 'bank', 'purpose', 'image_data', 'target_amt', 'annual_fee', 'prt_ideal', 'prt_real'],
+        },
+        insurances: {
+            cacheKey: 'insurances',
+            optional: true,
+            columns: ['category', 'description', 'company', 'monthly_payment', 'pay_day', 'start_date', 'end_date'],
+        },
+        quant_strategy_rules: {
+            cacheKey: 'quantRules',
+            optional: true,
+            columns: ['strategy_tag', 'target_pct', 'band_pct', 'trigger_label', 'is_active', 'display_order', 'updated_at'],
+            order: [['display_order', true]],
+        },
+        quant_strategy_rule_overrides: {
+            cacheKey: 'quantRuleOverrides',
+            optional: true,
+            columns: ['user_id', 'strategy_tag', 'target_pct', 'band_pct', 'trigger_label', 'is_active', 'display_order', 'updated_at'],
+            order: [['display_order', true]],
+        },
+        portfolio_market_prices: {
+            cacheKey: 'marketPrices',
+            optional: true,
+            columns: ['ticker', 'price', 'currency', 'price_date', 'source', 'note', 'updated_at'],
+            order: [['ticker', true]],
+        },
+        portfolio_market_price_overrides: {
+            cacheKey: 'marketPriceOverrides',
+            optional: true,
+            columns: ['user_id', 'ticker', 'price', 'currency', 'price_date', 'source', 'note', 'updated_at'],
+            order: [['ticker', true]],
+        },
+        real_estate_subscription_sites: {
+            cacheKey: 'realEstateSubscriptions',
+            optional: true,
+            columns: [
+                'id', 'block', 'site_name', 'region', 'district', 'supply_count', 'housing_type',
+                'sale_type', 'priority', 'priority_order', 'budget_note', 'key_point', 'target_budget',
+                'expected_notice_month', 'main_subscription_date', 'special_supply_start_date',
+                'special_supply_end_date', 'general_supply_start_date', 'general_supply_end_date',
+                'winner_announcement_date', 'contract_start_date', 'contract_end_date', 'latitude',
+                'longitude', 'color', 'status', 'source', 'source_url', 'source_notice_no',
+                'source_house_manage_no', 'synced_at', 'updated_at',
+            ],
+            order: [['priority_order', true], ['block', true]],
+        },
+        real_estate_housing_types: {
+            cacheKey: 'realEstateHousingTypes',
+            optional: true,
+            columns: [
+                'id', 'subscription_site_id', 'source_notice_no', 'source_house_manage_no', 'model_no',
+                'housing_type', 'exclusive_area', 'supply_area', 'total_supply_count', 'general_supply_count',
+                'special_supply_count', 'special_multi_child_count', 'special_newlywed_count',
+                'special_first_life_count', 'special_elderly_parent_count', 'special_institution_count',
+                'max_sale_price_krw', 'source', 'synced_at', 'updated_at',
+            ],
+        },
+        real_estate_competition: {
+            cacheKey: 'realEstateCompetition',
+            optional: true,
+            columns: [
+                'id', 'subscription_site_id', 'source_notice_no', 'source_house_manage_no', 'model_no',
+                'housing_type', 'supply_count', 'rank_no', 'residence_area', 'applications',
+                'competition_rate', 'source', 'synced_at', 'updated_at',
+            ],
+        },
+        real_estate_price_refs: {
+            cacheKey: 'realEstatePriceRefs',
+            optional: true,
+            columns: [
+                'id', 'apartment_name', 'region_code', 'region_name', 'legal_dong', 'deal_date',
+                'deal_amount_krw', 'exclusive_area', 'floor_no', 'build_year', 'latitude',
+                'longitude', 'source', 'synced_at', 'updated_at',
+            ],
+            order: [['deal_date', false]],
+        },
+    });
+
+    const DEFAULT_DATA_TABLES = Object.freeze([
+        'transactions',
+        'assets',
+        'portfolios',
+        'cards',
+        'insurances',
+        'quant_strategy_rules',
+        'quant_strategy_rule_overrides',
+        'portfolio_market_prices',
+        'portfolio_market_price_overrides',
+        'real_estate_subscription_sites',
+    ]);
+    const REAL_ESTATE_DETAIL_TABLES = Object.freeze([
+        'real_estate_housing_types',
+        'real_estate_competition',
+        'real_estate_price_refs',
+    ]);
+    const ALL_DATA_TABLES = Object.freeze([...DEFAULT_DATA_TABLES, ...REAL_ESTATE_DETAIL_TABLES]);
+
+    function finiteNumber(value, fallback = 0) {
+        const parsed = Number(String(value ?? '').replace(/[^0-9.-]/g, ''));
+        return Number.isFinite(parsed) ? parsed : fallback;
+    }
+
+    function nullableNumber(value) {
+        if (value === null || value === undefined || value === '') return null;
+        const parsed = finiteNumber(value, Number.NaN);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    function normalizeTransaction(row = {}) {
+        return {
+            date: String(row.date || ''),
+            time: String(row.time || ''),
+            type: String(row.type || ''),
+            category: String(row.category || '미분류'),
+            subcategory: String(row.subcategory || '미분류'),
+            memo: String(row.memo || ''),
+            amount: Math.round(finiteNumber(row.amount)),
+            currency: String(row.currency || 'KRW'),
+            method: String(row.method || ''),
+        };
+    }
+
+    function normalizeAsset(row = {}) {
+        return {
+            year: Math.trunc(finiteNumber(row.year)),
+            month: Math.trunc(finiteNumber(row.month)),
+            total_asset: Math.round(finiteNumber(row.total_asset)),
+            cash: Math.round(finiteNumber(row.cash)),
+            safe: Math.round(finiteNumber(row.safe)),
+            invest: Math.round(finiteNumber(row.invest)),
+            debt: Math.round(finiteNumber(row.debt)),
+        };
+    }
+
+    function normalizePortfolio(row = {}) {
+        return {
+            id: row.id || '',
+            group_name: String(row.group_name || '미분류'),
+            name: String(row.name || ''),
+            currency: String(row.currency || 'KRW'),
+            maturity: String(row.maturity || ''),
+            amount: Math.round(finiteNumber(row.amount)),
+            shares: nullableNumber(row.shares),
+            asset_type: String(row.asset_type || ''),
+            instrument_type: String(row.instrument_type || ''),
+            ticker: String(row.ticker || ''),
+            risk_bucket: String(row.risk_bucket || ''),
+            classification_source: String(row.classification_source || ''),
+            classification_updated_at: String(row.classification_updated_at || ''),
+            strategy_tag: String(row.strategy_tag || ''),
+            avg_buy_price: nullableNumber(row.avg_buy_price),
+            account_name: String(row.account_name || ''),
+            account_order: nullableNumber(row.account_order),
+        };
+    }
+
+    function fromLegacyRows(table, rows) {
+        if (!Array.isArray(rows) || !Array.isArray(rows[0])) return rows;
+        const values = rows.slice(1);
+        if (table === 'transactions') {
+            return values.map((row) => ({
+                date: row[0], time: row[1], type: row[2], category: row[3], subcategory: row[4],
+                memo: row[5], amount: row[6], currency: row[7], method: row[8],
+            }));
+        }
+        if (table === 'assets') {
+            return values.map((row) => ({
+                year: row[0], month: row[1], total_asset: row[2], cash: row[3],
+                safe: row[4], invest: row[5], debt: row[6],
+            }));
+        }
+        if (table === 'portfolios') {
+            return values.map((row) => ({
+                group_name: row[0], name: row[1], currency: row[2], maturity: row[3], amount: row[4],
+                shares: row[5], id: row[6], asset_type: row[7], instrument_type: row[8], ticker: row[9],
+                risk_bucket: row[10], classification_source: row[11], classification_updated_at: row[12],
+                strategy_tag: row[13], avg_buy_price: row[14], account_name: row[15], account_order: row[16],
+            }));
+        }
+        return values;
+    }
+
+    function normalizeTableRows(table, rows = []) {
+        const source = fromLegacyRows(table, Array.isArray(rows) ? rows : []);
+        if (table === 'transactions') return source.map(normalizeTransaction).filter((row) => row.date && row.amount !== 0);
+        if (table === 'assets') return source.map(normalizeAsset).filter((row) => row.year && row.month);
+        if (table === 'portfolios') return source.map(normalizePortfolio).filter((row) => row.name);
+        return source.map((row) => ({ ...row }));
+    }
+
+    function normalizeCache(data = {}) {
+        const normalized = {};
+        Object.entries(TABLE_SPECS).forEach(([table, spec]) => {
+            const rows = data[spec.cacheKey];
+            normalized[spec.cacheKey] = Array.isArray(rows) ? normalizeTableRows(table, rows) : null;
+        });
+        return normalized;
+    }
+
+    function getSnapshot(cache = {}, options = {}) {
+        const snapshot = { updatedAt: options.updatedAt || '' };
+        Object.entries(TABLE_SPECS).forEach(([table, spec]) => {
+            snapshot[table] = Array.isArray(cache[spec.cacheKey])
+                ? cache[spec.cacheKey].map((row) => ({ ...row }))
+                : [];
+        });
+        return snapshot;
+    }
+
+    function toLegacyPortfolioRows(rows = []) {
+        const header = [
+            '대분류 (Drop-down)', '계좌/자산명 (Text)', '통화/형태 (Text)', '만기일 (Date/Text)',
+            '금액 (Number)', '주식수', 'id', 'asset_type', 'instrument_type', 'ticker', 'risk_bucket',
+            'classification_source', 'classification_updated_at', 'strategy_tag', 'avg_buy_price',
+            'account_name', 'account_order',
+        ];
+        return [header, ...normalizeTableRows('portfolios', rows).map((row) => [
+            row.group_name, row.name, row.currency, row.maturity, row.amount, row.shares ?? '', row.id,
+            row.asset_type, row.instrument_type, row.ticker, row.risk_bucket, row.classification_source,
+            row.classification_updated_at, row.strategy_tag, row.avg_buy_price ?? '', row.account_name,
+            row.account_order ?? '',
+        ])];
+    }
+
+    function mergeTransactionRows(currentRows = [], insertedRows = []) {
+        return [...normalizeTableRows('transactions', currentRows), ...normalizeTableRows('transactions', insertedRows)]
+            .sort((a, b) => `${a.date} ${a.time || '00:00'}`.localeCompare(`${b.date} ${b.time || '00:00'}`));
+    }
+
+    function buildAccountingPeriods(rows = [], resolvePeriod) {
+        if (typeof resolvePeriod !== 'function') return [];
+        const periods = new Map();
+        normalizeTableRows('transactions', rows).forEach((row) => {
+            const period = resolvePeriod(row.date);
+            if (!period?.monthKey || !period.periodStart || !period.periodEnd) return;
+            const current = periods.get(period.monthKey) || {
+                key: period.monthKey,
+                label: period.title || period.monthKey,
+                startDate: period.periodStart,
+                endDate: period.periodEnd,
+                transactions: [],
+            };
+            current.transactions.push({
+                date: row.date,
+                type: row.type,
+                category: row.category,
+                subcategory: row.subcategory,
+                memo: row.memo,
+                amount: row.amount,
+                method: row.method,
+            });
+            periods.set(period.monthKey, current);
+        });
+        return Array.from(periods.values()).sort((a, b) => a.key.localeCompare(b.key));
+    }
+
+    function createSupabaseFinanceRepository(options = {}) {
+        if (typeof options.getClient !== 'function') throw new Error('FinanceRepository requires getClient().');
+        async function fetchTables(tables = DEFAULT_DATA_TABLES) {
+            const client = options.getClient();
+            const responses = await Promise.all(tables.map(async (table) => {
+                const spec = TABLE_SPECS[table];
+                if (!spec) throw new Error(`UNKNOWN_TABLE: ${table}`);
+                let query = client.from(table).select(spec.columns.join(','));
+                (spec.order || []).forEach(([column, ascending]) => {
+                    query = query.order(column, { ascending });
+                });
+                return { table, spec, response: await query };
+            }));
+            const patch = {};
+            responses.forEach(({ table, spec, response }) => {
+                if (response.error) {
+                    if (!spec.optional) throw response.error;
+                    options.onOptionalError?.(table, response.error);
+                    return;
+                }
+                patch[spec.cacheKey] = normalizeTableRows(table, response.data || []);
+            });
+            return patch;
+        }
+        return Object.freeze({ fetchTables });
+    }
+
+    root.FinanceRepository = Object.freeze({
+        ALL_DATA_TABLES,
+        DEFAULT_DATA_TABLES,
+        REAL_ESTATE_DETAIL_TABLES,
+        TABLE_SPECS,
+        buildAccountingPeriods,
+        createSupabaseFinanceRepository,
+        getSnapshot,
+        mergeTransactionRows,
+        normalizeCache,
+        normalizeTableRows,
+        toLegacyPortfolioRows,
+    });
+})(typeof window !== 'undefined' ? window : globalThis);

@@ -10,6 +10,7 @@ const financeViews = await readFile(new URL('../js/features/financeViews.js', im
 
 const requiredScripts = [
     './js/shared/appUtils.js',
+    './js/features/financeRepository.js',
     './js/features/financeModel.js',
     './js/generated/personal-cfo-domain.js',
     './js/features/lifeDashboard.js',
@@ -17,6 +18,7 @@ const requiredScripts = [
 requiredScripts.forEach((script) => assert.ok(index.includes(script), `${script} must be loaded`));
 
 assert.ok(index.indexOf('./js/shared/appUtils.js') < index.indexOf('./js/features/appCore.js'), 'shared utils must load before appCore');
+assert.ok(index.indexOf('./js/features/financeRepository.js') < index.indexOf('./js/features/appCore.js'), 'finance repository must load before appCore');
 assert.ok(index.indexOf('./js/features/financeModel.js') < index.indexOf('./js/features/financeViews.js'), 'finance model must load before finance views');
 assert.ok(index.indexOf('./js/generated/personal-cfo-domain.js') < index.indexOf('./js/features/appCore.js'), 'Personal CFO TypeScript runtime must load before legacy features');
 assert.ok(!index.includes('xlsx.full.min.js'), 'SheetJS must be loaded on demand');
