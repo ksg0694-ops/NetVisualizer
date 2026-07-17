@@ -21,7 +21,7 @@
         person: { fill: '#334155', stroke: '#0f172a', label: '본인' },
         income: { fill: '#16a34a', stroke: '#15803d', label: '소득' },
         account: { fill: '#0284c7', stroke: '#0369a1', label: '계좌' },
-        asset: { fill: '#4f46e5', stroke: '#4338ca', label: '자산' },
+        asset: { fill: '#4f46e5', stroke: '#4338ca', label: '보유자산' },
         liability: { fill: '#dc2626', stroke: '#b91c1c', label: '부채' },
         budgetBucket: { fill: '#d97706', stroke: '#b45309', label: '자금' },
         project: { fill: '#7c3aed', stroke: '#6d28d9', label: '프로젝트' },
@@ -43,6 +43,7 @@
     const edgeLabels = {
         FLOWS_TO: '흐름',
         ALLOCATED_TO: '배분',
+        HOLDS: '보유',
         FUNDS: '자금지원',
         HEDGES: '완충',
         EXPOSED_TO: '노출',
@@ -68,7 +69,7 @@
         balanceSheet: {
             label: '재무상태',
             title: '현재 재무상태 네트워크',
-            description: '포트폴리오 현재값만 사용해 계좌·자산·부채가 순자산에 기여하는 구조를 보여줍니다.',
+            description: '계좌는 보관 위치, 보유자산은 경제적 가치로 분리합니다. 순자산에는 보유자산만 한 번 반영합니다.',
             dataLabel: '실제 데이터',
             dataClasses: 'border-emerald-100 bg-emerald-50 text-emerald-700',
         },
@@ -437,6 +438,7 @@
         const hasAmount = node.amount !== undefined && node.amount !== null;
         const formattedAmount = hasAmount ? formatMetricValue(node.amount, node.unit) : '';
         const amountText = hasAmount ? ` / ${formattedAmount}` : '';
+        const purposeText = node.bucketKey ? ` / ${bucketLabels[node.bucketKey] || node.bucketKey}` : '';
         const { width, height } = getGraphNodeDimensions(node);
         const x = -width / 2;
         const y = -height / 2;
@@ -445,7 +447,7 @@
             : (node.riskScore ? `리스크 ${node.riskScore}` : (hasAmount ? formattedAmount : meta.label));
         return `
             <g opacity="${node.opacity}" transform="translate(${node.x} ${node.y})">
-                <title>${escapeHtml(`${node.label} / ${meta.label}${statusText}${amountText}`)}</title>
+                <title>${escapeHtml(`${node.label} / ${meta.label}${purposeText}${statusText}${amountText}`)}</title>
                 ${isHighRisk ? `<rect x="${x - 5}" y="${y - 5}" width="${width + 10}" height="${height + 10}" rx="8" fill="none" stroke="#fb7185" stroke-width="3" stroke-opacity="0.8"></rect>` : ''}
                 <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="6" fill="${meta.fill}" stroke="${meta.stroke}" stroke-width="2"></rect>
                 <text y="-7" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="800" opacity="0.82">${escapeHtml(meta.label.toUpperCase())}</text>
@@ -522,10 +524,15 @@
     }
 
     function renderMobileFinanceSummary(nextSnapshot) {
-        const assetRows = [
-            ...nextSnapshot.accounts.map((item) => ({ label: item.label, amount: item.balance, type: '계좌' })),
-            ...nextSnapshot.assets.map((item) => ({ label: item.label, amount: item.marketValue, type: '자산' })),
-        ];
+        const accountById = new Map(nextSnapshot.accounts.map((item) => [item.id, item]));
+        const assetRows = nextSnapshot.assets.map((item) => {
+            const account = item.accountId ? accountById.get(item.accountId) : null;
+            return {
+                label: account ? `${account.label} · ${item.label}` : item.label,
+                amount: item.marketValue,
+                type: '보유자산',
+            };
+        });
         const liabilityRows = nextSnapshot.liabilities.map((item) => ({
             label: item.label,
             amount: item.outstandingBalance,
@@ -709,7 +716,7 @@
         const model = domain.createPersonalCfoPageModel(portfolioOverlay.snapshot, activeGraphMode);
         const officialSnapshot = typeof getOfficialFinanceSnapshot === 'function' ? getOfficialFinanceSnapshot() : null;
         const dataBadge = portfolioOverlay.hasPortfolioData
-            ? `${window.FinanceModel.getSourceBadge(officialSnapshot)} · 자산 ${portfolioOverlay.accountItemCount + portfolioOverlay.assetItemCount}개 · 부채 ${portfolioOverlay.liabilityItemCount}개`
+            ? `${window.FinanceModel.getSourceBadge(officialSnapshot)} · 계좌 ${portfolioOverlay.accountItemCount}개 · 보유자산 ${portfolioOverlay.assetItemCount}개 · 부채 ${portfolioOverlay.liabilityItemCount}개`
             : '포트폴리오 데이터 없음';
         const dataBadgeClasses = portfolioOverlay.hasPortfolioData
             ? 'border-emerald-100 bg-emerald-50 text-emerald-700'

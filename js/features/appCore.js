@@ -176,7 +176,7 @@
 
     const ASSET_CLASS_META = {
         account: {
-            label: '계좌/현금성', shortLabel: '계좌', icon: 'fa-wallet',
+            label: '현금성 자산', shortLabel: '현금', icon: 'fa-wallet',
             badgeClass: 'bg-blue-50 text-blue-600 border-blue-100', color: '#3B82F6', riskBucket: 'safe'
         },
         pension: {

@@ -183,9 +183,26 @@ const portfolio = domain.applyPortfolioFinanceData(emptySnapshot, [
   { id: 'deposit', groupName: '기타', name: '전세금', amount: 140_000_000, assetType: 'other' },
   { id: 'loan', groupName: '부채', name: '직장인론', amount: -65_000_000, assetType: 'debt' },
 ]);
-const housingAsset = portfolio.snapshot.assets.find((asset) => asset.bucketKey === 'housing');
+const cashAsset = portfolio.snapshot.assets.find((asset) => asset.assetClass === 'cash');
+const housingAsset = portfolio.snapshot.assets.find((asset) => asset.purposeKey === 'housing');
+assert.ok(cashAsset.accountId, 'cash position must reference its containing account');
+assert.equal(cashAsset.purposeKey, 'operating', 'cash position must retain its independent purpose axis');
+assert.equal(
+  portfolio.snapshot.accounts.find((account) => account.id === cashAsset.accountId).balance,
+  cashAsset.marketValue,
+  'account balance must be derived from linked positions',
+);
 assert.equal(housingAsset.marketValue, 140_000_000, 'housing deposit must be classified as housing asset');
+assert.equal(housingAsset.assetClass, 'realEstate');
+assert.equal(domain.calculateTotalAssets(portfolio.snapshot), 141_000_000, 'account subtotal must not double count assets');
 assert.equal(domain.calculateNetWorth(portfolio.snapshot), 76_000_000);
+const noteAxes = domain.classifyPortfolioPositionAxes({
+  groupName: '안전자산', name: '원화 발행어음', accountName: '한국투자증권 계좌',
+  amount: 1_000_000, assetType: 'account', instrumentType: 'safe_account',
+});
+assert.ok(noteAxes.accountId, 'a holding with an account name must retain an account reference');
+assert.equal(noteAxes.assetClass, 'fixedIncome', 'legacy account classification must map to an economic asset class');
+assert.equal(noteAxes.purposeKey, 'defense', 'safe asset purpose must stay independent from its brokerage account');
 
 const actualSnapshot = domain.applyCashFlowData(portfolio.snapshot, [closedPeriod, openPeriod], '2026-07-16');
 const model = domain.createPersonalCfoPageModel(actualSnapshot);
@@ -203,11 +220,22 @@ const balanceLiabilities = model.graph.nodes.filter((node) => node.type === 'lia
 assert.equal(new Set(balanceAccounts.map((node) => node.x)).size, 1, 'accounts must share one vertical column');
 assert.equal(new Set(balanceAssets.map((node) => node.x)).size, 1, 'assets must share one vertical column');
 assert.ok(balanceAccounts.every((node) => node.x < balancePerson.x));
-assert.ok(balanceAssets.every((node) => node.x > balancePerson.x));
+assert.ok(balanceAssets.every((node) => node.x > balanceAccounts[0].x && node.x < balancePerson.x));
 assert.ok(balanceLiabilities.every((node) => node.y > balancePerson.y));
 assert.equal(balancePerson.y, Math.min(...balanceAccounts.map((node) => node.y)), 'balance columns must start on the same top line');
 assert.equal(balancePerson.y, Math.min(...balanceAssets.map((node) => node.y)), 'asset column must start on the same top line');
-assert.deepEqual(Array.from(model.graph.columns, (column) => column.label), ['계좌', '순자산', '보유자산']);
+assert.deepEqual(Array.from(model.graph.columns, (column) => column.label), ['계좌', '보유자산', '순자산']);
+assert.ok(model.graph.edges.some((edge) => edge.type === 'HOLDS'), 'accounts must connect to their positions with HOLDS');
+assert.ok(!model.graph.edges.some((edge) => (
+  edge.type === 'CONTRIBUTES_TO' && balanceAccounts.some((account) => account.id === edge.source)
+)), 'account subtotals must not contribute to net worth when positions exist');
+assert.equal(
+  model.graph.edges
+    .filter((edge) => edge.type === 'CONTRIBUTES_TO' && balanceAssets.some((asset) => asset.id === edge.source))
+    .reduce((total, edge) => total + edge.amount, 0),
+  model.summary.totalAssets,
+  'position contributions must equal total assets exactly once',
+);
 
 const cashFlowGraph = domain.buildFinanceGraphFromSnapshot(actualSnapshot, 'cashFlow');
 const outgoing = cashFlowGraph.edges

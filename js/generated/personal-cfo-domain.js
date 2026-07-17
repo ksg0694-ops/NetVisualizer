@@ -94,7 +94,11 @@ var PersonalCfoDomain = (function(exports) {
 		return Math.max(min, Math.min(max, value));
 	}
 	function calculateTotalAssets(snapshot) {
-		return sum$2(snapshot.accounts.map((account) => account.balance)) + sum$2(snapshot.assets.map((asset) => asset.marketValue));
+		if (snapshot.assets.length > 0) return sum$2(snapshot.assets.map((asset) => asset.marketValue));
+		return sum$2(snapshot.accounts.map((account) => account.balance));
+	}
+	function calculateAccountBalance(snapshot, accountId) {
+		return sum$2(snapshot.assets.filter((asset) => asset.accountId === accountId).map((asset) => asset.marketValue));
 	}
 	function calculateTotalLiabilities(snapshot) {
 		return sum$2(snapshot.liabilities.map((liability) => liability.outstandingBalance));
@@ -650,22 +654,18 @@ var PersonalCfoDomain = (function(exports) {
 	function buildBalanceSheetGraph(snapshot) {
 		const nodes = [];
 		const edges = [];
-		const accountX = 170;
-		const personX = 600;
-		const assetX = 1030;
+		const accountX = 150;
+		const assetX = 590;
+		const personX = 1030;
 		const topY = 92;
 		const personY = topY;
-		const accountYs = [
-			topY,
-			220,
-			348,
-			476
-		];
-		const assetYs = [
-			topY,
-			250,
-			408
-		];
+		const rowGap = 96;
+		const accountOrder = new Map(snapshot.accounts.map((account, index) => [account.id, index]));
+		const orderedAssets = [...snapshot.assets].sort((left, right) => {
+			return (left.accountId ? accountOrder.get(left.accountId) ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER) - (right.accountId ? accountOrder.get(right.accountId) ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER);
+		});
+		const assetYById = new Map(orderedAssets.map((asset, index) => [asset.id, topY + index * rowGap]));
+		const accountIds = new Set(snapshot.accounts.map((account) => account.id));
 		nodes.push(makeNode({
 			id: snapshot.person.id,
 			label: snapshot.person.label,
@@ -675,37 +675,40 @@ var PersonalCfoDomain = (function(exports) {
 			amount: calculateNetWorth(snapshot)
 		}));
 		snapshot.accounts.forEach((account, index) => {
+			const y = orderedAssets.filter((asset) => asset.accountId === account.id).map((asset) => assetYById.get(asset.id) ?? topY)[0] ?? topY + index * rowGap;
 			nodes.push(makeNode({
 				id: account.id,
 				label: account.label,
 				type: "account",
 				x: accountX,
-				y: accountYs[index] ?? topY + index * 128,
+				y,
 				amount: account.balance,
-				bucketKey: account.bucketKey
+				bucketKey: account.purposeKey
 			}));
-			edges.push(makeEdge(`edge:${account.id}:person`, account.id, snapshot.person.id, "CONTRIBUTES_TO", account.balance));
+			if (snapshot.assets.length === 0) edges.push(makeEdge(`edge:${account.id}:person`, account.id, snapshot.person.id, "CONTRIBUTES_TO", account.balance));
 		});
-		snapshot.assets.forEach((asset, index) => {
+		orderedAssets.forEach((asset, index) => {
 			nodes.push(makeNode({
 				id: asset.id,
 				label: asset.label,
 				type: "asset",
 				x: assetX,
-				y: assetYs[index] ?? topY + index * 158,
+				y: assetYById.get(asset.id) ?? topY + index * rowGap,
 				amount: asset.marketValue,
-				bucketKey: asset.bucketKey,
+				bucketKey: asset.purposeKey,
 				riskScore: asset.volatilityScore
 			}));
+			if (asset.accountId && accountIds.has(asset.accountId)) edges.push(makeEdge(`edge:${asset.accountId}:${asset.id}`, asset.accountId, asset.id, "HOLDS", asset.marketValue));
 			edges.push(makeEdge(`edge:${asset.id}:person`, asset.id, snapshot.person.id, "CONTRIBUTES_TO", asset.marketValue));
 		});
+		const liabilityTopY = topY + Math.max(1, orderedAssets.length) * rowGap;
 		snapshot.liabilities.forEach((liability, index) => {
 			nodes.push(makeNode({
 				id: liability.id,
 				label: liability.label,
 				type: "liability",
-				x: personX + (index - (snapshot.liabilities.length - 1) / 2) * 180,
-				y: 242,
+				x: personX,
+				y: liabilityTopY + index * rowGap,
 				amount: liability.outstandingBalance,
 				riskScore: liability.riskScore
 			}));
@@ -714,19 +717,19 @@ var PersonalCfoDomain = (function(exports) {
 		return {
 			mode: "balanceSheet",
 			width: 1200,
-			height: 580,
+			height: Math.max(580, liabilityTopY + snapshot.liabilities.length * rowGap + 60),
 			columns: [
 				{
 					x: accountX,
 					label: "계좌"
 				},
 				{
-					x: personX,
-					label: "순자산"
-				},
-				{
 					x: assetX,
 					label: "보유자산"
+				},
+				{
+					x: personX,
+					label: "순자산"
 				}
 			],
 			nodes,
@@ -854,30 +857,46 @@ var PersonalCfoDomain = (function(exports) {
 	}
 	//#endregion
 	//#region src/features/personal-cfo/portfolioAdapter.ts
-	var accountMeta = {
-		operating: {
-			label: "생활계좌",
-			liquidityScore: 95
+	var assetClassMeta = {
+		cash: {
+			label: "현금",
+			liquidityScore: 98,
+			volatilityScore: 2
 		},
-		defense: {
-			label: "안전자산 계좌",
-			liquidityScore: 70
+		deposit: {
+			label: "예·적금",
+			liquidityScore: 70,
+			volatilityScore: 4
 		},
-		housing: {
-			label: "청약통장",
-			liquidityScore: 60
+		fixedIncome: {
+			label: "채권·발행어음",
+			liquidityScore: 72,
+			volatilityScore: 14
 		},
-		growth: {
-			label: "증권계좌 현금",
-			liquidityScore: 85
+		equity: {
+			label: "주식·ETF",
+			liquidityScore: 82,
+			volatilityScore: 58
 		},
-		humanCapital: {
-			label: "인적자본 계좌",
-			liquidityScore: 80
+		fund: {
+			label: "펀드",
+			liquidityScore: 72,
+			volatilityScore: 44
 		},
-		experience: {
-			label: "경험자금 계좌",
-			liquidityScore: 80
+		pension: {
+			label: "연금자산",
+			liquidityScore: 24,
+			volatilityScore: 32
+		},
+		realEstate: {
+			label: "주거자산",
+			liquidityScore: 12,
+			volatilityScore: 18
+		},
+		other: {
+			label: "기타자산",
+			liquidityScore: 45,
+			volatilityScore: 24
 		}
 	};
 	function toSourceRefs(items) {
@@ -888,35 +907,94 @@ var PersonalCfoDomain = (function(exports) {
 			field: "amount"
 		}));
 	}
-	function getAccountBucket(item) {
-		const group = item.groupName.toLowerCase();
-		const text = `${item.groupName} ${item.name} ${item.accountName ?? ""} ${item.instrumentType ?? ""}`.toLowerCase();
-		if (/청약|주택드림/.test(text)) return "housing";
-		if (/투자/.test(group) || /증권|isa|brokerage/.test(text)) return "growth";
-		if (/안전|예금|적금|발행어음|ima|도약|rp|cma|채권/.test(text)) return "defense";
+	function stableId(prefix, value) {
+		let hash = 2166136261;
+		for (let index = 0; index < value.length; index += 1) {
+			hash ^= value.charCodeAt(index);
+			hash = Math.imul(hash, 16777619);
+		}
+		return `${prefix}:${(hash >>> 0).toString(36)}`;
+	}
+	function getItemText(item) {
+		return `${item.groupName} ${item.name} ${item.accountName ?? ""} ${item.assetType ?? ""} ${item.instrumentType ?? ""}`.toLowerCase();
+	}
+	function getPurposeKey(item) {
+		const text = getItemText(item);
+		const holdingText = `${item.groupName} ${item.name} ${item.assetType ?? ""} ${item.instrumentType ?? ""}`.toLowerCase();
+		if (/청약|주택드림|전세|보증금|부동산|housing/u.test(holdingText)) return "housing";
+		if (/학비|교육|자격증|석사|커리어|human.?capital/u.test(holdingText)) return "humanCapital";
+		if (/여행|취미|회복|경험|experience/u.test(holdingText)) return "experience";
+		if (/연금|퇴직|irp|주식|etf|펀드|stock|equity|fund/u.test(holdingText)) return "growth";
+		if (/안전|예금|적금|발행어음|ima|도약|rp|cma|채권|deposit|bond/u.test(holdingText)) return "defense";
+		if (/투자|증권|isa|brokerage/u.test(text)) return "growth";
 		return "operating";
 	}
-	function aggregateAccounts(items) {
+	function getAssetClass(item) {
+		const text = getItemText(item);
+		const assetType = String(item.assetType || "").toLowerCase();
+		const instrumentType = String(item.instrumentType || "").toLowerCase();
+		if (/청약|주택드림/u.test(text)) return "deposit";
+		if (/전세|보증금|부동산|housing/u.test(text) || assetType === "real_estate") return "realEstate";
+		if (/연금|퇴직|irp|pension/u.test(text) || assetType === "pension") return "pension";
+		if (/예금|적금|도약|deposit/u.test(text) || instrumentType === "deposit") return "deposit";
+		if (/발행어음|채권|\brp\b|bond|fixed.?income|safe_account/u.test(text)) return "fixedIncome";
+		if (/펀드|fund/u.test(text) && !/etf/u.test(text)) return "fund";
+		if (/주식|etf|stock|equity/u.test(text) || assetType === "stock" || assetType === "etf") return "equity";
+		if (/현금|입출금|예수금|cash/u.test(text) || assetType === "account") return "cash";
+		return "other";
+	}
+	function getAccountLabel(item) {
+		const explicitLabel = String(item.accountName || "").trim();
+		if (explicitLabel) return explicitLabel;
+		const itemName = String(item.name || "").trim();
+		const text = getItemText(item);
+		if (/계좌|통장/u.test(itemName)) return itemName;
+		if (item.assetType === "account" && /cash_account/u.test(text)) return itemName || void 0;
+		if (/연금|퇴직|irp|pension/u.test(text)) return "연금 계좌";
+	}
+	function getAccountType(label, item) {
+		const text = `${label} ${getItemText(item)}`.toLowerCase();
+		if (/연금|퇴직|irp|pension/u.test(text)) return "pension";
+		if (/청약|적금|도약|savings/u.test(text)) return "savings";
+		if (/증권|투자|isa|brokerage|cma/u.test(text)) return "brokerage";
+		if (/은행|통장|계좌|bank/u.test(text)) return "bank";
+		return "other";
+	}
+	function classifyPortfolioPositionAxes(item) {
+		const accountLabel = getAccountLabel(item);
+		return {
+			accountId: accountLabel ? stableId("account:portfolio", accountLabel.toLowerCase()) : void 0,
+			accountLabel,
+			assetClass: getAssetClass(item),
+			purposeKey: getPurposeKey(item)
+		};
+	}
+	function classifyHolding(item) {
+		const axes = classifyPortfolioPositionAxes(item);
+		return {
+			...axes,
+			item,
+			accountType: axes.accountLabel ? getAccountType(axes.accountLabel, item) : void 0
+		};
+	}
+	function aggregateAccounts(holdings) {
 		const grouped = /* @__PURE__ */ new Map();
-		items.forEach((item) => {
-			const bucket = getAccountBucket(item);
-			grouped.set(bucket, [...grouped.get(bucket) ?? [], item]);
+		holdings.forEach((holding) => {
+			if (!holding.accountId) return;
+			grouped.set(holding.accountId, [...grouped.get(holding.accountId) ?? [], holding]);
 		});
-		return [
-			"operating",
-			"defense",
-			"housing",
-			"growth"
-		].filter((bucket) => grouped.has(bucket)).map((bucket) => {
-			const rows = grouped.get(bucket) ?? [];
-			const meta = accountMeta[bucket];
+		return Array.from(grouped.entries()).map(([accountId, rows]) => {
+			const balance = rows.reduce((total, row) => total + Math.max(0, Number(row.item.amount || 0)), 0);
+			const purposeKeys = new Set(rows.map((row) => row.purposeKey));
+			const weightedLiquidity = rows.reduce((total, row) => total + Math.max(0, Number(row.item.amount || 0)) * assetClassMeta[row.assetClass].liquidityScore, 0);
 			return {
-				id: `account:portfolio:${bucket}`,
-				label: `${meta.label} ${rows.length}개`,
-				balance: rows.reduce((total, item) => total + Math.max(0, Number(item.amount || 0)), 0),
-				liquidityScore: meta.liquidityScore,
-				bucketKey: bucket,
-				sourceRefs: toSourceRefs(rows)
+				id: accountId,
+				label: rows[0].accountLabel || "계좌",
+				accountType: rows[0].accountType || "other",
+				balance,
+				liquidityScore: balance > 0 ? Math.round(weightedLiquidity / balance) : 0,
+				purposeKey: purposeKeys.size === 1 ? rows[0].purposeKey : void 0,
+				sourceRefs: toSourceRefs(rows.map((row) => row.item))
 			};
 		});
 	}
@@ -937,52 +1015,29 @@ var PersonalCfoDomain = (function(exports) {
 			};
 		});
 	}
-	function getAssetGroup(item) {
-		const text = `${item.groupName} ${item.name} ${item.assetType ?? ""} ${item.instrumentType ?? ""}`.toLowerCase();
-		if (/연금|퇴직|pension/u.test(text)) return {
-			key: "pension",
-			label: "연금·퇴직자산",
-			bucketKey: "growth",
-			volatilityScore: 30
-		};
-		if (/주식|etf|펀드|채권|stock|equity|fund/u.test(text)) return {
-			key: "investment",
-			label: "투자자산",
-			bucketKey: "growth",
-			volatilityScore: 52
-		};
-		if (/전세|보증금|부동산|housing/u.test(text)) return {
-			key: "housing",
-			label: "주거자산",
-			bucketKey: "housing",
-			volatilityScore: 18
-		};
-		return {
-			key: "other",
-			label: "기타 보유자산",
-			bucketKey: "defense",
-			volatilityScore: 24
-		};
-	}
-	function aggregateAssets(items) {
+	function aggregateAssets(holdings) {
 		const grouped = /* @__PURE__ */ new Map();
-		items.forEach((item) => {
-			const meta = getAssetGroup(item);
-			const entry = grouped.get(meta.key) ?? {
-				meta,
-				items: []
-			};
-			entry.items.push(item);
-			grouped.set(meta.key, entry);
+		holdings.forEach((holding) => {
+			const key = `${holding.accountId || "direct"}|${holding.assetClass}|${holding.purposeKey}`;
+			grouped.set(key, [...grouped.get(key) ?? [], holding]);
 		});
-		return Array.from(grouped.entries()).map(([key, entry]) => ({
-			id: `asset:portfolio:${key}`,
-			label: `${entry.meta.label} ${entry.items.length}개`,
-			marketValue: entry.items.reduce((total, item) => total + Math.max(0, Number(item.amount || 0)), 0),
-			bucketKey: entry.meta.bucketKey,
-			volatilityScore: entry.meta.volatilityScore,
-			sourceRefs: toSourceRefs(entry.items)
-		}));
+		return Array.from(grouped.entries()).map(([key, rows]) => {
+			const first = rows[0];
+			const meta = assetClassMeta[first.assetClass];
+			const firstItemLabel = String(first.item.name || "").trim();
+			const repeatsAccountLabel = first.accountLabel === firstItemLabel;
+			const label = rows.length > 1 ? `${meta.label} ${rows.length}개` : repeatsAccountLabel ? meta.label : firstItemLabel || meta.label;
+			return {
+				id: stableId("asset:portfolio", key),
+				label,
+				accountId: first.accountId,
+				assetClass: first.assetClass,
+				marketValue: rows.reduce((total, row) => total + Math.max(0, Number(row.item.amount || 0)), 0),
+				purposeKey: first.purposeKey,
+				volatilityScore: meta.volatilityScore,
+				sourceRefs: toSourceRefs(rows.map((row) => row.item))
+			};
+		});
 	}
 	function applyPortfolioFinanceData(snapshot, items) {
 		if (items.length === 0) return {
@@ -993,18 +1048,20 @@ var PersonalCfoDomain = (function(exports) {
 			hasPortfolioData: false
 		};
 		const liabilityItems = items.filter((item) => item.assetType === "debt" || Number(item.amount) < 0);
-		const accountItems = items.filter((item) => !liabilityItems.includes(item) && (item.assetType === "account" || /청약통장/u.test(item.name)));
-		const assetItems = items.filter((item) => !liabilityItems.includes(item) && !accountItems.includes(item));
+		const holdings = items.filter((item) => !liabilityItems.includes(item) && Number(item.amount) > 0).map(classifyHolding);
+		const accounts = aggregateAccounts(holdings);
+		const assets = aggregateAssets(holdings);
+		const liabilities = mapLiabilities(liabilityItems);
 		return {
 			snapshot: {
 				...snapshot,
-				accounts: aggregateAccounts(accountItems),
-				assets: aggregateAssets(assetItems),
-				liabilities: mapLiabilities(liabilityItems)
+				accounts,
+				assets,
+				liabilities
 			},
-			accountItemCount: accountItems.length,
-			assetItemCount: assetItems.length,
-			liabilityItemCount: liabilityItems.length,
+			accountItemCount: accounts.length,
+			assetItemCount: assets.length,
+			liabilityItemCount: liabilities.length,
 			hasPortfolioData: true
 		};
 	}
@@ -1277,6 +1334,7 @@ var PersonalCfoDomain = (function(exports) {
 	exports.applyPortfolioFinanceData = applyPortfolioFinanceData;
 	exports.buildFinanceGraphFromSnapshot = buildFinanceGraphFromSnapshot;
 	exports.buildPersonalCfoKpiSummary = buildPersonalCfoKpiSummary;
+	exports.calculateAccountBalance = calculateAccountBalance;
 	exports.calculateDebtRatio = calculateDebtRatio;
 	exports.calculateEmergencyCoverageMonths = calculateEmergencyCoverageMonths;
 	exports.calculateFixedCostRatio = calculateFixedCostRatio;
@@ -1289,6 +1347,7 @@ var PersonalCfoDomain = (function(exports) {
 	exports.calculateTotalAssets = calculateTotalAssets;
 	exports.calculateTotalLiabilities = calculateTotalLiabilities;
 	exports.canApplyConfirmedMonthlyClose = canApplyConfirmedMonthlyClose;
+	exports.classifyPortfolioPositionAxes = classifyPortfolioPositionAxes;
 	exports.closeFinanceMonth = closeFinanceMonth;
 	exports.createEmptyPersonalCfoSnapshot = createEmptyPersonalCfoSnapshot;
 	exports.createFinanceMonthlyCloseRecord = createFinanceMonthlyCloseRecord;

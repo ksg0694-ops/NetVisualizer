@@ -14,8 +14,18 @@ function clamp(value: number, min = 0, max = 100): number {
 }
 
 export function calculateTotalAssets(snapshot: PersonalCfoSnapshot): number {
-  return sum(snapshot.accounts.map((account) => account.balance))
-    + sum(snapshot.assets.map((asset) => asset.marketValue));
+  if (snapshot.assets.length > 0) {
+    return sum(snapshot.assets.map((asset) => asset.marketValue));
+  }
+  return sum(snapshot.accounts.map((account) => account.balance));
+}
+
+export function calculateAccountBalance(snapshot: PersonalCfoSnapshot, accountId: string): number {
+  return sum(
+    snapshot.assets
+      .filter((asset) => asset.accountId === accountId)
+      .map((asset) => asset.marketValue),
+  );
 }
 
 export function calculateTotalLiabilities(snapshot: PersonalCfoSnapshot): number {

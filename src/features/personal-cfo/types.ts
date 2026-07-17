@@ -12,6 +12,7 @@ export type PersonalCfoNodeType =
 export type PersonalCfoEdgeType =
   | 'FLOWS_TO'
   | 'ALLOCATED_TO'
+  | 'HOLDS'
   | 'FUNDS'
   | 'HEDGES'
   | 'EXPOSED_TO'
@@ -25,6 +26,23 @@ export type BudgetBucketKey =
   | 'growth'
   | 'humanCapital'
   | 'experience';
+
+export type PersonalCfoAccountType =
+  | 'bank'
+  | 'brokerage'
+  | 'savings'
+  | 'pension'
+  | 'other';
+
+export type PersonalCfoAssetClass =
+  | 'cash'
+  | 'deposit'
+  | 'fixedIncome'
+  | 'equity'
+  | 'fund'
+  | 'pension'
+  | 'realEstate'
+  | 'other';
 
 export type ProjectStatus = 'active' | 'planned' | 'completed' | 'paused';
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
@@ -64,17 +82,21 @@ export interface PersonalCfoIncome {
 export interface PersonalCfoAccount {
   id: string;
   label: string;
+  accountType: PersonalCfoAccountType;
+  // Account value is a derived subtotal of linked positions, never an additional asset.
   balance: number;
   liquidityScore: number;
-  bucketKey?: BudgetBucketKey;
+  purposeKey?: BudgetBucketKey;
   sourceRefs?: PersonalCfoSourceRef[];
 }
 
 export interface PersonalCfoAsset {
   id: string;
   label: string;
+  accountId?: string;
+  assetClass: PersonalCfoAssetClass;
   marketValue: number;
-  bucketKey: BudgetBucketKey;
+  purposeKey: BudgetBucketKey;
   volatilityScore: number;
   sourceRefs?: PersonalCfoSourceRef[];
 }

@@ -196,13 +196,20 @@ function buildCashFlowGraph(snapshot: PersonalCfoSnapshot): PersonalCfoGraph {
 function buildBalanceSheetGraph(snapshot: PersonalCfoSnapshot): PersonalCfoGraph {
   const nodes: PersonalCfoGraphNode[] = [];
   const edges: PersonalCfoGraphEdge[] = [];
-  const accountX = 170;
-  const personX = 600;
-  const assetX = 1030;
+  const accountX = 150;
+  const assetX = 590;
+  const personX = 1030;
   const topY = 92;
   const personY = topY;
-  const accountYs = [topY, 220, 348, 476];
-  const assetYs = [topY, 250, 408];
+  const rowGap = 96;
+  const accountOrder = new Map(snapshot.accounts.map((account, index) => [account.id, index]));
+  const orderedAssets = [...snapshot.assets].sort((left, right) => {
+    const leftOrder = left.accountId ? accountOrder.get(left.accountId) ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER;
+    const rightOrder = right.accountId ? accountOrder.get(right.accountId) ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER;
+    return leftOrder - rightOrder;
+  });
+  const assetYById = new Map(orderedAssets.map((asset, index) => [asset.id, topY + (index * rowGap)]));
+  const accountIds = new Set(snapshot.accounts.map((account) => account.id));
 
   nodes.push(makeNode({
     id: snapshot.person.id,
@@ -214,39 +221,49 @@ function buildBalanceSheetGraph(snapshot: PersonalCfoSnapshot): PersonalCfoGraph
   }));
 
   snapshot.accounts.forEach((account, index) => {
+    const linkedAssetYs = orderedAssets
+      .filter((asset) => asset.accountId === account.id)
+      .map((asset) => assetYById.get(asset.id) ?? topY);
+    const y = linkedAssetYs[0] ?? (topY + (index * rowGap));
     nodes.push(makeNode({
       id: account.id,
       label: account.label,
       type: 'account',
       x: accountX,
-      y: accountYs[index] ?? (topY + (index * 128)),
+      y,
       amount: account.balance,
-      bucketKey: account.bucketKey,
+      bucketKey: account.purposeKey,
     }));
-    edges.push(makeEdge(`edge:${account.id}:person`, account.id, snapshot.person.id, 'CONTRIBUTES_TO', account.balance));
+    if (snapshot.assets.length === 0) {
+      edges.push(makeEdge(`edge:${account.id}:person`, account.id, snapshot.person.id, 'CONTRIBUTES_TO', account.balance));
+    }
   });
 
-  snapshot.assets.forEach((asset, index) => {
+  orderedAssets.forEach((asset, index) => {
     nodes.push(makeNode({
       id: asset.id,
       label: asset.label,
       type: 'asset',
       x: assetX,
-      y: assetYs[index] ?? (topY + (index * 158)),
+      y: assetYById.get(asset.id) ?? (topY + (index * rowGap)),
       amount: asset.marketValue,
-      bucketKey: asset.bucketKey,
+      bucketKey: asset.purposeKey,
       riskScore: asset.volatilityScore,
     }));
+    if (asset.accountId && accountIds.has(asset.accountId)) {
+      edges.push(makeEdge(`edge:${asset.accountId}:${asset.id}`, asset.accountId, asset.id, 'HOLDS', asset.marketValue));
+    }
     edges.push(makeEdge(`edge:${asset.id}:person`, asset.id, snapshot.person.id, 'CONTRIBUTES_TO', asset.marketValue));
   });
 
+  const liabilityTopY = topY + (Math.max(1, orderedAssets.length) * rowGap);
   snapshot.liabilities.forEach((liability, index) => {
     nodes.push(makeNode({
       id: liability.id,
       label: liability.label,
       type: 'liability',
-      x: personX + ((index - ((snapshot.liabilities.length - 1) / 2)) * 180),
-      y: 242,
+      x: personX,
+      y: liabilityTopY + (index * rowGap),
       amount: liability.outstandingBalance,
       riskScore: liability.riskScore,
     }));
@@ -256,11 +273,11 @@ function buildBalanceSheetGraph(snapshot: PersonalCfoSnapshot): PersonalCfoGraph
   return {
     mode: 'balanceSheet',
     width: 1200,
-    height: 580,
+    height: Math.max(580, liabilityTopY + (snapshot.liabilities.length * rowGap) + 60),
     columns: [
       { x: accountX, label: '계좌' },
-      { x: personX, label: '순자산' },
       { x: assetX, label: '보유자산' },
+      { x: personX, label: '순자산' },
     ],
     nodes,
     edges,
