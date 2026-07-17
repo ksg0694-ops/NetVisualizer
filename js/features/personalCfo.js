@@ -15,7 +15,7 @@
     let remoteLoadStarted = false;
     let syncStatusText = '로컬 우선';
     let syncStatusClasses = 'text-slate-600 bg-slate-50 border-slate-100';
-    let activeGraphMode = 'cashFlow';
+    let activeGraphMode = 'combined';
 
     const typeMeta = {
         person: { fill: '#334155', stroke: '#0f172a', label: '본인' },
@@ -59,26 +59,26 @@
         experience: '경험자금',
     };
     const graphModeMeta = {
+        combined: {
+            label: '통합 요약',
+            title: '현금흐름과 재무상태 통합 요약',
+            description: '월급의 사용 방향과 현재 목적별 자산, 부채, 순자산을 하나의 흐름으로 연결합니다.',
+            dataLabel: '실제 통합',
+            dataClasses: 'border-indigo-100 bg-indigo-50 text-indigo-700',
+        },
         cashFlow: {
-            label: '현금 흐름',
-            title: '월급 배분 현금 흐름',
-            description: '최근 종료 급여기간의 내부 이체를 순액으로 정산해 생활비·저축·부채 순서로 보여줍니다. 전세대출은 이 흐름에만 반영합니다.',
+            label: '현금흐름 요약',
+            title: '월급 배분 요약',
+            description: '최근 종료 급여기간의 월급을 생활비, 저축·투자, 부채·금융비용으로 묶어 보여줍니다.',
             dataLabel: '실제+정산 추정',
             dataClasses: 'border-emerald-100 bg-emerald-50 text-emerald-700',
         },
         balanceSheet: {
-            label: '재무상태',
-            title: '현재 재무상태 네트워크',
-            description: '계좌는 보관 위치, 보유자산은 경제적 가치로 분리합니다. 순자산에는 보유자산만 한 번 반영합니다.',
+            label: '재무상태 요약',
+            title: '현재 재무상태 요약',
+            description: '개별 계좌와 종목 대신 목적별 자산 합계, 총부채, 순자산만 보여줍니다.',
             dataLabel: '실제 데이터',
             dataClasses: 'border-emerald-100 bg-emerald-50 text-emerald-700',
-        },
-        strategy: {
-            label: '목표·리스크',
-            title: '목표와 리스크 연결',
-            description: '계획 바구니가 프로젝트를 지원하고 주요 리스크를 완충하는 관계입니다.',
-            dataLabel: '계획 모델',
-            dataClasses: 'border-amber-100 bg-amber-50 text-amber-700',
         },
     };
     function clamp(value, min = 0, max = 100) {
@@ -474,6 +474,16 @@
         return `<g aria-hidden="true">${laneLines}${columns}</g>`;
     }
 
+    function renderGraphModeToggle(activeMode) {
+        return `
+            <div class="inline-flex w-fit max-w-full overflow-x-auto rounded-md border border-gray-200 bg-gray-50 p-0.5" role="group" aria-label="재무 네트워크 보기">
+                ${Object.entries(graphModeMeta).map(([mode, meta]) => `
+                    <button type="button" data-cfo-graph-mode="${escapeAttr(mode)}" class="shrink-0 rounded px-2.5 py-1.5 text-[11px] font-bold transition ${activeMode === mode ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-800'}" aria-pressed="${activeMode === mode}">${escapeHtml(meta.label)}</button>
+                `).join('')}
+            </div>
+        `;
+    }
+
     function renderFinanceGraph(graph) {
         const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
         const modeMeta = graphModeMeta[graph.mode] || graphModeMeta.cashFlow;
@@ -491,11 +501,7 @@
                         </div>
                         <p class="text-xs text-gray-500">${escapeHtml(modeMeta.description)}</p>
                     </div>
-                    <div class="inline-flex w-fit rounded-md border border-gray-200 bg-gray-50 p-0.5" role="group" aria-label="재무 네트워크 보기">
-                        ${Object.entries(graphModeMeta).map(([mode, meta]) => `
-                            <button type="button" data-cfo-graph-mode="${escapeAttr(mode)}" class="rounded px-2.5 py-1.5 text-[11px] font-bold transition ${graph.mode === mode ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-800'}" aria-pressed="${graph.mode === mode}">${escapeHtml(meta.label)}</button>
-                        `).join('')}
-                    </div>
+                    ${renderGraphModeToggle(graph.mode)}
                 </div>
                 <div class="mb-2 hidden md:flex flex-wrap gap-1.5 text-[10px] font-bold">
                         ${Object.entries(typeMeta).filter(([type]) => visibleTypes.has(type)).map(([, meta]) => `
@@ -529,37 +535,28 @@
         `;
     }
 
-    function renderMobileFinanceSummary(nextSnapshot) {
-        const accountById = new Map(nextSnapshot.accounts.map((item) => [item.id, item]));
-        const assetRows = nextSnapshot.assets.map((item) => {
-            const account = item.accountId ? accountById.get(item.accountId) : null;
-            return {
-                label: account ? `${account.label} · ${item.label}` : item.label,
-                amount: item.marketValue,
-                type: '보유자산',
-            };
-        });
-        const liabilityRows = nextSnapshot.liabilities.map((item) => ({
-            label: item.label,
-            amount: item.outstandingBalance,
-            type: '부채',
-        }));
-        const salaryAllocation = nextSnapshot.cashFlow?.salaryAllocation;
-        const actualAllocationRows = salaryAllocation ? [
-            { label: '생활비', amount: salaryAllocation.salaryAccountReserve + salaryAllocation.livingAccountReserve, type: '운영자금' },
-            { label: '청년도약계좌', amount: salaryAllocation.youthSavings, type: '장기목돈' },
-            { label: '연금저축펀드', amount: salaryAllocation.pensionSavings, type: '노후자산' },
-            { label: '원화 발행어음', amount: salaryAllocation.safeAssetSweep, type: '안전자산' },
-            { label: '신용대출 이자', amount: salaryAllocation.creditLoanInterest, type: '금융비용' },
-            { label: '전세대출', amount: salaryAllocation.housingLoanPayment, type: '현금흐름 부채' },
-        ].filter((item) => Number(item.amount) > 0) : [];
-        const allocationRows = nextSnapshot.cashFlow
-            ? actualAllocationRows
-            : nextSnapshot.budgetBuckets.map((item) => ({
-                label: item.label,
-                amount: item.monthlyAllocation,
-                type: '월 계획',
-            }));
+    function renderMobileFinanceSummary(graph) {
+        const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
+        const cashRows = [
+            { id: 'summary:cashflow:living', type: '월 생활비' },
+            { id: 'summary:cashflow:saving', type: '월 저축·투자' },
+            { id: 'summary:cashflow:debt', type: '월 부채·금융비용' },
+        ].map((row) => {
+            const node = nodeById.get(row.id);
+            return node ? { ...node, type: row.type } : null;
+        }).filter((row) => row && row.amount > 0);
+        const assetRows = graph.nodes
+            .filter((node) => node.id.startsWith('summary:asset:'))
+            .map((node) => ({ ...node, type: '현재 자산' }));
+        const totalAsset = nodeById.get('summary:assets:total') || {
+            id: 'summary:assets:mobile-total',
+            label: '총자산',
+            amount: assetRows.reduce((sum, row) => sum + Number(row.amount || 0), 0),
+        };
+        const totalLiability = nodeById.get('summary:liabilities:total');
+        const person = graph.nodes.find((node) => node.type === 'person' && node.id !== 'flow:salary-allocation');
+        const showCashFlow = graph.mode === 'combined' || graph.mode === 'cashFlow';
+        const showBalanceSheet = graph.mode === 'combined' || graph.mode === 'balanceSheet';
         const renderRows = (rows, amountClass = 'text-gray-900') => rows.map((row) => `
             <div class="flex items-center justify-between gap-3 border-b border-gray-100 py-2.5 last:border-b-0">
                 <div class="min-w-0">
@@ -572,23 +569,31 @@
 
         return `
             <section class="md:hidden rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
-                <div class="mb-2">
-                    <h3 class="text-base font-bold text-gray-900">재무 흐름 요약</h3>
-                    <p class="text-xs text-gray-500">모바일에서는 핵심 금액을 목록으로 먼저 보여줍니다.</p>
+                <div class="mb-3 flex flex-col gap-2">
+                    <h3 class="text-base font-bold text-gray-900">${escapeHtml(graphModeMeta[graph.mode]?.title || '재무 요약')}</h3>
+                    ${renderGraphModeToggle(graph.mode)}
                 </div>
                 <div class="divide-y-4 divide-gray-50">
-                    <div class="py-2">
-                        <p class="mb-1 text-[11px] font-bold text-indigo-600">자산</p>
-                        ${assetRows.length ? renderRows(assetRows) : '<p class="py-3 text-sm text-gray-400">등록된 자산이 없습니다.</p>'}
-                    </div>
-                    <div class="py-2">
-                        <p class="mb-1 text-[11px] font-bold text-rose-600">부채</p>
-                        ${liabilityRows.length ? renderRows(liabilityRows, 'text-rose-700') : '<p class="py-3 text-sm text-gray-400">등록된 부채가 없습니다.</p>'}
-                    </div>
-                    <div class="py-2">
-                        <p class="mb-1 text-[11px] font-bold text-emerald-600">${escapeHtml(nextSnapshot.cashFlow ? `${nextSnapshot.cashFlow.periodLabel} 월급 배분` : '월 자금 배분 계획')}</p>
-                        ${allocationRows.length ? renderRows(allocationRows, 'text-emerald-700') : '<p class="py-3 text-sm text-gray-400">표시할 흐름이 없습니다.</p>'}
-                    </div>
+                    ${showCashFlow ? `
+                        <div class="py-2">
+                            <p class="mb-1 text-[11px] font-bold text-emerald-600">현금흐름</p>
+                            ${cashRows.length ? renderRows(cashRows, 'text-emerald-700') : '<p class="py-3 text-sm text-gray-400">표시할 현금흐름이 없습니다.</p>'}
+                        </div>
+                    ` : ''}
+                    ${showBalanceSheet ? `
+                        <div class="py-2">
+                            <p class="mb-1 text-[11px] font-bold text-indigo-600">목적별 자산</p>
+                            ${assetRows.length ? renderRows(assetRows) : '<p class="py-3 text-sm text-gray-400">등록된 자산이 없습니다.</p>'}
+                        </div>
+                        <div class="py-2">
+                            <p class="mb-1 text-[11px] font-bold text-gray-500">재무 결과</p>
+                            ${renderRows([
+                                ...(totalAsset ? [{ ...totalAsset, type: '총자산' }] : []),
+                                ...(totalLiability ? [{ ...totalLiability, type: '총부채' }] : []),
+                                ...(person ? [{ ...person, label: '순자산', type: '자산-부채' }] : []),
+                            ], 'text-indigo-700')}
+                        </div>
+                    ` : ''}
                 </div>
             </section>
         `;
@@ -745,7 +750,7 @@
                 ${renderKpiCards(model.summary)}
             </div>
             <div class="space-y-4 pb-10">
-                ${renderMobileFinanceSummary(portfolioOverlay.snapshot)}
+                ${renderMobileFinanceSummary(model.graph)}
                 ${renderFinanceGraph(model.graph)}
                 ${renderTables(model)}
             </div>

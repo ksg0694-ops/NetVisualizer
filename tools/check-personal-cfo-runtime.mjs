@@ -169,8 +169,10 @@ const reconciledGraph = domain.buildFinanceGraphFromSnapshot({
   ...emptySnapshot,
   cashFlow: reconciledSummary,
 }, 'cashFlow');
-assert.ok(reconciledGraph.nodes.some((node) => node.id === 'account:living-expense' && node.amount === 588_041));
-assert.ok(reconciledGraph.nodes.some((node) => node.id === 'asset:krw-note' && node.amount === 1_118_502));
+assert.ok(reconciledGraph.nodes.some((node) => node.id === 'summary:cashflow:living' && node.amount === 588_041));
+assert.ok(reconciledGraph.nodes.some((node) => (
+  node.id === 'summary:cashflow:saving' && node.amount === 1_918_502
+)));
 assert.equal(
   reconciledGraph.edges
     .filter((edge) => edge.source === 'flow:salary-allocation' && edge.amount > 0)
@@ -218,37 +220,61 @@ const overriddenAxes = domain.classifyPortfolioPositionAxes({
 assert.equal(overriddenAxes.assetClass, 'alternative', 'user asset axis must override legacy ETF classification');
 assert.equal(overriddenAxes.purposeKey, 'growth', 'user purpose axis must override inference');
 
+const pensionPortfolio = domain.applyPortfolioFinanceData(emptySnapshot, [{
+  id: 'pension-etf',
+  groupName: '연금',
+  name: '연금 ETF',
+  accountName: '연금저축펀드',
+  accountType: 'pension',
+  assetClass: 'equity',
+  purposeKey: 'growth',
+  amount: 4_000_000,
+  assetType: 'pension',
+  instrumentType: 'etf',
+}]);
+const pensionBalanceGraph = domain.buildFinanceGraphFromSnapshot(pensionPortfolio.snapshot, 'balanceSheet');
+assert.ok(pensionBalanceGraph.nodes.some((node) => (
+  node.id === 'summary:asset:pension' && node.amount === 4_000_000
+)), 'pension account holdings must remain a separate retirement summary');
+
 const actualSnapshot = domain.applyCashFlowData(portfolio.snapshot, [closedPeriod, openPeriod], '2026-07-16');
 const model = domain.createPersonalCfoPageModel(actualSnapshot);
-assert.equal(model.graph.mode, 'balanceSheet', 'balance sheet must be the default network mode');
+assert.equal(model.graph.mode, 'combined', 'combined summary must be the default network mode');
 assert.equal(model.summary.monthlyFreeCashFlow, 999_578);
 assert.equal(model.summary.cashFlowReviewStatus, 'confirmed');
 assert.equal(model.summary.hasPlanningData, false);
 assert.equal(actualSnapshot.incomes.length, 1, 'actual cash flow must create the income node without a seed');
 assert.equal(actualSnapshot.incomes[0].monthlyAmount, closedSummary.totalIncome);
-assert.equal(model.graph.nodes.some((node) => node.type === 'income'), false, 'balance sheet must not mix income flow nodes');
-const balancePerson = model.graph.nodes.find((node) => node.type === 'person');
-const balanceAccounts = model.graph.nodes.filter((node) => node.type === 'account');
-const balanceAssets = model.graph.nodes.filter((node) => node.type === 'asset');
-const balanceLiabilities = model.graph.nodes.filter((node) => node.type === 'liability');
-assert.equal(new Set(balanceAccounts.map((node) => node.x)).size, 1, 'accounts must share one vertical column');
-assert.equal(new Set(balanceAssets.map((node) => node.x)).size, 1, 'assets must share one vertical column');
-assert.ok(balanceAccounts.every((node) => node.x < balancePerson.x));
-assert.ok(balanceAssets.every((node) => node.x > balanceAccounts[0].x && node.x < balancePerson.x));
-assert.ok(balanceLiabilities.every((node) => node.y > balancePerson.y));
-assert.equal(balancePerson.y, Math.min(...balanceAccounts.map((node) => node.y)), 'balance columns must start on the same top line');
-assert.equal(balancePerson.y, Math.min(...balanceAssets.map((node) => node.y)), 'asset column must start on the same top line');
-assert.deepEqual(Array.from(model.graph.columns, (column) => column.label), ['계좌', '보유자산', '순자산']);
-assert.ok(model.graph.edges.some((edge) => edge.type === 'HOLDS'), 'accounts must connect to their positions with HOLDS');
-assert.ok(!model.graph.edges.some((edge) => (
-  edge.type === 'CONTRIBUTES_TO' && balanceAccounts.some((account) => account.id === edge.source)
-)), 'account subtotals must not contribute to net worth when positions exist');
+assert.deepEqual(Array.from(model.graph.columns, (column) => column.label), [
+  '월급', '배분', '월 사용 요약', '현재 자산', '순자산',
+]);
+assert.ok(model.graph.nodes.some((node) => node.type === 'income'));
+assert.ok(model.graph.nodes.some((node) => node.id === 'summary:cashflow:living'));
+assert.ok(model.graph.nodes.some((node) => node.id === 'summary:asset:operating'));
+assert.ok(!model.graph.nodes.some((node) => node.type === 'account'), 'combined summary must hide account detail');
+assert.ok(!model.graph.nodes.some((node) => node.id === cashAsset.id), 'combined summary must hide position detail');
+assert.ok(model.graph.edges.some((edge) => (
+  edge.source === 'summary:cashflow:living' && edge.target === 'summary:asset:operating'
+)), 'combined summary must connect monthly living funding to operating assets');
+
+const balanceGraph = domain.buildFinanceGraphFromSnapshot(actualSnapshot, 'balanceSheet');
+const balancePerson = balanceGraph.nodes.find((node) => node.type === 'person');
+const balanceGroups = balanceGraph.nodes.filter((node) => node.id.startsWith('summary:asset:'));
+const balanceTotalAssets = balanceGraph.nodes.find((node) => node.id === 'summary:assets:total');
+const balanceTotalLiabilities = balanceGraph.nodes.find((node) => node.id === 'summary:liabilities:total');
+assert.equal(balanceGraph.nodes.some((node) => node.type === 'income'), false, 'balance summary must not mix income flow nodes');
+assert.equal(balanceGraph.nodes.some((node) => node.type === 'account'), false, 'balance summary must hide account detail');
+assert.equal(new Set(balanceGroups.map((node) => node.x)).size, 1, 'asset summaries must share one vertical column');
+assert.equal(balanceTotalAssets.amount, model.summary.totalAssets);
+assert.equal(balanceTotalLiabilities.amount, model.summary.totalLiabilities);
+assert.equal(balancePerson.amount, model.summary.netWorth);
+assert.deepEqual(Array.from(balanceGraph.columns, (column) => column.label), ['자산 구성', '자산·부채 합계', '순자산']);
 assert.equal(
-  model.graph.edges
-    .filter((edge) => edge.type === 'CONTRIBUTES_TO' && balanceAssets.some((asset) => asset.id === edge.source))
+  balanceGraph.edges
+    .filter((edge) => edge.target === 'summary:assets:total')
     .reduce((total, edge) => total + edge.amount, 0),
   model.summary.totalAssets,
-  'position contributions must equal total assets exactly once',
+  'purpose summaries must equal total assets exactly once',
 );
 
 const cashFlowGraph = domain.buildFinanceGraphFromSnapshot(actualSnapshot, 'cashFlow');
@@ -256,24 +282,21 @@ const outgoing = cashFlowGraph.edges
   .filter((edge) => edge.source === 'flow:salary-allocation' && edge.amount > 0)
   .reduce((sum, edge) => sum + edge.amount, 0);
 assert.equal(outgoing, closedSummary.salaryAllocation.salaryIncome, 'salary-allocation graph must conserve salary income');
-assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'liability:credit-loan-interest' && node.amount === 269_457));
-assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'account:living-expense'
-  && node.type === 'account' && node.amount === 1_000_000));
-assert.ok(!cashFlowGraph.nodes.some((node) => node.id === 'account:salary-reserve'
-  || node.id === 'account:living-reserve'), 'salary and living account targets must share one living-expense node');
-assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'liability:housing-loan-cashflow'
-  && node.type === 'liability' && node.amount === 1_000_000));
-assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'asset:krw-note' && node.amount === 839_123));
+assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'summary:cashflow:living' && node.amount === 1_000_000));
+assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'summary:cashflow:saving' && node.amount === 1_639_123));
+assert.ok(cashFlowGraph.nodes.some((node) => (
+  node.id === 'summary:cashflow:debt' && node.type === 'liability' && node.amount === 1_269_457
+)));
 const cashFlowTargets = cashFlowGraph.nodes.filter((node) => node.x === 790);
 assert.equal(new Set(cashFlowTargets.map((node) => node.x)).size, 1, 'cash-flow outflows must share one vertical column');
 assert.deepEqual(Array.from(cashFlowTargets, (node) => node.label), [
-  '생활비', '청년도약계좌', '연금저축펀드', '원화 발행어음', '신용대출 이자', '전세대출',
+  '생활비', '저축·투자', '부채·금융비용',
 ]);
-const cashPerson = cashFlowGraph.nodes.find((node) => node.type === 'person');
+const cashAllocation = cashFlowGraph.nodes.find((node) => node.id === 'flow:salary-allocation');
 const cashIncome = cashFlowGraph.nodes.find((node) => node.type === 'income');
-assert.equal(cashPerson.y, Math.min(...cashFlowTargets.map((node) => node.y)), 'cash-flow columns must start at the top');
-assert.equal(cashPerson.y, cashIncome.y, 'income and available cash must share the top line');
-assert.deepEqual(Array.from(cashFlowGraph.columns, (column) => column.label), ['월급', '배분', '월급 사용처']);
+assert.equal(cashAllocation.y, Math.min(...cashFlowTargets.map((node) => node.y)), 'cash-flow columns must start at the top');
+assert.equal(cashAllocation.y, cashIncome.y, 'income and available cash must share the top line');
+assert.deepEqual(Array.from(cashFlowGraph.columns, (column) => column.label), ['월급', '배분', '월 사용 요약']);
 assert.equal(domain.calculateDebtRatio(actualSnapshot), model.summary.debtRatio, 'cash-flow-only housing node must not change debt ratio');
 
 const planningSnapshot = {

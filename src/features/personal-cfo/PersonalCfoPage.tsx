@@ -16,7 +16,7 @@ export interface PersonalCfoPageModel {
 
 export function createPersonalCfoPageModel(
   snapshot: PersonalCfoSnapshot,
-  graphMode: PersonalCfoGraphMode = 'balanceSheet',
+  graphMode: PersonalCfoGraphMode = 'combined',
 ): PersonalCfoPageModel {
   return {
     snapshot,

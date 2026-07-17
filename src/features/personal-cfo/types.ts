@@ -51,7 +51,7 @@ export type PersonalCfoAssetClass =
 export type ProjectStatus = 'active' | 'planned' | 'completed' | 'paused';
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 export type PersonalCfoMetricUnit = 'KRW' | 'PERCENT' | 'MONTHS' | 'SCORE';
-export type PersonalCfoGraphMode = 'cashFlow' | 'balanceSheet' | 'strategy';
+export type PersonalCfoGraphMode = 'combined' | 'cashFlow' | 'balanceSheet' | 'strategy';
 export type PersonalCfoDataSourceType =
   | 'manual'
   | 'financeData'
