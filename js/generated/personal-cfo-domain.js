@@ -626,39 +626,19 @@ var PersonalCfoDomain = (function(exports) {
 		const edges = [];
 		const summary = getCashFlowSummaryData(snapshot);
 		const salaryId = "income:salary-allocation";
-		const allocationId = "flow:salary-allocation";
-		const outflowX = 790;
+		const outflowX = 660;
 		const topY = 92;
 		const destinationGap = 112;
+		const allocationTotal = summary.salaryIncome + summary.allocationShortfall;
 		nodes.push(makeNode({
 			id: salaryId,
-			label: snapshot.cashFlow ? `${snapshot.cashFlow.periodLabel} 월급` : "월급",
+			label: snapshot.cashFlow ? `${snapshot.cashFlow.periodLabel} 월급${summary.allocationShortfall > 0 ? "+부족분" : ""}` : `월급${summary.allocationShortfall > 0 ? "+부족분" : ""}`,
 			type: "income",
-			x: 115,
+			x: 150,
 			y: topY,
-			amount: summary.salaryIncome
+			amount: allocationTotal,
+			riskScore: summary.allocationShortfall > 0 ? 85 : void 0
 		}));
-		nodes.push(makeNode({
-			id: allocationId,
-			label: "월급 배분",
-			type: "budgetBucket",
-			x: 390,
-			y: topY,
-			amount: summary.salaryIncome + summary.allocationShortfall
-		}));
-		edges.push(makeEdge("edge:salary:allocation", salaryId, allocationId, "FLOWS_TO", summary.salaryIncome));
-		if (summary.allocationShortfall > 0) {
-			nodes.push(makeNode({
-				id: "liability:salary-allocation-shortfall",
-				label: "배분 부족",
-				type: "liability",
-				x: 115,
-				y: 204,
-				amount: summary.allocationShortfall,
-				riskScore: 85
-			}));
-			edges.push(makeEdge("edge:shortfall:allocation", "liability:salary-allocation-shortfall", allocationId, "EXPOSED_TO", summary.allocationShortfall));
-		}
 		[
 			{
 				id: "summary:cashflow:living",
@@ -689,27 +669,20 @@ var PersonalCfoDomain = (function(exports) {
 				amount: destination.amount,
 				bucketKey: destination.bucketKey
 			}));
-			edges.push(makeEdge(`edge:allocation:${destination.id}`, allocationId, destination.id, destination.type === "liability" ? "FLOWS_TO" : "ALLOCATED_TO", destination.amount));
+			edges.push(makeEdge(`edge:salary:${destination.id}`, salaryId, destination.id, destination.type === "liability" ? "FLOWS_TO" : "ALLOCATED_TO", destination.amount));
 		});
 		const laneYs = nodes.filter((node) => node.x === outflowX).map((node) => node.y);
 		return {
 			mode: "cashFlow",
-			width: 1020,
+			width: 900,
 			height: Math.max(440, (laneYs.length ? Math.max(...laneYs) : topY) + 84),
-			columns: [
-				{
-					x: 115,
-					label: "월급"
-				},
-				{
-					x: 390,
-					label: "배분"
-				},
-				{
-					x: outflowX,
-					label: "월 사용 요약"
-				}
-			],
+			columns: [{
+				x: 150,
+				label: "월급"
+			}, {
+				x: outflowX,
+				label: "월 사용 요약"
+			}],
 			laneYs,
 			nodes,
 			edges
@@ -795,45 +768,24 @@ var PersonalCfoDomain = (function(exports) {
 		const cashFlow = getCashFlowSummaryData(snapshot);
 		const assetGroups = getAssetSummaryGroups(snapshot);
 		const totalLiabilities = calculateTotalLiabilities(snapshot);
-		const salaryX = 100;
-		const allocationX = 320;
-		const flowX = 580;
-		const assetX = 920;
-		const resultX = 1300;
+		const salaryX = 130;
+		const flowX = 430;
+		const assetX = 790;
+		const resultX = 1180;
 		const topY = 92;
 		const flowGap = 112;
 		const assetGap = 92;
 		const salaryId = "income:salary-allocation";
-		const allocationId = "flow:salary-allocation";
+		const allocationTotal = cashFlow.salaryIncome + cashFlow.allocationShortfall;
 		nodes.push(makeNode({
 			id: salaryId,
-			label: snapshot.cashFlow ? `${snapshot.cashFlow.periodLabel} 월급` : "월급",
+			label: snapshot.cashFlow ? `${snapshot.cashFlow.periodLabel} 월급${cashFlow.allocationShortfall > 0 ? "+부족분" : ""}` : `월급${cashFlow.allocationShortfall > 0 ? "+부족분" : ""}`,
 			type: "income",
 			x: salaryX,
 			y: topY,
-			amount: cashFlow.salaryIncome
+			amount: allocationTotal,
+			riskScore: cashFlow.allocationShortfall > 0 ? 85 : void 0
 		}));
-		nodes.push(makeNode({
-			id: allocationId,
-			label: "월급 배분",
-			type: "budgetBucket",
-			x: allocationX,
-			y: topY,
-			amount: cashFlow.salaryIncome + cashFlow.allocationShortfall
-		}));
-		edges.push(makeEdge("edge:combined:salary:allocation", salaryId, allocationId, "FLOWS_TO", cashFlow.salaryIncome));
-		if (cashFlow.allocationShortfall > 0) {
-			nodes.push(makeNode({
-				id: "liability:salary-allocation-shortfall",
-				label: "배분 부족",
-				type: "liability",
-				x: salaryX,
-				y: 204,
-				amount: cashFlow.allocationShortfall,
-				riskScore: 85
-			}));
-			edges.push(makeEdge("edge:combined:shortfall:allocation", "liability:salary-allocation-shortfall", allocationId, "EXPOSED_TO", cashFlow.allocationShortfall));
-		}
 		[
 			{
 				id: "summary:cashflow:living",
@@ -860,7 +812,7 @@ var PersonalCfoDomain = (function(exports) {
 				x: flowX,
 				y: topY + index * flowGap
 			}));
-			edges.push(makeEdge(`edge:combined:allocation:${group.id}`, allocationId, group.id, group.type === "liability" ? "FLOWS_TO" : "ALLOCATED_TO", group.amount));
+			edges.push(makeEdge(`edge:combined:salary:${group.id}`, salaryId, group.id, group.type === "liability" ? "FLOWS_TO" : "ALLOCATED_TO", group.amount));
 		});
 		assetGroups.forEach((group, index) => {
 			nodes.push(makeNode({
@@ -935,16 +887,12 @@ var PersonalCfoDomain = (function(exports) {
 		}
 		return {
 			mode: "combined",
-			width: 1430,
+			width: 1300,
 			height: Math.max(560, liabilityY + 72),
 			columns: [
 				{
 					x: salaryX,
 					label: "월급"
-				},
-				{
-					x: allocationX,
-					label: "배분"
 				},
 				{
 					x: flowX,

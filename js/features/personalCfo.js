@@ -19,11 +19,11 @@
 
     const typeMeta = {
         person: { fill: '#334155', stroke: '#0f172a', label: '본인' },
-        income: { fill: '#16a34a', stroke: '#15803d', label: '소득' },
-        account: { fill: '#0284c7', stroke: '#0369a1', label: '계좌' },
+        income: { fill: '#4f46e5', stroke: '#4338ca', label: '소득' },
+        account: { fill: '#4f46e5', stroke: '#4338ca', label: '계좌' },
         asset: { fill: '#4f46e5', stroke: '#4338ca', label: '보유자산' },
         liability: { fill: '#dc2626', stroke: '#b91c1c', label: '부채' },
-        budgetBucket: { fill: '#d97706', stroke: '#b45309', label: '자금' },
+        budgetBucket: { fill: '#4f46e5', stroke: '#4338ca', label: '자금' },
         project: { fill: '#7c3aed', stroke: '#6d28d9', label: '프로젝트' },
         risk: { fill: '#e11d48', stroke: '#be123c', label: '리스크' },
         kpi: { fill: '#0d9488', stroke: '#0f766e', label: 'KPI' },
@@ -68,7 +68,7 @@
         },
         cashFlow: {
             label: '현금흐름 요약',
-            title: '월급 배분 요약',
+            title: '월급 사용 요약',
             description: '최근 종료 급여기간의 월급을 생활비, 저축·투자, 부채·금융비용으로 묶어 보여줍니다.',
             dataLabel: '실제+정산 추정',
             dataClasses: 'border-emerald-100 bg-emerald-50 text-emerald-700',
@@ -417,7 +417,7 @@
         if (!source || !target) return '';
         const isHedge = edge.type === 'HEDGES';
         const isExposure = edge.type === 'EXPOSED_TO';
-        const color = isExposure ? '#fb7185' : isHedge ? '#14b8a6' : '#94a3b8';
+        const color = isExposure ? '#fb7185' : isHedge ? '#14b8a6' : '#818cf8';
         const markerId = isExposure ? 'personal-cfo-arrow-exposure' : isHedge ? 'personal-cfo-arrow-hedge' : 'personal-cfo-arrow';
         const amountText = edge.amount === undefined ? '' : formatMetricValue(edge.amount, target.unit);
         const path = buildOrthogonalEdgePath(source, target);
@@ -428,7 +428,7 @@
                 d="${path}"
                 fill="none"
                 stroke="${color}" stroke-width="${edge.weight}" stroke-linecap="round"
-                stroke-linejoin="round" stroke-opacity="${isExposure ? '0.48' : isHedge ? '0.44' : '0.28'}"
+                stroke-linejoin="round" stroke-opacity="${isExposure ? '0.48' : isHedge ? '0.44' : '0.42'}"
                 ${isHedge ? 'stroke-dasharray="8 6"' : ''}
                 marker-end="url(#${markerId})"
             >
@@ -516,7 +516,7 @@
                     ` : `<svg viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="xMinYMin meet" role="img" aria-label="${escapeAttr(modeMeta.title)}" class="min-w-[900px] w-full h-auto" style="aspect-ratio:${graph.width}/${graph.height}">
                         <defs>
                             <marker id="personal-cfo-arrow" markerWidth="10" markerHeight="10" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
-                                <path d="M0,0 L0,8 L9,4 z" fill="#94a3b8"></path>
+                                <path d="M0,0 L0,8 L9,4 z" fill="#818cf8"></path>
                             </marker>
                             <marker id="personal-cfo-arrow-exposure" markerWidth="10" markerHeight="10" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
                                 <path d="M0,0 L0,8 L9,4 z" fill="#fb7185"></path>
@@ -554,7 +554,7 @@
             amount: assetRows.reduce((sum, row) => sum + Number(row.amount || 0), 0),
         };
         const totalLiability = nodeById.get('summary:liabilities:total');
-        const person = graph.nodes.find((node) => node.type === 'person' && node.id !== 'flow:salary-allocation');
+        const person = graph.nodes.find((node) => node.type === 'person');
         const showCashFlow = graph.mode === 'combined' || graph.mode === 'cashFlow';
         const showBalanceSheet = graph.mode === 'combined' || graph.mode === 'balanceSheet';
         const renderRows = (rows, amountClass = 'text-gray-900') => rows.map((row) => `
