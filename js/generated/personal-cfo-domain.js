@@ -87,32 +87,32 @@ var PersonalCfoDomain = (function(exports) {
 	}
 	//#endregion
 	//#region src/features/personal-cfo/calculations.ts
-	function sum$1(values) {
+	function sum$2(values) {
 		return values.reduce((total, value) => total + value, 0);
 	}
 	function clamp(value, min = 0, max = 100) {
 		return Math.max(min, Math.min(max, value));
 	}
 	function calculateTotalAssets(snapshot) {
-		return sum$1(snapshot.accounts.map((account) => account.balance)) + sum$1(snapshot.assets.map((asset) => asset.marketValue));
+		return sum$2(snapshot.accounts.map((account) => account.balance)) + sum$2(snapshot.assets.map((asset) => asset.marketValue));
 	}
 	function calculateTotalLiabilities(snapshot) {
-		return sum$1(snapshot.liabilities.map((liability) => liability.outstandingBalance));
+		return sum$2(snapshot.liabilities.map((liability) => liability.outstandingBalance));
 	}
 	function calculateNetWorth(snapshot) {
 		return calculateTotalAssets(snapshot) - calculateTotalLiabilities(snapshot);
 	}
 	function calculateMonthlyFreeCashFlow(snapshot) {
 		if (snapshot.cashFlow) return snapshot.cashFlow.freeCashFlow;
-		const income = sum$1(snapshot.incomes.map((item) => item.monthlyAmount));
-		const allocations = sum$1(snapshot.budgetBuckets.map((bucket) => bucket.monthlyAllocation));
-		const debtPayments = sum$1(snapshot.liabilities.map((liability) => liability.monthlyPayment));
+		const income = sum$2(snapshot.incomes.map((item) => item.monthlyAmount));
+		const allocations = sum$2(snapshot.budgetBuckets.map((bucket) => bucket.monthlyAllocation));
+		const debtPayments = sum$2(snapshot.liabilities.map((liability) => liability.monthlyPayment));
 		return income - allocations - debtPayments;
 	}
 	function calculateSavingsRate(snapshot) {
-		const income = sum$1(snapshot.incomes.map((item) => item.monthlyAmount));
+		const income = sum$2(snapshot.incomes.map((item) => item.monthlyAmount));
 		if (income <= 0) return 0;
-		return clamp(sum$1(snapshot.budgetBuckets.filter((bucket) => [
+		return clamp(sum$2(snapshot.budgetBuckets.filter((bucket) => [
 			"defense",
 			"housing",
 			"growth",
@@ -124,9 +124,9 @@ var PersonalCfoDomain = (function(exports) {
 			if (snapshot.cashFlow.totalIncome <= 0) return 0;
 			return clamp((snapshot.cashFlow.fixedExpense + snapshot.cashFlow.creditLoanInterest + snapshot.cashFlow.housingLoanPayment) / snapshot.cashFlow.totalIncome * 100);
 		}
-		const income = sum$1(snapshot.incomes.map((item) => item.monthlyAmount));
+		const income = sum$2(snapshot.incomes.map((item) => item.monthlyAmount));
 		if (income <= 0) return 0;
-		return clamp((sum$1(snapshot.budgetBuckets.map((bucket) => bucket.fixedCostAmount)) + sum$1(snapshot.liabilities.map((liability) => liability.monthlyPayment))) / income * 100);
+		return clamp((sum$2(snapshot.budgetBuckets.map((bucket) => bucket.fixedCostAmount)) + sum$2(snapshot.liabilities.map((liability) => liability.monthlyPayment))) / income * 100);
 	}
 	function calculateDebtRatio(snapshot) {
 		const assets = calculateTotalAssets(snapshot);
@@ -134,17 +134,17 @@ var PersonalCfoDomain = (function(exports) {
 		return clamp(calculateTotalLiabilities(snapshot) / assets * 100);
 	}
 	function calculateEmergencyCoverageMonths(snapshot) {
-		const defenseBalance = sum$1(snapshot.budgetBuckets.filter((bucket) => bucket.id === "defense").map((bucket) => bucket.currentBalance));
-		const essentialMonthlyCost = sum$1(snapshot.budgetBuckets.filter((bucket) => [
+		const defenseBalance = sum$2(snapshot.budgetBuckets.filter((bucket) => bucket.id === "defense").map((bucket) => bucket.currentBalance));
+		const essentialMonthlyCost = sum$2(snapshot.budgetBuckets.filter((bucket) => [
 			"operating",
 			"defense",
 			"housing"
-		].includes(bucket.id)).map((bucket) => bucket.fixedCostAmount)) + sum$1(snapshot.liabilities.map((liability) => liability.monthlyPayment));
+		].includes(bucket.id)).map((bucket) => bucket.fixedCostAmount)) + sum$2(snapshot.liabilities.map((liability) => liability.monthlyPayment));
 		if (essentialMonthlyCost <= 0) return 0;
 		return defenseBalance / essentialMonthlyCost;
 	}
 	function calculateProjectBurnRate(snapshot) {
-		return sum$1(snapshot.projects.filter((project) => project.status === "active").map((project) => project.monthlyBurn));
+		return sum$2(snapshot.projects.filter((project) => project.status === "active").map((project) => project.monthlyBurn));
 	}
 	function calculateRiskScore(risk) {
 		const baseScore = risk.likelihood * .45 + risk.impact * .55;
@@ -190,6 +190,175 @@ var PersonalCfoDomain = (function(exports) {
 		};
 	}
 	//#endregion
+	//#region src/features/personal-cfo/salaryFlowReconciliation.ts
+	var DEFAULT_SALARY_ACCOUNT_TARGET = 5e5;
+	var DEFAULT_LIVING_ACCOUNT_TARGET = 5e5;
+	var DEFAULT_PENSION_MONTHLY_TRANSFER = 1e5;
+	var PAYDAY_TRANSFER_WINDOW_DAYS = 3;
+	var MAX_PAIR_MINUTES = 15;
+	function value(value) {
+		return String(value || "").trim();
+	}
+	function absoluteAmount$1(transaction) {
+		return Math.abs(Number(transaction.amount || 0));
+	}
+	function sum$1(values) {
+		return values.reduce((total, current) => total + Number(current || 0), 0);
+	}
+	function dateKey(input) {
+		return value(input).replace(/[./]/g, "-").slice(0, 10);
+	}
+	function transactionKey(transaction, index) {
+		return value(transaction.id) || `${dateKey(transaction.date)}:${value(transaction.time) || index}:${index}`;
+	}
+	function minuteOfDay(transaction) {
+		const [hour, minute] = (value(transaction.time) || value(transaction.date).split(/[T ]/)[1] || "").split(":").map(Number);
+		if (!Number.isFinite(hour) || !Number.isFinite(minute)) return void 0;
+		return hour * 60 + minute;
+	}
+	function daysFrom(date, startDate) {
+		const dateMs = Date.parse(`${dateKey(date)}T00:00:00Z`);
+		const startMs = Date.parse(`${dateKey(startDate)}T00:00:00Z`);
+		if (!Number.isFinite(dateMs) || !Number.isFinite(startMs)) return Number.POSITIVE_INFINITY;
+		return Math.round((dateMs - startMs) / 864e5);
+	}
+	function isInPaydayWindow(transaction, startDate) {
+		const distance = daysFrom(transaction.date, startDate);
+		return distance >= 0 && distance <= PAYDAY_TRANSFER_WINDOW_DAYS;
+	}
+	function isPairableTransfer(transaction) {
+		return transaction.type === "이체" && /내계좌이체|저축/u.test(value(transaction.category));
+	}
+	function isSalaryAccount(method) {
+		return /월급\s*통장/u.test(value(method));
+	}
+	function isLivingAccount(method) {
+		return /생활비\s*통장/u.test(value(method));
+	}
+	function evidenceStatus(amount, inferred = false) {
+		if (amount <= 0) return "missing";
+		return inferred ? "inferred" : "observed";
+	}
+	function unique(values) {
+		return Array.from(new Set(values.filter(Boolean)));
+	}
+	function buildIndexedTransactions(period) {
+		return period.transactions.map((transaction, index) => ({
+			transaction,
+			index,
+			key: transactionKey(transaction, index),
+			dateKey: dateKey(transaction.date),
+			minuteOfDay: minuteOfDay(transaction)
+		}));
+	}
+	function pairInternalTransfers(indexed, startDate) {
+		const pairable = indexed.filter(({ transaction }) => isPairableTransfer(transaction) && isInPaydayWindow(transaction, startDate));
+		const outflows = pairable.filter(({ transaction }) => Number(transaction.amount) < 0);
+		const inflows = pairable.filter(({ transaction }) => Number(transaction.amount) > 0);
+		const matchedIndexes = /* @__PURE__ */ new Set();
+		const matches = [];
+		inflows.forEach((inflow) => {
+			const selected = outflows.filter((outflow) => !matchedIndexes.has(outflow.index) && outflow.dateKey === inflow.dateKey && absoluteAmount$1(outflow.transaction) === absoluteAmount$1(inflow.transaction)).map((outflow) => {
+				const hasTimes = outflow.minuteOfDay !== void 0 && inflow.minuteOfDay !== void 0;
+				const minuteDifference = hasTimes ? Math.abs(Number(outflow.minuteOfDay) - Number(inflow.minuteOfDay)) : 0;
+				return {
+					outflow,
+					hasTimes,
+					minuteDifference,
+					score: minuteDifference * 1e3 + Math.abs(outflow.index - inflow.index)
+				};
+			}).filter(({ hasTimes, minuteDifference }) => !hasTimes || minuteDifference <= MAX_PAIR_MINUTES).sort((a, b) => a.score - b.score)[0]?.outflow;
+			if (!selected) return;
+			matchedIndexes.add(selected.index);
+			matchedIndexes.add(inflow.index);
+			matches.push({
+				date: inflow.dateKey,
+				amount: absoluteAmount$1(inflow.transaction),
+				fromAccount: value(selected.transaction.method),
+				toAccount: value(inflow.transaction.method),
+				outflowKey: selected.key,
+				inflowKey: inflow.key
+			});
+		});
+		return {
+			matches,
+			matchedIndexes
+		};
+	}
+	function makeEntry(key, label, amount, status, transactionKeys) {
+		return {
+			key,
+			label,
+			amount,
+			status,
+			transactionKeys: unique(transactionKeys)
+		};
+	}
+	function reconcileSalaryFlowPeriod(period, options = {}) {
+		const salaryAccountTarget = Math.max(0, options.salaryAccountTarget ?? DEFAULT_SALARY_ACCOUNT_TARGET);
+		const livingAccountTarget = Math.max(0, options.livingAccountTarget ?? DEFAULT_LIVING_ACCOUNT_TARGET);
+		const pensionMonthlyTransfer = Math.max(0, options.pensionMonthlyTransfer ?? DEFAULT_PENSION_MONTHLY_TRANSFER);
+		const indexed = buildIndexedTransactions(period);
+		const { matches, matchedIndexes } = pairInternalTransfers(indexed, period.startDate);
+		const salaryRows = indexed.filter(({ transaction }) => transaction.type === "수입" && /급여|월급/u.test(`${value(transaction.category)} ${value(transaction.memo)}`));
+		const salaryIncome = sum$1(salaryRows.map(({ transaction }) => Number(transaction.amount || 0))) || Math.max(0, options.fallbackSalaryIncome || 0);
+		const youthRows = indexed.filter(({ transaction }) => transaction.type === "이체" && transaction.category === "저축" && Number(transaction.amount) < 0 && /청년|도약/u.test(value(transaction.memo)));
+		const youthSavings = sum$1(youthRows.map(({ transaction }) => absoluteAmount$1(transaction)));
+		const creditRows = indexed.filter(({ transaction }) => transaction.type === "지출" && transaction.category === "상환" && !/전세/u.test(`${value(transaction.subcategory)} ${value(transaction.memo)}`));
+		const creditLoanInterest = sum$1(creditRows.map(({ transaction }) => absoluteAmount$1(transaction)));
+		const housingRows = indexed.filter(({ transaction }) => transaction.type === "지출" && transaction.category === "상환" && /전세/u.test(`${value(transaction.subcategory)} ${value(transaction.memo)}`));
+		const housingLoanPayment = sum$1(housingRows.map(({ transaction }) => absoluteAmount$1(transaction)));
+		const pensionEvidence = indexed.filter(({ transaction, index }) => !matchedIndexes.has(index) && transaction.type === "이체" && transaction.category === "내계좌이체" && Number(transaction.amount) === -pensionMonthlyTransfer && isSalaryAccount(transaction.method) && daysFrom(transaction.date, period.startDate) >= 0 && daysFrom(transaction.date, period.startDate) <= 2).slice(0, pensionMonthlyTransfer > 0 ? 1 : 0);
+		const pensionIndexes = new Set(pensionEvidence.map(({ index }) => index));
+		const pensionSavings = pensionEvidence.length > 0 ? pensionMonthlyTransfer : 0;
+		const livingMatches = matches.filter((match) => isSalaryAccount(match.fromAccount) && isLivingAccount(match.toAccount) || isLivingAccount(match.fromAccount) && isSalaryAccount(match.toAccount));
+		const livingAccountNetFunding = sum$1(livingMatches.map((match) => isSalaryAccount(match.fromAccount) ? match.amount : -match.amount));
+		const livingAccountFundingFromSalary = Math.max(0, livingAccountNetFunding);
+		const unmatchedSalaryTransfers = indexed.filter(({ transaction, index }) => !matchedIndexes.has(index) && !pensionIndexes.has(index) && isInPaydayWindow(transaction, period.startDate) && transaction.type === "이체" && transaction.category === "내계좌이체" && isSalaryAccount(transaction.method) && Number(transaction.amount) !== 0);
+		const inferredSafeAssetSweep = Math.max(0, sum$1(unmatchedSalaryTransfers.map(({ transaction }) => Number(transaction.amount) < 0 ? absoluteAmount$1(transaction) : -absoluteAmount$1(transaction))));
+		const hasSafeAssetEvidence = inferredSafeAssetSweep > 0 && unmatchedSalaryTransfers.length > 0;
+		const committedSalary = youthSavings + pensionSavings + creditLoanInterest + housingLoanPayment;
+		const availableForAccounts = Math.max(0, salaryIncome - committedSalary);
+		let salaryAccountFunding;
+		let livingAccountFunding;
+		let safeAssetSweep;
+		if (hasSafeAssetEvidence) {
+			livingAccountFunding = livingAccountFundingFromSalary;
+			safeAssetSweep = inferredSafeAssetSweep;
+			salaryAccountFunding = Math.max(0, salaryIncome - committedSalary - livingAccountFunding - safeAssetSweep);
+		} else {
+			salaryAccountFunding = Math.min(salaryAccountTarget, availableForAccounts);
+			livingAccountFunding = Math.min(livingAccountTarget, Math.max(0, availableForAccounts - salaryAccountFunding));
+			safeAssetSweep = Math.max(0, availableForAccounts - salaryAccountFunding - livingAccountFunding);
+		}
+		const livingFunding = salaryAccountFunding + livingAccountFunding;
+		const accountedSalary = committedSalary + livingFunding + safeAssetSweep;
+		const allocationShortfall = Math.max(0, accountedSalary - salaryIncome);
+		const unaccountedSalary = Math.max(0, salaryIncome - accountedSalary);
+		const livingKeys = livingMatches.flatMap((match) => [match.outflowKey, match.inflowKey]);
+		const accountFlowStatus = hasSafeAssetEvidence ? "inferred" : "target";
+		return {
+			entries: [
+				makeEntry("salaryIncome", "월급", salaryIncome, salaryRows.length > 0 ? "observed" : salaryIncome > 0 ? "inferred" : "missing", salaryRows.map(({ key }) => key)),
+				makeEntry("youthSavings", "청년도약계좌", youthSavings, evidenceStatus(youthSavings), youthRows.map(({ key }) => key)),
+				makeEntry("pensionSavings", "연금저축펀드", pensionSavings, evidenceStatus(pensionSavings, true), pensionEvidence.map(({ key }) => key)),
+				makeEntry("creditLoanInterest", "신용대출 이자", creditLoanInterest, evidenceStatus(creditLoanInterest), creditRows.map(({ key }) => key)),
+				makeEntry("housingLoanPayment", "전세대출", housingLoanPayment, evidenceStatus(housingLoanPayment), housingRows.map(({ key }) => key)),
+				makeEntry("livingFunding", "생활비", livingFunding, accountFlowStatus, livingKeys),
+				makeEntry("safeAssetSweep", "원화 발행어음", safeAssetSweep, accountFlowStatus, unmatchedSalaryTransfers.map(({ key }) => key))
+			],
+			internalTransfers: matches,
+			livingAccountNetFunding,
+			salaryAccountFunding,
+			livingAccountFunding,
+			safeAssetSweep,
+			accountedSalary,
+			unaccountedSalary,
+			allocationShortfall,
+			usesReconciledAccountFlow: hasSafeAssetEvidence
+		};
+	}
+	//#endregion
 	//#region src/features/personal-cfo/cashFlowAdapter.ts
 	var SALARY_ACCOUNT_TARGET = 5e5;
 	var LIVING_ACCOUNT_TARGET = 5e5;
@@ -207,26 +376,8 @@ var PersonalCfoDomain = (function(exports) {
 			experience: 0
 		};
 	}
-	function text$1(value) {
-		return String(value || "").trim();
-	}
 	function absoluteAmount(transaction) {
 		return Math.abs(Number(transaction.amount || 0));
-	}
-	function daysFrom(date, startDate) {
-		const dateMs = Date.parse(`${date}T00:00:00Z`);
-		const startMs = Date.parse(`${startDate}T00:00:00Z`);
-		if (!Number.isFinite(dateMs) || !Number.isFinite(startMs)) return Number.POSITIVE_INFINITY;
-		return Math.round((dateMs - startMs) / 864e5);
-	}
-	function calculatePensionTransfer(period) {
-		const paydayTransfers = period.transactions.filter((item) => item.type === "이체" && item.category === "내계좌이체" && Number(item.amount) === -1e5 && /월급통장/u.test(text$1(item.method)) && daysFrom(item.date, period.startDate) >= 0 && daysFrom(item.date, period.startDate) <= 2);
-		const unpairedCount = paydayTransfers.reduce((total, item) => {
-			const pairedIncomeCount = period.transactions.filter((candidate) => candidate.type === "이체" && candidate.date === item.date && Number(candidate.amount) === PENSION_MONTHLY_TRANSFER).length;
-			const sameDayOutflowCount = paydayTransfers.filter((candidate) => candidate.date === item.date).length;
-			return total + Math.max(0, sameDayOutflowCount - pairedIncomeCount);
-		}, 0);
-		return Math.min(PENSION_MONTHLY_TRANSFER, unpairedCount * PENSION_MONTHLY_TRANSFER);
 	}
 	function resolveExpenseBucket(transaction) {
 		const text = `${String(transaction.category || "").trim()} ${String(transaction.subcategory || "").trim()} ${transaction.memo || ""}`;
@@ -240,27 +391,30 @@ var PersonalCfoDomain = (function(exports) {
 		const bucketOutflows = emptyBucketOutflows();
 		const incomes = period.transactions.filter((item) => item.type === "수입");
 		const expenses = period.transactions.filter((item) => item.type === "지출");
-		const youthSavingTransfers = period.transactions.filter((item) => item.type === "이체" && item.category === "저축" && Number(item.amount) < 0 && /청년|도약/u.test(text$1(item.memo)));
 		expenses.forEach((item) => {
 			if (item.category === "상환") return;
 			bucketOutflows[resolveExpenseBucket(item)] += Math.abs(Number(item.amount || 0));
 		});
 		const totalIncome = sum(incomes.map((item) => Number(item.amount || 0)));
 		const totalExpense = sum(expenses.map((item) => Math.abs(Number(item.amount || 0))));
-		const salaryIncome = sum(incomes.filter((item) => /급여|월급/u.test(`${text$1(item.category)} ${text$1(item.memo)}`)).map((item) => Number(item.amount || 0))) || totalIncome;
-		const youthSavings = sum(youthSavingTransfers.map(absoluteAmount));
-		const pensionSavings = calculatePensionTransfer(period);
+		const reconciliation = reconcileSalaryFlowPeriod(period, {
+			salaryAccountTarget: SALARY_ACCOUNT_TARGET,
+			livingAccountTarget: LIVING_ACCOUNT_TARGET,
+			pensionMonthlyTransfer: PENSION_MONTHLY_TRANSFER,
+			fallbackSalaryIncome: totalIncome
+		});
+		const salaryIncome = reconciliation.entries.find((entry) => entry.key === "salaryIncome")?.amount || totalIncome;
+		const youthSavings = reconciliation.entries.find((entry) => entry.key === "youthSavings")?.amount || 0;
+		const pensionSavings = reconciliation.entries.find((entry) => entry.key === "pensionSavings")?.amount || 0;
 		const savingTotal = youthSavings + pensionSavings;
 		const fixedExpense = sum(expenses.filter((item) => item.category === "고정비").map(absoluteAmount));
-		const housingLoanPayment = sum(expenses.filter((item) => item.category === "상환" && /전세/u.test(`${text$1(item.subcategory)} ${text$1(item.memo)}`)).map(absoluteAmount));
-		const creditLoanInterest = sum(expenses.filter((item) => item.category === "상환" && !/전세/u.test(`${text$1(item.subcategory)} ${text$1(item.memo)}`)).map(absoluteAmount));
+		const housingLoanPayment = reconciliation.entries.find((entry) => entry.key === "housingLoanPayment")?.amount || 0;
+		const creditLoanInterest = reconciliation.entries.find((entry) => entry.key === "creditLoanInterest")?.amount || 0;
 		const dates = period.transactions.map((item) => item.date).filter(Boolean).sort();
 		const freeCashFlow = totalIncome - totalExpense;
-		const committedSalary = youthSavings + pensionSavings + creditLoanInterest + housingLoanPayment;
-		const availableForAccounts = Math.max(0, salaryIncome - committedSalary);
-		const salaryAccountReserve = Math.min(SALARY_ACCOUNT_TARGET, availableForAccounts);
-		const livingAccountReserve = Math.min(LIVING_ACCOUNT_TARGET, Math.max(0, availableForAccounts - salaryAccountReserve));
-		const safeAssetSweep = Math.max(0, availableForAccounts - salaryAccountReserve - livingAccountReserve);
+		const salaryAccountReserve = reconciliation.salaryAccountFunding;
+		const livingAccountReserve = reconciliation.livingAccountFunding;
+		const safeAssetSweep = reconciliation.safeAssetSweep;
 		return {
 			periodKey: period.key,
 			periodLabel: period.label,
@@ -289,7 +443,8 @@ var PersonalCfoDomain = (function(exports) {
 				salaryAccountReserve,
 				livingAccountReserve,
 				safeAssetSweep,
-				allocationShortfall: Math.max(0, committedSalary - salaryIncome)
+				allocationShortfall: reconciliation.allocationShortfall,
+				reconciliation
 			}
 		};
 	}
@@ -1145,6 +1300,7 @@ var PersonalCfoDomain = (function(exports) {
 	exports.getPaydayDate = getPaydayDate;
 	exports.normalizeFinanceMonthlyCloseRecord = normalizeFinanceMonthlyCloseRecord;
 	exports.normalizePersonalCfoPlanSnapshot = normalizePersonalCfoPlanSnapshot;
+	exports.reconcileSalaryFlowPeriod = reconcileSalaryFlowPeriod;
 	exports.reopenFinanceMonth = reopenFinanceMonth;
 	exports.selectLatestClosedCashFlow = selectLatestClosedCashFlow;
 	exports.summarizeCashFlowPeriod = summarizeCashFlowPeriod;

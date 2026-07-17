@@ -5,13 +5,16 @@ import type {
   PersonalCfoIncome,
   PersonalCfoSnapshot,
 } from './types';
+import { reconcileSalaryFlowPeriod } from './salaryFlowReconciliation';
 
 const SALARY_ACCOUNT_TARGET = 500_000;
 const LIVING_ACCOUNT_TARGET = 500_000;
 const PENSION_MONTHLY_TRANSFER = 100_000;
 
 export interface CashFlowTransaction {
+  id?: string;
   date: string;
+  time?: string;
   type: string;
   category?: string;
   subcategory?: string;
@@ -44,40 +47,8 @@ function emptyBucketOutflows(): Record<BudgetBucketKey, number> {
   };
 }
 
-function text(value: unknown): string {
-  return String(value || '').trim();
-}
-
 function absoluteAmount(transaction: CashFlowTransaction): number {
   return Math.abs(Number(transaction.amount || 0));
-}
-
-function daysFrom(date: string, startDate: string): number {
-  const dateMs = Date.parse(`${date}T00:00:00Z`);
-  const startMs = Date.parse(`${startDate}T00:00:00Z`);
-  if (!Number.isFinite(dateMs) || !Number.isFinite(startMs)) return Number.POSITIVE_INFINITY;
-  return Math.round((dateMs - startMs) / 86_400_000);
-}
-
-function calculatePensionTransfer(period: CashFlowPeriod): number {
-  const paydayTransfers = period.transactions.filter((item) => (
-    item.type === '이체'
-      && item.category === '내계좌이체'
-      && Number(item.amount) === -PENSION_MONTHLY_TRANSFER
-      && /월급통장/u.test(text(item.method))
-      && daysFrom(item.date, period.startDate) >= 0
-      && daysFrom(item.date, period.startDate) <= 2
-  ));
-  const unpairedCount = paydayTransfers.reduce((total, item) => {
-    const pairedIncomeCount = period.transactions.filter((candidate) => (
-      candidate.type === '이체'
-        && candidate.date === item.date
-        && Number(candidate.amount) === PENSION_MONTHLY_TRANSFER
-    )).length;
-    const sameDayOutflowCount = paydayTransfers.filter((candidate) => candidate.date === item.date).length;
-    return total + Math.max(0, sameDayOutflowCount - pairedIncomeCount);
-  }, 0);
-  return Math.min(PENSION_MONTHLY_TRANSFER, unpairedCount * PENSION_MONTHLY_TRANSFER);
 }
 
 function resolveExpenseBucket(transaction: CashFlowTransaction): BudgetBucketKey {
@@ -95,12 +66,6 @@ export function summarizeCashFlowPeriod(period: CashFlowPeriod): PersonalCfoCash
   const bucketOutflows = emptyBucketOutflows();
   const incomes = period.transactions.filter((item) => item.type === '수입');
   const expenses = period.transactions.filter((item) => item.type === '지출');
-  const youthSavingTransfers = period.transactions.filter((item) => (
-    item.type === '이체'
-      && item.category === '저축'
-      && Number(item.amount) < 0
-      && /청년|도약/u.test(text(item.memo))
-  ));
 
   expenses.forEach((item) => {
     if (item.category === '상환') return;
@@ -108,36 +73,28 @@ export function summarizeCashFlowPeriod(period: CashFlowPeriod): PersonalCfoCash
   });
   const totalIncome = sum(incomes.map((item) => Number(item.amount || 0)));
   const totalExpense = sum(expenses.map((item) => Math.abs(Number(item.amount || 0))));
-  const salaryIncome = sum(incomes
-    .filter((item) => /급여|월급/u.test(`${text(item.category)} ${text(item.memo)}`))
-    .map((item) => Number(item.amount || 0))) || totalIncome;
-  const youthSavings = sum(youthSavingTransfers.map(absoluteAmount));
-  const pensionSavings = calculatePensionTransfer(period);
+  const reconciliation = reconcileSalaryFlowPeriod(period, {
+    salaryAccountTarget: SALARY_ACCOUNT_TARGET,
+    livingAccountTarget: LIVING_ACCOUNT_TARGET,
+    pensionMonthlyTransfer: PENSION_MONTHLY_TRANSFER,
+    fallbackSalaryIncome: totalIncome,
+  });
+  const salaryIncome = reconciliation.entries.find((entry) => entry.key === 'salaryIncome')?.amount || totalIncome;
+  const youthSavings = reconciliation.entries.find((entry) => entry.key === 'youthSavings')?.amount || 0;
+  const pensionSavings = reconciliation.entries.find((entry) => entry.key === 'pensionSavings')?.amount || 0;
   const savingTotal = youthSavings + pensionSavings;
   const fixedExpense = sum(expenses
     .filter((item) => item.category === '고정비')
     .map(absoluteAmount));
-  const housingLoanPayment = sum(expenses
-    .filter((item) => item.category === '상환'
-      && /전세/u.test(`${text(item.subcategory)} ${text(item.memo)}`))
-    .map(absoluteAmount));
-  const creditLoanInterest = sum(expenses
-    .filter((item) => item.category === '상환'
-      && !/전세/u.test(`${text(item.subcategory)} ${text(item.memo)}`))
-    .map(absoluteAmount));
+  const housingLoanPayment = reconciliation.entries
+    .find((entry) => entry.key === 'housingLoanPayment')?.amount || 0;
+  const creditLoanInterest = reconciliation.entries
+    .find((entry) => entry.key === 'creditLoanInterest')?.amount || 0;
   const dates = period.transactions.map((item) => item.date).filter(Boolean).sort();
   const freeCashFlow = totalIncome - totalExpense;
-  const committedSalary = youthSavings + pensionSavings + creditLoanInterest + housingLoanPayment;
-  const availableForAccounts = Math.max(0, salaryIncome - committedSalary);
-  const salaryAccountReserve = Math.min(SALARY_ACCOUNT_TARGET, availableForAccounts);
-  const livingAccountReserve = Math.min(
-    LIVING_ACCOUNT_TARGET,
-    Math.max(0, availableForAccounts - salaryAccountReserve),
-  );
-  const safeAssetSweep = Math.max(
-    0,
-    availableForAccounts - salaryAccountReserve - livingAccountReserve,
-  );
+  const salaryAccountReserve = reconciliation.salaryAccountFunding;
+  const livingAccountReserve = reconciliation.livingAccountFunding;
+  const safeAssetSweep = reconciliation.safeAssetSweep;
 
   return {
     periodKey: period.key,
@@ -167,7 +124,8 @@ export function summarizeCashFlowPeriod(period: CashFlowPeriod): PersonalCfoCash
       salaryAccountReserve,
       livingAccountReserve,
       safeAssetSweep,
-      allocationShortfall: Math.max(0, committedSalary - salaryIncome),
+      allocationShortfall: reconciliation.allocationShortfall,
+      reconciliation,
     },
   };
 }

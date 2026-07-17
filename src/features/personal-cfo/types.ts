@@ -139,6 +139,47 @@ export interface PersonalCfoKpi {
 
 export type PersonalCfoCashFlowReviewStatus = 'confirmed' | 'unconfirmed' | 'stale';
 
+export type PersonalCfoSalaryFlowEvidenceStatus = 'observed' | 'inferred' | 'target' | 'missing';
+
+export type PersonalCfoSalaryFlowEntryKey =
+  | 'salaryIncome'
+  | 'youthSavings'
+  | 'pensionSavings'
+  | 'creditLoanInterest'
+  | 'housingLoanPayment'
+  | 'livingFunding'
+  | 'safeAssetSweep';
+
+export interface PersonalCfoSalaryFlowLedgerEntry {
+  key: PersonalCfoSalaryFlowEntryKey;
+  label: string;
+  amount: number;
+  status: PersonalCfoSalaryFlowEvidenceStatus;
+  transactionKeys: string[];
+}
+
+export interface PersonalCfoInternalTransferMatch {
+  date: string;
+  amount: number;
+  fromAccount: string;
+  toAccount: string;
+  outflowKey: string;
+  inflowKey: string;
+}
+
+export interface PersonalCfoSalaryFlowReconciliation {
+  entries: PersonalCfoSalaryFlowLedgerEntry[];
+  internalTransfers: PersonalCfoInternalTransferMatch[];
+  livingAccountNetFunding: number;
+  salaryAccountFunding: number;
+  livingAccountFunding: number;
+  safeAssetSweep: number;
+  accountedSalary: number;
+  unaccountedSalary: number;
+  allocationShortfall: number;
+  usesReconciledAccountFlow: boolean;
+}
+
 export interface PersonalCfoSalaryAllocationSummary {
   salaryIncome: number;
   youthSavings: number;
@@ -149,6 +190,7 @@ export interface PersonalCfoSalaryAllocationSummary {
   livingAccountReserve: number;
   safeAssetSweep: number;
   allocationShortfall: number;
+  reconciliation: PersonalCfoSalaryFlowReconciliation;
 }
 
 export interface PersonalCfoCashFlowSummary {

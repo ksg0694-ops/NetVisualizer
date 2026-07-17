@@ -77,6 +77,11 @@ assert.equal(closedSummary.youthSavings, 700_000, 'the destination-side youth ac
 assert.equal(closedSummary.pensionSavings, 100_000);
 assert.equal(closedSummary.savingTransfers, 800_000);
 assert.equal(closedSummary.unallocatedCash, 199_578);
+assert.equal(closedSummary.salaryAllocation.reconciliation.usesReconciledAccountFlow, false);
+assert.equal(
+  closedSummary.salaryAllocation.reconciliation.entries.find((entry) => entry.key === 'livingFunding').status,
+  'target',
+);
 assert.deepEqual(
   {
     salary: closedSummary.salaryAllocation.salaryIncome,
@@ -98,6 +103,79 @@ assert.deepEqual(
     livingReserve: 500_000,
     note: 839_123,
   },
+);
+
+const reconciledPeriod = {
+  key: '2026-06-reconciled',
+  label: '2026년 6월 실제',
+  startDate: '2026-05-22',
+  endDate: '2026-06-24',
+  closeStatus: 'confirmed',
+  transactions: [
+    { id: 'salary', date: '2026-05-22', time: '03:42:00', type: '수입', category: '급여', memo: '급여', method: '월급통장', amount: 3_776_000 },
+    { id: 'loan-in', date: '2026-05-22', time: '07:03:00', type: '이체', category: '내계좌이체', memo: '김성준', method: '대출통장', amount: 300_000 },
+    { id: 'loan-out', date: '2026-05-22', time: '07:03:00', type: '이체', category: '내계좌이체', memo: '김성준', method: '월급통장', amount: -300_000 },
+    { id: 'pension-out', date: '2026-05-22', time: '07:03:00', type: '이체', category: '내계좌이체', memo: '김성준', method: '월급통장', amount: -100_000 },
+    { id: 'living-in-100', date: '2026-05-22', time: '07:04:00', type: '이체', category: '내계좌이체', memo: '김성준', method: '생활비 통장', amount: 100_000 },
+    { id: 'living-out-100', date: '2026-05-22', time: '07:04:00', type: '이체', category: '내계좌이체', memo: '김성준', method: '월급통장', amount: -100_000 },
+    { id: 'youth-out', date: '2026-05-22', time: '08:10:00', type: '이체', category: '저축', memo: '청년도약계좌', method: '월급통장', amount: -700_000 },
+    { id: 'youth-in', date: '2026-05-22', time: '08:10:00', type: '이체', category: '저축', memo: '월 자동이체', method: '신한 청년도약계좌', amount: 700_000 },
+    { id: 'credit-interest', date: '2026-05-22', time: '15:13:00', type: '지출', category: '상환', subcategory: '신용대출', memo: '40698026625142-00001', method: '대출통장', amount: -269_457 },
+    { id: 'loan-return-out', date: '2026-05-22', time: '21:36:00', type: '이체', category: '내계좌이체', memo: '김성준', method: '대출통장', amount: -30_543 },
+    { id: 'loan-return-in', date: '2026-05-22', time: '21:36:00', type: '이체', category: '내계좌이체', memo: '김성준', method: '월급통장', amount: 30_543 },
+    { id: 'living-return-out', date: '2026-05-22', time: '21:37:00', type: '이체', category: '내계좌이체', memo: '김성준', method: '생활비 통장', amount: -282_307 },
+    { id: 'living-return-in', date: '2026-05-22', time: '21:37:00', type: '이체', category: '내계좌이체', memo: '김성준', method: '월급통장', amount: 282_307 },
+    { id: 'living-in-500', date: '2026-05-23', time: '05:31:00', type: '이체', category: '내계좌이체', memo: '김성준', method: '생활비 통장', amount: 500_000 },
+    { id: 'living-out-500', date: '2026-05-23', time: '05:31:00', type: '이체', category: '내계좌이체', memo: '김성준', method: '월급통장', amount: -500_000 },
+    { id: 'note-out-2m', date: '2026-05-23', time: '05:32:00', type: '이체', category: '내계좌이체', memo: '김성준', method: '월급통장', amount: -2_000_000 },
+    { id: 'note-return-1m', date: '2026-05-23', time: '05:37:00', type: '이체', category: '내계좌이체', memo: '김성준', method: '월급통장', amount: 1_000_000 },
+    { id: 'note-out-rest', date: '2026-05-23', time: '05:37:00', type: '이체', category: '내계좌이체', memo: '김성준', method: '월급통장', amount: -118_502 },
+    { id: 'housing', date: '2026-05-25', time: '10:23:00', type: '지출', category: '상환', subcategory: '전세대출', memo: '김삼봉', method: '월급통장', amount: -1_000_000 },
+    { id: 'late-living-out', date: '2026-06-07', time: '07:58:00', type: '이체', category: '내계좌이체', memo: '김성준', method: '월급통장', amount: -300_000 },
+    { id: 'late-living-in', date: '2026-06-07', time: '07:58:00', type: '이체', category: '내계좌이체', memo: '김성준', method: '생활비 통장', amount: 300_000 },
+  ],
+};
+const reconciliation = domain.reconcileSalaryFlowPeriod(reconciledPeriod);
+const reconciliationEntries = Object.fromEntries(Array.from(reconciliation.entries, (entry) => [entry.key, entry]));
+assert.equal(reconciliation.internalTransfers.length, 6, 'payday internal transfers must be paired once');
+assert.equal(reconciliation.livingAccountNetFunding, 317_693);
+assert.equal(reconciliation.salaryAccountFunding, 270_348);
+assert.equal(reconciliation.livingAccountFunding, 317_693);
+assert.equal(reconciliation.safeAssetSweep, 1_118_502);
+assert.equal(reconciliation.accountedSalary, 3_776_000);
+assert.equal(reconciliation.unaccountedSalary, 0);
+assert.equal(reconciliation.allocationShortfall, 0);
+assert.equal(reconciliation.usesReconciledAccountFlow, true);
+assert.equal(reconciliationEntries.salaryIncome.status, 'observed');
+assert.equal(reconciliationEntries.youthSavings.status, 'observed');
+assert.equal(reconciliationEntries.pensionSavings.status, 'inferred');
+assert.equal(reconciliationEntries.livingFunding.status, 'inferred');
+assert.equal(reconciliationEntries.livingFunding.amount, 588_041);
+assert.equal(reconciliationEntries.safeAssetSweep.status, 'inferred');
+assert.equal(reconciliationEntries.safeAssetSweep.amount, 1_118_502);
+
+const reconciledSummary = domain.summarizeCashFlowPeriod(reconciledPeriod);
+assert.deepEqual(
+  {
+    salary: reconciledSummary.salaryAllocation.salaryIncome,
+    living: reconciledSummary.salaryAllocation.salaryAccountReserve
+      + reconciledSummary.salaryAllocation.livingAccountReserve,
+    note: reconciledSummary.salaryAllocation.safeAssetSweep,
+  },
+  { salary: 3_776_000, living: 588_041, note: 1_118_502 },
+);
+assert.equal(reconciledSummary.salaryAllocation.reconciliation.usesReconciledAccountFlow, true);
+const reconciledGraph = domain.buildFinanceGraphFromSnapshot({
+  ...emptySnapshot,
+  cashFlow: reconciledSummary,
+}, 'cashFlow');
+assert.ok(reconciledGraph.nodes.some((node) => node.id === 'account:living-expense' && node.amount === 588_041));
+assert.ok(reconciledGraph.nodes.some((node) => node.id === 'asset:krw-note' && node.amount === 1_118_502));
+assert.equal(
+  reconciledGraph.edges
+    .filter((edge) => edge.source === 'flow:salary-allocation' && edge.amount > 0)
+    .reduce((total, edge) => total + edge.amount, 0),
+  3_776_000,
 );
 
 const portfolio = domain.applyPortfolioFinanceData(emptySnapshot, [

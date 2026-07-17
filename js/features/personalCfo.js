@@ -61,8 +61,8 @@
         cashFlow: {
             label: '현금 흐름',
             title: '월급 배분 현금 흐름',
-            description: '최근 종료 급여기간의 월급을 생활비·저축·부채 순서로 보여줍니다. 전세대출은 이 흐름에만 반영합니다.',
-            dataLabel: '실제+개인 규칙',
+            description: '최근 종료 급여기간의 내부 이체를 순액으로 정산해 생활비·저축·부채 순서로 보여줍니다. 전세대출은 이 흐름에만 반영합니다.',
+            dataLabel: '실제+정산 추정',
             dataClasses: 'border-emerald-100 bg-emerald-50 text-emerald-700',
         },
         balanceSheet: {
