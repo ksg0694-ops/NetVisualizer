@@ -56,7 +56,8 @@ assert.ok(!cfo.includes('buildGraphEdgeRoutes'), 'graph edges should share simpl
 assert.ok(cfo.includes("dataLabel: '실제+개인 규칙'"));
 assert.ok(cfo.includes("dataLabel: '계획 모델'"));
 assert.ok(cfo.includes("let activeGraphMode = 'cashFlow'"));
-assert.ok(cfo.includes("label: '전세대출', amount: salaryAllocation.housingLoanPayment, type: '현금흐름 전용'"));
+assert.ok(cfo.includes("label: '생활비', amount: salaryAllocation.salaryAccountReserve + salaryAllocation.livingAccountReserve"));
+assert.ok(cfo.includes("label: '전세대출', amount: salaryAllocation.housingLoanPayment, type: '현금흐름 부채'"));
 assert.ok(cfo.includes("basis: 'actual'"));
 assert.ok(cfo.includes("basis: summary.hasSavingsPlan ? 'plan' : 'unset'"));
 assert.ok(cfo.includes("unset: 'border-gray-200 bg-gray-50 text-gray-500'"));

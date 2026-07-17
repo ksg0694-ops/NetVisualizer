@@ -122,6 +122,11 @@ function buildCashFlowGraph(snapshot: PersonalCfoSnapshot): PersonalCfoGraph {
     riskScore?: number;
   }> = allocation ? [
     {
+      id: 'account:living-expense', label: '생활비', type: 'account',
+      amount: allocation.salaryAccountReserve + allocation.livingAccountReserve,
+      edgeType: 'ALLOCATED_TO', bucketKey: 'operating',
+    },
+    {
       id: 'account:youth-savings', label: '청년도약계좌', type: 'account',
       amount: allocation.youthSavings, edgeType: 'ALLOCATED_TO', bucketKey: 'defense',
     },
@@ -130,24 +135,16 @@ function buildCashFlowGraph(snapshot: PersonalCfoSnapshot): PersonalCfoGraph {
       amount: allocation.pensionSavings, edgeType: 'ALLOCATED_TO', bucketKey: 'growth',
     },
     {
+      id: 'asset:krw-note', label: '원화 발행어음', type: 'asset',
+      amount: allocation.safeAssetSweep, edgeType: 'ALLOCATED_TO', bucketKey: 'defense',
+    },
+    {
       id: 'liability:credit-loan-interest', label: '신용대출 이자', type: 'liability',
       amount: allocation.creditLoanInterest, edgeType: 'FLOWS_TO', riskScore: 62,
     },
     {
-      id: 'bucket:housing-cashflow', label: '전세대출', type: 'budgetBucket',
+      id: 'liability:housing-loan-cashflow', label: '전세대출', type: 'liability',
       amount: allocation.housingLoanPayment, edgeType: 'FLOWS_TO', bucketKey: 'housing',
-    },
-    {
-      id: 'account:salary-reserve', label: '월급통장 잔액', type: 'account',
-      amount: allocation.salaryAccountReserve, edgeType: 'ALLOCATED_TO', bucketKey: 'operating',
-    },
-    {
-      id: 'account:living-reserve', label: '생활비통장 잔액', type: 'account',
-      amount: allocation.livingAccountReserve, edgeType: 'ALLOCATED_TO', bucketKey: 'operating',
-    },
-    {
-      id: 'asset:krw-note', label: '원화 발행어음', type: 'asset',
-      amount: allocation.safeAssetSweep, edgeType: 'ALLOCATED_TO', bucketKey: 'defense',
     },
   ] : snapshot.budgetBuckets.map((bucket) => ({
     id: bucketNodeByKey[bucket.id],

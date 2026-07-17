@@ -61,7 +61,7 @@
         cashFlow: {
             label: '현금 흐름',
             title: '월급 배분 현금 흐름',
-            description: '최근 종료 급여기간의 실제 월급·이자와 개인 배분 규칙을 함께 보여줍니다. 전세대출은 이 흐름에만 반영합니다.',
+            description: '최근 종료 급여기간의 월급을 생활비·저축·부채 순서로 보여줍니다. 전세대출은 이 흐름에만 반영합니다.',
             dataLabel: '실제+개인 규칙',
             dataClasses: 'border-emerald-100 bg-emerald-50 text-emerald-700',
         },
@@ -533,13 +533,12 @@
         }));
         const salaryAllocation = nextSnapshot.cashFlow?.salaryAllocation;
         const actualAllocationRows = salaryAllocation ? [
+            { label: '생활비', amount: salaryAllocation.salaryAccountReserve + salaryAllocation.livingAccountReserve, type: '운영자금' },
             { label: '청년도약계좌', amount: salaryAllocation.youthSavings, type: '장기목돈' },
             { label: '연금저축펀드', amount: salaryAllocation.pensionSavings, type: '노후자산' },
-            { label: '신용대출 이자', amount: salaryAllocation.creditLoanInterest, type: '금융비용' },
-            { label: '전세대출', amount: salaryAllocation.housingLoanPayment, type: '현금흐름 전용' },
-            { label: '월급통장 잔액', amount: salaryAllocation.salaryAccountReserve, type: '잔액 목표' },
-            { label: '생활비통장 잔액', amount: salaryAllocation.livingAccountReserve, type: '잔액 목표' },
             { label: '원화 발행어음', amount: salaryAllocation.safeAssetSweep, type: '안전자산' },
+            { label: '신용대출 이자', amount: salaryAllocation.creditLoanInterest, type: '금융비용' },
+            { label: '전세대출', amount: salaryAllocation.housingLoanPayment, type: '현금흐름 부채' },
         ].filter((item) => Number(item.amount) > 0) : [];
         const allocationRows = nextSnapshot.cashFlow
             ? actualAllocationRows

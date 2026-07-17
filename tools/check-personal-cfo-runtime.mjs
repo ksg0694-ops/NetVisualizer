@@ -137,17 +137,24 @@ const outgoing = cashFlowGraph.edges
   .reduce((sum, edge) => sum + edge.amount, 0);
 assert.equal(outgoing, closedSummary.salaryAllocation.salaryIncome, 'salary-allocation graph must conserve salary income');
 assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'liability:credit-loan-interest' && node.amount === 269_457));
-assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'bucket:housing-cashflow'
-  && node.type === 'budgetBucket' && node.amount === 1_000_000));
-assert.ok(!cashFlowGraph.nodes.some((node) => node.type === 'liability' && node.amount === 1_000_000), 'housing payment must not become a liability node');
+assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'account:living-expense'
+  && node.type === 'account' && node.amount === 1_000_000));
+assert.ok(!cashFlowGraph.nodes.some((node) => node.id === 'account:salary-reserve'
+  || node.id === 'account:living-reserve'), 'salary and living account targets must share one living-expense node');
+assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'liability:housing-loan-cashflow'
+  && node.type === 'liability' && node.amount === 1_000_000));
 assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'asset:krw-note' && node.amount === 839_123));
 const cashFlowTargets = cashFlowGraph.nodes.filter((node) => node.x === 790);
 assert.equal(new Set(cashFlowTargets.map((node) => node.x)).size, 1, 'cash-flow outflows must share one vertical column');
+assert.deepEqual(Array.from(cashFlowTargets, (node) => node.label), [
+  '생활비', '청년도약계좌', '연금저축펀드', '원화 발행어음', '신용대출 이자', '전세대출',
+]);
 const cashPerson = cashFlowGraph.nodes.find((node) => node.type === 'person');
 const cashIncome = cashFlowGraph.nodes.find((node) => node.type === 'income');
 assert.equal(cashPerson.y, Math.min(...cashFlowTargets.map((node) => node.y)), 'cash-flow columns must start at the top');
 assert.equal(cashPerson.y, cashIncome.y, 'income and available cash must share the top line');
 assert.deepEqual(Array.from(cashFlowGraph.columns, (column) => column.label), ['월급', '배분', '월급 사용처']);
+assert.equal(domain.calculateDebtRatio(actualSnapshot), model.summary.debtRatio, 'cash-flow-only housing node must not change debt ratio');
 
 const planningSnapshot = {
   ...actualSnapshot,
