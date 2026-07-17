@@ -32,6 +32,8 @@ export type PersonalCfoAccountType =
   | 'brokerage'
   | 'savings'
   | 'pension'
+  | 'direct'
+  | 'liability'
   | 'other';
 
 export type PersonalCfoAssetClass =
@@ -40,6 +42,8 @@ export type PersonalCfoAssetClass =
   | 'fixedIncome'
   | 'equity'
   | 'fund'
+  | 'commodity'
+  | 'alternative'
   | 'pension'
   | 'realEstate'
   | 'other';

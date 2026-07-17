@@ -128,6 +128,9 @@
                 amount: Number(item.amount || 0),
                 maturity: String(item.maturity || ''),
                 accountName: String(item.account_name || ''),
+                accountType: String(item.account_type || ''),
+                assetClass: String(item.asset_class || ''),
+                purposeKey: String(item.purpose_key || ''),
                 assetType: String(item.asset_type || ''),
                 instrumentType: String(item.instrument_type || ''),
             }));
@@ -144,6 +147,9 @@
             amount: Number(item.amount || 0),
             maturity: String(item.maturity || ''),
             accountName: String(item.accountName || ''),
+            accountType: String(item.accountType || ''),
+            assetClass: String(item.assetClass || ''),
+            purposeKey: String(item.purposeKey || ''),
             assetType: String(item.classification?.assetType || item.assetType || ''),
             instrumentType: String(item.classification?.instrumentType || item.instrumentType || ''),
         })));

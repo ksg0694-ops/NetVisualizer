@@ -1,29 +1,25 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Account Asset Purpose Axes v1",
+  "feature": "Portfolio Position Axes Sync",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-07-17T20:30:00+09:00",
+  "updatedAt": "2026-07-17T22:30:00+09:00",
   "status": "completed",
-  "currentFocus": "계좌, 보유자산, 목적을 독립 축으로 분리하고 순자산 중복 합산을 방지한다.",
+  "currentFocus": "사용자가 검토한 Google Sheets 매핑을 계좌, 자산, 목적의 독립 축으로 Supabase와 Personal CFO 네트워크에 반영한다.",
   "completed": [
-    "보유자산에 accountId, assetClass, purposeKey 세 축을 추가했다.",
-    "계좌 잔액을 연결된 보유자산의 파생 합계로 변경했다.",
-    "Supabase의 legacy assetType account를 현금, 예적금, 채권과 발행어음 자산으로 호환 변환한다.",
-    "총자산과 순자산은 보유자산만 한 번 합산하도록 변경했다.",
-    "재무상태 그래프를 계좌, 보유자산, 순자산 순서로 변경했다.",
-    "계좌와 보유자산 사이에 HOLDS 관계를 추가했다.",
-    "잔액 0원 보유항목은 CFO 네트워크에서 제외했다.",
-    "모바일 요약에서 계좌명과 보유자산을 함께 표시한다.",
-    "TypeScript, 도메인, repository, UI, Supabase, 정적 자산 검사를 통과했다.",
-    "실제 포트폴리오 렌더링에서 청년도약계좌를 예적금으로 보정했다.",
-    "데스크톱 그래프 노드 겹침 0건과 모바일 가로 넘침 없음, 브라우저 오류 0건을 확인했다."
+    "Google Sheets의 보유자산 40개와 계좌 정의를 대조했다.",
+    "한국투자증권 외화 CMA와 원화 CMA를 별도 계좌 노드로 분리했다.",
+    "portfolios에 사용자 소유 계좌, 자산, 목적, 검토 상태 컬럼을 추가했다.",
+    "기존 asset_type은 시세와 Quant 호환을 위해 유지하고 사용자 축이 화면 분류를 우선하도록 했다.",
+    "직접 보유 전세금은 계좌 노드를 만들지 않고 주거자산으로만 표시하도록 했다.",
+    "Supabase 40개 행에 매핑을 적용했으며 자산 299,601,305원과 부채 65,000,000원이 유지됨을 확인했다.",
+    "로컬 Personal CFO에서 순자산 234,601,305원과 두 CMA 계좌 노드를 확인했다.",
+    "TypeScript, Repository, Domain, CFO Runtime, UI, Supabase 계약 검사를 모두 통과했다."
   ],
   "remaining": [
-    "계좌명이 비어 있는 직접 보유자산의 실제 보관 계좌를 사용자와 확인한다.",
-    "자산별 목적 분류를 사용자 override 설정으로 이동한다.",
-    "연금계좌 내부 상품이 확보되면 연금 placeholder를 실제 펀드 자산으로 세분화한다."
+    "LS, 대신증권, 신영증권, 태광산업 4개 항목의 CMA 귀속은 시트 입력값을 유지하되 검토 필요 상태로 남겨 두었다.",
+    "운영 환경의 Tailwind CDN 사용 경고는 별도 빌드 파이프라인 개선에서 제거한다."
   ],
-  "nextStep": "사용자가 실제 포트폴리오의 계좌, 자산군, 목적 매핑을 검토하고 예외 항목을 수정한다."
+  "nextStep": "검토 필요 4개 종목이 외화 CMA와 원화 CMA 중 어느 계좌에 속하는지 확정한 뒤 시트와 Supabase 상태를 confirmed로 갱신한다."
 }

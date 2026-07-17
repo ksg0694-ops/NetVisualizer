@@ -883,6 +883,16 @@ var PersonalCfoDomain = (function(exports) {
 			liquidityScore: 72,
 			volatilityScore: 44
 		},
+		commodity: {
+			label: "원자재",
+			liquidityScore: 76,
+			volatilityScore: 52
+		},
+		alternative: {
+			label: "대체자산",
+			liquidityScore: 70,
+			volatilityScore: 72
+		},
 		pension: {
 			label: "연금자산",
 			liquidityScore: 24,
@@ -919,6 +929,7 @@ var PersonalCfoDomain = (function(exports) {
 		return `${item.groupName} ${item.name} ${item.accountName ?? ""} ${item.assetType ?? ""} ${item.instrumentType ?? ""}`.toLowerCase();
 	}
 	function getPurposeKey(item) {
+		if (item.purposeKey) return item.purposeKey;
 		const text = getItemText(item);
 		const holdingText = `${item.groupName} ${item.name} ${item.assetType ?? ""} ${item.instrumentType ?? ""}`.toLowerCase();
 		if (/청약|주택드림|전세|보증금|부동산|housing/u.test(holdingText)) return "housing";
@@ -930,6 +941,7 @@ var PersonalCfoDomain = (function(exports) {
 		return "operating";
 	}
 	function getAssetClass(item) {
+		if (item.assetClass) return item.assetClass;
 		const text = getItemText(item);
 		const assetType = String(item.assetType || "").toLowerCase();
 		const instrumentType = String(item.instrumentType || "").toLowerCase();
@@ -944,6 +956,7 @@ var PersonalCfoDomain = (function(exports) {
 		return "other";
 	}
 	function getAccountLabel(item) {
+		if (item.accountType === "direct") return void 0;
 		const explicitLabel = String(item.accountName || "").trim();
 		if (explicitLabel) return explicitLabel;
 		const itemName = String(item.name || "").trim();
@@ -953,6 +966,7 @@ var PersonalCfoDomain = (function(exports) {
 		if (/연금|퇴직|irp|pension/u.test(text)) return "연금 계좌";
 	}
 	function getAccountType(label, item) {
+		if (item.accountType) return item.accountType;
 		const text = `${label} ${getItemText(item)}`.toLowerCase();
 		if (/연금|퇴직|irp|pension/u.test(text)) return "pension";
 		if (/청약|적금|도약|savings/u.test(text)) return "savings";

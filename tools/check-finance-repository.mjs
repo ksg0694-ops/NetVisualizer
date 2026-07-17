@@ -8,6 +8,8 @@ assert.ok(repository.DEFAULT_DATA_TABLES.includes('transactions'));
 assert.ok(repository.DEFAULT_DATA_TABLES.includes('finance_month_closes'));
 assert.ok(repository.TABLE_SPECS.transactions.columns.includes('id'));
 assert.ok(repository.TABLE_SPECS.portfolios.columns.includes('account_order'));
+assert.ok(repository.TABLE_SPECS.portfolios.columns.includes('asset_class'));
+assert.ok(repository.TABLE_SPECS.portfolios.columns.includes('purpose_key'));
 
 const legacyTransactions = [
     ['날짜', '시간', '타입', '대분류', '소분류', '내용', '금액', '화폐', '결제수단'],
@@ -27,9 +29,16 @@ const normalizedPortfolio = repository.normalizeTableRows('portfolios', [{
     amount: '65000000',
     asset_type: 'debt',
     account_order: '20',
+    account_provider: '하나은행',
+    account_type: 'liability',
+    asset_class: 'liability',
+    purpose_key: 'housing',
+    mapping_review_status: 'confirmed',
 }]);
 assert.equal(normalizedPortfolio[0].amount, 65_000_000);
 assert.equal(normalizedPortfolio[0].account_order, 20);
+assert.equal(normalizedPortfolio[0].asset_class, 'liability');
+assert.equal(normalizedPortfolio[0].purpose_key, 'housing');
 
 const cache = repository.normalizeCache({
     tx: legacyTransactions,
@@ -47,6 +56,8 @@ const draft = repository.createPortfolioDraft([
 assert.equal(draft.items.length, 2);
 assert.equal(draft.items[0].groupName, '부채');
 assert.equal(draft.items[0].accountOrder, 20);
+assert.equal(draft.items[0].accountProvider, '하나은행');
+assert.equal(draft.items[0].assetClass, 'liability');
 draft.items[0].name = '직장인론 수정';
 draft.items = draft.items.filter((item) => item.id !== 'cash');
 const addedDraftItem = repository.addPortfolioDraftItem(draft, '안전');
@@ -56,6 +67,8 @@ addedDraftItem.assetType = 'account';
 const mutation = repository.buildPortfolioMutation(draft);
 assert.equal(mutation.upserts.length, 1);
 assert.equal(mutation.upserts[0].name, '직장인론 수정');
+assert.equal(mutation.upserts[0].asset_class, 'liability');
+assert.equal(mutation.upserts[0].purpose_key, 'housing');
 assert.equal(mutation.inserts.length, 1);
 assert.equal(mutation.inserts[0].name, '새 적금');
 assert.deepEqual(mutation.removedIds, ['cash']);

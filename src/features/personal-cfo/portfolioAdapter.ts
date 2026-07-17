@@ -16,6 +16,9 @@ export interface PortfolioFinanceItem {
   amount: number;
   maturity?: string;
   accountName?: string;
+  accountType?: PersonalCfoAccountType;
+  assetClass?: PersonalCfoAssetClass;
+  purposeKey?: BudgetBucketKey;
   assetType?: string;
   instrumentType?: string;
 }
@@ -50,6 +53,8 @@ const assetClassMeta: Record<PersonalCfoAssetClass, {
   fixedIncome: { label: '채권·발행어음', liquidityScore: 72, volatilityScore: 14 },
   equity: { label: '주식·ETF', liquidityScore: 82, volatilityScore: 58 },
   fund: { label: '펀드', liquidityScore: 72, volatilityScore: 44 },
+  commodity: { label: '원자재', liquidityScore: 76, volatilityScore: 52 },
+  alternative: { label: '대체자산', liquidityScore: 70, volatilityScore: 72 },
   pension: { label: '연금자산', liquidityScore: 24, volatilityScore: 32 },
   realEstate: { label: '주거자산', liquidityScore: 12, volatilityScore: 18 },
   other: { label: '기타자산', liquidityScore: 45, volatilityScore: 24 },
@@ -81,6 +86,7 @@ function getItemText(item: PortfolioFinanceItem): string {
 }
 
 function getPurposeKey(item: PortfolioFinanceItem): BudgetBucketKey {
+  if (item.purposeKey) return item.purposeKey;
   const text = getItemText(item);
   const holdingText = `${item.groupName} ${item.name} ${item.assetType ?? ''} ${item.instrumentType ?? ''}`.toLowerCase();
   if (/청약|주택드림|전세|보증금|부동산|housing/u.test(holdingText)) return 'housing';
@@ -93,6 +99,7 @@ function getPurposeKey(item: PortfolioFinanceItem): BudgetBucketKey {
 }
 
 function getAssetClass(item: PortfolioFinanceItem): PersonalCfoAssetClass {
+  if (item.assetClass) return item.assetClass;
   const text = getItemText(item);
   const assetType = String(item.assetType || '').toLowerCase();
   const instrumentType = String(item.instrumentType || '').toLowerCase();
@@ -108,6 +115,7 @@ function getAssetClass(item: PortfolioFinanceItem): PersonalCfoAssetClass {
 }
 
 function getAccountLabel(item: PortfolioFinanceItem): string | undefined {
+  if (item.accountType === 'direct') return undefined;
   const explicitLabel = String(item.accountName || '').trim();
   if (explicitLabel) return explicitLabel;
 
@@ -120,6 +128,7 @@ function getAccountLabel(item: PortfolioFinanceItem): string | undefined {
 }
 
 function getAccountType(label: string, item: PortfolioFinanceItem): PersonalCfoAccountType {
+  if (item.accountType) return item.accountType;
   const text = `${label} ${getItemText(item)}`.toLowerCase();
   if (/연금|퇴직|irp|pension/u.test(text)) return 'pension';
   if (/청약|적금|도약|savings/u.test(text)) return 'savings';

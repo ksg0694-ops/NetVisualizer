@@ -16,6 +16,8 @@
                 'id', 'group_name', 'name', 'currency', 'maturity', 'amount', 'shares',
                 'asset_type', 'instrument_type', 'ticker', 'risk_bucket', 'classification_source',
                 'classification_updated_at', 'strategy_tag', 'avg_buy_price', 'account_name', 'account_order',
+                'account_provider', 'account_type', 'asset_class', 'purpose_key',
+                'mapping_review_status', 'mapping_source', 'mapping_updated_at',
             ],
         },
         cards: {
@@ -185,6 +187,13 @@
             avg_buy_price: nullableNumber(row.avg_buy_price),
             account_name: String(row.account_name || ''),
             account_order: nullableNumber(row.account_order),
+            account_provider: String(row.account_provider || ''),
+            account_type: String(row.account_type || ''),
+            asset_class: String(row.asset_class || ''),
+            purpose_key: String(row.purpose_key || ''),
+            mapping_review_status: String(row.mapping_review_status || ''),
+            mapping_source: String(row.mapping_source || ''),
+            mapping_updated_at: String(row.mapping_updated_at || ''),
         };
     }
 
@@ -233,6 +242,8 @@
                 shares: row[5], id: row[6], asset_type: row[7], instrument_type: row[8], ticker: row[9],
                 risk_bucket: row[10], classification_source: row[11], classification_updated_at: row[12],
                 strategy_tag: row[13], avg_buy_price: row[14], account_name: row[15], account_order: row[16],
+                account_provider: row[17], account_type: row[18], asset_class: row[19], purpose_key: row[20],
+                mapping_review_status: row[21], mapping_source: row[22], mapping_updated_at: row[23],
             }));
         }
         return values;
@@ -286,6 +297,13 @@
             avgBuyPrice: nullableNumber(row.avg_buy_price),
             accountName: row.account_name || '',
             accountOrder: nullableNumber(row.account_order),
+            accountProvider: row.account_provider || '',
+            accountType: row.account_type || '',
+            assetClass: row.asset_class || '',
+            purposeKey: row.purpose_key || '',
+            mappingReviewStatus: row.mapping_review_status || '',
+            mappingSource: row.mapping_source || '',
+            mappingUpdatedAt: row.mapping_updated_at || '',
         };
     }
 
@@ -320,6 +338,13 @@
             avgBuyPrice: null,
             accountName: '',
             accountOrder: null,
+            accountProvider: '',
+            accountType: '',
+            assetClass: '',
+            purposeKey: '',
+            mappingReviewStatus: '',
+            mappingSource: '',
+            mappingUpdatedAt: '',
         };
         draft.nextSequence = sequence + 1;
         draft.items.push(item);
@@ -343,6 +368,13 @@
             strategy_tag: String(item.strategyTag || 'other'),
             avg_buy_price: nullableNumber(item.avgBuyPrice),
             account_name: String(item.accountName || '').trim() || null,
+            account_provider: String(item.accountProvider || '').trim() || null,
+            account_type: String(item.accountType || '').trim() || null,
+            asset_class: String(item.assetClass || '').trim() || null,
+            purpose_key: String(item.purposeKey || '').trim() || null,
+            mapping_review_status: String(item.mappingReviewStatus || '').trim() || null,
+            mapping_source: String(item.mappingSource || '').trim() || null,
+            mapping_updated_at: String(item.mappingUpdatedAt || '').trim() || null,
         };
         const accountOrder = nullableNumber(item.accountOrder);
         if (accountOrder !== null) payload.account_order = accountOrder;

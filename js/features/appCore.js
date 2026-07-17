@@ -1069,6 +1069,11 @@
             const avgBuyPrice = row.avg_buy_price;
             const accountName = row.account_name || '';
             const accountOrder = row.account_order;
+            const accountProvider = row.account_provider || '';
+            const accountType = row.account_type || '';
+            const assetClass = row.asset_class || '';
+            const purposeKey = row.purpose_key || '';
+            const mappingReviewStatus = row.mapping_review_status || '';
 
             if (!name) return;
 
@@ -1079,7 +1084,12 @@
                 dynamicPortfolioData[group] = { color: isDebtColor.c, bg: isDebtColor.b, isDebt: isDebt, items: [] };
                 if(!isDebt) colorIdx++;
             }
-            const item = { id, name, amount: isDebt && amount > 0 ? -amount : amount, currency, maturity, shares, assetType, instrumentType, ticker, riskBucket, classificationSource, classificationUpdatedAt, strategyTag, avgBuyPrice, accountName, accountOrder };
+            const item = {
+                id, name, amount: isDebt && amount > 0 ? -amount : amount, currency, maturity, shares,
+                assetType, instrumentType, ticker, riskBucket, classificationSource,
+                classificationUpdatedAt, strategyTag, avgBuyPrice, accountName, accountOrder,
+                accountProvider, accountType, assetClass, purposeKey, mappingReviewStatus,
+            };
             item.classification = classifyPortfolioItem(group, item);
             dynamicPortfolioData[group].items.push(item);
             hasData = true;

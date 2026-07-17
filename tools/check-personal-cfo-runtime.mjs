@@ -204,6 +204,20 @@ assert.ok(noteAxes.accountId, 'a holding with an account name must retain an acc
 assert.equal(noteAxes.assetClass, 'fixedIncome', 'legacy account classification must map to an economic asset class');
 assert.equal(noteAxes.purposeKey, 'defense', 'safe asset purpose must stay independent from its brokerage account');
 
+const overriddenAxes = domain.classifyPortfolioPositionAxes({
+  groupName: '투자 자산',
+  name: 'BITWISE 10 CRYPTO',
+  accountName: '한국투자증권 계좌(외화CMA)',
+  accountType: 'brokerage',
+  assetClass: 'alternative',
+  purposeKey: 'growth',
+  amount: 4_315_336,
+  assetType: 'etf',
+  instrumentType: 'etf',
+});
+assert.equal(overriddenAxes.assetClass, 'alternative', 'user asset axis must override legacy ETF classification');
+assert.equal(overriddenAxes.purposeKey, 'growth', 'user purpose axis must override inference');
+
 const actualSnapshot = domain.applyCashFlowData(portfolio.snapshot, [closedPeriod, openPeriod], '2026-07-16');
 const model = domain.createPersonalCfoPageModel(actualSnapshot);
 assert.equal(model.graph.mode, 'balanceSheet', 'balance sheet must be the default network mode');
