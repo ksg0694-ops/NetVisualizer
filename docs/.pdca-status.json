@@ -1,23 +1,22 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "CFO Summary Visual Cleanup",
-  "phase": "report",
-  "progress": 100,
-  "updatedAt": "2026-07-18T00:45:00+09:00",
-  "status": "completed",
-  "currentFocus": "CFO 요약 네트워크의 중복 단계를 제거하고 색상 체계를 단순하게 통일한다.",
+  "feature": "August Finance Data and UX Refresh",
+  "phase": "do",
+  "progress": 55,
+  "updatedAt": "2026-07-25T07:35:00+09:00",
+  "status": "in_progress",
+  "currentFocus": "Complete the July ledger synchronization and prepare the portfolio review input for the August update.",
   "completed": [
-    "월급과 월급 배분으로 중복되던 두 노드를 월급 하나로 합쳤다.",
-    "월급 노드에서 생활비, 저축·투자, 부채·금융비용으로 직접 연결되도록 변경했다.",
-    "통합 요약과 현금흐름 요약 모두 동일한 직접 분기 구조를 사용한다.",
-    "소득, 계좌, 자산, 자금 노드를 인디고 색상으로 통일했다.",
-    "정상 자금 연결선도 밝은 인디고로 통일하고 부채 노드와 노출선만 빨간색으로 유지했다.",
-    "월급 관련 노드 1개, 노드 겹침 0건, 브라우저 오류 0건을 로컬 화면에서 확인했다.",
-    "현금흐름 합계 보존과 중복 노드 미생성 테스트를 갱신했다."
+    "Synchronized the July accounting-period ledger with the current source workbook.",
+    "Added the structural monthly cash-flow view to Personal CFO.",
+    "Prepared and validated the portfolio account and holding review workbook."
   ],
   "remaining": [
-    "Tailwind CDN 운영 경고는 별도 정적 빌드 파이프라인 개선에서 제거한다."
+    "Confirm portfolio account, asset-class, product-type, and purpose mappings.",
+    "Apply the confirmed July closing portfolio to the August long-term asset view.",
+    "Create the July monthly report.",
+    "Recalculate loan eligibility after the real-estate policy update."
   ],
-  "nextStep": "실제 화면에서 인디고와 부채 빨간색의 대비가 편한지 확인하고 필요하면 명도만 미세 조정한다."
+  "nextStep": "Review the proposed values in the portfolio workbook and mark each row as confirmed or needs change."
 }

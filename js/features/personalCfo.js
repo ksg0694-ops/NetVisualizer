@@ -68,9 +68,9 @@
         },
         cashFlow: {
             label: '현금흐름 요약',
-            title: '월급 사용 요약',
-            description: '최근 종료 급여기간의 월급을 생활비, 저축·투자, 부채·금융비용으로 묶어 보여줍니다.',
-            dataLabel: '실제+정산 추정',
+            title: '월 재무 구조',
+            description: '최근 원장으로 검증한 월 수입 구조를 지출, 저축, 상환, 잔여로 단순화해 보여줍니다.',
+            dataLabel: '구조 요약',
             dataClasses: 'border-emerald-100 bg-emerald-50 text-emerald-700',
         },
         balanceSheet: {
@@ -538,9 +538,10 @@
     function renderMobileFinanceSummary(graph) {
         const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
         const cashRows = [
-            { id: 'summary:cashflow:living', type: '월 생활비' },
-            { id: 'summary:cashflow:saving', type: '월 저축·투자' },
-            { id: 'summary:cashflow:debt', type: '월 부채·금융비용' },
+            { id: 'summary:cashflow:expense', type: '월 지출' },
+            { id: 'summary:cashflow:saving', type: '월 저축' },
+            { id: 'summary:cashflow:debt', type: '월 상환' },
+            { id: 'summary:cashflow:residual', type: '월 잔여' },
         ].map((row) => {
             const node = nodeById.get(row.id);
             return node ? { ...node, type: row.type } : null;

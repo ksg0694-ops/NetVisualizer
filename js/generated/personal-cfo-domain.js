@@ -494,6 +494,8 @@ var PersonalCfoDomain = (function(exports) {
 		humanCapital: "bucket:humanCapital",
 		experience: "bucket:experience"
 	};
+	var STRUCTURAL_EXPENSE_TARGET = 1e6;
+	var STRUCTURAL_ROUNDING_UNIT = 1e5;
 	var summaryAssetGroupMeta = {
 		operating: {
 			label: "생활자금",
@@ -544,24 +546,32 @@ var PersonalCfoDomain = (function(exports) {
 			bucketKey: summaryAssetGroupMeta[key].bucketKey
 		})).filter((group) => group.amount > 0);
 	}
+	function roundStructuralAmount(amount) {
+		return Math.max(0, Math.round(Number(amount || 0) / STRUCTURAL_ROUNDING_UNIT) * STRUCTURAL_ROUNDING_UNIT);
+	}
 	function getCashFlowSummaryData(snapshot) {
 		const allocation = snapshot.cashFlow?.salaryAllocation;
 		if (allocation) {
-			const living = allocation.salaryAccountReserve + allocation.livingAccountReserve;
-			const defenseSaving = allocation.youthSavings + allocation.safeAssetSweep;
-			const growthSaving = allocation.pensionSavings;
+			const salaryIncome = roundStructuralAmount(allocation.salaryIncome);
+			const youthSavings = roundStructuralAmount(allocation.youthSavings);
+			const pensionSavings = roundStructuralAmount(allocation.pensionSavings);
+			const saving = youthSavings + pensionSavings;
+			const debt = roundStructuralAmount(allocation.creditLoanInterest + allocation.housingLoanPayment);
+			const expense = STRUCTURAL_EXPENSE_TARGET;
+			const committed = expense + saving + debt;
 			return {
-				salaryIncome: allocation.salaryIncome,
-				allocationShortfall: allocation.allocationShortfall,
-				living,
-				saving: defenseSaving + growthSaving,
-				debt: allocation.creditLoanInterest + allocation.housingLoanPayment,
+				salaryIncome,
+				allocationShortfall: Math.max(0, committed - salaryIncome),
+				expense,
+				saving,
+				debt,
+				residual: Math.max(0, salaryIncome - committed),
 				purposeAllocations: {
-					operating: living,
-					defense: defenseSaving,
+					operating: 0,
+					defense: youthSavings,
 					housing: 0,
 					growth: 0,
-					pension: growthSaving,
+					pension: pensionSavings,
 					other: 0
 				}
 			};
@@ -577,17 +587,19 @@ var PersonalCfoDomain = (function(exports) {
 		const housing = monthlyByPurpose.get("housing") || 0;
 		const growth = monthlyByPurpose.get("growth") || 0;
 		const humanCapital = monthlyByPurpose.get("humanCapital") || 0;
-		const living = operating + experience;
+		const expense = operating + experience;
 		const saving = defense + housing + growth + humanCapital;
 		const debt = snapshot.liabilities.reduce((sum, item) => sum + item.monthlyPayment, 0);
+		const committed = expense + saving + debt;
 		return {
 			salaryIncome,
-			allocationShortfall: Math.max(0, living + saving + debt - salaryIncome),
-			living,
+			allocationShortfall: Math.max(0, committed - salaryIncome),
+			expense,
 			saving,
 			debt,
+			residual: Math.max(0, salaryIncome - committed),
 			purposeAllocations: {
-				operating,
+				operating: 0,
 				defense,
 				housing,
 				growth,
@@ -632,7 +644,7 @@ var PersonalCfoDomain = (function(exports) {
 		const allocationTotal = summary.salaryIncome + summary.allocationShortfall;
 		nodes.push(makeNode({
 			id: salaryId,
-			label: snapshot.cashFlow ? `${snapshot.cashFlow.periodLabel} 월급${summary.allocationShortfall > 0 ? "+부족분" : ""}` : `월급${summary.allocationShortfall > 0 ? "+부족분" : ""}`,
+			label: `월 수입(약)${summary.allocationShortfall > 0 ? "+부족분" : ""}`,
 			type: "income",
 			x: 150,
 			y: topY,
@@ -641,23 +653,29 @@ var PersonalCfoDomain = (function(exports) {
 		}));
 		[
 			{
-				id: "summary:cashflow:living",
-				label: "생활비",
+				id: "summary:cashflow:expense",
+				label: "지출(생활비)",
 				type: "budgetBucket",
-				amount: summary.living,
+				amount: summary.expense,
 				bucketKey: "operating"
 			},
 			{
 				id: "summary:cashflow:saving",
-				label: "저축·투자",
+				label: "저축(청년도약·연금)",
 				type: "budgetBucket",
 				amount: summary.saving
 			},
 			{
 				id: "summary:cashflow:debt",
-				label: "부채·금융비용",
+				label: "상환(전세·신용)",
 				type: "liability",
 				amount: summary.debt
+			},
+			{
+				id: "summary:cashflow:residual",
+				label: "잔여",
+				type: "budgetBucket",
+				amount: summary.residual
 			}
 		].filter((destination) => destination.amount > 0).forEach((destination, index) => {
 			nodes.push(makeNode({
@@ -678,10 +696,10 @@ var PersonalCfoDomain = (function(exports) {
 			height: Math.max(440, (laneYs.length ? Math.max(...laneYs) : topY) + 84),
 			columns: [{
 				x: 150,
-				label: "월급"
+				label: "월 수입"
 			}, {
 				x: outflowX,
-				label: "월 사용 요약"
+				label: "재무 구조"
 			}],
 			laneYs,
 			nodes,
@@ -779,7 +797,7 @@ var PersonalCfoDomain = (function(exports) {
 		const allocationTotal = cashFlow.salaryIncome + cashFlow.allocationShortfall;
 		nodes.push(makeNode({
 			id: salaryId,
-			label: snapshot.cashFlow ? `${snapshot.cashFlow.periodLabel} 월급${cashFlow.allocationShortfall > 0 ? "+부족분" : ""}` : `월급${cashFlow.allocationShortfall > 0 ? "+부족분" : ""}`,
+			label: `월 수입(약)${cashFlow.allocationShortfall > 0 ? "+부족분" : ""}`,
 			type: "income",
 			x: salaryX,
 			y: topY,
@@ -788,23 +806,29 @@ var PersonalCfoDomain = (function(exports) {
 		}));
 		[
 			{
-				id: "summary:cashflow:living",
-				label: "생활비",
-				amount: cashFlow.living,
+				id: "summary:cashflow:expense",
+				label: "지출(생활비)",
+				amount: cashFlow.expense,
 				type: "budgetBucket",
 				bucketKey: "operating"
 			},
 			{
 				id: "summary:cashflow:saving",
-				label: "저축·투자",
+				label: "저축(청년도약·연금)",
 				amount: cashFlow.saving,
 				type: "budgetBucket"
 			},
 			{
 				id: "summary:cashflow:debt",
-				label: "부채·금융비용",
+				label: "상환(전세·신용)",
 				amount: cashFlow.debt,
 				type: "liability"
+			},
+			{
+				id: "summary:cashflow:residual",
+				label: "잔여",
+				amount: cashFlow.residual,
+				type: "budgetBucket"
 			}
 		].filter((group) => group.amount > 0).forEach((group, index) => {
 			nodes.push(makeNode({
@@ -828,11 +852,6 @@ var PersonalCfoDomain = (function(exports) {
 		});
 		const assetByKey = new Map(assetGroups.map((group) => [group.key, group]));
 		const flowToAsset = [
-			{
-				source: "summary:cashflow:living",
-				targetKey: "operating",
-				amount: cashFlow.purposeAllocations.operating
-			},
 			{
 				source: "summary:cashflow:saving",
 				targetKey: "defense",
@@ -892,11 +911,11 @@ var PersonalCfoDomain = (function(exports) {
 			columns: [
 				{
 					x: salaryX,
-					label: "월급"
+					label: "월 수입"
 				},
 				{
 					x: flowX,
-					label: "월 사용 요약"
+					label: "재무 구조"
 				},
 				{
 					x: assetX,
