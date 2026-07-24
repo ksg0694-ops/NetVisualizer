@@ -169,15 +169,21 @@ const reconciledGraph = domain.buildFinanceGraphFromSnapshot({
   ...emptySnapshot,
   cashFlow: reconciledSummary,
 }, 'cashFlow');
-assert.ok(reconciledGraph.nodes.some((node) => node.id === 'summary:cashflow:living' && node.amount === 588_041));
+assert.ok(reconciledGraph.nodes.some((node) => node.id === 'summary:cashflow:expense' && node.amount === 1_000_000));
 assert.ok(reconciledGraph.nodes.some((node) => (
-  node.id === 'summary:cashflow:saving' && node.amount === 1_918_502
+  node.id === 'summary:cashflow:saving' && node.amount === 800_000
+)));
+assert.ok(reconciledGraph.nodes.some((node) => (
+  node.id === 'summary:cashflow:debt' && node.amount === 1_300_000
+)));
+assert.ok(reconciledGraph.nodes.some((node) => (
+  node.id === 'summary:cashflow:residual' && node.amount === 700_000
 )));
 assert.equal(
   reconciledGraph.edges
     .filter((edge) => edge.source === 'income:salary-allocation' && edge.amount > 0)
     .reduce((total, edge) => total + edge.amount, 0),
-  3_776_000,
+  3_800_000,
 );
 
 const portfolio = domain.applyPortfolioFinanceData(emptySnapshot, [
@@ -246,17 +252,18 @@ assert.equal(model.summary.hasPlanningData, false);
 assert.equal(actualSnapshot.incomes.length, 1, 'actual cash flow must create the income node without a seed');
 assert.equal(actualSnapshot.incomes[0].monthlyAmount, closedSummary.totalIncome);
 assert.deepEqual(Array.from(model.graph.columns, (column) => column.label), [
-  '월급', '월 사용 요약', '현재 자산', '순자산',
+  '월 수입', '재무 구조', '현재 자산', '순자산',
 ]);
 assert.ok(model.graph.nodes.some((node) => node.type === 'income'));
 assert.ok(!model.graph.nodes.some((node) => node.id === 'flow:salary-allocation'), 'salary allocation must not be duplicated as a node');
-assert.ok(model.graph.nodes.some((node) => node.id === 'summary:cashflow:living'));
+assert.ok(model.graph.nodes.some((node) => node.id === 'summary:cashflow:expense'));
+assert.ok(model.graph.nodes.some((node) => node.id === 'summary:cashflow:residual'));
 assert.ok(model.graph.nodes.some((node) => node.id === 'summary:asset:operating'));
 assert.ok(!model.graph.nodes.some((node) => node.type === 'account'), 'combined summary must hide account detail');
 assert.ok(!model.graph.nodes.some((node) => node.id === cashAsset.id), 'combined summary must hide position detail');
-assert.ok(model.graph.edges.some((edge) => (
-  edge.source === 'summary:cashflow:living' && edge.target === 'summary:asset:operating'
-)), 'combined summary must connect monthly living funding to operating assets');
+assert.ok(!model.graph.edges.some((edge) => (
+  edge.source === 'summary:cashflow:expense' && edge.target.startsWith('summary:asset:')
+)), 'consumed monthly expenses must not be represented as asset accumulation');
 
 const balanceGraph = domain.buildFinanceGraphFromSnapshot(actualSnapshot, 'balanceSheet');
 const balancePerson = balanceGraph.nodes.find((node) => node.type === 'person');
@@ -282,21 +289,24 @@ const cashFlowGraph = domain.buildFinanceGraphFromSnapshot(actualSnapshot, 'cash
 const outgoing = cashFlowGraph.edges
   .filter((edge) => edge.source === 'income:salary-allocation' && edge.amount > 0)
   .reduce((sum, edge) => sum + edge.amount, 0);
-assert.equal(outgoing, closedSummary.salaryAllocation.salaryIncome, 'salary-allocation graph must conserve salary income');
-assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'summary:cashflow:living' && node.amount === 1_000_000));
-assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'summary:cashflow:saving' && node.amount === 1_639_123));
+assert.equal(outgoing, 3_900_000, 'structural graph must conserve the rounded monthly income');
+assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'summary:cashflow:expense' && node.amount === 1_000_000));
+assert.ok(cashFlowGraph.nodes.some((node) => node.id === 'summary:cashflow:saving' && node.amount === 800_000));
 assert.ok(cashFlowGraph.nodes.some((node) => (
-  node.id === 'summary:cashflow:debt' && node.type === 'liability' && node.amount === 1_269_457
+  node.id === 'summary:cashflow:debt' && node.type === 'liability' && node.amount === 1_300_000
 )));
-const cashFlowTargetX = cashFlowGraph.columns.find((column) => column.label === '월 사용 요약').x;
+assert.ok(cashFlowGraph.nodes.some((node) => (
+  node.id === 'summary:cashflow:residual' && node.amount === 800_000
+)));
+const cashFlowTargetX = cashFlowGraph.columns.find((column) => column.label === '재무 구조').x;
 const cashFlowTargets = cashFlowGraph.nodes.filter((node) => node.x === cashFlowTargetX);
 assert.equal(new Set(cashFlowTargets.map((node) => node.x)).size, 1, 'cash-flow outflows must share one vertical column');
 assert.deepEqual(Array.from(cashFlowTargets, (node) => node.label), [
-  '생활비', '저축·투자', '부채·금융비용',
+  '지출(생활비)', '저축(청년도약·연금)', '상환(전세·신용)', '잔여',
 ]);
 const cashIncome = cashFlowGraph.nodes.find((node) => node.type === 'income');
 assert.equal(cashIncome.y, Math.min(...cashFlowTargets.map((node) => node.y)), 'cash-flow columns must start at the top');
-assert.deepEqual(Array.from(cashFlowGraph.columns, (column) => column.label), ['월급', '월 사용 요약']);
+assert.deepEqual(Array.from(cashFlowGraph.columns, (column) => column.label), ['월 수입', '재무 구조']);
 assert.equal(domain.calculateDebtRatio(actualSnapshot), model.summary.debtRatio, 'cash-flow-only housing node must not change debt ratio');
 
 const planningSnapshot = {
