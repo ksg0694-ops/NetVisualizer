@@ -41,7 +41,8 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         'routine-checklist-view': document.getElementById('routine-checklist-view'),
         'health-view': document.getElementById('health-view'),
         'personal-cfo-view': document.getElementById('personal-cfo-view'),
-        'stats-view': document.getElementById('stats-view'), 'asset-view': document.getElementById('asset-view'),
+        'stats-view': document.getElementById('stats-view'), 'cashflow-view': document.getElementById('cashflow-view'),
+        'asset-view': document.getElementById('asset-view'),
         'realestate-view': document.getElementById('realestate-view'), 'invest-detail-view': document.getElementById('invest-detail-view')
     };
 
@@ -52,22 +53,23 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         'health-view': { label: '생활 도구', title: '건강 기록' },
         'personal-cfo-view': { label: '재무 도구', title: '개인 CFO' },
         'portfolio-view': { label: '재무 도구', title: '포트폴리오' },
-        'stats-view': { label: '재무 도구', title: '월별 Report' },
-        'asset-view': { label: '재무 도구', title: '자산 추이' },
-        'realestate-view': { label: '재무 도구', title: '부동산·청약' },
+        'stats-view': { label: '재무 도구', title: 'Monthly Report' },
+        'cashflow-view': { label: '재무 도구', title: '현금흐름' },
+        'asset-view': { label: '재무 도구', title: '장기자산' },
+        'realestate-view': { label: '재무 도구', title: '부동산' },
         'invest-detail-view': { label: '재무 도구', title: '투자 상세' }
     };
 
-    const financeToolViews = new Set(['personal-cfo-view', 'portfolio-view', 'stats-view', 'asset-view', 'realestate-view', 'invest-detail-view']);
+    const financeToolViews = new Set(['personal-cfo-view', 'portfolio-view', 'stats-view', 'cashflow-view', 'asset-view', 'realestate-view', 'invest-detail-view']);
     const lifeToolViews = new Set(['health-view', 'routine-checklist-view']);
     const mobileToolNav = document.getElementById('mobile-tool-nav');
     const mobileToolGroups = {
         'dashboard-view': [
-            { target: 'personal-cfo-view', icon: 'fa-diagram-project', label: '재무맵' },
             { target: 'stats-view', icon: 'fa-file-invoice-dollar', label: 'Report' },
+            { target: 'cashflow-view', icon: 'fa-arrow-right-arrow-left', label: '현금흐름' },
             { target: 'portfolio-view', icon: 'fa-briefcase', label: '포트폴리오' },
-            { target: 'asset-view', icon: 'fa-chart-area', label: '자산추이' },
-            { target: 'realestate-view', icon: 'fa-home', label: '청약' }
+            { target: 'asset-view', icon: 'fa-chart-area', label: '장기자산' },
+            { target: 'realestate-view', icon: 'fa-home', label: '부동산' }
         ],
         'life-view': [
             { target: 'health-view', icon: 'fa-heart-pulse', label: '건강' },
@@ -189,20 +191,20 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         // ???[?????怨뚮뼺?됰뗀??? FAB ???????????? '?????????????????stats-view)' ??????饔낅떽????????????怨뺤른??????怨쀫뮡?壤굿??곸읆????ル폆???
         const fab = document.getElementById('fab-add-tx');
         if(fab) {
-            if(targetId === 'stats-view') fab.classList.remove('hidden');
+            if(targetId === 'cashflow-view') fab.classList.remove('hidden');
             else fab.classList.add('hidden');
         }
 
         if (targetId === 'realestate-view' && window.reMap) {
             setTimeout(() => window.reMap.invalidateSize(), 50);
         }
-        if (targetId === 'stats-view') toggleManageView(false);
+        if (targetId === 'cashflow-view') toggleManageView(false);
 
         setTimeout(() => {
             if (targetId === 'dashboard-view') renderSections({ financeSummary: true, portfolio: true });
             else if (targetId === 'life-view') window.LifeDashboardFeature?.render();
             else if (targetId === 'portfolio-view') renderSections({ portfolio: true });
-            else if (targetId === 'stats-view') renderSections({ cashFlow: true });
+            else if (targetId === 'stats-view' || targetId === 'cashflow-view') renderSections({ cashFlow: true });
             else if (targetId === 'asset-view') renderSections({ financeSummary: true });
             else if (targetId === 'personal-cfo-view') window.PersonalCfoFeature?.render();
             else if (targetId === 'realestate-view') renderSections({ realEstate: true });
@@ -258,8 +260,12 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         }
         const prevMonthButton = document.getElementById('btn-prev-month');
         const nextMonthButton = document.getElementById('btn-next-month');
-        if (activeViewId === 'stats-view' && e.key === 'ArrowLeft' && prevMonthButton && !prevMonthButton.disabled) prevMonthButton.click();
-        else if (activeViewId === 'stats-view' && e.key === 'ArrowRight' && nextMonthButton && !nextMonthButton.disabled) nextMonthButton.click();
+        const reportPrevMonthButton = document.getElementById('btn-report-prev-month');
+        const reportNextMonthButton = document.getElementById('btn-report-next-month');
+        if (activeViewId === 'cashflow-view' && e.key === 'ArrowLeft' && prevMonthButton && !prevMonthButton.disabled) prevMonthButton.click();
+        else if (activeViewId === 'cashflow-view' && e.key === 'ArrowRight' && nextMonthButton && !nextMonthButton.disabled) nextMonthButton.click();
+        else if (activeViewId === 'stats-view' && e.key === 'ArrowLeft' && reportPrevMonthButton && !reportPrevMonthButton.disabled) reportPrevMonthButton.click();
+        else if (activeViewId === 'stats-view' && e.key === 'ArrowRight' && reportNextMonthButton && !reportNextMonthButton.disabled) reportNextMonthButton.click();
     });
 
     function updateNavigationButtons() {
@@ -267,8 +273,12 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         const idx = keys.indexOf(currentMonthKey);
         const btnPrev = document.getElementById('btn-prev-month');
         const btnNext = document.getElementById('btn-next-month');
-        if (!btnPrev || !btnNext) return;
-        btnPrev.disabled = idx <= 0; btnNext.disabled = idx === -1 || idx >= keys.length - 1;
+        const reportPrev = document.getElementById('btn-report-prev-month');
+        const reportNext = document.getElementById('btn-report-next-month');
+        if (btnPrev) btnPrev.disabled = idx <= 0;
+        if (btnNext) btnNext.disabled = idx === -1 || idx >= keys.length - 1;
+        if (reportPrev) reportPrev.disabled = idx <= 0;
+        if (reportNext) reportNext.disabled = idx === -1 || idx >= keys.length - 1;
     }
 
     document.getElementById('btn-prev-month')?.addEventListener('click', () => {
@@ -277,6 +287,16 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     });
 
     document.getElementById('btn-next-month')?.addEventListener('click', () => {
+        const keys = getMonthKeys(); const idx = keys.indexOf(currentMonthKey);
+        if (idx !== -1 && idx < keys.length - 1) { currentMonthKey = keys[idx + 1]; cashFlowMonthKey = currentMonthKey; renderSections({ cashFlow: true }); }
+    });
+
+    document.getElementById('btn-report-prev-month')?.addEventListener('click', () => {
+        const keys = getMonthKeys(); const idx = keys.indexOf(currentMonthKey);
+        if (idx > 0) { currentMonthKey = keys[idx - 1]; cashFlowMonthKey = currentMonthKey; renderSections({ cashFlow: true }); }
+    });
+
+    document.getElementById('btn-report-next-month')?.addEventListener('click', () => {
         const keys = getMonthKeys(); const idx = keys.indexOf(currentMonthKey);
         if (idx !== -1 && idx < keys.length - 1) { currentMonthKey = keys[idx + 1]; cashFlowMonthKey = currentMonthKey; renderSections({ cashFlow: true }); }
     });

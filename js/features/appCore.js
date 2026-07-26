@@ -361,7 +361,7 @@
         const latestMonthKey = getLatestMonthKey();
         if (!latestMonthKey) return;
 
-        if (targetId === 'stats-view') {
+        if (targetId === 'stats-view' || targetId === 'cashflow-view') {
             cashFlowMonthKey = cashFlowMonthKey || currentMonthKey || latestMonthKey;
             currentMonthKey = cashFlowMonthKey;
             return;

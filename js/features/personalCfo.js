@@ -642,68 +642,85 @@
         }).join('');
     }
 
-    function renderCfoStructureOverview(graph, cashFlow) {
+    function renderCfoStructureOverview(graph, cashFlow, summary) {
         const nodeById = new Map((graph?.nodes || []).map((node) => [node.id, node]));
-        const income = (graph?.nodes || []).find((node) => node.type === 'income');
-        if (!income) return '';
-        const flowRows = [
-            { id: 'summary:cashflow:expense', label: '소비', detail: '생활비·고정비', icon: 'fa-basket-shopping', classes: 'border-rose-100 bg-rose-50 text-rose-700' },
-            { id: 'summary:cashflow:debt', label: '상환', detail: '전세·신용대출', icon: 'fa-building-columns', classes: 'border-red-100 bg-red-50 text-red-700' },
-            {
-                id: 'summary:cashflow:saving',
-                label: '저축',
-                detail: cashFlow
-                    ? `청년 ${formatKrw(cashFlow.youthSavings)} · 연금 ${formatKrw(cashFlow.pensionSavings)}`
-                    : '청년도약·연금저축',
-                icon: 'fa-piggy-bank',
-                classes: 'border-emerald-100 bg-emerald-50 text-emerald-700',
-            },
-            { id: 'summary:cashflow:residual', label: '잔여', detail: '안전자산 대기자금', icon: 'fa-wallet', classes: 'border-lime-100 bg-lime-50 text-lime-700' },
-        ].map((row) => ({ ...row, node: nodeById.get(row.id) })).filter((row) => row.node);
         const assetRows = [
             { id: 'summary:asset:defense', label: '안전자산', detail: '청년도약·발행어음·IMA', icon: 'fa-shield-halved', classes: 'border-blue-100 bg-blue-50 text-blue-700' },
             { id: 'summary:asset:growth', label: '투자자산', detail: '성장 Port · Phase 2', icon: 'fa-chart-line', classes: 'border-violet-100 bg-violet-50 text-violet-700' },
             { id: 'summary:asset:pension', label: '연금', detail: '연금저축펀드', icon: 'fa-landmark', classes: 'border-pink-100 bg-pink-50 text-pink-700' },
             { id: 'summary:asset:housing', label: '주거자산', detail: '청약통장·전세금', icon: 'fa-house', classes: 'border-amber-100 bg-amber-50 text-amber-700' },
         ].map((row) => ({ ...row, node: nodeById.get(row.id) }));
-        const renderMiniCard = (row) => `
-            <article class="min-w-0 rounded-lg border p-2.5 ${row.classes} ${row.node ? '' : 'opacity-55'}">
+        const allocationRows = [
+            { label: '소비', value: '월별 변동', detail: '생활비·고정비', icon: 'fa-basket-shopping', classes: 'border-rose-100 bg-rose-50 text-rose-700' },
+            { label: '상환', value: '기준 약 130만원', detail: '전세 100만 · 신용 약 30만', icon: 'fa-building-columns', classes: 'border-red-100 bg-red-50 text-red-700' },
+            { label: '저축', value: '기준 80만원', detail: '청년도약 70만 · 연금 10만', icon: 'fa-piggy-bank', classes: 'border-emerald-100 bg-emerald-50 text-emerald-700' },
+            { label: '잔여', value: '월별 변동', detail: '월 마감 후 가용 현금', icon: 'fa-wallet', classes: 'border-lime-100 bg-lime-50 text-lime-700' },
+        ];
+        const renderAllocationCard = (row) => `
+            <article class="min-w-0 rounded-lg border p-3 ${row.classes}">
                 <div class="flex items-center justify-between gap-2">
                     <p class="truncate text-[11px] font-bold">${escapeHtml(row.label)}</p>
                     <i class="fas ${row.icon} text-[10px] opacity-70" aria-hidden="true"></i>
                 </div>
-                <p class="mt-2 truncate text-sm font-bold">${escapeHtml(formatKrw(row.node?.amount || 0))}</p>
+                <p class="mt-2 truncate text-sm font-bold">${escapeHtml(row.value)}</p>
+                <p class="mt-1 truncate text-[9px] opacity-65">${escapeHtml(row.detail)}</p>
+            </article>
+        `;
+        const renderAssetCard = (row) => `
+            <article class="min-w-0 rounded-lg border p-3 ${row.classes} ${row.node ? '' : 'opacity-55'}">
+                <div class="flex items-center justify-between gap-2">
+                    <p class="truncate text-[11px] font-bold">${escapeHtml(row.label)}</p>
+                    <i class="fas ${row.icon} text-[10px] opacity-70" aria-hidden="true"></i>
+                </div>
+                <p class="mt-2 truncate text-sm font-bold">${row.node ? escapeHtml(formatKrw(row.node.amount || 0)) : '데이터 없음'}</p>
                 <p class="mt-1 truncate text-[9px] opacity-65">${escapeHtml(row.detail)}</p>
             </article>
         `;
         return `
-            <section class="rounded-lg border border-gray-200 bg-white p-3 shadow-sm md:p-4">
-                <div class="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <section class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                <div class="flex flex-col gap-2 border-b border-gray-100 bg-slate-50/70 p-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <h3 class="text-base font-bold text-gray-900">개인 CFO 자금 구조</h3>
-                        <p class="text-xs text-gray-500">월 수입이 소비·상환·저축·잔여로 나뉘고 현재 자산 바구니로 이어지는 구조입니다.</p>
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-indigo-500">Personal CFO</p>
+                        <h3 class="text-base font-bold text-gray-900 md:text-lg">현금흐름과 재무상태 통합 요약</h3>
+                        <p class="mt-0.5 text-xs text-gray-500">금액이 고정되지 않는 수입·소비·잔여는 구조만 표시하고, 실제 결과는 Monthly Report에서 확인합니다.</p>
                     </div>
-                    <span class="w-fit rounded-md border border-indigo-100 bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700">전체 구조 요약</span>
+                    <span class="w-fit rounded-md border border-emerald-100 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">실제 자산 연결</span>
                 </div>
-                <div class="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-[190px_24px_minmax(300px,0.9fr)_24px_minmax(300px,1.1fr)]">
-                    <article class="flex min-h-28 flex-col justify-between rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-indigo-700">
+                <div class="p-4">
+                    <div class="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-[180px_28px_minmax(320px,1fr)_28px_minmax(320px,1fr)]">
+                    <article class="flex min-h-32 flex-col justify-between rounded-xl border border-indigo-100 bg-indigo-600 p-4 text-white">
                         <div class="flex items-center justify-between gap-2">
-                            <p class="text-xs font-bold">월 수입</p>
-                            <i class="fas fa-won-sign text-sm opacity-70" aria-hidden="true"></i>
+                            <p class="text-xs font-bold">수입</p>
+                            <i class="fas fa-money-bill-wave text-sm opacity-70" aria-hidden="true"></i>
                         </div>
-                        <p class="text-xl font-bold">${escapeHtml(formatKrw(income.amount || 0))}</p>
-                        <p class="text-[10px] text-indigo-500">전체적인 월 재무 구조</p>
+                        <p class="text-xl font-bold">월별 변동</p>
+                        <p class="text-[10px] text-indigo-100">급여 · 기타수입</p>
                     </article>
                     <div class="hidden items-center justify-center text-indigo-300 lg:flex" aria-hidden="true"><i class="fas fa-arrow-right"></i></div>
-                    <div class="grid grid-cols-2 gap-2">${flowRows.map(renderMiniCard).join('')}</div>
+                    <div class="grid grid-cols-2 gap-2">${allocationRows.map(renderAllocationCard).join('')}</div>
                     <div class="hidden items-center justify-center text-indigo-300 lg:flex" aria-hidden="true"><i class="fas fa-arrow-right"></i></div>
-                    <div class="grid grid-cols-2 gap-2">${assetRows.map(renderMiniCard).join('')}</div>
-                </div>
-                <div class="mt-3 flex flex-wrap gap-2 text-[10px] font-medium text-gray-500">
-                    <span class="rounded-md bg-blue-50 px-2 py-1 text-blue-700">저축·잔여 → 안전자산</span>
-                    <span class="rounded-md bg-pink-50 px-2 py-1 text-pink-700">연금저축 → 연금자산</span>
-                    <span class="rounded-md bg-violet-50 px-2 py-1 text-violet-700">안전자산 → 투자 Port는 Phase 2</span>
-                    <span class="rounded-md bg-red-50 px-2 py-1 text-red-700">상환 → 부채 감소</span>
+                    <div class="grid grid-cols-2 gap-2">${assetRows.map(renderAssetCard).join('')}</div>
+                    </div>
+                    <div class="mt-4 grid grid-cols-1 gap-2 border-t border-gray-100 pt-4 sm:grid-cols-3">
+                        <article class="rounded-lg bg-slate-50 px-3 py-2.5">
+                            <p class="text-[10px] font-bold text-gray-400">총자산</p>
+                            <p class="mt-1 text-base font-bold text-gray-900">${escapeHtml(formatKrw(summary?.totalAssets || 0))}</p>
+                        </article>
+                        <article class="rounded-lg bg-rose-50 px-3 py-2.5">
+                            <p class="text-[10px] font-bold text-rose-500">총부채</p>
+                            <p class="mt-1 text-base font-bold text-rose-800">${escapeHtml(formatKrw(summary?.totalLiabilities || 0))}</p>
+                        </article>
+                        <article class="rounded-lg bg-indigo-50 px-3 py-2.5">
+                            <p class="text-[10px] font-bold text-indigo-500">순자산</p>
+                            <p class="mt-1 text-base font-bold text-indigo-900">${escapeHtml(formatKrw(summary?.netWorth || 0))}</p>
+                        </article>
+                    </div>
+                    <div class="mt-3 flex flex-wrap gap-2 text-[10px] font-medium text-gray-500">
+                        <span class="rounded-md bg-blue-50 px-2 py-1 text-blue-700">잔여 → 안전자산</span>
+                        <span class="rounded-md bg-pink-50 px-2 py-1 text-pink-700">연금저축 → 연금자산</span>
+                        <span class="rounded-md bg-red-50 px-2 py-1 text-red-700">상환 → 부채 감소</span>
+                        <span class="rounded-md bg-violet-50 px-2 py-1 text-violet-700">투자 전환 → Portfolio Phase 2</span>
+                    </div>
                 </div>
             </section>
         `;
@@ -825,13 +842,8 @@
                     <span class="rounded-md border px-2.5 py-1.5 text-[11px] font-bold ${planningBadgeClasses}">${escapeHtml(planningBadge)}</span>
                 </div>
             </div>
-            <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-4">
-                ${renderKpiCards(model.summary, cashFlow)}
-            </div>
             <div class="space-y-4 pb-10">
-                ${renderCfoStructureOverview(overviewGraph, cashFlow)}
-                ${renderMobileFinanceSummary(model.graph)}
-                ${renderFinanceGraph(model.graph)}
+                ${renderCfoStructureOverview(overviewGraph, cashFlow, model.summary)}
                 ${renderTables(model)}
             </div>
         `;

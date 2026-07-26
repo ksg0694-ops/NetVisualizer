@@ -126,9 +126,11 @@
                         borderColor: '#64748B',
                         backgroundColor: '#64748B',
                         borderWidth: 2,
+                        hoverBorderWidth: 2,
                         borderDash: [7, 6],
                         pointRadius: 0,
-                        pointHoverRadius: 3,
+                        pointHoverRadius: 0,
+                        pointHitRadius: 8,
                         fill: false,
                         tension: 0,
                         order: 2
@@ -151,6 +153,7 @@
             options: withChartTransitions({
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
                 scales: {
                     y: {
                         ticks: { font: { size: 10 }, callback: function(value) { return Math.floor(value / 10000).toLocaleString() + '만'; } },
@@ -160,7 +163,19 @@
                 },
                 plugins: {
                     legend: { display: true, position: 'bottom', labels: { usePointStyle: false, boxWidth: 18, boxHeight: 2, font: { size: 10 } } },
-                    tooltip: { callbacks: { label: function(context) { return ' ' + context.dataset.label + ': ' + context.raw.toLocaleString() + '원'; } } }
+                    tooltip: {
+                        filter: function(context) {
+                            return context.raw !== null && Number.isFinite(Number(context.raw));
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                const value = Number(context.raw);
+                                return Number.isFinite(value)
+                                    ? ` ${context.dataset.label}: ${value.toLocaleString()}원`
+                                    : '';
+                            }
+                        }
+                    }
                 }
             }, 480)
         };
@@ -368,6 +383,109 @@
                 </div>
             </div>
         `;
+    }
+
+    function renderMonthlyReportSummary(db, structure) {
+        const setText = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
+        };
+        const setWidth = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) element.style.width = `${Math.max(0, Math.min(100, Number(value) || 0))}%`;
+        };
+        setText('monthly-report-period-label', db?.title || currentMonthKey || '-');
+        setText('monthly-report-period-range', db?.periodStr || '기간 없음');
+        if (!structure) {
+            setText('monthly-report-status', '데이터 없음');
+            [
+                'monthly-report-income',
+                'monthly-report-spending',
+                'monthly-report-repayment',
+                'monthly-report-saving',
+                'monthly-report-residual',
+                'monthly-report-saving-residual',
+            ].forEach((id) => setText(id, '-'));
+            return;
+        }
+
+        const income = Math.max(0, Number(structure.totalIncome || 0));
+        const shares = {
+            spending: income > 0 ? (Number(structure.spending || 0) / income) * 100 : 0,
+            repayment: income > 0 ? (Number(structure.repayment || 0) / income) * 100 : 0,
+            saving: income > 0 ? (Number(structure.saving || 0) / income) * 100 : 0,
+            residual: income > 0 ? (Number(structure.residual || 0) / income) * 100 : 0,
+        };
+        setText('monthly-report-income', formatWon(structure.totalIncome));
+        setText('monthly-report-spending', formatWon(structure.spending));
+        setText('monthly-report-repayment', formatWon(structure.repayment));
+        setText('monthly-report-saving', formatWon(structure.saving));
+        setText('monthly-report-residual', formatWon(structure.residual));
+        setText('monthly-report-saving-residual', formatWon(structure.savingAndResidual));
+        setText('monthly-report-spending-share', `${shares.spending.toFixed(0)}%`);
+        setText('monthly-report-repayment-share', `${shares.repayment.toFixed(0)}%`);
+        setWidth('monthly-report-spending-bar', shares.spending);
+        setWidth('monthly-report-repayment-bar', shares.repayment);
+        setWidth('monthly-report-saving-bar', shares.saving);
+        setWidth('monthly-report-residual-bar', Math.max(0, shares.residual));
+
+        const status = document.getElementById('monthly-report-status');
+        if (status) {
+            const confirmed = structure.reviewStatus === 'confirmed';
+            status.textContent = confirmed ? '마감 완료' : (structure.reviewStatus === 'stale' ? '재확인 필요' : '분류 검토');
+            status.className = `rounded-md border px-2 py-1 text-[10px] font-bold ${
+                confirmed
+                    ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
+                    : 'border-amber-100 bg-amber-50 text-amber-700'
+            }`;
+        }
+
+        const labels = [];
+        const incomeData = [];
+        const outflowData = [];
+        const retainedData = [];
+        getYearMonthKeys(currentMonthKey).forEach((key) => {
+            const item = getCashFlowStructureSummary(key);
+            if (!item) return;
+            labels.push(key.replace('20', '').replace('-', '.'));
+            incomeData.push(item.totalIncome);
+            outflowData.push(item.spending + item.repayment);
+            retainedData.push(item.savingAndResidual);
+        });
+        if (document.getElementById('monthlyReportCashFlowChart')) {
+            renderOrUpdateChart('monthlyReportCashFlow', 'monthlyReportCashFlowChart', {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { type: 'bar', label: '수입', data: incomeData, backgroundColor: 'rgba(59, 130, 246, 0.72)', borderRadius: 5 },
+                        { type: 'bar', label: '소비+상환', data: outflowData, backgroundColor: 'rgba(244, 63, 94, 0.58)', borderRadius: 5 },
+                        { type: 'line', label: '저축+잔여', data: retainedData, borderColor: '#10B981', backgroundColor: '#10B981', borderWidth: 2.5, pointRadius: 2.5, pointHoverRadius: 4, tension: 0.3 },
+                    ],
+                },
+                options: withChartTransitions({
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+                        y: {
+                            beginAtZero: true,
+                            grid: { borderDash: [4, 5] },
+                            ticks: { font: { size: 9 }, callback: (value) => Math.round(value / 10000).toLocaleString() },
+                        },
+                    },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 6, font: { size: 9 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => `${context.dataset.label}: ${Number(context.raw || 0).toLocaleString()}원`,
+                            },
+                        },
+                    },
+                }, 320),
+            });
+        }
     }
 
     function getFinanceCashFlowContext() {
@@ -1184,6 +1302,7 @@
         if (selectedIncome) selectedIncome.textContent = formatWon(totalIncome);
         if (selectedExpense) selectedExpense.textContent = formatWon(totalExpense);
         renderCashFlowAllocationPanel(cashFlowStructure);
+        renderMonthlyReportSummary(db, cashFlowStructure);
 
         const manageList = document.getElementById('manageTransactionList');
         if (manageList) manageList.innerHTML = '';

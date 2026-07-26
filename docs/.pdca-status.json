@@ -3,22 +3,27 @@
   "level": "dynamic",
   "feature": "August Finance Data and UX Refresh",
   "phase": "do",
-  "progress": 80,
-  "updatedAt": "2026-07-26T12:46:00+09:00",
+  "progress": 90,
+  "updatedAt": "2026-07-26T16:30:00+09:00",
   "status": "in_progress",
-  "currentFocus": "Prepare the portfolio Phase 2 data model after the validated Phase 1 deployment.",
+  "currentFocus": "Review the validated Phase 1 navigation, Personal CFO, Monthly Report, long-term asset, and real-estate UX changes.",
   "completed": [
     "Synchronized the July accounting-period ledger with the current source workbook.",
     "Added the structural monthly cash-flow view to Personal CFO.",
     "Prepared and validated the portfolio account and holding review workbook.",
     "Implemented the monthly Report cash-allocation view and long-term asset goal path.",
     "Added the Personal CFO structural flow from income to spending, repayment, savings, residual cash, and asset buckets.",
-    "Validated the Phase 1 desktop layout, month navigation, CFO mode switching, accounting equation, and selected-month asset goal path."
+    "Validated the Phase 1 desktop layout, month navigation, CFO mode switching, accounting equation, and selected-month asset goal path.",
+    "Separated Monthly Report and detailed cash flow into independent finance tabs.",
+    "Replaced the Personal CFO KPI and network stack with one integrated variable-income and balance-sheet summary.",
+    "Compressed Monthly Report into a 1366 x 768 notebook viewport without clipping.",
+    "Fixed long-term asset prediction hover and removed Finance Roadmap.",
+    "Removed the real-estate schedule and map while preserving funding and DSR analysis."
   ],
   "remaining": [
     "Phase 2: rebuild the portfolio around holding quantity, market price, FX rate, Port, and monthly position snapshots.",
     "Phase 2: add Port trends, holding drill-down, return history, and the portfolio section of the monthly Report.",
     "Recalculate loan eligibility after the real-estate policy update."
   ],
-  "nextStep": "Define the portfolio Phase 2 position, market price, FX, Port, and monthly snapshot schema."
+  "nextStep": "Review the Phase 1 local preview, then define the portfolio Phase 2 position, market price, FX, Port, and monthly snapshot schema."
 }

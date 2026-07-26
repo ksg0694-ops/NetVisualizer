@@ -1,54 +1,60 @@
-# 0726 Phase 1 Design QA
+# Phase 1 Finance UX Design QA
 
 ## Evidence
 
-- Source visual truth: Google Slides `0726 변경제안`
-  - Monthly Report: `%TEMP%\netvisualizer-0726-deck-review\slide-02.png`
-  - Personal CFO: `%TEMP%\netvisualizer-0726-deck-review\slide-03.png`
-  - Cash flow: `%TEMP%\netvisualizer-0726-deck-review\slide-04.png`
+- Source visual truth:
+  - User Phase 1 specification dated 2026-07-26.
+  - Existing Monthly Report at `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-1876\before-monthly-report-1440x900.png`.
+  - Existing Personal CFO at `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-1876\before-personal-cfo-1440x900.png`.
 - Implementation:
-  - Monthly Report: `%TEMP%\netvisualizer-0726-design-qa\implementation-report-desktop-final.png`
-  - Long-term asset region: `%TEMP%\netvisualizer-0726-design-qa\implementation-report-asset-region-final.png`
-  - Personal CFO: `%TEMP%\netvisualizer-0726-design-qa\implementation-cfo-desktop.png`
-- Combined comparisons:
-  - `%TEMP%\netvisualizer-0726-design-qa\comparison-report-final.png`
-  - `%TEMP%\netvisualizer-0726-design-qa\comparison-asset-final.png`
-  - `%TEMP%\netvisualizer-0726-design-qa\comparison-cfo.png`
-- Browser viewport: 1280 × 720 CSS px, device scale factor 1.
-- Source pixels: 1600 × 900. Source and implementation were normalized to 1280 × 720 and composited side by side at 2560 × 720.
-- State: 2026년 7월 마감, 실제 원장·자산 데이터 로드 완료.
+  - Monthly Report desktop: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-1876\after-monthly-report-1440x900-v2.png`.
+  - Monthly Report notebook: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-1876\after-monthly-report-1366x768-v2.png`.
+  - Personal CFO: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-1876\after-personal-cfo-1440x900.png`.
+  - Long-term asset prediction hover: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-1876\after-asset-prediction-hover-1440x900.png`.
+- Combined comparison:
+  - Monthly Report: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-1876\compare-monthly-report.png`.
+  - Personal CFO: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-1876\compare-personal-cfo.png`.
+- Viewports: 1440 × 900 and 1366 × 768 CSS px, device scale factor 1.
+- Source and implementation captures use equal pixel dimensions at each compared viewport; no density normalization was required.
+- State: 2026년 7월 마감, actual ledger and asset data loaded.
 
 ## Full-view comparison
 
-The Monthly Report follows the proposal hierarchy: month close, income/expense summaries, structural cash allocation, monthly trend, long-term asset goal path, and a reserved Phase 2 portfolio region. The Personal CFO keeps the existing application design system while reproducing the proposed income → spending/repayment/savings/residual → asset-bucket structure.
+- The finance-tool navigation now follows the requested order: Monthly Report, 현금흐름, 포트폴리오, 장기자산, 부동산.
+- Monthly Report reduces the former multi-scroll layout to one screen at 1366 × 768 while preserving monthly close, allocation, cash-flow trend, asset goal path, and the Phase 2 portfolio reservation.
+- Personal CFO removes the six KPI cards and the competing network graph. One integrated summary now connects variable monthly inflow, known allocation rules, current asset buckets, liabilities, and net worth.
+- Cash flow remains a separate detailed workspace with month close, categorization, allocation, import, add-on, and transaction-detail controls.
+- Real estate retains funding and DSR analysis while removing the schedule and map regions.
 
 ## Focused-region comparison
 
-- Long-term asset: actual asset line, year-end target path, target line, current amount, remaining amount, and required monthly increase are all visible together.
-- Personal CFO: the structural amounts conserve the approximate monthly income and separate spending, repayment, savings, and residual cash. Current safe, growth, pension, and housing assets are displayed in the destination column.
-- Cash flow: the chart legend and data use monthly `저축+잔여`; the former cumulative surplus series is removed.
+- Personal CFO: income, spending, and residual use `월별 변동`; the former fixed `400만원` and residual amount are not displayed. Known repayment and savings rules remain visible.
+- Monthly Report: every major report block is visible without vertical or horizontal clipping at 1366 × 768.
+- Long-term asset: hovering the prediction area keeps the dotted goal path visible and shows a valid tooltip without console errors.
+- Real estate: no schedule or map region is rendered, and the simulator continues to render without loading Leaflet.
 
 ## Required fidelity surfaces
 
-- Fonts and typography: existing Pretendard hierarchy is preserved; report and structural labels match the product’s established weights and sizes.
-- Spacing and layout rhythm: existing sidebar, card radii, shadows, and grid gaps are preserved. New report sections use the same container width and responsive grid rules.
-- Colors and visual tokens: existing indigo, blue, red, emerald, amber, and violet semantic colors are reused.
-- Image quality and assets: the proposal contains no required production raster assets. Existing Font Awesome icons and Chart.js rendering are used.
-- Copy and content: formulas, asset labels, goal-path meaning, and Phase 2 portfolio scope match the proposal and prior accounting rules.
+- Fonts and typography: the existing Pretendard hierarchy, weights, and compact financial labels are preserved.
+- Spacing and layout rhythm: sidebar, 12-column report grid, card radii, shadows, and gaps use the existing product system. Grid items explicitly allow shrinking at notebook widths.
+- Colors and visual tokens: existing indigo, blue, rose, emerald, lime, amber, violet, and slate semantics are reused.
+- Image quality and assets: no new raster asset is required. Existing Font Awesome icons and Chart.js charts are retained.
+- Copy and content: unclear monthly values are labeled as variable; only stable allocation rules and actual balance-sheet values display amounts.
 
 ## Interaction and runtime checks
 
-- Month navigation: 2026년 7월 → 2026년 6월 → 2026년 7월 passed.
-- Personal CFO graph mode: `현금흐름 요약` toggle passed.
-- Horizontal overflow at 1280 px: none.
-- Browser console: no application errors. Existing Tailwind CDN production warning remains.
-- Mobile: responsive classes and mobile-specific CFO summary remain in place; the selected in-app browser did not expose viewport resizing for a new visual capture.
+- Monthly Report month navigation: 2026년 7월 → 2026년 6월 passed.
+- Cash flow detailed view and floating add-transaction action passed.
+- Long-term asset prediction hover passed; prediction line remains visible.
+- Real-estate simplified view passed; browser console has no application error.
+- Full automated project check passed.
 
 ## Comparison history
 
-1. Initial focused review found that the July Report asset chart included the August actual point while the current card used July. This was a P1 period-consistency issue.
-2. The Report chart now masks actual asset points after the selected report month and starts the goal path from the selected month.
-3. Final focused comparison confirms that the July card, July actual endpoint, remaining amount, and year-end goal path use the same period.
+1. The first 1366 × 768 capture showed top and chart cards clipped by grid-item intrinsic width.
+2. `min-w-0` was added to the report grid and every report section.
+3. The second 1366 × 768 capture shows all sections within the 1078 px content area and the entire report within the 768 px viewport.
+4. A stale cached real-estate bundle still attempted to initialize the deleted map. Asset query versions and the service-worker cache version were bumped; a fresh tab then rendered with no error.
 
 ## Findings
 
