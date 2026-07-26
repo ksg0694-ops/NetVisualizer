@@ -9,6 +9,7 @@
   - Cash-flow reference: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-0726-deck-review\slide-04.png`.
 - Implementation:
   - Monthly Report: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-1876\monthly-report-1366x768-final-fixed.png`.
+  - Monthly Report compact notebook: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-1876\monthly-report-1280x720-final.png`.
   - Personal CFO desktop: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-1876\personal-cfo-1366x768-pass1.png`.
   - Personal CFO mobile: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-1876\personal-cfo-390x844-final.png`.
   - Cash flow: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-1876\cashflow-1366x768-pass1.png`.
@@ -18,7 +19,7 @@
   - Monthly Report: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-1876\compare-monthly-report-final.png`.
   - Personal CFO: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-1876\compare-personal-cfo-pass1.png`.
   - Cash flow: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-1876\compare-cashflow-pass1.png`.
-- Viewports: 1366 × 768 and 390 × 844 CSS px, device scale factor 1.
+- Viewports: 1366 × 768, 1280 × 720, and 390 × 844 CSS px, device scale factor 1.
 - Source and implementation captures use equal pixel dimensions at each compared viewport; no density normalization was required.
 - State: 2026년 7월 마감, actual ledger and asset data loaded.
 
@@ -33,7 +34,7 @@
 ## Focused-region comparison
 
 - Personal CFO: income, spending, and residual use `월별 변동`; the former fixed `400만원` and residual amount are not displayed. Known repayment and savings rules remain visible.
-- Monthly Report: every major report block is visible without clipping at 1366 × 768, and the monthly cash-flow trend is absent.
+- Monthly Report: every major report block is visible without clipping at 1366 × 768 and 1280 × 720, and the monthly cash-flow trend is absent.
 - Long-term Goal: the actual asset line, income-trend forecast, and target line remain visible after switching away and back to the tab.
 - Housing capacity: assumption settings open and close from Long-term Goal; no standalone schedule or map is rendered.
 
@@ -60,6 +61,7 @@
 2. After forecast logic extraction, the asset chart was blank because Chart.js retained a 0×0 canvas initialized in a hidden tab.
 3. Chart.js 4.4.7 was vendored locally and chart updates now call `resize()` after the target tab becomes visible.
 4. The final 1366 × 768 comparison shows the requested bar/donut cash block and visible long-term forecast with no clipping.
+5. A 1280 × 720 GitHub Pages check exposed a minimum-width collision between the cash bar and donut column. The inner grid now shrinks to the available width and passes with `scrollWidth === clientWidth`.
 
 ## Findings
 
