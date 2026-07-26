@@ -71,6 +71,39 @@ P3 follow-up: replace the Tailwind CDN runtime with a compiled production styles
 
 final result: passed
 
+## Salary-rule and two-step CFO iteration — 2026-07-26
+
+### Evidence
+
+- Source captures:
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\source-monthly-report-1280x720.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\source-long-goal-1280x720.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\source-personal-cfo-1280x720.png`
+- Final implementation captures:
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\final-monthly-report-1280x720-v1.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\final-long-goal-1280x720-v1.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\final-personal-cfo-1280x720-v1.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\final-personal-cfo-390x844-v1.png`
+- Equal-size comparisons:
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\compare-monthly-report-v1.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\compare-long-goal-v1.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\compare-personal-cfo-v1.png`
+- Viewports: 1280 x 720 and 390 x 844 CSS px at device scale factor 1.
+
+### Findings and checks
+
+- The allocation chart and donut column use the same stretched grid height; the `저축+잔여` bar displays `+215만원` above the bar.
+- The forecast uses the lowest observed salary, currently 3,538,000 KRW, as the regular monthly salary.
+- Twelve regular salary payments represent 18/20 of annual salary; February and September each add a 1/20 holiday bonus.
+- The displayed year-end asset forecast changed from 245,705,807 KRW to 243,867,318 KRW under the conservative salary calendar.
+- Personal CFO has no route tags such as `월 운영` or `부채 감소`.
+- Assets are grouped into step 1 safe assets and step 2 pension, housing, and investment assets.
+- Mobile Personal CFO has no horizontal overflow at 390 x 844.
+- Full runtime, forecast, UI, TypeScript, repository, domain, Supabase, and static asset checks passed.
+- No actionable P0, P1, or P2 design differences remain.
+
+final result: passed
+
 ## Compact Phase 1 CFO iteration — 2026-07-26
 
 ### Evidence

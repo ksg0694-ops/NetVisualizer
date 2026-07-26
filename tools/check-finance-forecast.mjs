@@ -18,6 +18,22 @@ const risingTrend = forecast.calculateLinearTrend([4_000_000, 4_100_000, 4_200_0
 assert.equal(risingTrend.slope, 100_000);
 assert.equal(risingTrend.fittedLatest, 4_200_000);
 
+const salaryCalendar = forecast.buildSalaryCalendarForecast(
+    [4_200_000, 3_900_000, 4_600_000],
+    7,
+    12,
+    [2, 9],
+);
+assert.equal(salaryCalendar.lowestMonthlySalary, 3_900_000);
+assert.equal(salaryCalendar.annualSalary, 52_000_000);
+assert.equal(salaryCalendar.holidayBonus, 2_600_000);
+assert.equal(salaryCalendar.projectedMonthlyIncomes[0], 3_900_000);
+assert.equal(salaryCalendar.projectedMonthlyIncomes[1], 6_500_000);
+assert.equal(
+    salaryCalendar.projectedMonthlyIncomes.reduce((sum, value) => sum + value, 0),
+    52_000_000,
+);
+
 const flatProjection = forecast.buildAssetIncomeForecastPath(
     [100_000_000, null, null, null],
     {
@@ -30,6 +46,19 @@ const flatProjection = forecast.buildAssetIncomeForecastPath(
 assert.deepEqual(Array.from(flatProjection.path), [100_000_000, 102_000_000, 104_000_000, 106_000_000]);
 assert.equal(flatProjection.yearEndAsset, 106_000_000);
 assert.equal(flatProjection.averageMonthlyRetained, 2_000_000);
+
+const scheduledProjection = forecast.buildAssetIncomeForecastPath(
+    [100_000_000, null, null, null],
+    {
+        observedMonths: 3,
+        fittedLatestIncome: 9_000_000,
+        incomeSlope: 0,
+        retentionRate: 0.5,
+        projectedMonthlyIncomes: [4_000_000, 6_000_000, 4_000_000],
+    },
+);
+assert.deepEqual(Array.from(scheduledProjection.path), [100_000_000, 102_000_000, 105_000_000, 107_000_000]);
+assert.equal(scheduledProjection.yearEndAsset, 107_000_000);
 
 const noObservationProjection = forecast.buildAssetIncomeForecastPath(
     [100_000_000, null],

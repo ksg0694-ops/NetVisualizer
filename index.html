@@ -28,19 +28,19 @@
     <script src="./js/features/financeModel.js?v=20260726-phase1-cfo-5"></script>
     <script src="./js/generated/personal-cfo-domain.js?v=20260726-monthly-report-1"></script>
     <script src="./js/features/monthlyClose.js?v=20260717-monthly-close-5"></script>
-    <script src="./js/features/appCore.js?v=20260726-phase1-cfo-5"></script>
+    <script src="./js/features/appCore.js?v=20260726-phase1-cfo-6"></script>
     <script src="./js/features/assetTrend.js?v=20260726-monthly-report-1"></script>
-    <script src="./js/features/financeForecast.js?v=20260726-phase1-cfo-5"></script>
+    <script src="./js/features/financeForecast.js?v=20260726-phase1-cfo-6"></script>
     <script src="./js/features/quantEngine.js?v=20260713-public-server"></script>
     <script src="./js/features/realEstate.js?v=20260726-phase1-cfo-5"></script>
     <script src="./js/features/transactionImport.js?v=20260708-auth-cloud"></script>
     <script src="./js/features/portfolioEditor.js?v=20260717-portfolio-draft-1"></script>
     <script src="./js/features/cashflowControls.js"></script>
     <script src="./js/features/portfolioViews.js?v=20260626-account-order"></script>
-    <script src="./js/features/financeViews.js?v=20260726-phase1-cfo-5"></script>
+    <script src="./js/features/financeViews.js?v=20260726-phase1-cfo-6"></script>
     <script src="./js/features/healthTracker.js?v=20260713-public-server"></script>
     <script src="./js/features/checklist.js?v=20260713-public-server"></script>
-    <script src="./js/features/personalCfo.js?v=20260726-phase1-cfo-5"></script>
+    <script src="./js/features/personalCfo.js?v=20260726-phase1-cfo-6"></script>
     <script src="./js/features/lifeDashboard.js?v=20260717-finance-scope-1"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
@@ -78,7 +78,7 @@
                     <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
                 </div>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.03.25
+                    version 1.03.26
                 </div>
             </div>
             <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-2 space-y-2">
@@ -957,11 +957,11 @@
                             <span id="monthly-report-status" class="rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-[10px] font-bold text-gray-500">확인 중</span>
                         </div>
                         <div class="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-[minmax(180px,0.9fr)_minmax(0,1.25fr)]">
-                            <article class="min-w-0 rounded-xl border border-gray-100 bg-slate-50/70 p-2.5">
+                            <article class="flex h-full min-w-0 flex-col rounded-xl border border-gray-100 bg-slate-50/70 p-2.5">
                                 <div class="flex items-center justify-between gap-2">
                                     <span class="text-[9px] text-gray-400">단위: 만원</span>
                                 </div>
-                                <div class="relative h-[202px] w-full">
+                                <div class="relative min-h-[202px] w-full flex-1">
                                     <canvas id="monthlyReportAllocationChart"></canvas>
                                 </div>
                                 <div class="grid grid-cols-2 gap-1.5 text-[9px]">
@@ -1272,8 +1272,8 @@
                                 <p id="asset-forecast-retained" class="mt-1 truncate text-base font-bold text-emerald-900">0원</p>
                             </article>
                             <article class="rounded-lg bg-slate-50 px-3 py-2.5">
-                                <p class="text-[10px] font-bold text-slate-500">기준 데이터</p>
-                                <p id="asset-forecast-observations" class="mt-1 truncate text-base font-bold text-slate-900">0개월</p>
+                                <p class="text-[10px] font-bold text-slate-500">기준 월급</p>
+                                <p id="asset-forecast-observations" class="mt-1 truncate text-base font-bold text-slate-900">0원</p>
                             </article>
                         </div>
                     </div>

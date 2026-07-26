@@ -39,9 +39,8 @@
         const forecastYearEnd = Number(projection.yearEndAsset || model.currentAsset || 0);
         const forecastGoalGap = Math.max(0, Number(model.targetGoalAsset || 0) - forecastYearEnd);
         const averageRetained = Number(projection.averageMonthlyRetained || 0);
-        const trendDirection = Number(forecast.incomeSlope || 0) >= 0 ? '증가' : '감소';
         const forecastMethodText = forecast.observedMonths > 0
-            ? `마감 ${forecast.observedMonths}개월 수입 ${trendDirection} 추세 · 저축+잔여 중앙비율 ${(Number(forecast.retentionRate || 0) * 100).toFixed(1)}%`
+            ? `최저 월급 기준 · 설·추석 상여 반영 · 저축+잔여 중앙비율 ${(Number(forecast.retentionRate || 0) * 100).toFixed(1)}%`
             : '예측에 사용할 마감 현금흐름이 부족합니다.';
 
         if (goalRemainingEl) goalRemainingEl.textContent = formatWon(goalMeta.remaining);
@@ -60,7 +59,9 @@
             : '예측 데이터 부족';
         if (forecastYearEndEl) forecastYearEndEl.textContent = formatWon(forecastYearEnd);
         if (forecastRetainedEl) forecastRetainedEl.textContent = averageRetained > 0 ? `+${formatWon(averageRetained)}` : '-';
-        if (forecastObservationsEl) forecastObservationsEl.textContent = `${Number(forecast.observedMonths || 0)}개월`;
+        if (forecastObservationsEl) forecastObservationsEl.textContent = Number(forecast.lowestMonthlySalary || 0) > 0
+            ? formatWon(forecast.lowestMonthlySalary)
+            : '-';
         if (forecastMethodEl) forecastMethodEl.textContent = forecastMethodText;
         if (dashboardTitleEl) dashboardTitleEl.textContent = model.dashboardTitle;
     }
@@ -88,11 +89,21 @@
             .map((period) => ({ key: period.key, summary: getCashFlowStructureSummary(period.key) }))
             .filter((item) => Number(item.summary?.totalIncome || 0) > 0);
         const incomes = observations.map((item) => Number(item.summary.totalIncome || 0));
+        const monthlySalaries = observations
+            .map((item) => Number(item.summary.salaryAllocation?.salaryIncome || item.summary.totalIncome || 0))
+            .filter((value) => value > 0);
         const retentionRates = observations
             .map((item) => Number(item.summary.savingAndResidual || 0) / Number(item.summary.totalIncome || 1))
             .filter(Number.isFinite)
             .map((value) => Math.max(0, Math.min(1, value)));
         const trend = calculateLinearTrend(incomes);
+        const referenceMonthNumber = Number(String(referenceMonthKey || '').split('-')[1]) || 12;
+        const salaryCalendar = window.FinanceForecastFeature.buildSalaryCalendarForecast(
+            monthlySalaries,
+            referenceMonthNumber,
+            24,
+            [2, 9],
+        );
         return {
             observedMonths: observations.length,
             firstPeriodKey: observations[0]?.key || '',
@@ -100,6 +111,7 @@
             incomeSlope: trend.slope,
             fittedLatestIncome: trend.fittedLatest,
             retentionRate: retentionRates.length ? median(retentionRates) : 0,
+            ...salaryCalendar,
         };
     }
 
@@ -455,6 +467,23 @@
         if (document.getElementById('monthlyReportAllocationChart')) {
             renderOrUpdateChart('monthlyReportAllocation', 'monthlyReportAllocationChart', {
                 type: 'bar',
+                plugins: [{
+                    id: 'monthlyReportAssetGrowthValue',
+                    afterDatasetsDraw: (chart) => {
+                        const bar = chart.getDatasetMeta(0)?.data?.[2];
+                        const value = Number(chart.data.datasets?.[0]?.data?.[2] || 0);
+                        if (!bar || value <= 0) return;
+                        const label = `+${Math.round(value / 10000).toLocaleString()}만원`;
+                        const { ctx, chartArea } = chart;
+                        ctx.save();
+                        ctx.fillStyle = '#047857';
+                        ctx.font = '700 10px Pretendard, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+                        ctx.fillText(label, bar.x, Math.max(chartArea.top + 12, bar.y - 7));
+                        ctx.restore();
+                    },
+                }],
                 data: {
                     labels: ['수입', '소비+상환', '저축+잔여'],
                     datasets: [{
@@ -471,6 +500,7 @@
                 options: withChartTransitions({
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: { padding: { top: 14 } },
                     scales: {
                         x: { grid: { display: false }, ticks: { font: { size: 9, weight: '600' } } },
                         y: {

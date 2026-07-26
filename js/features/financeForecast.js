@@ -31,6 +31,40 @@
         };
     }
 
+    function buildSalaryCalendarForecast(
+        monthlySalaryValues = [],
+        referenceMonthNumber = 12,
+        projectedMonthCount = 24,
+        bonusMonths = [2, 9],
+    ) {
+        const salaries = monthlySalaryValues
+            .map(Number)
+            .filter((value) => Number.isFinite(value) && value > 0);
+        const lowestMonthlySalary = salaries.length ? Math.min(...salaries) : 0;
+        const annualSalary = lowestMonthlySalary > 0 ? (lowestMonthlySalary / 1.5) * 20 : 0;
+        const holidayBonus = annualSalary / 20;
+        const normalizedReferenceMonth = Math.max(1, Math.min(12, Number(referenceMonthNumber) || 12));
+        const bonusMonthSet = new Set(
+            bonusMonths
+                .map(Number)
+                .filter((month) => Number.isInteger(month) && month >= 1 && month <= 12),
+        );
+        const projectedMonthlyIncomes = Array.from(
+            { length: Math.max(0, Number(projectedMonthCount) || 0) },
+            (_, index) => {
+                const monthNumber = ((normalizedReferenceMonth + index) % 12) + 1;
+                return lowestMonthlySalary + (bonusMonthSet.has(monthNumber) ? holidayBonus : 0);
+            },
+        );
+        return {
+            lowestMonthlySalary,
+            annualSalary,
+            holidayBonus,
+            bonusMonths: Array.from(bonusMonthSet),
+            projectedMonthlyIncomes,
+        };
+    }
+
     function buildAssetIncomeForecastPath(data, incomeForecast) {
         const values = Array.isArray(data) ? data : [];
         const lastActualIndex = values.reduce(
@@ -50,10 +84,13 @@
         }
         for (let index = lastActualIndex + 1; index <= finalIndex; index += 1) {
             const monthOffset = index - lastActualIndex;
-            const forecastIncome = Math.max(
-                0,
-                Number(incomeForecast.fittedLatestIncome || 0) + (Number(incomeForecast.incomeSlope || 0) * monthOffset),
-            );
+            const scheduledIncome = Number(incomeForecast?.projectedMonthlyIncomes?.[monthOffset - 1]);
+            const forecastIncome = Number.isFinite(scheduledIncome) && scheduledIncome > 0
+                ? scheduledIncome
+                : Math.max(
+                    0,
+                    Number(incomeForecast.fittedLatestIncome || 0) + (Number(incomeForecast.incomeSlope || 0) * monthOffset),
+                );
             const retained = Math.max(0, forecastIncome * Number(incomeForecast.retentionRate || 0));
             currentAsset += retained;
             projectedRetained.push(retained);
@@ -72,6 +109,7 @@
     window.FinanceForecastFeature = {
         median,
         calculateLinearTrend,
+        buildSalaryCalendarForecast,
         buildAssetIncomeForecastPath,
     };
 })(window);
