@@ -160,5 +160,11 @@ assert.ok(portfolioViews.includes('buildCfoAssetGroups(dynamicPortfolioData)'));
     assert.ok(portfolioViews.includes(label) || financeModel.includes(label), `${label} CFO group must exist`);
 });
 assert.ok(portfolioViews.includes("renderInvestDetail('투자 자산')"), 'investment drill-down must remain reachable');
+assert.ok(financeModel.includes("return 'housing'"), 'portfolio debt must be grouped under housing assets');
+assert.ok(financeModel.includes("String(item.name || '').trim() === '대출통장'"), 'loan transit account must be excluded');
+assert.ok(financeModel.includes("Object.freeze(['생활비통장', '월급통장'])"), 'operating account order must be explicit');
+assert.ok(financeModel.includes('Math.abs(number(b.amount)) - Math.abs(number(a.amount))'), 'items must sort by descending amount magnitude');
+assert.ok(portfolioViews.includes('.sort((a, b) => b.accountTotal - a.accountTotal'), 'investment accounts must sort by descending total');
+assert.ok(index.includes('id="portfolio-accordion-wrapper"') && index.includes('class="space-y-2"'), 'portfolio group list must use compact gaps');
 
 console.log('UI runtime contracts ok');

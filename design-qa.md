@@ -71,6 +71,49 @@ P3 follow-up: replace the Tailwind CDN runtime with a compiled production styles
 
 final result: passed
 
+## Portfolio Phase 2 compact list — 2026-07-26
+
+### Evidence
+
+- Source visual truth:
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-compact-1876\source-portfolio-1280x720.png`
+- Rendered implementation:
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-compact-1876\final-portfolio-1280x720.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-compact-1876\final-safe-expanded-1280x720.png`
+- Equal-size comparison:
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-compact-1876\compare-portfolio-source-final.png`
+- Viewports: 1280 x 720 and 390 x 844 CSS px at device scale factor 1.
+- State: latest portfolio, CFO groups collapsed plus safe-assets expanded state.
+
+### Full-view comparison
+
+- The CFO group list uses less vertical space while preserving the existing five-group order, card language, icons, colors, and totals.
+- Housing now carries the 65,000,000 KRW repayment badge; operating assets no longer show a repayment amount.
+- The right column retains sufficient whitespace and no content is clipped at 1280 x 720.
+
+### Focused-region comparison
+
+- Expanded safe assets fit five sorted rows inside one compact card without truncated amounts.
+- Operating assets contain only 생활비통장 and 월급통장 in that order.
+- Housing items are ordered by amount magnitude: 전세금, housing loan, then 청약통장.
+- Investment accounts and holdings are sorted by descending evaluated amount.
+
+### Required fidelity surfaces
+
+- Typography: existing Pretendard hierarchy is preserved; list metadata and secondary values are reduced without losing legibility.
+- Spacing: accordion gaps, header padding, icon size, account headers, and item rows are compacted consistently.
+- Colors: the existing indigo, violet, teal, slate, and rose semantic tokens are unchanged.
+- Assets: existing Font Awesome icons and Chart.js chart rendering are retained; no new raster assets are required.
+- Copy: operating and housing purposes now match the revised debt classification.
+
+### Findings and checks
+
+- No actionable P0, P1, or P2 differences remain.
+- Portfolio has no horizontal overflow at 390 x 844.
+- Total assets 300,628,856 KRW, liabilities 65,000,000 KRW, and net worth 235,628,856 KRW remain reconciled.
+
+final result: passed
+
 ## Phase 1 alignment and Portfolio Phase 2 grouping — 2026-07-26
 
 ### Evidence

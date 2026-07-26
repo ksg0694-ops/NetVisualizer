@@ -35,7 +35,11 @@ assert.equal(Number(snapshot.debtRatio.toFixed(2)), 26.67);
 const cfoGroups = FinanceModel.buildCfoAssetGroups({
     현금: {
         isDebt: false,
-        items: [{ id: 'cash', name: '생활비통장', amount: 1_000_000, classification: { assetType: 'account' } }],
+        items: [
+            { id: 'loan-account', name: '대출통장', amount: 0, classification: { assetType: 'account' } },
+            { id: 'salary', name: '월급통장', amount: 500_000, classification: { assetType: 'account' } },
+            { id: 'living', name: '생활비통장', amount: 500_000, classification: { assetType: 'account' } },
+        ],
     },
     안전: {
         isDebt: false,
@@ -62,11 +66,17 @@ const cfoGroups = FinanceModel.buildCfoAssetGroups({
     },
 });
 assert.deepEqual(cfoGroups.groups.map((group) => group.key), ['operating', 'safe', 'investment', 'housing', 'pension']);
-assert.equal(cfoGroups.groups.find((group) => group.key === 'operating').assetAmount, 1_000_000);
-assert.equal(cfoGroups.groups.find((group) => group.key === 'operating').liabilityAmount, 40_000_000);
+const operatingGroup = cfoGroups.groups.find((group) => group.key === 'operating');
+const housingGroup = cfoGroups.groups.find((group) => group.key === 'housing');
+assert.equal(operatingGroup.assetAmount, 1_000_000);
+assert.equal(operatingGroup.liabilityAmount, 0);
+assert.deepEqual(operatingGroup.items.map((item) => item.name), ['생활비통장', '월급통장']);
+assert.ok(!cfoGroups.groups.some((group) => group.items.some((item) => item.name === '대출통장')));
 assert.equal(cfoGroups.groups.find((group) => group.key === 'safe').assetAmount, 22_000_000);
 assert.equal(cfoGroups.groups.find((group) => group.key === 'investment').assetAmount, 5_000_000);
-assert.equal(cfoGroups.groups.find((group) => group.key === 'housing').assetAmount, 100_000_000);
+assert.equal(housingGroup.assetAmount, 100_000_000);
+assert.equal(housingGroup.liabilityAmount, 40_000_000);
+assert.deepEqual(housingGroup.items.map((item) => item.name), ['전세금', '신용대출']);
 assert.equal(cfoGroups.totalAssets, 131_000_000);
 assert.equal(cfoGroups.totalLiabilities, 40_000_000);
 assert.equal(cfoGroups.netWorth, 91_000_000);

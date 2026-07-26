@@ -70,20 +70,20 @@
         const renderPortfolioItemRow = (item) => {
             const debt = Boolean(item.isDebt || item.amount < 0 || item.classification?.assetType === 'debt');
             return `
-                <div class="flex items-center justify-between gap-3 text-sm">
+                <div class="flex items-center justify-between gap-2 py-0.5 text-xs">
                     <div class="min-w-0">
-                        <div class="flex min-w-0 items-center gap-2">
+                        <div class="flex min-w-0 items-center gap-1.5">
                             <span class="h-1.5 w-1.5 shrink-0 rounded-full ${debt ? 'bg-rose-400' : 'bg-slate-300'}"></span>
-                            <span class="truncate text-gray-700">${escapeHtml(item.name)}</span>
+                            <span class="truncate font-medium text-gray-700">${escapeHtml(item.name)}</span>
                             ${getAssetClassBadgeHtml(item.classification)}
                         </div>
-                        <p class="mt-0.5 truncate pl-3.5 text-[9px] text-slate-400">
+                        <p class="truncate pl-3 text-[8px] leading-tight text-slate-400">
                             ${escapeHtml(item.groupName || '')}${item.maturity ? ` · ${escapeHtml(item.maturity)}` : ''}
                         </p>
                     </div>
                     <div class="flex shrink-0 flex-col items-end text-right">
                         <span class="font-medium ${debt ? 'text-rose-500' : 'text-gray-700'}">${Number(item.amount || 0).toLocaleString()}원</span>
-                        ${item.shares ? `<span class="text-[10px] font-bold tracking-tight text-gray-400">${item.shares.toLocaleString()}주 · 단가 ${Math.floor(item.amount / item.shares).toLocaleString()}원</span>` : ''}
+                        ${item.shares ? `<span class="text-[9px] font-bold leading-tight tracking-tight text-gray-400">${item.shares.toLocaleString()}주 · 단가 ${Math.floor(item.amount / item.shares).toLocaleString()}원</span>` : ''}
                     </div>
                 </div>
             `;
@@ -91,26 +91,29 @@
 
         const renderInvestmentAccountRows = (items) => {
             const accountGroups = {};
-            const accountOrderMap = getPortfolioAccountOrderMap(items);
             items.forEach((item) => {
                 const accountName = getPortfolioAccountDisplayName(item);
                 if (!accountGroups[accountName]) accountGroups[accountName] = [];
                 accountGroups[accountName].push(item);
             });
             return Object.entries(accountGroups)
-                .sort(([a], [b]) => comparePortfolioAccounts(a, b, accountOrderMap))
-                .map(([accountName, accountItems]) => {
-                    const accountTotal = accountItems.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+                .map(([accountName, accountItems]) => ({
+                    accountName,
+                    accountItems,
+                    accountTotal: accountItems.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+                }))
+                .sort((a, b) => b.accountTotal - a.accountTotal || a.accountName.localeCompare(b.accountName, 'ko'))
+                .map(({ accountName, accountItems, accountTotal }) => {
                     return `
-                        <div class="overflow-hidden rounded-xl border border-violet-100 bg-white">
-                            <div class="flex items-center justify-between gap-3 border-b border-violet-100 bg-violet-50/50 px-3 py-1.5">
-                                <div class="min-w-0">
+                        <div class="overflow-hidden rounded-lg border border-violet-100 bg-white">
+                            <div class="flex items-center justify-between gap-2 border-b border-violet-100 bg-violet-50/50 px-2.5 py-1">
+                                <div class="flex min-w-0 items-center gap-1.5">
                                     <p class="truncate text-xs font-bold text-gray-800">${escapeHtml(accountName)}</p>
-                                    <p class="text-[10px] text-gray-400">${accountItems.length}개 자산</p>
+                                    <p class="shrink-0 text-[9px] text-gray-400">${accountItems.length}개</p>
                                 </div>
                                 <p class="whitespace-nowrap text-xs font-black text-violet-700">${accountTotal.toLocaleString()}원</p>
                             </div>
-                            <div class="space-y-1.5 p-2.5">${accountItems.map(renderPortfolioItemRow).join('')}</div>
+                            <div class="space-y-0.5 p-2">${accountItems.map(renderPortfolioItemRow).join('')}</div>
                         </div>
                     `;
                 }).join('');
@@ -147,27 +150,27 @@
                     : '';
                 wrapper.insertAdjacentHTML('beforeend', `
                     <div class="overflow-hidden rounded-xl border shadow-sm ${ui.borderClass}">
-                        <div class="flex w-full cursor-pointer items-center justify-between gap-3 bg-white p-3 transition-colors hover:bg-slate-50" onclick="toggleAccordion(this)">
+                        <div class="flex w-full cursor-pointer items-center justify-between gap-2 bg-white px-2.5 py-2 transition-colors hover:bg-slate-50" onclick="toggleAccordion(this)">
                             <div class="flex min-w-0 items-center gap-2">
-                                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${ui.iconClass}">
+                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${ui.iconClass}">
                                     <i class="fas ${ui.icon} text-xs" aria-hidden="true"></i>
                                 </span>
                                 <div class="min-w-0">
                                     <div class="flex items-center gap-1">
-                                        <span class="truncate text-sm font-bold text-gray-800 md:text-base">${escapeHtml(group.label)}</span>
+                                        <span class="truncate text-sm font-bold text-gray-800">${escapeHtml(group.label)}</span>
                                         ${investmentButton}
                                     </div>
-                                    <p class="text-[9px] text-slate-400">${escapeHtml(group.purpose)} · ${group.items.length}개 항목</p>
+                                    <p class="text-[8px] leading-tight text-slate-400">${escapeHtml(group.purpose)} · ${group.items.length}개 항목</p>
                                 </div>
                             </div>
-                            <div class="flex shrink-0 items-center gap-2">
+                            <div class="flex shrink-0 items-center gap-1.5">
                                 ${liabilityBadge}
-                                <span class="text-sm font-bold text-gray-800 md:text-base">${group.assetAmount.toLocaleString()}원</span>
-                                <i class="fas fa-chevron-down text-sm text-gray-400 accordion-icon"></i>
+                                <span class="text-sm font-bold text-gray-800">${group.assetAmount.toLocaleString()}원</span>
+                                <i class="fas fa-chevron-down text-xs text-gray-400 accordion-icon"></i>
                             </div>
                         </div>
                         <div class="accordion-content bg-white">
-                            <div class="space-y-2 border-t border-gray-100 p-3">
+                            <div class="space-y-1 border-t border-gray-100 p-2">
                                 ${group.items.length > 0
                                     ? (group.key === 'investment' ? renderInvestmentAccountRows(group.items) : group.items.map(renderPortfolioItemRow).join(''))
                                     : '<p class="py-2 text-center text-sm text-gray-400">등록된 내역이 없습니다.</p>'}

@@ -25,7 +25,7 @@
     <!-- Shared runtime and feature modules -->
     <script src="./js/shared/appUtils.js?v=20260715-foundation-1"></script>
     <script src="./js/features/financeRepository.js?v=20260717-monthly-close-1"></script>
-    <script src="./js/features/financeModel.js?v=20260726-phase2-portfolio-1"></script>
+    <script src="./js/features/financeModel.js?v=20260726-phase2-portfolio-2"></script>
     <script src="./js/generated/personal-cfo-domain.js?v=20260726-monthly-report-1"></script>
     <script src="./js/features/monthlyClose.js?v=20260717-monthly-close-5"></script>
     <script src="./js/features/appCore.js?v=20260726-phase2-portfolio-1"></script>
@@ -36,7 +36,7 @@
     <script src="./js/features/transactionImport.js?v=20260708-auth-cloud"></script>
     <script src="./js/features/portfolioEditor.js?v=20260717-portfolio-draft-1"></script>
     <script src="./js/features/cashflowControls.js"></script>
-    <script src="./js/features/portfolioViews.js?v=20260726-phase2-portfolio-1"></script>
+    <script src="./js/features/portfolioViews.js?v=20260726-phase2-portfolio-2"></script>
     <script src="./js/features/financeViews.js?v=20260726-phase2-portfolio-1"></script>
     <script src="./js/features/healthTracker.js?v=20260713-public-server"></script>
     <script src="./js/features/checklist.js?v=20260713-public-server"></script>
@@ -78,7 +78,7 @@
                     <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
                 </div>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.03.27
+                    version 1.03.28
                 </div>
             </div>
             <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-2 space-y-2">
@@ -888,12 +888,12 @@
                     </div>
 
                     <!-- 우측: 계좌 리스트 (아코디언) -->
-                    <div class="flex flex-col rounded-xl border border-gray-100 bg-white p-4 shadow-sm lg:col-span-2">
+                    <div class="flex flex-col rounded-xl border border-gray-100 bg-white p-3 shadow-sm lg:col-span-2">
                         <!-- 💡 헤더 업데이트: 포트폴리오 금액 수정 버튼 추가 -->
-                        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                            <h3 class="text-lg font-bold text-gray-800">CFO 그룹별 보유자산</h3>
+                        <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                            <h3 class="text-base font-bold text-gray-800">CFO 그룹별 보유자산</h3>
                             <div class="flex items-center gap-2">
-                                <button onclick="openPortfolioEditModal()" class="text-xs text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition whitespace-nowrap shrink-0">
+                                <button onclick="openPortfolioEditModal()" class="shrink-0 whitespace-nowrap rounded-lg bg-indigo-50 px-2.5 py-1 text-[11px] text-indigo-600 transition hover:bg-indigo-100">
                                     <i class="fas fa-edit mr-1"></i>금액 수정
                                 </button>
                                 <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded font-bold" id="portfolio-month-badge">계산중</span>
@@ -914,7 +914,7 @@
                             </button>
                         </div>
 
-                        <div class="space-y-3" id="portfolio-accordion-wrapper">
+                        <div class="space-y-2" id="portfolio-accordion-wrapper">
                             <!-- JS에서 동적으로 생성 -->
                         </div>
                     </div>

@@ -1,12 +1,13 @@
 (function (root) {
     const utils = root.AppUtils || {};
     const CFO_ASSET_GROUP_DEFINITIONS = Object.freeze([
-        { key: 'operating', label: '운영자산', purpose: '소비 · 상환', color: '#64748B' },
+        { key: 'operating', label: '운영자산', purpose: '생활 운영', color: '#64748B' },
         { key: 'safe', label: '안전자산', purpose: '현금 방어', color: '#4F46E5' },
         { key: 'investment', label: '투자자산', purpose: '시장 성장', color: '#7C3AED' },
-        { key: 'housing', label: '주거자산', purpose: '전세 · 청약', color: '#0F766E' },
+        { key: 'housing', label: '주거자산', purpose: '전세 · 청약 · 대출', color: '#0F766E' },
         { key: 'pension', label: '연금', purpose: '장기 노후', color: '#475569' },
     ]);
+    const OPERATING_ACCOUNT_ORDER = Object.freeze(['생활비통장', '월급통장']);
 
     function number(value) {
         const parsed = Number(value);
@@ -31,11 +32,28 @@
         return item.groupIsDebt || item.assetType === 'debt' || item.amount < 0;
     }
 
+    function isExcludedCfoItem(item = {}) {
+        return String(item.name || '').trim() === '대출통장';
+    }
+
+    function compareCfoGroupItems(a, b, groupKey = '') {
+        if (groupKey === 'operating') {
+            const rankA = OPERATING_ACCOUNT_ORDER.indexOf(String(a.name || '').trim());
+            const rankB = OPERATING_ACCOUNT_ORDER.indexOf(String(b.name || '').trim());
+            const normalizedRankA = rankA === -1 ? Number.MAX_SAFE_INTEGER : rankA;
+            const normalizedRankB = rankB === -1 ? Number.MAX_SAFE_INTEGER : rankB;
+            if (normalizedRankA !== normalizedRankB) return normalizedRankA - normalizedRankB;
+        }
+        const amountDiff = Math.abs(number(b.amount)) - Math.abs(number(a.amount));
+        if (amountDiff !== 0) return amountDiff;
+        return String(a.name || '').localeCompare(String(b.name || ''), 'ko');
+    }
+
     function classifyCfoAssetGroup(item = {}) {
         const assetType = String(item.assetType || item.classification?.assetType || '').toLowerCase();
         const instrumentType = String(item.instrumentType || item.classification?.instrumentType || '').toLowerCase();
         const text = `${item.groupName || ''} ${item.name || ''}`.toLowerCase();
-        if (isDebtItem(item)) return 'operating';
+        if (isDebtItem(item)) return 'housing';
         if (assetType === 'pension' || /연금|퇴직|irp/.test(text)) return 'pension';
         if (assetType === 'real_estate' || /전세|보증금|청약|주택|부동산/.test(text)) return 'housing';
         if (
@@ -56,7 +74,7 @@
             netAmount: 0,
         }));
         const groupByKey = new Map(groups.map((group) => [group.key, group]));
-        flattenPortfolio(portfolioData).forEach((item) => {
+        flattenPortfolio(portfolioData).filter((item) => !isExcludedCfoItem(item)).forEach((item) => {
             const key = classifyCfoAssetGroup(item);
             const group = groupByKey.get(key) || groupByKey.get('operating');
             const debt = isDebtItem(item);
@@ -66,6 +84,7 @@
             else group.assetAmount += Math.max(0, number(item.amount));
             group.netAmount = group.assetAmount - group.liabilityAmount;
         });
+        groups.forEach((group) => group.items.sort((a, b) => compareCfoGroupItems(a, b, group.key)));
         const totalAssets = groups.reduce((sum, group) => sum + group.assetAmount, 0);
         const totalLiabilities = groups.reduce((sum, group) => sum + group.liabilityAmount, 0);
         return {

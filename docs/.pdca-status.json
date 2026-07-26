@@ -4,9 +4,9 @@
   "feature": "August Finance Data and UX Refresh",
   "phase": "check",
   "progress": 99,
-  "updatedAt": "2026-07-26T21:34:00+09:00",
+  "updatedAt": "2026-07-26T22:24:00+09:00",
   "status": "in_progress",
-  "currentFocus": "Close Phase 1 alignment and start Portfolio Phase 2 with the five CFO-purpose asset groups.",
+  "currentFocus": "Compact the Portfolio Phase 2 holdings list and refine operating and housing classifications.",
   "completed": [
     "Synchronized the July accounting-period ledger with the current source workbook.",
     "Added the structural monthly cash-flow view to Personal CFO.",
@@ -37,7 +37,10 @@
     "Removed allocation route tags and split Personal CFO assets into safe assets and pension, housing, and investment assets.",
     "Removed the baseline-salary KPI from Long-term Goal and aligned the Personal CFO columns and internal rows.",
     "Grouped current holdings into operating, safe, investment, housing, and pension assets with reconciled totals.",
-    "Prioritized product attributes over source folders so IMA and issuance-note products remain safe assets."
+    "Prioritized product attributes over source folders so IMA and issuance-note products remain safe assets.",
+    "Compacted the CFO holdings list while preserving the five-group order and responsive layout.",
+    "Moved the housing loan from operating assets to housing assets and removed the empty loan transit account.",
+    "Sorted holdings and investment accounts by descending amount, with living-expense and salary accounts kept in the requested order."
   ],
   "remaining": [
     "Phase 2: rebuild the portfolio around holding quantity, market price, FX rate, Port, and monthly position snapshots.",
