@@ -20,37 +20,48 @@
     function renderAssetTrendSummary(model) {
         if (!model) return;
 
-        const totalGrowthEl = document.getElementById('asset-total-growth');
-        const avgGrowthEl = document.getElementById('asset-avg-growth');
-        const goalPercentEl = document.getElementById('asset-goal-percent');
-        const goalBarEl = document.getElementById('asset-goal-bar');
         const goalRemainingEl = document.getElementById('asset-goal-remaining');
         const requiredGrowthEl = document.getElementById('asset-required-growth');
         const reportCurrentAssetEl = document.getElementById('monthly-report-current-asset');
         const reportAssetAsofEl = document.getElementById('monthly-report-asset-asof');
         const reportGoalRemainingEl = document.getElementById('monthly-report-goal-remaining');
         const reportRequiredGrowthEl = document.getElementById('monthly-report-required-growth');
+        const reportForecastAssetEl = document.getElementById('monthly-report-forecast-asset');
+        const reportForecastMetaEl = document.getElementById('monthly-report-forecast-meta');
+        const forecastYearEndEl = document.getElementById('asset-forecast-year-end');
+        const forecastRetainedEl = document.getElementById('asset-forecast-retained');
+        const forecastObservationsEl = document.getElementById('asset-forecast-observations');
+        const forecastMethodEl = document.getElementById('asset-forecast-method');
         const dashboardTitleEl = document.getElementById('dashboard-asset-title');
-        const goalPercentage = Number(model.goalPercentage) || 0;
         const goalMeta = getAssetGoalProgressMeta(model);
+        const forecast = model.incomeTrendForecast || {};
+        const projection = model.dashboardProjection || {};
+        const forecastYearEnd = Number(projection.yearEndAsset || model.currentAsset || 0);
+        const forecastGoalGap = Math.max(0, Number(model.targetGoalAsset || 0) - forecastYearEnd);
+        const averageRetained = Number(projection.averageMonthlyRetained || 0);
+        const trendDirection = Number(forecast.incomeSlope || 0) >= 0 ? '증가' : '감소';
+        const forecastMethodText = forecast.observedMonths > 0
+            ? `마감 ${forecast.observedMonths}개월 수입 ${trendDirection} 추세 · 저축+잔여 중앙비율 ${(Number(forecast.retentionRate || 0) * 100).toFixed(1)}%`
+            : '예측에 사용할 마감 현금흐름이 부족합니다.';
 
-        if (totalGrowthEl) totalGrowthEl.innerHTML = `<span class="text-indigo-600">${model.totalAssetGrowth >= 0 ? '+' : ''}${model.totalAssetGrowth.toLocaleString()}</span>원`;
-        if (avgGrowthEl) avgGrowthEl.innerHTML = `<span class="text-emerald-600">${model.avgMonthlyGrowth >= 0 ? '+' : ''}${Math.round(model.avgMonthlyGrowth).toLocaleString()}</span>원/월`;
-        if (goalPercentEl) goalPercentEl.innerHTML = `<span class="text-amber-500">${goalPercentage.toFixed(1)}</span>%`;
         if (goalRemainingEl) goalRemainingEl.textContent = formatWon(goalMeta.remaining);
-        if (requiredGrowthEl) requiredGrowthEl.textContent = goalMeta.remaining > 0
-            ? `연말까지 월 ${formatWon(goalMeta.requiredMonthlyGrowth)} 필요`
-            : '목표 달성';
+        if (requiredGrowthEl) requiredGrowthEl.textContent = forecastGoalGap > 0
+            ? `현재 추세 유지 시 연말 목표까지 ${formatWon(forecastGoalGap)}`
+            : '현재 추세 기준 연말 목표 도달';
         if (reportCurrentAssetEl) reportCurrentAssetEl.textContent = formatWon(model.currentAsset);
         if (reportAssetAsofEl) reportAssetAsofEl.textContent = `${currentMonthKey || '현재'} 기준`;
         if (reportGoalRemainingEl) reportGoalRemainingEl.textContent = formatWon(goalMeta.remaining);
-        if (reportRequiredGrowthEl) reportRequiredGrowthEl.textContent = goalMeta.remaining > 0
-            ? `연말까지 월 ${formatWon(goalMeta.requiredMonthlyGrowth)}씩 필요`
-            : '목표를 달성했습니다.';
-        if (goalBarEl) {
-            goalBarEl.style.width = '0%';
-            setTimeout(() => { goalBarEl.style.width = `${Math.max(0, Math.min(100, goalPercentage))}%`; }, 100);
-        }
+        if (reportRequiredGrowthEl) reportRequiredGrowthEl.textContent = forecastGoalGap > 0
+            ? `연말 예상 ${formatWon(forecastGoalGap)} 부족`
+            : '예상 경로상 목표 도달';
+        if (reportForecastAssetEl) reportForecastAssetEl.textContent = formatWon(forecastYearEnd);
+        if (reportForecastMetaEl) reportForecastMetaEl.textContent = averageRetained > 0
+            ? `월 평균 +${formatWon(averageRetained)}`
+            : '예측 데이터 부족';
+        if (forecastYearEndEl) forecastYearEndEl.textContent = formatWon(forecastYearEnd);
+        if (forecastRetainedEl) forecastRetainedEl.textContent = averageRetained > 0 ? `+${formatWon(averageRetained)}` : '-';
+        if (forecastObservationsEl) forecastObservationsEl.textContent = `${Number(forecast.observedMonths || 0)}개월`;
+        if (forecastMethodEl) forecastMethodEl.textContent = forecastMethodText;
         if (dashboardTitleEl) dashboardTitleEl.textContent = model.dashboardTitle;
     }
 
@@ -63,35 +74,42 @@
         return {
             remaining,
             monthsRemaining,
-            requiredMonthlyGrowth: remaining > 0 ? Math.ceil(remaining / monthsRemaining) : 0,
         };
     }
 
-    function buildAssetGoalPath(data, targetGoalAsset) {
-        const values = Array.isArray(data) ? data : [];
-        const lastActualIndex = values.reduce(
-            (latest, value, index) => (Number.isFinite(Number(value)) && value !== null ? index : latest),
-            -1,
-        );
-        const path = values.map(() => null);
-        if (lastActualIndex < 0) return path;
-        const currentAsset = Number(values[lastActualIndex] || 0);
-        const finalIndex = values.length - 1;
-        if (finalIndex <= lastActualIndex || currentAsset >= targetGoalAsset) {
-            path[lastActualIndex] = currentAsset;
-            return path;
-        }
-        const intervals = finalIndex - lastActualIndex;
-        for (let index = lastActualIndex; index <= finalIndex; index += 1) {
-            const progress = (index - lastActualIndex) / intervals;
-            path[index] = Math.round(currentAsset + ((targetGoalAsset - currentAsset) * progress));
-        }
-        return path;
+    function calculateLinearTrend(values = []) {
+        return window.FinanceForecastFeature.calculateLinearTrend(values);
     }
 
-    function createAssetTrendChartConfig(labels, data, targetGoalAsset) {
+    function buildIncomeTrendForecast(referenceMonthKey) {
+        const observations = getCashFlowPeriods()
+            .filter((period) => !referenceMonthKey || period.key <= referenceMonthKey)
+            .sort((a, b) => a.key.localeCompare(b.key))
+            .map((period) => ({ key: period.key, summary: getCashFlowStructureSummary(period.key) }))
+            .filter((item) => Number(item.summary?.totalIncome || 0) > 0);
+        const incomes = observations.map((item) => Number(item.summary.totalIncome || 0));
+        const retentionRates = observations
+            .map((item) => Number(item.summary.savingAndResidual || 0) / Number(item.summary.totalIncome || 1))
+            .filter(Number.isFinite)
+            .map((value) => Math.max(0, Math.min(1, value)));
+        const trend = calculateLinearTrend(incomes);
+        return {
+            observedMonths: observations.length,
+            firstPeriodKey: observations[0]?.key || '',
+            lastPeriodKey: observations[observations.length - 1]?.key || '',
+            incomeSlope: trend.slope,
+            fittedLatestIncome: trend.fittedLatest,
+            retentionRate: retentionRates.length ? median(retentionRates) : 0,
+        };
+    }
+
+    function buildAssetIncomeForecastPath(data, incomeForecast) {
+        return window.FinanceForecastFeature.buildAssetIncomeForecastPath(data, incomeForecast);
+    }
+
+    function createAssetTrendChartConfig(labels, data, targetGoalAsset, incomeForecast) {
         const goalData = labels.map(() => targetGoalAsset);
-        const goalPathData = buildAssetGoalPath(data, targetGoalAsset);
+        const forecastPathData = buildAssetIncomeForecastPath(data, incomeForecast).path;
         return {
             type: 'line',
             data: {
@@ -120,8 +138,8 @@
                         order: 1
                     },
                     {
-                        label: '목표 경로',
-                        data: goalPathData,
+                        label: '수입 추세 기반 예상',
+                        data: forecastPathData,
                         spanGaps: true,
                         borderColor: '#64748B',
                         backgroundColor: '#64748B',
@@ -188,7 +206,7 @@
             renderOrUpdateChart(
                 'dashAsset',
                 'dashboardAssetChart',
-                createAssetTrendChartConfig(model.dashboardSeries.labels, model.dashboardSeries.data, model.targetGoalAsset)
+                createAssetTrendChartConfig(model.dashboardSeries.labels, model.dashboardSeries.data, model.targetGoalAsset, model.incomeTrendForecast)
             );
         }
 
@@ -196,7 +214,7 @@
             renderOrUpdateChart(
                 'fullAsset',
                 'fullAssetChart',
-                createAssetTrendChartConfig(model.fullSeries.labels, model.fullSeries.data, model.targetGoalAsset)
+                createAssetTrendChartConfig(model.fullSeries.labels, model.fullSeries.data, model.targetGoalAsset, model.incomeTrendForecast)
             );
         }
         if (document.getElementById('monthlyReportAssetChart')) {
@@ -207,7 +225,7 @@
             renderOrUpdateChart(
                 'monthlyReportAsset',
                 'monthlyReportAssetChart',
-                createAssetTrendChartConfig(model.dashboardSeries.labels, reportData, model.targetGoalAsset)
+                createAssetTrendChartConfig(model.dashboardSeries.labels, reportData, model.targetGoalAsset, model.incomeTrendForecast)
             );
         }
     }
@@ -227,6 +245,8 @@
             prevAsset: db.prevAsset,
             monthIndex: db.monthIndex
         });
+        model.incomeTrendForecast = buildIncomeTrendForecast(currentMonthKey);
+        model.dashboardProjection = buildAssetIncomeForecastPath(model.dashboardSeries.data, model.incomeTrendForecast);
 
         renderAssetTrendDashboardDiff(model);
         renderAssetTrendSummary(model);
@@ -346,8 +366,8 @@
             { label: '잔여', amount: structure.residual, detail: '저축 후 남은 가용 현금', icon: 'fa-wallet', classes: structure.residual >= 0 ? 'border-lime-100 bg-lime-50 text-lime-700' : 'border-amber-100 bg-amber-50 text-amber-700' },
         ];
         container.innerHTML = `
-            <div class="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:p-5">
-                <div class="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div class="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
+                <div class="mb-2 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                         <h3 class="text-sm font-bold text-gray-900 md:text-base">이번 달 재무 배분</h3>
                         <p class="mt-0.5 text-[10px] text-gray-400 md:text-xs">수입 = 소비 + 상환 + 저축 + 잔여</p>
@@ -356,27 +376,27 @@
                         저축+잔여 ${escapeHtml(formatWon(structure.savingAndResidual))}
                     </span>
                 </div>
-                <div class="grid grid-cols-1 items-stretch gap-3 md:grid-cols-[210px_28px_minmax(0,1fr)]">
-                    <article class="flex min-h-28 flex-col justify-between rounded-xl border border-blue-100 bg-blue-50 p-4 text-blue-700">
+                <div class="grid grid-cols-1 items-stretch gap-2 md:grid-cols-[165px_20px_minmax(0,1fr)]">
+                    <article class="flex min-h-20 flex-col justify-between rounded-lg border border-blue-100 bg-blue-50 p-3 text-blue-700">
                         <div class="flex items-center justify-between gap-2">
                             <span class="text-xs font-bold">수입</span>
                             <i class="fas fa-arrow-down-to-line text-sm" aria-hidden="true"></i>
                         </div>
-                        <p class="text-xl font-bold md:text-2xl">${escapeHtml(formatWon(structure.totalIncome))}</p>
+                        <p class="mt-1 text-lg font-bold">${escapeHtml(formatWon(structure.totalIncome))}</p>
                         <p class="text-[10px] text-blue-500">${escapeHtml(structure.periodLabel)} 마감</p>
                     </article>
                     <div class="hidden items-center justify-center text-indigo-300 md:flex" aria-hidden="true">
                         <i class="fas fa-arrow-right"></i>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 lg:grid-cols-4">
+                    <div class="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
                         ${rows.map((row) => `
-                            <article class="min-w-0 rounded-xl border p-3 ${row.classes}">
+                            <article class="min-w-0 rounded-lg border p-2.5 ${row.classes}">
                                 <div class="flex items-center justify-between gap-2">
                                     <p class="text-xs font-bold">${escapeHtml(row.label)}</p>
                                     <i class="fas ${row.icon} text-xs opacity-70" aria-hidden="true"></i>
                                 </div>
-                                <p class="mt-3 truncate text-sm font-bold md:text-base">${escapeHtml(formatWon(row.amount))}</p>
-                                <p class="mt-1 text-[9px] leading-snug opacity-70">${escapeHtml(row.detail)}</p>
+                                <p class="mt-1.5 truncate text-sm font-bold">${escapeHtml(formatWon(row.amount))}</p>
+                                <p class="mt-0.5 truncate text-[9px] leading-snug opacity-70">${escapeHtml(row.detail)}</p>
                             </article>
                         `).join('')}
                     </div>
@@ -398,8 +418,10 @@
         setText('monthly-report-period-range', db?.periodStr || '기간 없음');
         if (!structure) {
             setText('monthly-report-status', '데이터 없음');
+            destroyChart('monthlyReportAllocation');
             [
                 'monthly-report-income',
+                'monthly-report-expense',
                 'monthly-report-spending',
                 'monthly-report-repayment',
                 'monthly-report-saving',
@@ -417,6 +439,7 @@
             residual: income > 0 ? (Number(structure.residual || 0) / income) * 100 : 0,
         };
         setText('monthly-report-income', formatWon(structure.totalIncome));
+        setText('monthly-report-expense', formatWon(Number(structure.spending || 0) + Number(structure.repayment || 0)));
         setText('monthly-report-spending', formatWon(structure.spending));
         setText('monthly-report-repayment', formatWon(structure.repayment));
         setText('monthly-report-saving', formatWon(structure.saving));
@@ -440,50 +463,42 @@
             }`;
         }
 
-        const labels = [];
-        const incomeData = [];
-        const outflowData = [];
-        const retainedData = [];
-        getYearMonthKeys(currentMonthKey).forEach((key) => {
-            const item = getCashFlowStructureSummary(key);
-            if (!item) return;
-            labels.push(key.replace('20', '').replace('-', '.'));
-            incomeData.push(item.totalIncome);
-            outflowData.push(item.spending + item.repayment);
-            retainedData.push(item.savingAndResidual);
-        });
-        if (document.getElementById('monthlyReportCashFlowChart')) {
-            renderOrUpdateChart('monthlyReportCashFlow', 'monthlyReportCashFlowChart', {
+        if (document.getElementById('monthlyReportAllocationChart')) {
+            renderOrUpdateChart('monthlyReportAllocation', 'monthlyReportAllocationChart', {
                 type: 'bar',
                 data: {
-                    labels,
-                    datasets: [
-                        { type: 'bar', label: '수입', data: incomeData, backgroundColor: 'rgba(59, 130, 246, 0.72)', borderRadius: 5 },
-                        { type: 'bar', label: '소비+상환', data: outflowData, backgroundColor: 'rgba(244, 63, 94, 0.58)', borderRadius: 5 },
-                        { type: 'line', label: '저축+잔여', data: retainedData, borderColor: '#10B981', backgroundColor: '#10B981', borderWidth: 2.5, pointRadius: 2.5, pointHoverRadius: 4, tension: 0.3 },
-                    ],
+                    labels: ['수입', '소비+상환', '저축+잔여'],
+                    datasets: [{
+                        data: [
+                            Number(structure.totalIncome || 0),
+                            Number(structure.spending || 0) + Number(structure.repayment || 0),
+                            Number(structure.savingAndResidual || 0),
+                        ],
+                        backgroundColor: ['rgba(59, 130, 246, 0.72)', 'rgba(244, 63, 94, 0.62)', 'rgba(16, 185, 129, 0.72)'],
+                        borderRadius: 6,
+                        maxBarThickness: 46,
+                    }],
                 },
                 options: withChartTransitions({
                     responsive: true,
                     maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
                     scales: {
-                        x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 9, weight: '600' } } },
                         y: {
                             beginAtZero: true,
                             grid: { borderDash: [4, 5] },
-                            ticks: { font: { size: 9 }, callback: (value) => Math.round(value / 10000).toLocaleString() },
+                            ticks: { maxTicksLimit: 5, font: { size: 9 }, callback: (value) => Math.round(value / 10000).toLocaleString() },
                         },
                     },
                     plugins: {
-                        legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 6, font: { size: 9 } } },
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: (context) => `${context.dataset.label}: ${Number(context.raw || 0).toLocaleString()}원`,
+                                label: (context) => `${context.label}: ${Number(context.raw || 0).toLocaleString()}원`,
                             },
                         },
                     },
-                }, 320),
+                }, 280),
             });
         }
     }
@@ -689,7 +704,8 @@
 
         [
             ['cashflowIncomeCategory', 'cashflow-income-category-chart', 'cashflow-income-category-list', incomeDetailItems],
-            ['cashflowMainIncomeCategory', 'cashflow-main-income-category-chart', 'cashflow-main-income-category-list', incomeMainItems]
+            ['cashflowMainIncomeCategory', 'cashflow-main-income-category-chart', 'cashflow-main-income-category-list', incomeMainItems],
+            ['monthlyReportIncomeCategory', 'monthly-report-income-category-chart', 'monthly-report-income-category-list', incomeMainItems]
         ].forEach(([chartKey, chartId, listId, items]) => {
             renderCategoryDoughnutBlock({
                 chartKey,
@@ -700,13 +716,14 @@
                 total: incomeTotal,
                 colors: expandChartColors(incomeColors, incomeDetailItems.length),
                 accentClass: 'text-blue-600',
-                compact: chartKey.includes('Main')
+                compact: chartKey.includes('Main') || chartKey.includes('monthlyReport')
             });
         });
 
         [
             ['cashflowExpenseCategory', 'cashflow-expense-category-chart', 'cashflow-expense-category-list', expenseDetailItems],
-            ['cashflowMainExpenseCategory', 'cashflow-main-expense-category-chart', 'cashflow-main-expense-category-list', expenseMainItems]
+            ['cashflowMainExpenseCategory', 'cashflow-main-expense-category-chart', 'cashflow-main-expense-category-list', expenseMainItems],
+            ['monthlyReportExpenseCategory', 'monthly-report-expense-category-chart', 'monthly-report-expense-category-list', expenseMainItems]
         ].forEach(([chartKey, chartId, listId, items]) => {
             renderCategoryDoughnutBlock({
                 chartKey,
@@ -717,7 +734,7 @@
                 total: expenseTotal,
                 colors: expandChartColors(expenseColors, expenseDetailItems.length),
                 accentClass: 'text-red-600',
-                compact: chartKey.includes('Main')
+                compact: chartKey.includes('Main') || chartKey.includes('monthlyReport')
             });
         });
     }
@@ -1222,6 +1239,25 @@
         setElementText('re-analysis-income-meta', `마감 ${runRate.observedMonths}개월 급여 중앙값 연환산 ${formatWon(assumptions.annualIncome)} · 최근 월 원리금 ${formatWon(assumptions.existingMonthlyDebt)}`);
 
         setElementHtml('re-analysis-status', `<span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] md:text-xs font-bold ${status.className}"><i class="fas ${status.icon}"></i>${status.label}</span>`);
+
+        const totalCapacity = Math.max(0, funding.selfFunding + model.maxLoanByDsr);
+        const totalCapacityPct = assumptions.targetBudget > 0
+            ? Math.min(100, (totalCapacity / assumptions.targetBudget) * 100)
+            : 0;
+        setElementText('long-goal-self-funding', formatWon(funding.selfFunding));
+        setElementText('long-goal-mortgage-capacity', model.maxLoanByDsr > 0 ? formatWon(model.maxLoanByDsr) : '소득 가정 필요');
+        setElementText('long-goal-total-funding', formatWon(totalCapacity));
+        setElementText('long-goal-total-percent', `${totalCapacityPct.toFixed(1)}%`);
+        setElementWidth('long-goal-total-bar', totalCapacityPct);
+        setElementText('long-goal-dsr', assumptions.annualIncome > 0 ? `${model.dsrPct.toFixed(1)}% / ${assumptions.dsrLimitPct.toFixed(0)}%` : '미입력');
+        setElementText(
+            'long-goal-income-meta',
+            `연소득 ${formatWon(assumptions.annualIncome)} · 기존 월 원리금 ${formatWon(assumptions.existingMonthlyDebt)} · 스트레스 ${model.stressedRatePct.toFixed(1)}%`,
+        );
+        setElementHtml(
+            'long-goal-housing-status',
+            `<span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold ${status.className}"><i class="fas ${status.icon}"></i>${status.label}</span>`,
+        );
     }
 
     function openRealEstateAssumptionModal() {
@@ -1264,6 +1300,7 @@
                 : getCashFlowStats(db.transactions),
             fundingStatus,
         });
+        renderRealEstateAnalysis();
         updateFinanceRoadmap(officialSnapshot.netWorth);
     }
 

@@ -17,6 +17,7 @@ const requiredScripts = [
     './js/shared/appUtils.js',
     './js/features/financeRepository.js',
     './js/features/financeModel.js',
+    './js/features/financeForecast.js',
     './js/generated/personal-cfo-domain.js',
     './js/features/monthlyClose.js',
     './js/features/lifeDashboard.js',
@@ -26,6 +27,7 @@ requiredScripts.forEach((script) => assert.ok(index.includes(script), `${script}
 assert.ok(index.indexOf('./js/shared/appUtils.js') < index.indexOf('./js/features/appCore.js'), 'shared utils must load before appCore');
 assert.ok(index.indexOf('./js/features/financeRepository.js') < index.indexOf('./js/features/appCore.js'), 'finance repository must load before appCore');
 assert.ok(index.indexOf('./js/features/financeModel.js') < index.indexOf('./js/features/financeViews.js'), 'finance model must load before finance views');
+assert.ok(index.indexOf('./js/features/financeForecast.js') < index.indexOf('./js/features/financeViews.js'), 'finance forecast must load before finance views');
 assert.ok(index.indexOf('./js/generated/personal-cfo-domain.js') < index.indexOf('./js/features/appCore.js'), 'Personal CFO TypeScript runtime must load before legacy features');
 assert.ok(index.indexOf('./js/features/monthlyClose.js') < index.indexOf('./js/features/appCore.js'), 'monthly close controller must load before appCore hydration');
 assert.ok(!index.includes('xlsx.full.min.js'), 'SheetJS must be loaded on demand');
@@ -34,19 +36,30 @@ assert.ok(index.includes('id="finance-data-source-badge"'));
 assert.ok(index.includes('id="finance-cashflow-source-badge"'));
 assert.ok(index.includes('id="finance-closed-free-cash"'));
 assert.ok(index.includes('id="finance-decision-inbox"'));
-assert.ok(index.includes('id="cashflow-month-close-panel"'));
+assert.ok(!index.includes('id="cashflow-month-close-panel"'), 'cash-flow month close panel must stay off the detailed screen');
 assert.ok(index.includes('id="cashflow-allocation-panel"'));
+assert.ok(index.indexOf('id="cashflow-allocation-panel"') < index.indexOf('id="cashflow-main-income-category-chart"'), 'allocation must appear before income and expense cards');
 assert.ok(index.includes('id="monthlyReportAssetChart"'));
+assert.ok(index.includes('id="monthlyReportAllocationChart"'));
+assert.ok(index.includes('id="monthly-report-income-category-chart"'));
+assert.ok(index.includes('id="monthly-report-expense-category-chart"'));
 assert.ok(index.includes('id="monthly-report-goal-remaining"'));
 assert.ok(index.includes('id="portfolio-phase2-preview"'));
 assert.ok(index.includes('Monthly close'));
 assert.ok(index.includes('id="cashflow-view"'));
-assert.ok(index.includes('id="monthlyReportCashFlowChart"'));
+assert.ok(!index.includes('id="monthlyReportCashFlowChart"'), 'Monthly Report must not duplicate the monthly cash-flow trend');
 assert.ok(index.includes('>Monthly Report<'));
-assert.ok(index.indexOf('data-target="stats-view"') < index.indexOf('data-target="cashflow-view"'));
+assert.ok(index.indexOf('data-target="stats-view"') < index.indexOf('data-target="personal-cfo-view"'));
+assert.ok(index.indexOf('data-target="personal-cfo-view"') < index.indexOf('data-target="cashflow-view"'));
 assert.ok(index.indexOf('data-target="cashflow-view"') < index.indexOf('data-target="portfolio-view"'));
 assert.ok(index.indexOf('data-target="portfolio-view"') < index.indexOf('data-target="asset-view"'));
-assert.ok(index.indexOf('data-target="asset-view"') < index.indexOf('data-target="realestate-view"'));
+assert.ok(!index.includes('data-target="realestate-view"'), 'real-estate must not remain as a standalone tab');
+assert.ok(index.includes('>장기 목표<'));
+assert.ok(!index.includes('id="asset-goal-percent"'));
+assert.ok(!index.includes('id="asset-total-growth"'));
+assert.ok(!index.includes('id="asset-avg-growth"'));
+assert.ok(index.includes('id="long-goal-self-funding"'));
+assert.ok(index.includes('id="long-goal-mortgage-capacity"'));
 assert.ok(!index.includes('Finance Roadmap'));
 assert.ok(!index.includes('2026년 주요 분양 일정'));
 assert.ok(!index.includes('수도권 주요 청약 지도'));
@@ -86,7 +99,7 @@ assert.ok(cfo.includes("id: 'summary:cashflow:debt'"));
 assert.ok(cfo.includes("id: 'summary:cashflow:residual'"));
 assert.ok(cfo.includes('renderCfoStructureOverview'));
 assert.ok(cfo.includes('현금흐름과 재무상태 통합 요약'));
-assert.ok(cfo.includes("value: '월별 변동'"));
+assert.ok(cfo.includes("value: '금액 미표시'"));
 assert.ok(cfo.includes("value: '기준 약 130만원'"));
 assert.ok(cfo.includes("value: '기준 80만원'"));
 assert.ok(!cfo.includes('${renderKpiCards(model.summary, cashFlow)}'));
@@ -106,10 +119,13 @@ assert.ok(!appCore.includes('const PAYDAYS'), 'payday overrides must live in the
 assert.ok(financeModel.includes('items.sort((a, b) => b.priority - a.priority)'));
 assert.ok(financeViews.includes('selectLatestClosedCashFlow(periods, today)'));
 assert.ok(financeViews.includes("label: '저축+잔여'"));
-assert.ok(financeViews.includes("label: '목표 경로'"));
+assert.ok(financeViews.includes("label: '수입 추세 기반 예상'"));
 assert.ok(financeViews.includes("filter: function(context)"));
 assert.ok(financeViews.includes("renderMonthlyReportSummary(db, cashFlowStructure)"));
 assert.ok(financeViews.includes('getCashFlowStructureSummary'));
+assert.ok(financeViews.includes('buildIncomeTrendForecast'));
+assert.ok(financeViews.includes('buildAssetIncomeForecastPath'));
+assert.ok(financeViews.includes("setElementText('long-goal-mortgage-capacity'"));
 assert.ok(financeViews.includes('const selfFunding = Math.max(0, liquidAndSafe + housingFunds + discountedInvestments + debt)'));
 assert.ok(portfolioEditor.includes('createPortfolioDraft(rawPortfolioData)'));
 assert.ok(portfolioEditor.includes('savePortfolioDraft(workingPortfolioData)'));

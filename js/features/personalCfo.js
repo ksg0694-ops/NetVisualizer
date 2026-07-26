@@ -651,29 +651,34 @@
             { id: 'summary:asset:housing', label: '주거자산', detail: '청약통장·전세금', icon: 'fa-house', classes: 'border-amber-100 bg-amber-50 text-amber-700' },
         ].map((row) => ({ ...row, node: nodeById.get(row.id) }));
         const allocationRows = [
-            { label: '소비', value: '월별 변동', detail: '생활비·고정비', icon: 'fa-basket-shopping', classes: 'border-rose-100 bg-rose-50 text-rose-700' },
-            { label: '상환', value: '기준 약 130만원', detail: '전세 100만 · 신용 약 30만', icon: 'fa-building-columns', classes: 'border-red-100 bg-red-50 text-red-700' },
-            { label: '저축', value: '기준 80만원', detail: '청년도약 70만 · 연금 10만', icon: 'fa-piggy-bank', classes: 'border-emerald-100 bg-emerald-50 text-emerald-700' },
-            { label: '잔여', value: '월별 변동', detail: '월 마감 후 가용 현금', icon: 'fa-wallet', classes: 'border-lime-100 bg-lime-50 text-lime-700' },
+            { label: '소비', value: '금액 미표시', detail: '생활비 · 관리비 · 통신비 · 구독비', route: '월 운영', icon: 'fa-basket-shopping', classes: 'border-rose-100 bg-rose-50 text-rose-700' },
+            { label: '상환', value: '기준 약 130만원', detail: '전세 100만 · 신용 약 30만', route: '부채 감소', icon: 'fa-building-columns', classes: 'border-red-100 bg-red-50 text-red-700' },
+            { label: '저축', value: '기준 80만원', detail: '청년도약 70만 · 연금 10만', route: '안전·연금자산', icon: 'fa-piggy-bank', classes: 'border-emerald-100 bg-emerald-50 text-emerald-700' },
+            { label: '잔여', value: '금액 미표시', detail: '월 마감 뒤 남는 가용 현금', route: '안전·투자자산', icon: 'fa-wallet', classes: 'border-lime-100 bg-lime-50 text-lime-700' },
         ];
         const renderAllocationCard = (row) => `
-            <article class="min-w-0 rounded-lg border p-3 ${row.classes}">
-                <div class="flex items-center justify-between gap-2">
-                    <p class="truncate text-[11px] font-bold">${escapeHtml(row.label)}</p>
-                    <i class="fas ${row.icon} text-[10px] opacity-70" aria-hidden="true"></i>
+            <article class="flex min-w-0 items-center gap-3 rounded-lg border p-3 ${row.classes}">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/70">
+                    <i class="fas ${row.icon} text-xs opacity-80" aria-hidden="true"></i>
+                </span>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="truncate text-xs font-bold">${escapeHtml(row.label)}</p>
+                        <span class="shrink-0 rounded bg-white/70 px-1.5 py-0.5 text-[9px] font-bold">${escapeHtml(row.route)}</span>
+                    </div>
+                    <p class="mt-0.5 truncate text-[10px] opacity-70">${escapeHtml(row.detail)}</p>
                 </div>
-                <p class="mt-2 truncate text-sm font-bold">${escapeHtml(row.value)}</p>
-                <p class="mt-1 truncate text-[9px] opacity-65">${escapeHtml(row.detail)}</p>
+                <p class="shrink-0 text-right text-xs font-bold">${escapeHtml(row.value)}</p>
             </article>
         `;
         const renderAssetCard = (row) => `
-            <article class="min-w-0 rounded-lg border p-3 ${row.classes} ${row.node ? '' : 'opacity-55'}">
+            <article class="min-w-0 rounded-xl border p-3.5 ${row.classes} ${row.node ? '' : 'opacity-55'}">
                 <div class="flex items-center justify-between gap-2">
-                    <p class="truncate text-[11px] font-bold">${escapeHtml(row.label)}</p>
-                    <i class="fas ${row.icon} text-[10px] opacity-70" aria-hidden="true"></i>
+                    <p class="truncate text-xs font-bold">${escapeHtml(row.label)}</p>
+                    <i class="fas ${row.icon} text-xs opacity-70" aria-hidden="true"></i>
                 </div>
-                <p class="mt-2 truncate text-sm font-bold">${row.node ? escapeHtml(formatKrw(row.node.amount || 0)) : '데이터 없음'}</p>
-                <p class="mt-1 truncate text-[9px] opacity-65">${escapeHtml(row.detail)}</p>
+                <p class="mt-3 truncate text-base font-bold">${row.node ? escapeHtml(formatKrw(row.node.amount || 0)) : '데이터 없음'}</p>
+                <p class="mt-1 truncate text-[10px] opacity-65">${escapeHtml(row.detail)}</p>
             </article>
         `;
         return `
@@ -687,19 +692,37 @@
                     <span class="w-fit rounded-md border border-emerald-100 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">실제 자산 연결</span>
                 </div>
                 <div class="p-4">
-                    <div class="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-[180px_28px_minmax(320px,1fr)_28px_minmax(320px,1fr)]">
-                    <article class="flex min-h-32 flex-col justify-between rounded-xl border border-indigo-100 bg-indigo-600 p-4 text-white">
-                        <div class="flex items-center justify-between gap-2">
-                            <p class="text-xs font-bold">수입</p>
-                            <i class="fas fa-money-bill-wave text-sm opacity-70" aria-hidden="true"></i>
+                    <div class="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-[180px_28px_minmax(350px,0.95fr)_28px_minmax(350px,1.05fr)]">
+                    <article class="flex min-h-36 flex-col justify-between rounded-xl border border-indigo-500 bg-indigo-600 p-4 text-white lg:min-h-[342px]">
+                        <div>
+                            <div class="flex items-center justify-between gap-2">
+                                <p class="text-xs font-bold">수입</p>
+                                <i class="fas fa-money-bill-wave text-sm opacity-70" aria-hidden="true"></i>
+                            </div>
+                            <p class="mt-1 text-[10px] text-indigo-100">급여 · 기타수입</p>
                         </div>
-                        <p class="text-xl font-bold">월별 변동</p>
-                        <p class="text-[10px] text-indigo-100">급여 · 기타수입</p>
+                        <div>
+                            <p class="text-xl font-bold">금액 미표시</p>
+                            <p class="mt-1 text-[10px] leading-relaxed text-indigo-100">월급은 400만원으로 고정하지 않습니다.<br>실제 금액은 Monthly Report에 표시합니다.</p>
+                        </div>
+                        <span class="w-fit rounded-md bg-white/10 px-2 py-1 text-[10px] font-bold text-indigo-100">매월 실제 마감값 사용</span>
                     </article>
                     <div class="hidden items-center justify-center text-indigo-300 lg:flex" aria-hidden="true"><i class="fas fa-arrow-right"></i></div>
-                    <div class="grid grid-cols-2 gap-2">${allocationRows.map(renderAllocationCard).join('')}</div>
+                    <div class="rounded-xl border border-gray-100 bg-slate-50/70 p-3">
+                        <div class="mb-2 flex items-center justify-between gap-2">
+                            <p class="text-xs font-bold text-gray-700">매월 자금 배분</p>
+                            <span class="text-[9px] font-bold text-gray-400">수입의 이동</span>
+                        </div>
+                        <div class="grid gap-2">${allocationRows.map(renderAllocationCard).join('')}</div>
+                    </div>
                     <div class="hidden items-center justify-center text-indigo-300 lg:flex" aria-hidden="true"><i class="fas fa-arrow-right"></i></div>
-                    <div class="grid grid-cols-2 gap-2">${assetRows.map(renderAssetCard).join('')}</div>
+                    <div class="rounded-xl border border-gray-100 bg-white p-3 shadow-inner">
+                        <div class="mb-2 flex items-center justify-between gap-2">
+                            <p class="text-xs font-bold text-gray-700">내 자산</p>
+                            <span class="rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700">실제 포트폴리오 연결</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">${assetRows.map(renderAssetCard).join('')}</div>
+                    </div>
                     </div>
                     <div class="mt-4 grid grid-cols-1 gap-2 border-t border-gray-100 pt-4 sm:grid-cols-3">
                         <article class="rounded-lg bg-slate-50 px-3 py-2.5">
@@ -715,11 +738,10 @@
                             <p class="mt-1 text-base font-bold text-indigo-900">${escapeHtml(formatKrw(summary?.netWorth || 0))}</p>
                         </article>
                     </div>
-                    <div class="mt-3 flex flex-wrap gap-2 text-[10px] font-medium text-gray-500">
-                        <span class="rounded-md bg-blue-50 px-2 py-1 text-blue-700">잔여 → 안전자산</span>
-                        <span class="rounded-md bg-pink-50 px-2 py-1 text-pink-700">연금저축 → 연금자산</span>
-                        <span class="rounded-md bg-red-50 px-2 py-1 text-red-700">상환 → 부채 감소</span>
-                        <span class="rounded-md bg-violet-50 px-2 py-1 text-violet-700">투자 전환 → Portfolio Phase 2</span>
+                    <div class="mt-3 grid grid-cols-1 gap-2 text-[10px] font-medium text-gray-500 sm:grid-cols-3">
+                        <span class="rounded-md bg-red-50 px-2 py-1.5 text-center text-red-700">상환 → 총부채 감소</span>
+                        <span class="rounded-md bg-emerald-50 px-2 py-1.5 text-center text-emerald-700">저축 → 안전·연금자산</span>
+                        <span class="rounded-md bg-violet-50 px-2 py-1.5 text-center text-violet-700">잔여 → 안전·투자자산</span>
                     </div>
                 </div>
             </section>

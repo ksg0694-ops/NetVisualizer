@@ -2,11 +2,11 @@
   "project": "NetVisualizer",
   "level": "dynamic",
   "feature": "August Finance Data and UX Refresh",
-  "phase": "do",
-  "progress": 90,
-  "updatedAt": "2026-07-26T16:30:00+09:00",
+  "phase": "check",
+  "progress": 95,
+  "updatedAt": "2026-07-26T19:05:00+09:00",
   "status": "in_progress",
-  "currentFocus": "Review the validated Phase 1 navigation, Personal CFO, Monthly Report, long-term asset, and real-estate UX changes.",
+  "currentFocus": "Validate and release the Phase 1 CFO structure, Monthly Report consolidation, and integrated long-term housing goal.",
   "completed": [
     "Synchronized the July accounting-period ledger with the current source workbook.",
     "Added the structural monthly cash-flow view to Personal CFO.",
@@ -18,12 +18,19 @@
     "Replaced the Personal CFO KPI and network stack with one integrated variable-income and balance-sheet summary.",
     "Compressed Monthly Report into a 1366 x 768 notebook viewport without clipping.",
     "Fixed long-term asset prediction hover and removed Finance Roadmap.",
-    "Removed the real-estate schedule and map while preserving funding and DSR analysis."
+    "Removed the real-estate schedule and map while preserving funding and DSR analysis.",
+    "Merged monthly close and income allocation into one bar-and-donut Monthly Report section.",
+    "Merged long-term progress and goal path into one income-trend-based asset forecast.",
+    "Removed the cash-flow month-close panel and moved the compact allocation structure above income and expense.",
+    "Added Personal CFO as a primary finance tab with variable amounts intentionally hidden.",
+    "Renamed long-term assets to Long-term Goal and integrated available equity, mortgage capacity, total funding, and DSR.",
+    "Removed the standalone real-estate tab while keeping its assumptions inside Long-term Goal.",
+    "Vendored Chart.js and fixed hidden-tab 0x0 chart resizing for stable local and GitHub Pages rendering."
   ],
   "remaining": [
     "Phase 2: rebuild the portfolio around holding quantity, market price, FX rate, Port, and monthly position snapshots.",
     "Phase 2: add Port trends, holding drill-down, return history, and the portfolio section of the monthly Report.",
     "Recalculate loan eligibility after the real-estate policy update."
   ],
-  "nextStep": "Review the Phase 1 local preview, then define the portfolio Phase 2 position, market price, FX, Port, and monthly snapshot schema."
+  "nextStep": "Confirm the deployed Phase 1 screens, then define the portfolio Phase 2 position, market price, FX, Port, and monthly snapshot schema."
 }

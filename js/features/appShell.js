@@ -55,7 +55,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         'portfolio-view': { label: '재무 도구', title: '포트폴리오' },
         'stats-view': { label: '재무 도구', title: 'Monthly Report' },
         'cashflow-view': { label: '재무 도구', title: '현금흐름' },
-        'asset-view': { label: '재무 도구', title: '장기자산' },
+        'asset-view': { label: '재무 도구', title: '장기 목표' },
         'realestate-view': { label: '재무 도구', title: '부동산' },
         'invest-detail-view': { label: '재무 도구', title: '투자 상세' }
     };
@@ -66,10 +66,10 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     const mobileToolGroups = {
         'dashboard-view': [
             { target: 'stats-view', icon: 'fa-file-invoice-dollar', label: 'Report' },
+            { target: 'personal-cfo-view', icon: 'fa-diagram-project', label: '개인 CFO' },
             { target: 'cashflow-view', icon: 'fa-arrow-right-arrow-left', label: '현금흐름' },
             { target: 'portfolio-view', icon: 'fa-briefcase', label: '포트폴리오' },
-            { target: 'asset-view', icon: 'fa-chart-area', label: '장기자산' },
-            { target: 'realestate-view', icon: 'fa-home', label: '부동산' }
+            { target: 'asset-view', icon: 'fa-bullseye', label: '장기 목표' }
         ],
         'life-view': [
             { target: 'health-view', icon: 'fa-heart-pulse', label: '건강' },

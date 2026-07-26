@@ -163,7 +163,7 @@
             items.push({ priority: 80, priorityLabel: '점검', tone: 'rose', icon: 'fa-scale-balanced', target: 'portfolio-view', title: '부채비율 점검이 필요합니다.', detail: `현재 총자산 대비 ${debtRatio.toFixed(1)}%입니다.` });
         }
         if (fundingPct > 0 && fundingPct < 50) {
-            items.push({ priority: 60, priorityLabel: '계획', tone: 'indigo', icon: 'fa-house', target: 'realestate-view', title: '청약 자기자금을 점검하세요.', detail: `연금 제외·부채 차감 기준 ${fundingPct.toFixed(1)}%입니다.` });
+            items.push({ priority: 60, priorityLabel: '계획', tone: 'indigo', icon: 'fa-house', target: 'asset-view', title: '주거 목표 가용자금을 점검하세요.', detail: `연금 제외·부채 차감 기준 ${fundingPct.toFixed(1)}%입니다.` });
         }
         if (!items.length) {
             items.push({ priority: 10, priorityLabel: '안내', tone: 'slate', icon: 'fa-clipboard-check', target: 'portfolio-view', title: '이번 달 재무 점검을 시작하세요.', detail: '계좌 잔액과 포트폴리오 기준일을 확인합니다.' });

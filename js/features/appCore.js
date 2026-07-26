@@ -914,6 +914,9 @@
         myCharts[chartKey].data.labels = config.data.labels;
         myCharts[chartKey].data.datasets = config.data.datasets;
         myCharts[chartKey].options = config.options;
+        // Charts can be initialized while their tab is hidden. Re-measure the
+        // visible container before updating so a cached 0×0 canvas is restored.
+        myCharts[chartKey].resize();
         myCharts[chartKey].update(updateMode);
         return myCharts[chartKey];
     }

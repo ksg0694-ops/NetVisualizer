@@ -1,15 +1,17 @@
-const CACHE_NAME = 'smartbook-v2-app-cache-v135';
+const CACHE_NAME = 'smartbook-v2-app-cache-v137';
 const urlsToCache = [
   './',
   './index.html',
   './manifest.json',
   './sw.js',
+  './vendor/chart.umd.min.js',
   './js/shared/appUtils.js',
   './js/features/financeRepository.js',
   './js/features/financeModel.js',
   './js/generated/personal-cfo-domain.js',
   './js/features/appCore.js',
   './js/features/assetTrend.js',
+  './js/features/financeForecast.js',
   './js/features/quantEngine.js',
   './js/features/realEstate.js',
   './js/features/transactionImport.js',
