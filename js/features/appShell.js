@@ -52,7 +52,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         'health-view': { label: '생활 도구', title: '건강 기록' },
         'personal-cfo-view': { label: '재무 도구', title: '개인 CFO' },
         'portfolio-view': { label: '재무 도구', title: '포트폴리오' },
-        'stats-view': { label: '재무 도구', title: '현금흐름' },
+        'stats-view': { label: '재무 도구', title: '월별 Report' },
         'asset-view': { label: '재무 도구', title: '자산 추이' },
         'realestate-view': { label: '재무 도구', title: '부동산·청약' },
         'invest-detail-view': { label: '재무 도구', title: '투자 상세' }
@@ -64,7 +64,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     const mobileToolGroups = {
         'dashboard-view': [
             { target: 'personal-cfo-view', icon: 'fa-diagram-project', label: '재무맵' },
-            { target: 'stats-view', icon: 'fa-money-bill-transfer', label: '현금흐름' },
+            { target: 'stats-view', icon: 'fa-file-invoice-dollar', label: 'Report' },
             { target: 'portfolio-view', icon: 'fa-briefcase', label: '포트폴리오' },
             { target: 'asset-view', icon: 'fa-chart-area', label: '자산추이' },
             { target: 'realestate-view', icon: 'fa-home', label: '청약' }

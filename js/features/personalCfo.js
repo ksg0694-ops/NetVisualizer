@@ -347,14 +347,23 @@
         return label.length > limit ? `${label.slice(0, limit - 1)}...` : label;
     }
 
-    function renderKpiCards(summary) {
+    function renderKpiCards(summary, cashFlow) {
         const cashFlowReviewLabel = summary.cashFlowReviewStatus === 'confirmed'
             ? '분류 확정'
             : (summary.cashFlowReviewStatus === 'stale' ? '분류 재확인 필요' : '분류 미확정');
+        const observedSavingsRate = Number(cashFlow?.totalIncome) > 0
+            ? (Number(cashFlow?.savingTransfers || 0) / Number(cashFlow.totalIncome)) * 100
+            : null;
         const cards = [
             { label: '순자산', value: formatKrw(summary.netWorth), sub: `총자산 ${formatKrw(summary.totalAssets)}`, tone: 'slate', basis: 'actual' },
-            { label: '종료월 잉여현금', value: formatKrw(summary.monthlyFreeCashFlow), sub: `수입-지출 · ${cashFlowReviewLabel}`, tone: summary.monthlyFreeCashFlow >= 0 ? 'emerald' : 'rose', basis: 'actual' },
-            { label: '계획 저축률', value: summary.hasSavingsPlan ? formatPercent(summary.savingsRate) : '-', sub: summary.hasSavingsPlan ? '계획 배분 / 종료월 수입' : '자금 배분 계획 없음', tone: summary.hasSavingsPlan ? 'emerald' : 'slate', basis: summary.hasSavingsPlan ? 'plan' : 'unset' },
+            { label: '저축+잔여', value: formatKrw(summary.monthlyFreeCashFlow), sub: `수입-소비-상환 · ${cashFlowReviewLabel}`, tone: summary.monthlyFreeCashFlow >= 0 ? 'emerald' : 'rose', basis: 'actual' },
+            {
+                label: '구조 저축률',
+                value: observedSavingsRate === null ? '-' : formatPercent(observedSavingsRate),
+                sub: observedSavingsRate === null ? '종료월 저축 데이터 없음' : `청년도약·연금 ${formatKrw(cashFlow.savingTransfers)}`,
+                tone: observedSavingsRate === null ? 'slate' : 'emerald',
+                basis: observedSavingsRate === null ? 'unset' : 'actual',
+            },
             { label: '고정 현금유출률', value: formatPercent(summary.fixedCostRatio), sub: '고정비+대출이자+전세대출 / 수입', tone: summary.fixedCostRatio <= 50 ? 'sky' : 'amber', basis: 'actual' },
             { label: '비상금 커버리지', value: summary.hasEmergencyPlan ? formatMonths(summary.emergencyCoverageMonths) : '-', sub: summary.hasEmergencyPlan ? '계획 방어자금 기준 유지 기간' : '방어자금 계획 없음', tone: summary.hasEmergencyPlan && summary.emergencyCoverageMonths >= 6 ? 'emerald' : summary.hasEmergencyPlan ? 'amber' : 'slate', basis: summary.hasEmergencyPlan ? 'plan' : 'unset' },
             { label: '부채비율', value: formatPercent(summary.debtRatio), sub: `총부채 ${formatKrw(summary.totalLiabilities)}`, tone: summary.debtRatio <= 25 ? 'emerald' : 'rose', basis: 'actual' },
@@ -633,6 +642,73 @@
         }).join('');
     }
 
+    function renderCfoStructureOverview(graph, cashFlow) {
+        const nodeById = new Map((graph?.nodes || []).map((node) => [node.id, node]));
+        const income = (graph?.nodes || []).find((node) => node.type === 'income');
+        if (!income) return '';
+        const flowRows = [
+            { id: 'summary:cashflow:expense', label: '소비', detail: '생활비·고정비', icon: 'fa-basket-shopping', classes: 'border-rose-100 bg-rose-50 text-rose-700' },
+            { id: 'summary:cashflow:debt', label: '상환', detail: '전세·신용대출', icon: 'fa-building-columns', classes: 'border-red-100 bg-red-50 text-red-700' },
+            {
+                id: 'summary:cashflow:saving',
+                label: '저축',
+                detail: cashFlow
+                    ? `청년 ${formatKrw(cashFlow.youthSavings)} · 연금 ${formatKrw(cashFlow.pensionSavings)}`
+                    : '청년도약·연금저축',
+                icon: 'fa-piggy-bank',
+                classes: 'border-emerald-100 bg-emerald-50 text-emerald-700',
+            },
+            { id: 'summary:cashflow:residual', label: '잔여', detail: '안전자산 대기자금', icon: 'fa-wallet', classes: 'border-lime-100 bg-lime-50 text-lime-700' },
+        ].map((row) => ({ ...row, node: nodeById.get(row.id) })).filter((row) => row.node);
+        const assetRows = [
+            { id: 'summary:asset:defense', label: '안전자산', detail: '청년도약·발행어음·IMA', icon: 'fa-shield-halved', classes: 'border-blue-100 bg-blue-50 text-blue-700' },
+            { id: 'summary:asset:growth', label: '투자자산', detail: '성장 Port · Phase 2', icon: 'fa-chart-line', classes: 'border-violet-100 bg-violet-50 text-violet-700' },
+            { id: 'summary:asset:pension', label: '연금', detail: '연금저축펀드', icon: 'fa-landmark', classes: 'border-pink-100 bg-pink-50 text-pink-700' },
+            { id: 'summary:asset:housing', label: '주거자산', detail: '청약통장·전세금', icon: 'fa-house', classes: 'border-amber-100 bg-amber-50 text-amber-700' },
+        ].map((row) => ({ ...row, node: nodeById.get(row.id) }));
+        const renderMiniCard = (row) => `
+            <article class="min-w-0 rounded-lg border p-2.5 ${row.classes} ${row.node ? '' : 'opacity-55'}">
+                <div class="flex items-center justify-between gap-2">
+                    <p class="truncate text-[11px] font-bold">${escapeHtml(row.label)}</p>
+                    <i class="fas ${row.icon} text-[10px] opacity-70" aria-hidden="true"></i>
+                </div>
+                <p class="mt-2 truncate text-sm font-bold">${escapeHtml(formatKrw(row.node?.amount || 0))}</p>
+                <p class="mt-1 truncate text-[9px] opacity-65">${escapeHtml(row.detail)}</p>
+            </article>
+        `;
+        return `
+            <section class="rounded-lg border border-gray-200 bg-white p-3 shadow-sm md:p-4">
+                <div class="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900">개인 CFO 자금 구조</h3>
+                        <p class="text-xs text-gray-500">월 수입이 소비·상환·저축·잔여로 나뉘고 현재 자산 바구니로 이어지는 구조입니다.</p>
+                    </div>
+                    <span class="w-fit rounded-md border border-indigo-100 bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700">전체 구조 요약</span>
+                </div>
+                <div class="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-[190px_24px_minmax(300px,0.9fr)_24px_minmax(300px,1.1fr)]">
+                    <article class="flex min-h-28 flex-col justify-between rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-indigo-700">
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="text-xs font-bold">월 수입</p>
+                            <i class="fas fa-won-sign text-sm opacity-70" aria-hidden="true"></i>
+                        </div>
+                        <p class="text-xl font-bold">${escapeHtml(formatKrw(income.amount || 0))}</p>
+                        <p class="text-[10px] text-indigo-500">전체적인 월 재무 구조</p>
+                    </article>
+                    <div class="hidden items-center justify-center text-indigo-300 lg:flex" aria-hidden="true"><i class="fas fa-arrow-right"></i></div>
+                    <div class="grid grid-cols-2 gap-2">${flowRows.map(renderMiniCard).join('')}</div>
+                    <div class="hidden items-center justify-center text-indigo-300 lg:flex" aria-hidden="true"><i class="fas fa-arrow-right"></i></div>
+                    <div class="grid grid-cols-2 gap-2">${assetRows.map(renderMiniCard).join('')}</div>
+                </div>
+                <div class="mt-3 flex flex-wrap gap-2 text-[10px] font-medium text-gray-500">
+                    <span class="rounded-md bg-blue-50 px-2 py-1 text-blue-700">저축·잔여 → 안전자산</span>
+                    <span class="rounded-md bg-pink-50 px-2 py-1 text-pink-700">연금저축 → 연금자산</span>
+                    <span class="rounded-md bg-violet-50 px-2 py-1 text-violet-700">안전자산 → 투자 Port는 Phase 2</span>
+                    <span class="rounded-md bg-red-50 px-2 py-1 text-red-700">상환 → 부채 감소</span>
+                </div>
+            </section>
+        `;
+    }
+
     function renderRiskRows(risks) {
         if (!risks.length) {
             return '<tr><td colspan="4" class="px-3 py-10 text-center text-sm font-semibold text-gray-400">등록된 리스크 계획이 없습니다.</td></tr>';
@@ -726,6 +802,8 @@
         if (!root) return;
         const portfolioOverlay = applyRuntimeFinanceData(currentSnapshot);
         const model = domain.createPersonalCfoPageModel(portfolioOverlay.snapshot, activeGraphMode);
+        const overviewGraph = domain.buildFinanceGraphFromSnapshot(portfolioOverlay.snapshot, 'combined');
+        const cashFlow = portfolioOverlay.snapshot.cashFlow;
         const officialSnapshot = typeof getOfficialFinanceSnapshot === 'function' ? getOfficialFinanceSnapshot() : null;
         const dataBadge = portfolioOverlay.hasPortfolioData
             ? `${window.FinanceModel.getSourceBadge(officialSnapshot)} · 계좌 ${portfolioOverlay.accountItemCount}개 · 보유자산 ${portfolioOverlay.assetItemCount}개 · 부채 ${portfolioOverlay.liabilityItemCount}개`
@@ -748,9 +826,10 @@
                 </div>
             </div>
             <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-4">
-                ${renderKpiCards(model.summary)}
+                ${renderKpiCards(model.summary, cashFlow)}
             </div>
             <div class="space-y-4 pb-10">
+                ${renderCfoStructureOverview(overviewGraph, cashFlow)}
                 ${renderMobileFinanceSummary(model.graph)}
                 ${renderFinanceGraph(model.graph)}
                 ${renderTables(model)}
