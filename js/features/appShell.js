@@ -66,10 +66,10 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     const mobileToolGroups = {
         'dashboard-view': [
             { target: 'stats-view', icon: 'fa-file-invoice-dollar', label: 'Report' },
-            { target: 'personal-cfo-view', icon: 'fa-diagram-project', label: '개인 CFO' },
             { target: 'cashflow-view', icon: 'fa-arrow-right-arrow-left', label: '현금흐름' },
             { target: 'portfolio-view', icon: 'fa-briefcase', label: '포트폴리오' },
-            { target: 'asset-view', icon: 'fa-bullseye', label: '장기 목표' }
+            { target: 'asset-view', icon: 'fa-bullseye', label: '장기 목표' },
+            { target: 'personal-cfo-view', icon: 'fa-diagram-project', label: '개인 CFO' }
         ],
         'life-view': [
             { target: 'health-view', icon: 'fa-heart-pulse', label: '건강' },

@@ -3,10 +3,10 @@
   "level": "dynamic",
   "feature": "August Finance Data and UX Refresh",
   "phase": "check",
-  "progress": 95,
-  "updatedAt": "2026-07-26T19:05:00+09:00",
+  "progress": 97,
+  "updatedAt": "2026-07-26T20:20:00+09:00",
   "status": "in_progress",
-  "currentFocus": "Validate and release the Phase 1 CFO structure, Monthly Report consolidation, and integrated long-term housing goal.",
+  "currentFocus": "Release the compact Phase 1 CFO structure, consumption-only cash-flow view, and Stress DSR 40% long-term goal.",
   "completed": [
     "Synchronized the July accounting-period ledger with the current source workbook.",
     "Added the structural monthly cash-flow view to Personal CFO.",
@@ -25,12 +25,17 @@
     "Added Personal CFO as a primary finance tab with variable amounts intentionally hidden.",
     "Renamed long-term assets to Long-term Goal and integrated available equity, mortgage capacity, total funding, and DSR.",
     "Removed the standalone real-estate tab while keeping its assumptions inside Long-term Goal.",
-    "Vendored Chart.js and fixed hidden-tab 0x0 chart resizing for stable local and GitHub Pages rendering."
+    "Vendored Chart.js and fixed hidden-tab 0x0 chart resizing for stable local and GitHub Pages rendering.",
+    "Moved Personal CFO after Long-term Goal in desktop and mobile finance navigation.",
+    "Compressed Monthly Report and detailed cash flow for a 1280 x 720 notebook viewport.",
+    "Redefined expense as consumption excluding repayment while preserving repayment as a separate allocation.",
+    "Simplified Personal CFO to a restrained indigo and slate visual system with variable values marked as variable.",
+    "Fixed mortgage capacity assumptions to Stress DSR 40% and removed the in-app lending sufficiency judgment."
   ],
   "remaining": [
     "Phase 2: rebuild the portfolio around holding quantity, market price, FX rate, Port, and monthly position snapshots.",
     "Phase 2: add Port trends, holding drill-down, return history, and the portfolio section of the monthly Report.",
     "Recalculate loan eligibility after the real-estate policy update."
   ],
-  "nextStep": "Confirm the deployed Phase 1 screens, then define the portfolio Phase 2 position, market price, FX, Port, and monthly snapshot schema."
+  "nextStep": "Confirm the deployed compact Phase 1 screens, then define the portfolio Phase 2 position, market price, FX, Port, and monthly snapshot schema."
 }

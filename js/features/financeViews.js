@@ -138,7 +138,7 @@
                         order: 1
                     },
                     {
-                        label: '수입 추세 기반 예상',
+                        label: '자산 예상',
                         data: forecastPathData,
                         spanGaps: true,
                         borderColor: '#64748B',
@@ -360,43 +360,32 @@
             return;
         }
         const rows = [
-            { label: '소비', amount: structure.spending, detail: '상환을 제외한 생활·고정 지출', icon: 'fa-basket-shopping', classes: 'border-rose-100 bg-rose-50 text-rose-700' },
-            { label: '상환', amount: structure.repayment, detail: '전세·신용대출 원리금', icon: 'fa-building-columns', classes: 'border-red-100 bg-red-50 text-red-700' },
-            { label: '저축', amount: structure.saving, detail: '청년도약계좌·연금저축', icon: 'fa-piggy-bank', classes: 'border-emerald-100 bg-emerald-50 text-emerald-700' },
-            { label: '잔여', amount: structure.residual, detail: '저축 후 남은 가용 현금', icon: 'fa-wallet', classes: structure.residual >= 0 ? 'border-lime-100 bg-lime-50 text-lime-700' : 'border-amber-100 bg-amber-50 text-amber-700' },
+            { label: '소비', amount: structure.spending, icon: 'fa-basket-shopping', classes: 'border-rose-100 bg-rose-50 text-rose-700' },
+            { label: '상환', amount: structure.repayment, icon: 'fa-building-columns', classes: 'border-red-100 bg-red-50 text-red-700' },
+            { label: '저축', amount: structure.saving, icon: 'fa-piggy-bank', classes: 'border-emerald-100 bg-emerald-50 text-emerald-700' },
+            { label: '잔여', amount: structure.residual, icon: 'fa-wallet', classes: structure.residual >= 0 ? 'border-lime-100 bg-lime-50 text-lime-700' : 'border-amber-100 bg-amber-50 text-amber-700' },
         ];
         container.innerHTML = `
-            <div class="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
-                <div class="mb-2 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <h3 class="text-sm font-bold text-gray-900 md:text-base">이번 달 재무 배분</h3>
-                        <p class="mt-0.5 text-[10px] text-gray-400 md:text-xs">수입 = 소비 + 상환 + 저축 + 잔여</p>
-                    </div>
-                    <span class="w-fit rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">
-                        저축+잔여 ${escapeHtml(formatWon(structure.savingAndResidual))}
-                    </span>
-                </div>
-                <div class="grid grid-cols-1 items-stretch gap-2 md:grid-cols-[165px_20px_minmax(0,1fr)]">
-                    <article class="flex min-h-20 flex-col justify-between rounded-lg border border-blue-100 bg-blue-50 p-3 text-blue-700">
+            <div class="rounded-xl border border-gray-100 bg-white p-2 shadow-sm">
+                <div class="grid grid-cols-1 items-stretch gap-1.5 md:grid-cols-[145px_16px_minmax(0,1fr)]">
+                    <article class="flex min-h-16 flex-col justify-between rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-2 text-blue-700">
                         <div class="flex items-center justify-between gap-2">
-                            <span class="text-xs font-bold">수입</span>
-                            <i class="fas fa-arrow-down-to-line text-sm" aria-hidden="true"></i>
+                            <span class="text-[10px] font-bold">수입</span>
+                            <i class="fas fa-arrow-down-to-line text-xs" aria-hidden="true"></i>
                         </div>
-                        <p class="mt-1 text-lg font-bold">${escapeHtml(formatWon(structure.totalIncome))}</p>
-                        <p class="text-[10px] text-blue-500">${escapeHtml(structure.periodLabel)} 마감</p>
+                        <p class="mt-1 text-base font-bold">${escapeHtml(formatWon(structure.totalIncome))}</p>
                     </article>
                     <div class="hidden items-center justify-center text-indigo-300 md:flex" aria-hidden="true">
                         <i class="fas fa-arrow-right"></i>
                     </div>
                     <div class="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
                         ${rows.map((row) => `
-                            <article class="min-w-0 rounded-lg border p-2.5 ${row.classes}">
+                            <article class="min-w-0 rounded-lg border px-2.5 py-2 ${row.classes}">
                                 <div class="flex items-center justify-between gap-2">
-                                    <p class="text-xs font-bold">${escapeHtml(row.label)}</p>
+                                    <p class="text-[10px] font-bold">${escapeHtml(row.label)}</p>
                                     <i class="fas ${row.icon} text-xs opacity-70" aria-hidden="true"></i>
                                 </div>
-                                <p class="mt-1.5 truncate text-sm font-bold">${escapeHtml(formatWon(row.amount))}</p>
-                                <p class="mt-0.5 truncate text-[9px] leading-snug opacity-70">${escapeHtml(row.detail)}</p>
+                                <p class="mt-1 truncate text-sm font-bold">${escapeHtml(formatWon(row.amount))}</p>
                             </article>
                         `).join('')}
                     </div>
@@ -439,7 +428,7 @@
             residual: income > 0 ? (Number(structure.residual || 0) / income) * 100 : 0,
         };
         setText('monthly-report-income', formatWon(structure.totalIncome));
-        setText('monthly-report-expense', formatWon(Number(structure.spending || 0) + Number(structure.repayment || 0)));
+        setText('monthly-report-expense', formatWon(structure.spending));
         setText('monthly-report-spending', formatWon(structure.spending));
         setText('monthly-report-repayment', formatWon(structure.repayment));
         setText('monthly-report-saving', formatWon(structure.saving));
@@ -692,9 +681,16 @@
         return Array.from({ length: count }, (_, idx) => colors[idx % colors.length]);
     }
 
+    function isRepaymentExpense(item = {}) {
+        if (item.type !== '지출') return false;
+        const classification = `${item.cat || item.category || ''} ${item.subcat || item.subcategory || ''}`;
+        return /상환/u.test(classification);
+    }
+
     function renderCashFlowCategoryAnalysis(txData = []) {
         const incomeDetailItems = getCashFlowCategoryBreakdown(txData, '수입', Number.MAX_SAFE_INTEGER);
-        const expenseDetailItems = getCashFlowCategoryBreakdown(txData, '지출', Number.MAX_SAFE_INTEGER);
+        const consumptionTxData = txData.filter((item) => !isRepaymentExpense(item));
+        const expenseDetailItems = getCashFlowCategoryBreakdown(consumptionTxData, '지출', Number.MAX_SAFE_INTEGER);
         const incomeMainItems = incomeDetailItems.slice(0, 3);
         const expenseMainItems = expenseDetailItems.slice(0, 3);
         const incomeTotal = incomeDetailItems.reduce((sum, item) => sum + item.amount, 0);
@@ -1042,7 +1038,7 @@
             mortgageRatePct: Math.max(0, Number(overrides.mortgageRatePct ?? REAL_ESTATE_ANALYSIS_DEFAULTS.mortgageRatePct) || 0),
             stressRatePct: Math.max(0, Number(overrides.stressRatePct ?? REAL_ESTATE_ANALYSIS_DEFAULTS.stressRatePct) || 0),
             termYears: Math.max(1, Number(overrides.termYears ?? REAL_ESTATE_ANALYSIS_DEFAULTS.termYears) || 30),
-            dsrLimitPct: clampPct(overrides.dsrLimitPct ?? REAL_ESTATE_ANALYSIS_DEFAULTS.dsrLimitPct, REAL_ESTATE_ANALYSIS_DEFAULTS.dsrLimitPct)
+            dsrLimitPct: REAL_ESTATE_ANALYSIS_DEFAULTS.dsrLimitPct
         };
     }
 
@@ -1060,7 +1056,7 @@
             mortgageRatePct: Math.max(0, parseAssumptionNumber(document.getElementById('re-input-rate')?.value, REAL_ESTATE_ANALYSIS_DEFAULTS.mortgageRatePct)),
             stressRatePct: Math.max(0, parseAssumptionNumber(document.getElementById('re-input-stress-rate')?.value, REAL_ESTATE_ANALYSIS_DEFAULTS.stressRatePct)),
             termYears: Math.max(1, parseAssumptionNumber(document.getElementById('re-input-term-years')?.value, REAL_ESTATE_ANALYSIS_DEFAULTS.termYears)),
-            dsrLimitPct: clampPct(document.getElementById('re-input-dsr-limit')?.value, REAL_ESTATE_ANALYSIS_DEFAULTS.dsrLimitPct)
+            dsrLimitPct: REAL_ESTATE_ANALYSIS_DEFAULTS.dsrLimitPct
         };
     }
 
@@ -1072,8 +1068,7 @@
             're-input-existing-debt',
             're-input-rate',
             're-input-stress-rate',
-            're-input-term-years',
-            're-input-dsr-limit'
+            're-input-term-years'
         ];
         ids.forEach(id => {
             const input = document.getElementById(id);
@@ -1126,19 +1121,6 @@
         return { stressedRatePct, monthlyDsrCapacity, maxLoanByDsr };
     }
 
-    function getRealEstateAnalysisStatus(model) {
-        if (!model.assumptions.annualIncome) {
-            return { label: '소득 가정 필요', className: 'bg-gray-100 text-gray-600 border-gray-200', icon: 'fa-circle-info' };
-        }
-        if (model.loanCapacityGap > 0) {
-            return { label: 'DSR 한도 내 대출 부족', className: 'bg-rose-50 text-rose-600 border-rose-100', icon: 'fa-triangle-exclamation' };
-        }
-        if (model.equityShortfall > 0) {
-            return { label: '자기자금 보강 필요', className: 'bg-amber-50 text-amber-700 border-amber-100', icon: 'fa-wallet' };
-        }
-        return { label: '가정상 실행 가능', className: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: 'fa-check-circle' };
-    }
-
     function getRealEstateAnalysisModel() {
         const assumptions = getRealEstateAnalysisAssumptions();
         const funding = getRealEstateFundingStatus();
@@ -1175,7 +1157,7 @@
             totalShortfall,
             monthsToReady
         };
-        return { ...model, status: getRealEstateAnalysisStatus(model) };
+        return model;
     }
 
     function setInputValue(id, value) {
@@ -1201,7 +1183,7 @@
 
     function renderRealEstateAnalysis() {
         const model = getRealEstateAnalysisModel();
-        const { assumptions, funding, runRate, status } = model;
+        const { assumptions, funding, runRate } = model;
         bindRealEstateAnalysisControls();
 
         setInputValue('re-input-target-name', assumptions.targetName);
@@ -1238,8 +1220,6 @@
 
         setElementText('re-analysis-income-meta', `마감 ${runRate.observedMonths}개월 급여 중앙값 연환산 ${formatWon(assumptions.annualIncome)} · 최근 월 원리금 ${formatWon(assumptions.existingMonthlyDebt)}`);
 
-        setElementHtml('re-analysis-status', `<span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] md:text-xs font-bold ${status.className}"><i class="fas ${status.icon}"></i>${status.label}</span>`);
-
         const totalCapacity = Math.max(0, funding.selfFunding + model.maxLoanByDsr);
         const totalCapacityPct = assumptions.targetBudget > 0
             ? Math.min(100, (totalCapacity / assumptions.targetBudget) * 100)
@@ -1253,10 +1233,6 @@
         setElementText(
             'long-goal-income-meta',
             `연소득 ${formatWon(assumptions.annualIncome)} · 기존 월 원리금 ${formatWon(assumptions.existingMonthlyDebt)} · 스트레스 ${model.stressedRatePct.toFixed(1)}%`,
-        );
-        setElementHtml(
-            'long-goal-housing-status',
-            `<span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold ${status.className}"><i class="fas ${status.icon}"></i>${status.label}</span>`,
         );
     }
 
@@ -1337,7 +1313,7 @@
         const selectedIncome = document.getElementById('cashflow-selected-income');
         const selectedExpense = document.getElementById('cashflow-selected-expense');
         if (selectedIncome) selectedIncome.textContent = formatWon(totalIncome);
-        if (selectedExpense) selectedExpense.textContent = formatWon(totalExpense);
+        if (selectedExpense) selectedExpense.textContent = formatWon(cashFlowStructure?.spending ?? totalExpense);
         renderCashFlowAllocationPanel(cashFlowStructure);
         renderMonthlyReportSummary(db, cashFlowStructure);
 

@@ -70,3 +70,39 @@ No actionable P0, P1, or P2 design differences remain.
 P3 follow-up: replace the Tailwind CDN runtime with a compiled production stylesheet during a separate infrastructure pass.
 
 final result: passed
+
+## Compact Phase 1 CFO iteration — 2026-07-26
+
+### Evidence
+
+- Deployed source captures:
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\source-monthly-report-1280x720.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\source-cashflow-1280x720.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\source-long-goal-1280x720.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\source-personal-cfo-1280x720.png`
+- Final implementation captures:
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\monthly-report-1280x720-final.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\cashflow-1280x720-final.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\long-goal-1280x720-final.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\personal-cfo-1280x720-final.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\personal-cfo-390x844-final.png`
+- Equal-size before/after comparisons:
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\compare-monthly-report-final.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\compare-cashflow-final.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\compare-long-goal-final.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\compare-personal-cfo-final.png`
+- Viewports: 1280 x 720 and 390 x 844 CSS px at device scale factor 1.
+
+### Findings and checks
+
+- Desktop and mobile finance navigation now follows Monthly Report, Cash Flow, Portfolio, Long-term Goal, Personal CFO.
+- Monthly Report uses the single `현금흐름` heading and keeps all primary content visible at 1280 x 720.
+- Cash-flow consumption is 886,272 KRW and excludes the separate 1,273,267 KRW repayment allocation.
+- The long-goal chart legend is `자산 예상`; the mortgage assumption input is fixed and disabled at Stress DSR 40%.
+- The lending sufficiency judgment badge and redundant explanatory copy are absent.
+- Personal CFO uses a restrained indigo/slate palette and stacks without horizontal overflow at 390 x 844.
+- Settings modal open/close, tab switching, chart resize, and selected-month rendering passed.
+- Browser console: zero application errors.
+- No actionable P0, P1, or P2 design differences remain.
+
+final result: passed
