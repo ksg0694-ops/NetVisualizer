@@ -1,5 +1,12 @@
 (function (root) {
     const utils = root.AppUtils || {};
+    const CFO_ASSET_GROUP_DEFINITIONS = Object.freeze([
+        { key: 'operating', label: '운영자산', purpose: '소비 · 상환', color: '#64748B' },
+        { key: 'safe', label: '안전자산', purpose: '현금 방어', color: '#4F46E5' },
+        { key: 'investment', label: '투자자산', purpose: '시장 성장', color: '#7C3AED' },
+        { key: 'housing', label: '주거자산', purpose: '전세 · 청약', color: '#0F766E' },
+        { key: 'pension', label: '연금', purpose: '장기 노후', color: '#475569' },
+    ]);
 
     function number(value) {
         const parsed = Number(value);
@@ -22,6 +29,51 @@
 
     function isDebtItem(item) {
         return item.groupIsDebt || item.assetType === 'debt' || item.amount < 0;
+    }
+
+    function classifyCfoAssetGroup(item = {}) {
+        const assetType = String(item.assetType || item.classification?.assetType || '').toLowerCase();
+        const instrumentType = String(item.instrumentType || item.classification?.instrumentType || '').toLowerCase();
+        const text = `${item.groupName || ''} ${item.name || ''}`.toLowerCase();
+        if (isDebtItem(item)) return 'operating';
+        if (assetType === 'pension' || /연금|퇴직|irp/.test(text)) return 'pension';
+        if (assetType === 'real_estate' || /전세|보증금|청약|주택|부동산/.test(text)) return 'housing';
+        if (
+            instrumentType === 'safe_account'
+            || instrumentType === 'deposit'
+            || /안전|청년도약|발행어음|ima|예금|적금|파킹|rp/.test(text)
+        ) return 'safe';
+        if (['stock', 'etf', 'fund', 'crypto'].includes(assetType) || /투자|주식|증권|etf|펀드/.test(text)) return 'investment';
+        return 'operating';
+    }
+
+    function buildCfoAssetGroups(portfolioData) {
+        const groups = CFO_ASSET_GROUP_DEFINITIONS.map((definition) => ({
+            ...definition,
+            items: [],
+            assetAmount: 0,
+            liabilityAmount: 0,
+            netAmount: 0,
+        }));
+        const groupByKey = new Map(groups.map((group) => [group.key, group]));
+        flattenPortfolio(portfolioData).forEach((item) => {
+            const key = classifyCfoAssetGroup(item);
+            const group = groupByKey.get(key) || groupByKey.get('operating');
+            const debt = isDebtItem(item);
+            const normalizedItem = { ...item, cfoGroupKey: group.key, isDebt: debt };
+            group.items.push(normalizedItem);
+            if (debt) group.liabilityAmount += Math.abs(number(item.amount));
+            else group.assetAmount += Math.max(0, number(item.amount));
+            group.netAmount = group.assetAmount - group.liabilityAmount;
+        });
+        const totalAssets = groups.reduce((sum, group) => sum + group.assetAmount, 0);
+        const totalLiabilities = groups.reduce((sum, group) => sum + group.liabilityAmount, 0);
+        return {
+            groups,
+            totalAssets,
+            totalLiabilities,
+            netWorth: totalAssets - totalLiabilities,
+        };
     }
 
     function isTiedItem(item) {
@@ -177,6 +229,8 @@
         buildAssetHistorySnapshot,
         buildOfficialSnapshot,
         buildDecisionItems,
+        buildCfoAssetGroups,
+        classifyCfoAssetGroup,
         flattenPortfolio,
         getSourceBadge,
         isDebtItem,

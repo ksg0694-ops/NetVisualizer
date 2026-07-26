@@ -71,6 +71,38 @@ P3 follow-up: replace the Tailwind CDN runtime with a compiled production styles
 
 final result: passed
 
+## Phase 1 alignment and Portfolio Phase 2 grouping — 2026-07-26
+
+### Evidence
+
+- Source captures:
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\phase2-portfolio-groups\source-long-goal-1280x720.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\phase2-portfolio-groups\source-personal-cfo-1280x720.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\phase2-portfolio-groups\source-portfolio-1280x720.png`
+- Final captures:
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-final-1876\final-long-goal-1280x720.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-final-1876\final-personal-cfo-1280x720.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-final-1876\final-portfolio-1280x720.png`
+- Equal-size source/final comparisons:
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-final-1876\compare-long-goal-source-final.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-final-1876\compare-personal-cfo-source-final.png`
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-final-1876\compare-portfolio-source-final.png`
+- Viewports: 1280 x 720 and 390 x 844 CSS px at device scale factor 1.
+
+### Findings and checks
+
+- Long-term Goal no longer renders the baseline-salary KPI.
+- Personal CFO source, allocation, and asset columns share the same desktop height; allocation rows and asset-step rows align vertically.
+- Portfolio uses the five requested CFO-purpose groups in order: operating, safe, investment, housing, and pension.
+- Product attributes override source folders: 한국투자 IMA S1 is included in safe assets.
+- Grouped totals reconcile to 300,628,856 KRW of assets, 65,000,000 KRW of liabilities, and 235,628,856 KRW of net worth.
+- Operating assets show 1,000,000 KRW of consumption cash and 65,000,000 KRW of repayment obligations without netting them together.
+- Safe-group accordion expansion and investment-detail navigation passed.
+- Portfolio and Personal CFO both satisfy `scrollWidth === clientWidth` at 390 x 844.
+- No actionable P0, P1, or P2 design differences remain.
+
+final result: passed
+
 ## Salary-rule and two-step CFO iteration — 2026-07-26
 
 ### Evidence

@@ -32,6 +32,45 @@ assert.equal(snapshot.assetCount, 2);
 assert.equal(snapshot.liabilityCount, 1);
 assert.equal(Number(snapshot.debtRatio.toFixed(2)), 26.67);
 
+const cfoGroups = FinanceModel.buildCfoAssetGroups({
+    현금: {
+        isDebt: false,
+        items: [{ id: 'cash', name: '생활비통장', amount: 1_000_000, classification: { assetType: 'account' } }],
+    },
+    안전: {
+        isDebt: false,
+        items: [{ id: 'safe', name: '청년도약계좌', amount: 20_000_000, classification: { assetType: 'account', instrumentType: 'safe_account' } }],
+    },
+    투자: {
+        isDebt: false,
+        items: [
+            { id: 'invest', name: 'ETF', amount: 5_000_000, classification: { assetType: 'etf' } },
+            { id: 'ima', name: '한국투자 IMA S1', amount: 2_000_000, classification: { assetType: 'account', instrumentType: 'safe_account' } },
+        ],
+    },
+    기타: {
+        isDebt: false,
+        items: [{ id: 'housing', name: '전세금', amount: 100_000_000, classification: { assetType: 'other' } }],
+    },
+    연금: {
+        isDebt: false,
+        items: [{ id: 'pension', name: '연금저축', amount: 3_000_000, classification: { assetType: 'pension' } }],
+    },
+    부채: {
+        isDebt: true,
+        items: [{ id: 'debt', name: '신용대출', amount: -40_000_000, classification: { assetType: 'debt' } }],
+    },
+});
+assert.deepEqual(cfoGroups.groups.map((group) => group.key), ['operating', 'safe', 'investment', 'housing', 'pension']);
+assert.equal(cfoGroups.groups.find((group) => group.key === 'operating').assetAmount, 1_000_000);
+assert.equal(cfoGroups.groups.find((group) => group.key === 'operating').liabilityAmount, 40_000_000);
+assert.equal(cfoGroups.groups.find((group) => group.key === 'safe').assetAmount, 22_000_000);
+assert.equal(cfoGroups.groups.find((group) => group.key === 'investment').assetAmount, 5_000_000);
+assert.equal(cfoGroups.groups.find((group) => group.key === 'housing').assetAmount, 100_000_000);
+assert.equal(cfoGroups.totalAssets, 131_000_000);
+assert.equal(cfoGroups.totalLiabilities, 40_000_000);
+assert.equal(cfoGroups.netWorth, 91_000_000);
+
 const fallback = FinanceModel.buildOfficialSnapshot({ assetHistory: { data: [900000, 1200000] } });
 assert.equal(fallback.source, 'asset-history');
 assert.equal(fallback.netWorth, 1200000);

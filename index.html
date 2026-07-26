@@ -25,10 +25,10 @@
     <!-- Shared runtime and feature modules -->
     <script src="./js/shared/appUtils.js?v=20260715-foundation-1"></script>
     <script src="./js/features/financeRepository.js?v=20260717-monthly-close-1"></script>
-    <script src="./js/features/financeModel.js?v=20260726-phase1-cfo-5"></script>
+    <script src="./js/features/financeModel.js?v=20260726-phase2-portfolio-1"></script>
     <script src="./js/generated/personal-cfo-domain.js?v=20260726-monthly-report-1"></script>
     <script src="./js/features/monthlyClose.js?v=20260717-monthly-close-5"></script>
-    <script src="./js/features/appCore.js?v=20260726-phase1-cfo-6"></script>
+    <script src="./js/features/appCore.js?v=20260726-phase2-portfolio-1"></script>
     <script src="./js/features/assetTrend.js?v=20260726-monthly-report-1"></script>
     <script src="./js/features/financeForecast.js?v=20260726-phase1-cfo-6"></script>
     <script src="./js/features/quantEngine.js?v=20260713-public-server"></script>
@@ -36,11 +36,11 @@
     <script src="./js/features/transactionImport.js?v=20260708-auth-cloud"></script>
     <script src="./js/features/portfolioEditor.js?v=20260717-portfolio-draft-1"></script>
     <script src="./js/features/cashflowControls.js"></script>
-    <script src="./js/features/portfolioViews.js?v=20260626-account-order"></script>
-    <script src="./js/features/financeViews.js?v=20260726-phase1-cfo-6"></script>
+    <script src="./js/features/portfolioViews.js?v=20260726-phase2-portfolio-1"></script>
+    <script src="./js/features/financeViews.js?v=20260726-phase2-portfolio-1"></script>
     <script src="./js/features/healthTracker.js?v=20260713-public-server"></script>
     <script src="./js/features/checklist.js?v=20260713-public-server"></script>
-    <script src="./js/features/personalCfo.js?v=20260726-phase1-cfo-6"></script>
+    <script src="./js/features/personalCfo.js?v=20260726-phase2-portfolio-1"></script>
     <script src="./js/features/lifeDashboard.js?v=20260717-finance-scope-1"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
@@ -78,7 +78,7 @@
                     <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
                 </div>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.03.26
+                    version 1.03.27
                 </div>
             </div>
             <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-2 space-y-2">
@@ -856,52 +856,42 @@
             </div>
 
             <div id="portfolio-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
-                <div class="mb-3 md:mb-4 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-2 md:gap-3">
+                <div class="mb-3 flex items-end justify-between gap-3">
                     <div>
-                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 tracking-wider mb-0.5">재무 도구</p>
-                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">보유자산 현황</h2>
-                        <p class="text-xs md:text-sm text-gray-500 mt-0.5">현재 보유자산, 구성, 유동성 상태를 한 번에 점검합니다.</p>
+                        <h2 class="text-xl font-bold text-gray-900 md:text-2xl">포트폴리오 전략</h2>
                     </div>
-                    <div class="flex flex-wrap gap-2">
-                        <span id="portfolio-data-source-badge" class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1.5 rounded-lg whitespace-nowrap">최신 보유 기준</span>
-                        <span class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1.5 rounded-lg whitespace-nowrap">유동성 점검</span>
-                    </div>
+                    <span id="portfolio-data-source-badge" class="whitespace-nowrap rounded-lg border border-indigo-100 bg-indigo-50 px-2.5 py-1.5 text-[10px] font-bold text-indigo-600 md:text-xs">최신 보유 기준</span>
                 </div>
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5 mb-5 md:mb-6">
+                <section id="portfolio-cfo-group-summary" class="mb-3 grid grid-cols-2 gap-2 lg:grid-cols-5"></section>
+                <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
                     <!-- 좌측: 자산 요약 및 차트 -->
-                    <div class="lg:col-span-1 flex flex-col gap-4">
-                        <div class="bg-gray-800 rounded-2xl p-4 md:p-5 text-white shadow-lg relative overflow-hidden">
+                    <div class="flex flex-col gap-3 lg:col-span-1">
+                        <div class="relative overflow-hidden rounded-xl bg-slate-900 p-4 text-white shadow-lg">
                             <div class="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-white opacity-5 rounded-full pointer-events-none"></div>
-                            <p class="text-gray-300 font-medium text-sm mb-1">총 순자산</p>
-                            <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">자산 요약</p>
-                            <h3 class="text-2xl md:text-3xl font-bold mb-3" id="pf-networth">0원</h3>
-                            <div class="space-y-1.5 text-sm border-t border-gray-700 pt-3">
-                                <div class="flex justify-between text-gray-300"><span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-blue-400"></div>현금+안전</span> <span id="pf-safe-sum">0원</span></div>
-                                <div class="flex justify-between text-gray-300"><span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-purple-400"></div>투자</span> <span id="pf-invest-sum">0원</span></div>
-                                <div class="flex justify-between text-red-300"><span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-red-400"></div>부채 (-)</span> <span id="pf-debt-sum">0원</span></div>
-                                <div class="border-t border-gray-700 pt-1.5 mt-1.5"></div>
-                                <div class="flex justify-between text-emerald-300 font-bold"><span class="flex items-center gap-2"><i class="fas fa-coins text-xs"></i>즉시 가용 자산</span> <span id="pf-liquid-sum">0원</span></div>
-                                <div class="flex justify-between text-gray-400 text-[11px]"><span class="flex items-center gap-2"><i class="fas fa-lock text-[10px]"></i>묶인 돈 (만기 등)</span> <span id="pf-tied-sum">0원</span></div>
+                            <p class="text-xs font-bold text-slate-400">순자산</p>
+                            <h3 class="mt-1 text-2xl font-bold md:text-3xl" id="pf-networth">0원</h3>
+                            <div class="mt-3 space-y-1.5 border-t border-slate-700 pt-3 text-xs">
+                                <div class="flex justify-between text-slate-300"><span>총자산</span><span id="pf-total-assets">0원</span></div>
+                                <div class="flex justify-between text-rose-300"><span>총부채</span><span id="pf-total-liabilities">0원</span></div>
+                                <div class="flex justify-between text-emerald-300"><span>즉시 가용</span><span id="pf-liquid-sum">0원</span></div>
+                                <div class="flex justify-between text-slate-400"><span>장기·묶인 자산</span><span id="pf-tied-sum">0원</span></div>
                             </div>
                         </div>
 
-                        <div class="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-                            <h3 class="text-base font-bold text-gray-800 mb-2">자산 구성 비율</h3>
-                            <p class="text-[10px] md:text-xs font-bold text-gray-400 tracking-wider mb-1">자산 구성</p>
-                            <div class="relative h-56 md:h-64 w-full">
+                        <div class="flex flex-col rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+                            <h3 class="text-base font-bold text-gray-800">CFO 그룹 구성</h3>
+                            <div class="relative h-52 w-full">
                                 <canvas id="portfolioChart"></canvas>
                             </div>
-                            <p class="text-xs text-gray-400 text-center mt-2">* 부채를 제외한 보유 자산 기준</p>
                         </div>
 
                     </div>
 
                     <!-- 우측: 계좌 리스트 (아코디언) -->
-                    <div class="lg:col-span-2 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-                        <p class="text-[10px] md:text-xs font-bold text-gray-400 tracking-wider mb-1.5">상세 내역</p>
+                    <div class="flex flex-col rounded-xl border border-gray-100 bg-white p-4 shadow-sm lg:col-span-2">
                         <!-- 💡 헤더 업데이트: 포트폴리오 금액 수정 버튼 추가 -->
-                        <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-                            <h3 class="text-lg font-bold text-gray-800">상세 계좌 및 투자 내역</h3>
+                        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <h3 class="text-lg font-bold text-gray-800">CFO 그룹별 보유자산</h3>
                             <div class="flex items-center gap-2">
                                 <button onclick="openPortfolioEditModal()" class="text-xs text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition whitespace-nowrap shrink-0">
                                     <i class="fas fa-edit mr-1"></i>금액 수정
@@ -1262,7 +1252,7 @@
                         <div class="relative min-h-[280px] md:min-h-[380px] w-full">
                             <canvas id="fullAssetChart"></canvas>
                         </div>
-                        <div class="mt-3 grid grid-cols-1 gap-2 border-t border-gray-100 pt-3 sm:grid-cols-3">
+                        <div class="mt-3 grid grid-cols-1 gap-2 border-t border-gray-100 pt-3 sm:grid-cols-2">
                             <article class="rounded-lg bg-indigo-50 px-3 py-2.5">
                                 <p class="text-[10px] font-bold text-indigo-500">연말 자산 예상</p>
                                 <p id="asset-forecast-year-end" class="mt-1 truncate text-base font-bold text-indigo-900">0원</p>
@@ -1270,10 +1260,6 @@
                             <article class="rounded-lg bg-emerald-50 px-3 py-2.5">
                                 <p class="text-[10px] font-bold text-emerald-600">월 예상 저축+잔여</p>
                                 <p id="asset-forecast-retained" class="mt-1 truncate text-base font-bold text-emerald-900">0원</p>
-                            </article>
-                            <article class="rounded-lg bg-slate-50 px-3 py-2.5">
-                                <p class="text-[10px] font-bold text-slate-500">기준 월급</p>
-                                <p id="asset-forecast-observations" class="mt-1 truncate text-base font-bold text-slate-900">0원</p>
                             </article>
                         </div>
                     </div>

@@ -1,162 +1,231 @@
 // Portfolio and investment detail rendering extracted from index.html.
 // This script intentionally shares the global app state used by the legacy static app.
 
-    function renderPortfolio() {
-        if(!currentMonthKey) return;
-        const shortYear = currentMonthKey.substring(2, 4); const shortMonth = currentMonthKey.substring(5, 7);
-        const targetLabel = `${shortYear}.${shortMonth}`;
+    const CFO_PORTFOLIO_GROUP_UI = {
+        operating: { icon: 'fa-wallet', iconClass: 'bg-slate-100 text-slate-600', borderClass: 'border-slate-200' },
+        safe: { icon: 'fa-shield-halved', iconClass: 'bg-indigo-50 text-indigo-600', borderClass: 'border-indigo-100' },
+        investment: { icon: 'fa-chart-line', iconClass: 'bg-violet-50 text-violet-600', borderClass: 'border-violet-100' },
+        housing: { icon: 'fa-house', iconClass: 'bg-teal-50 text-teal-700', borderClass: 'border-teal-100' },
+        pension: { icon: 'fa-landmark', iconClass: 'bg-slate-100 text-slate-700', borderClass: 'border-slate-200' },
+    };
 
+    function renderPortfolioCfoGroupSummary(model) {
+        const container = document.getElementById('portfolio-cfo-group-summary');
+        if (!container) return;
+        if (!model?.groups?.length) {
+            container.innerHTML = '';
+            return;
+        }
+        container.innerHTML = model.groups.map((group) => {
+            const ui = CFO_PORTFOLIO_GROUP_UI[group.key] || CFO_PORTFOLIO_GROUP_UI.operating;
+            const liabilityText = group.liabilityAmount > 0
+                ? `<p class="mt-1 truncate text-[9px] font-bold text-rose-500">상환 ${group.liabilityAmount.toLocaleString()}원</p>`
+                : `<p class="mt-1 text-[9px] text-slate-400">${group.items.length}개 항목</p>`;
+            return `
+                <article class="min-w-0 rounded-xl border bg-white p-2.5 shadow-sm ${ui.borderClass} ${group.key === 'pension' ? 'col-span-2 lg:col-span-1' : ''}">
+                    <div class="flex items-center gap-2">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${ui.iconClass}">
+                            <i class="fas ${ui.icon} text-xs" aria-hidden="true"></i>
+                        </span>
+                        <div class="min-w-0">
+                            <p class="truncate text-[10px] font-bold text-slate-700">${escapeHtml(group.label)}</p>
+                            <p class="truncate text-[9px] text-slate-400">${escapeHtml(group.purpose)}</p>
+                        </div>
+                    </div>
+                    <p class="mt-2 truncate text-sm font-bold text-slate-950">${group.assetAmount.toLocaleString()}원</p>
+                    ${liabilityText}
+                </article>
+            `;
+        }).join('');
+    }
+
+    function renderPortfolio() {
+        if (!currentMonthKey) return;
+        const shortYear = currentMonthKey.substring(2, 4);
+        const shortMonth = currentMonthKey.substring(5, 7);
+        const targetLabel = `${shortYear}.${shortMonth}`;
         const keys = getMonthKeys();
         const isLatestMonth = currentMonthKey === keys[keys.length - 1];
         const snapshot = dynamicAssetSnapshots[targetLabel];
-
-        let totalCashAndSafe = 0, totalInvest = 0, totalDebt = 0;
-        let totalLiquid = 0, totalTied = 0;
-        let chartLabels = [], chartData = [], chartColors = [];
-
         const badge = document.getElementById('portfolio-month-badge');
+        const wrapper = document.getElementById('portfolio-accordion-wrapper');
+        const notice = document.getElementById('portfolio-past-notice');
+        let chartLabels = [];
+        let chartData = [];
+        let chartColors = [];
+        let totalAssets = 0;
+        let totalLiabilities = 0;
+        let totalLiquid = 0;
+        let totalTied = 0;
+        let displayedNetWorth = 0;
+        let cfoModel = null;
+
         if (isLatestMonth) {
             badge.classList.add('hidden');
         } else {
             badge.classList.remove('hidden');
             badge.textContent = `${targetLabel} 스냅샷`;
         }
-        const wrapper = document.getElementById('portfolio-accordion-wrapper');
-        const notice = document.getElementById('portfolio-past-notice');
+
+        const renderPortfolioItemRow = (item) => {
+            const debt = Boolean(item.isDebt || item.amount < 0 || item.classification?.assetType === 'debt');
+            return `
+                <div class="flex items-center justify-between gap-3 text-sm">
+                    <div class="min-w-0">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="h-1.5 w-1.5 shrink-0 rounded-full ${debt ? 'bg-rose-400' : 'bg-slate-300'}"></span>
+                            <span class="truncate text-gray-700">${escapeHtml(item.name)}</span>
+                            ${getAssetClassBadgeHtml(item.classification)}
+                        </div>
+                        <p class="mt-0.5 truncate pl-3.5 text-[9px] text-slate-400">
+                            ${escapeHtml(item.groupName || '')}${item.maturity ? ` · ${escapeHtml(item.maturity)}` : ''}
+                        </p>
+                    </div>
+                    <div class="flex shrink-0 flex-col items-end text-right">
+                        <span class="font-medium ${debt ? 'text-rose-500' : 'text-gray-700'}">${Number(item.amount || 0).toLocaleString()}원</span>
+                        ${item.shares ? `<span class="text-[10px] font-bold tracking-tight text-gray-400">${item.shares.toLocaleString()}주 · 단가 ${Math.floor(item.amount / item.shares).toLocaleString()}원</span>` : ''}
+                    </div>
+                </div>
+            `;
+        };
+
+        const renderInvestmentAccountRows = (items) => {
+            const accountGroups = {};
+            const accountOrderMap = getPortfolioAccountOrderMap(items);
+            items.forEach((item) => {
+                const accountName = getPortfolioAccountDisplayName(item);
+                if (!accountGroups[accountName]) accountGroups[accountName] = [];
+                accountGroups[accountName].push(item);
+            });
+            return Object.entries(accountGroups)
+                .sort(([a], [b]) => comparePortfolioAccounts(a, b, accountOrderMap))
+                .map(([accountName, accountItems]) => {
+                    const accountTotal = accountItems.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+                    return `
+                        <div class="overflow-hidden rounded-xl border border-violet-100 bg-white">
+                            <div class="flex items-center justify-between gap-3 border-b border-violet-100 bg-violet-50/50 px-3 py-1.5">
+                                <div class="min-w-0">
+                                    <p class="truncate text-xs font-bold text-gray-800">${escapeHtml(accountName)}</p>
+                                    <p class="text-[10px] text-gray-400">${accountItems.length}개 자산</p>
+                                </div>
+                                <p class="whitespace-nowrap text-xs font-black text-violet-700">${accountTotal.toLocaleString()}원</p>
+                            </div>
+                            <div class="space-y-1.5 p-2.5">${accountItems.map(renderPortfolioItemRow).join('')}</div>
+                        </div>
+                    `;
+                }).join('');
+        };
 
         if (isLatestMonth && dynamicPortfolioData) {
-            wrapper.classList.remove('hidden'); notice.classList.add('hidden'); wrapper.innerHTML = '';
-            getSortedPortfolioGroups(dynamicPortfolioData).forEach(([groupName, groupData]) => {
-                const sum = groupData.items.reduce((acc, curr) => acc + curr.amount, 0);
+            cfoModel = window.FinanceModel.buildCfoAssetGroups(dynamicPortfolioData);
+            totalAssets = cfoModel.totalAssets;
+            totalLiabilities = cfoModel.totalLiabilities;
+            displayedNetWorth = cfoModel.netWorth;
+            wrapper.classList.remove('hidden');
+            notice.classList.add('hidden');
+            wrapper.innerHTML = '';
+            renderPortfolioCfoGroupSummary(cfoModel);
 
-                groupData.items.forEach(item => {
-                    if (groupData.isDebt || item.classification?.assetType === 'debt') {
-                        totalDebt += item.amount;
-                    } else if (item.classification?.assetType === 'stock' || item.classification?.assetType === 'etf' || item.classification?.assetType === 'pension') {
-                        totalInvest += item.amount;
-                    } else {
-                        totalCashAndSafe += item.amount;
-                    }
-
-                    if (!groupData.isDebt && item.classification?.assetType !== 'debt') {
-                        if (item.maturity || item.classification?.assetType === 'pension' || groupName.includes('부동산') || groupName.includes('보증금')) {
-                            totalTied += item.amount;
-                        } else {
-                            totalLiquid += item.amount;
-                        }
-                    }
+            cfoModel.groups.forEach((group) => {
+                const ui = CFO_PORTFOLIO_GROUP_UI[group.key] || CFO_PORTFOLIO_GROUP_UI.operating;
+                group.items.forEach((item) => {
+                    if (item.isDebt) return;
+                    const tied = Boolean(item.maturity) || group.key === 'housing' || group.key === 'pension';
+                    if (tied) totalTied += Math.max(0, Number(item.amount || 0));
+                    else totalLiquid += Math.max(0, Number(item.amount || 0));
                 });
-
-                if (!groupData.isDebt && sum > 0) {
-                    chartLabels.push(groupName); chartData.push(sum);
-                    chartColors.push(groupName.includes('투자') ? '#A855F7' : (groupName.includes('연금') ? '#EC4899' : (groupName.includes('안전') ? '#10B981' : (groupName.includes('기타') ? '#E5E7EB' : '#3B82F6'))));
+                if (group.assetAmount > 0) {
+                    chartLabels.push(group.label);
+                    chartData.push(group.assetAmount);
+                    chartColors.push(group.color);
                 }
-
-                const isDebt = groupData.isDebt;
-                // 💡 아코디언이 닫혀있도록 'open' 클래스 제거
-                const safeGroupName = escapeHtml(groupName);
-                const jsGroupName = escapeJsString(groupName);
-                const isInvestGroup = groupName.includes('투자');
-                const renderPortfolioItemRow = (item) => `
-                    <div class="flex justify-between items-center text-sm">
-                        <span class="text-gray-600 flex items-center gap-2 min-w-0">
-                            <div class="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0"></div>
-                            <span class="truncate">${escapeHtml(item.name)}</span>
-                            ${getAssetClassBadgeHtml(item.classification)}
-                            ${item.maturity ? `<span class="text-[10px] bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded font-bold whitespace-nowrap"><i class="fas fa-lock text-[9px]"></i> 묶인 돈 (${escapeHtml(item.maturity)})</span>` : ''}
-                        </span>
-                        <div class="text-right flex flex-col items-end shrink-0">
-                            <span class="font-medium ${item.amount < 0 ? 'text-red-500' : 'text-gray-700'}">${item.amount.toLocaleString()}원</span>
-                            ${item.shares ? `<span class="text-[10px] text-gray-400 font-bold tracking-tight">${item.shares.toLocaleString()}주 | 단가 ${Math.floor(item.amount / item.shares).toLocaleString()}원</span>` : ''}
-                        </div>
-                    </div>
-                `;
-                const renderInvestmentAccountRows = () => {
-                    const accountGroups = {};
-                    const accountOrderMap = getPortfolioAccountOrderMap(groupData.items);
-                    groupData.items.forEach(item => {
-                        const accountName = getPortfolioAccountDisplayName(item);
-                        if (!accountGroups[accountName]) accountGroups[accountName] = [];
-                        accountGroups[accountName].push(item);
-                    });
-                    return Object.entries(accountGroups)
-                    .sort(([a], [b]) => comparePortfolioAccounts(a, b, accountOrderMap))
-                    .map(([accountName, items]) => {
-                        const accountTotal = items.reduce((acc, item) => acc + Number(item.amount || 0), 0);
-                        return `
-                            <div class="rounded-xl border border-purple-100 overflow-hidden bg-white">
-                                <div class="px-3 py-1.5 bg-purple-50/50 border-b border-purple-100 flex items-center justify-between gap-3">
-                                    <div class="min-w-0">
-                                        <p class="text-xs font-bold text-gray-800 truncate">${escapeHtml(accountName)}</p>
-                                        <p class="text-[10px] text-gray-400">${items.length}개 자산</p>
+                const investmentButton = group.key === 'investment'
+                    ? `<button onclick="event.stopPropagation(); switchView('invest-detail-view'); renderInvestDetail('투자 자산');" class="ml-1.5 rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] font-bold text-violet-600 transition-colors hover:bg-violet-100">상세보기 <i class="fas fa-chevron-right ml-1 text-[8px]"></i></button>`
+                    : '';
+                const liabilityBadge = group.liabilityAmount > 0
+                    ? `<span class="rounded bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold text-rose-500">상환 ${group.liabilityAmount.toLocaleString()}원</span>`
+                    : '';
+                wrapper.insertAdjacentHTML('beforeend', `
+                    <div class="overflow-hidden rounded-xl border shadow-sm ${ui.borderClass}">
+                        <div class="flex w-full cursor-pointer items-center justify-between gap-3 bg-white p-3 transition-colors hover:bg-slate-50" onclick="toggleAccordion(this)">
+                            <div class="flex min-w-0 items-center gap-2">
+                                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${ui.iconClass}">
+                                    <i class="fas ${ui.icon} text-xs" aria-hidden="true"></i>
+                                </span>
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-1">
+                                        <span class="truncate text-sm font-bold text-gray-800 md:text-base">${escapeHtml(group.label)}</span>
+                                        ${investmentButton}
                                     </div>
-                                    <p class="text-xs font-black text-purple-700 whitespace-nowrap">${accountTotal.toLocaleString()}원</p>
-                                </div>
-                                <div class="p-2.5 space-y-1.5">
-                                    ${items.map(renderPortfolioItemRow).join('')}
+                                    <p class="text-[9px] text-slate-400">${escapeHtml(group.purpose)} · ${group.items.length}개 항목</p>
                                 </div>
                             </div>
-                        `;
-                    }).join('');
-                };
-                const itemHtml = `
-                <div class="border border-gray-100 rounded-xl overflow-hidden shadow-sm">
-                    <div class="w-full flex justify-between items-center p-3 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer" onclick="toggleAccordion(this)">
-                        <div class="flex items-center gap-2">
-                            <div class="w-7 h-7 rounded-full ${groupData.bg} ${groupData.color} flex items-center justify-center text-xs">
-                                <i class="fas ${isDebt ? 'fa-credit-card' : (groupName.includes('투자') ? 'fa-chart-line' : (groupName.includes('안전') ? 'fa-lock' : 'fa-coins'))}"></i>
+                            <div class="flex shrink-0 items-center gap-2">
+                                ${liabilityBadge}
+                                <span class="text-sm font-bold text-gray-800 md:text-base">${group.assetAmount.toLocaleString()}원</span>
+                                <i class="fas fa-chevron-down text-sm text-gray-400 accordion-icon"></i>
                             </div>
-                            <span class="font-bold text-gray-800 text-sm md:text-base">${safeGroupName}</span>
-                            ${groupName.includes('투자') ? `<button onclick="event.stopPropagation(); switchView('invest-detail-view'); renderInvestDetail('${jsGroupName}');" class="ml-1.5 text-[10px] bg-purple-50 text-purple-600 border border-purple-200 px-1.5 py-0.5 rounded font-bold hover:bg-purple-100 transition-colors z-10">상세보기 <i class="fas fa-chevron-right ml-1 text-[8px]"></i></button>` : ''}
                         </div>
-                        <div class="flex items-center gap-2 md:gap-3">
-                            <span class="font-bold ${isDebt ? 'text-red-500' : 'text-gray-800'} text-sm md:text-base">${sum.toLocaleString()}원</span>
-                            <i class="fas fa-chevron-down text-gray-400 accordion-icon text-sm"></i>
-                        </div>
-                    </div>
-                    <div class="accordion-content bg-white">
-                        <div class="p-3 space-y-2 border-t border-gray-100">
-                            ${groupData.items.length > 0 ? (isInvestGroup ? renderInvestmentAccountRows() : groupData.items.map(renderPortfolioItemRow).join('')) : '<p class="text-sm text-gray-400 text-center py-2">등록된 내역이 없습니다.</p>'}
+                        <div class="accordion-content bg-white">
+                            <div class="space-y-2 border-t border-gray-100 p-3">
+                                ${group.items.length > 0
+                                    ? (group.key === 'investment' ? renderInvestmentAccountRows(group.items) : group.items.map(renderPortfolioItemRow).join(''))
+                                    : '<p class="py-2 text-center text-sm text-gray-400">등록된 내역이 없습니다.</p>'}
+                            </div>
                         </div>
                     </div>
-                </div>`;
-                wrapper.insertAdjacentHTML('beforeend', itemHtml);
+                `);
             });
         } else if (snapshot) {
-            wrapper.classList.add('hidden'); notice.classList.remove('hidden');
-            totalCashAndSafe = snapshot.cash + snapshot.safe; totalInvest = snapshot.invest; totalDebt = snapshot.debt;
-
-            if(totalCashAndSafe > 0) { chartLabels.push('현금/안전 자산'); chartData.push(totalCashAndSafe); chartColors.push('#3B82F6'); }
-            if(totalInvest > 0) { chartLabels.push('투자 자산'); chartData.push(totalInvest); chartColors.push('#A855F7'); }
+            wrapper.classList.add('hidden');
+            notice.classList.remove('hidden');
+            renderPortfolioCfoGroupSummary(null);
+            const cashAndSafe = Number(snapshot.cash || 0) + Number(snapshot.safe || 0);
+            const invested = Number(snapshot.invest || 0);
+            totalLiabilities = Math.abs(Number(snapshot.debt || 0));
+            totalAssets = cashAndSafe + invested;
+            displayedNetWorth = totalAssets - totalLiabilities;
+            chartLabels = ['현금·안전', '투자'];
+            chartData = [cashAndSafe, invested];
+            chartColors = ['#4F46E5', '#7C3AED'];
         } else {
-            wrapper.classList.add('hidden'); notice.classList.remove('hidden');
-            document.getElementById('portfolio-past-notice-text').textContent = `해당 월의 자산 구성 스냅샷 데이터가 존재하지 않습니다.`;
+            wrapper.classList.add('hidden');
+            notice.classList.remove('hidden');
+            renderPortfolioCfoGroupSummary(null);
+            document.getElementById('portfolio-past-notice-text').textContent = '해당 월의 자산 구성 스냅샷 데이터가 존재하지 않습니다.';
         }
 
         const officialSnapshot = isLatestMonth && typeof getOfficialFinanceSnapshot === 'function'
             ? getOfficialFinanceSnapshot()
             : null;
-        const displayedNetWorth = officialSnapshot?.source === 'portfolio'
-            ? officialSnapshot.netWorth
-            : totalCashAndSafe + totalInvest + totalDebt;
         const sourceBadge = document.getElementById('portfolio-data-source-badge');
         if (sourceBadge && officialSnapshot) sourceBadge.textContent = window.FinanceModel.getSourceBadge(officialSnapshot);
-
-        document.getElementById('pf-networth').textContent = displayedNetWorth.toLocaleString() + '원';
-        document.getElementById('pf-safe-sum').textContent = totalCashAndSafe.toLocaleString() + '원';
-        document.getElementById('pf-invest-sum').textContent = totalInvest.toLocaleString() + '원';
-        document.getElementById('pf-debt-sum').textContent = totalDebt.toLocaleString() + '원';
-
-        if(document.getElementById('pf-liquid-sum')) {
-            document.getElementById('pf-liquid-sum').textContent = totalLiquid.toLocaleString() + '원';
-            document.getElementById('pf-tied-sum').textContent = totalTied.toLocaleString() + '원';
-        }
+        const setText = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = `${Number(value || 0).toLocaleString()}원`;
+        };
+        setText('pf-networth', displayedNetWorth);
+        setText('pf-total-assets', totalAssets);
+        setText('pf-total-liabilities', totalLiabilities);
+        setText('pf-liquid-sum', totalLiquid);
+        setText('pf-tied-sum', totalTied);
 
         const renderDoughnut = (ctxId, chartKey, isMini = false) => {
             renderOrUpdateChart(chartKey, ctxId, {
                 type: 'doughnut',
                 data: { labels: chartLabels, datasets: [{ data: chartData, backgroundColor: chartColors, borderWidth: 0, hoverOffset: 4 }] },
-                options: withChartTransitions({ responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { boxWidth: isMini ? 8 : 10, font: { size: isMini ? 10 : 11, color: '#4B5563' } } }, tooltip: { callbacks: { label: function(c) { return ' ' + c.raw.toLocaleString() + '원'; } } } } }, 420)
+                options: withChartTransitions({
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: isMini ? 'right' : 'bottom',
+                            labels: { boxWidth: isMini ? 8 : 10, font: { size: isMini ? 10 : 11, color: '#4B5563' } },
+                        },
+                        tooltip: { callbacks: { label: (context) => ` ${Number(context.raw || 0).toLocaleString()}원` } },
+                    },
+                }, 420),
             });
         };
         renderDoughnut('portfolioChart', 'portfolio', false);

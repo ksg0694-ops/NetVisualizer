@@ -30,7 +30,6 @@
         const reportForecastMetaEl = document.getElementById('monthly-report-forecast-meta');
         const forecastYearEndEl = document.getElementById('asset-forecast-year-end');
         const forecastRetainedEl = document.getElementById('asset-forecast-retained');
-        const forecastObservationsEl = document.getElementById('asset-forecast-observations');
         const forecastMethodEl = document.getElementById('asset-forecast-method');
         const dashboardTitleEl = document.getElementById('dashboard-asset-title');
         const goalMeta = getAssetGoalProgressMeta(model);
@@ -59,9 +58,6 @@
             : '예측 데이터 부족';
         if (forecastYearEndEl) forecastYearEndEl.textContent = formatWon(forecastYearEnd);
         if (forecastRetainedEl) forecastRetainedEl.textContent = averageRetained > 0 ? `+${formatWon(averageRetained)}` : '-';
-        if (forecastObservationsEl) forecastObservationsEl.textContent = Number(forecast.lowestMonthlySalary || 0) > 0
-            ? formatWon(forecast.lowestMonthlySalary)
-            : '-';
         if (forecastMethodEl) forecastMethodEl.textContent = forecastMethodText;
         if (dashboardTitleEl) dashboardTitleEl.textContent = model.dashboardTitle;
     }

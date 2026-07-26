@@ -659,7 +659,7 @@
             { label: '잔여', value: '변동', detail: '월 마감 후 남은 현금', icon: 'fa-wallet' },
         ];
         const renderAllocationCard = (row) => `
-            <article class="flex min-w-0 items-center gap-2.5 rounded-lg border border-slate-200 bg-white p-2.5 text-slate-700">
+            <article class="flex h-full min-w-0 items-center gap-2.5 rounded-lg border border-slate-200 bg-white p-2.5 text-slate-700">
                 <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
                     <i class="fas ${row.icon} text-xs" aria-hidden="true"></i>
                 </span>
@@ -673,7 +673,7 @@
             </article>
         `;
         const renderAssetCard = (row) => `
-            <article class="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-2 text-slate-700 ${row.node ? '' : 'opacity-55'}">
+            <article class="flex h-full min-w-0 flex-col justify-between rounded-lg border border-slate-200 bg-slate-50 p-2 text-slate-700 ${row.node ? '' : 'opacity-55'}">
                 <div class="flex items-center justify-between gap-2">
                     <p class="truncate text-[10px] font-bold">${escapeHtml(row.label)}</p>
                     <i class="fas ${row.icon} text-[10px] text-indigo-500" aria-hidden="true"></i>
@@ -689,7 +689,7 @@
                 </div>
                 <div class="p-3">
                     <div class="grid grid-cols-1 items-stretch gap-2.5 lg:grid-cols-[155px_22px_minmax(330px,0.95fr)_22px_minmax(330px,1.05fr)]">
-                    <article class="flex min-h-32 flex-col justify-between rounded-xl border border-slate-800 bg-slate-900 p-3.5 text-white lg:min-h-[298px]">
+                    <article class="flex min-h-32 flex-col justify-between rounded-xl border border-slate-800 bg-slate-900 p-3 text-white lg:h-full lg:min-h-[298px]">
                         <div>
                             <div class="flex items-center justify-between gap-2">
                                 <p class="text-xs font-bold">수입</p>
@@ -702,19 +702,19 @@
                         </div>
                     </article>
                     <div class="hidden items-center justify-center text-slate-300 lg:flex" aria-hidden="true"><i class="fas fa-arrow-right"></i></div>
-                    <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-2.5">
+                    <div class="flex h-full flex-col rounded-xl border border-slate-200 bg-slate-50/70 p-3 lg:min-h-[298px]">
                         <div class="mb-2 flex items-center justify-between gap-2">
                             <p class="text-xs font-bold text-gray-700">매월 자금 배분</p>
                         </div>
-                        <div class="grid gap-1.5">${allocationRows.map(renderAllocationCard).join('')}</div>
+                        <div class="grid flex-1 gap-1.5 lg:grid-rows-4">${allocationRows.map(renderAllocationCard).join('')}</div>
                     </div>
                     <div class="hidden items-center justify-center text-slate-300 lg:flex" aria-hidden="true"><i class="fas fa-arrow-right"></i></div>
-                    <div class="rounded-xl border border-slate-200 bg-white p-2.5">
+                    <div class="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-3 lg:min-h-[298px]">
                         <div class="mb-2 flex items-center justify-between gap-2">
                             <p class="text-xs font-bold text-gray-700">내 자산</p>
                         </div>
-                        <div class="space-y-2">
-                            <article class="rounded-lg border border-indigo-100 bg-indigo-50/60 p-2.5">
+                        <div class="grid flex-1 grid-rows-[76px_minmax(0,1fr)] gap-2">
+                            <article class="flex h-full flex-col justify-center rounded-lg border border-indigo-100 bg-indigo-50/60 p-2.5">
                                 <div class="flex items-center gap-2">
                                     <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[9px] font-bold text-white">1</span>
                                     <p class="text-[10px] font-bold text-indigo-700">안전자산</p>
@@ -722,26 +722,26 @@
                                 </div>
                                 <p class="mt-1 pl-7 text-[9px] text-indigo-400">${escapeHtml(safeAsset.detail)}</p>
                             </article>
-                            <div>
+                            <div class="flex min-h-0 flex-col">
                                 <div class="mb-1.5 flex items-center gap-2">
                                     <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[9px] font-bold text-white">2</span>
                                     <p class="text-[10px] font-bold text-slate-600">연금 · 주거 · 투자자산</p>
                                 </div>
-                                <div class="grid grid-cols-3 gap-1.5">${longTermAssets.map(renderAssetCard).join('')}</div>
+                                <div class="grid flex-1 grid-cols-3 gap-1.5">${longTermAssets.map(renderAssetCard).join('')}</div>
                             </div>
                         </div>
                     </div>
                     </div>
                     <div class="mt-3 grid grid-cols-1 gap-2 border-t border-gray-100 pt-3 sm:grid-cols-3">
-                        <article class="rounded-lg bg-slate-50 px-3 py-2.5">
+                        <article class="flex min-h-[66px] flex-col justify-center rounded-lg bg-slate-50 px-3 py-2.5">
                             <p class="text-[10px] font-bold text-gray-400">총자산</p>
                             <p class="mt-1 text-base font-bold text-gray-900">${escapeHtml(formatKrw(summary?.totalAssets || 0))}</p>
                         </article>
-                        <article class="rounded-lg bg-slate-100 px-3 py-2.5">
+                        <article class="flex min-h-[66px] flex-col justify-center rounded-lg bg-slate-100 px-3 py-2.5">
                             <p class="text-[10px] font-bold text-slate-500">총부채</p>
                             <p class="mt-1 text-base font-bold text-slate-900">${escapeHtml(formatKrw(summary?.totalLiabilities || 0))}</p>
                         </article>
-                        <article class="rounded-lg bg-indigo-50 px-3 py-2.5">
+                        <article class="flex min-h-[66px] flex-col justify-center rounded-lg bg-indigo-50 px-3 py-2.5">
                             <p class="text-[10px] font-bold text-indigo-500">순자산</p>
                             <p class="mt-1 text-base font-bold text-indigo-900">${escapeHtml(formatKrw(summary?.netWorth || 0))}</p>
                         </article>

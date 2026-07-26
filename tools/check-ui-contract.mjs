@@ -12,6 +12,7 @@ const monthlyClose = await readFile(new URL('../js/features/monthlyClose.js', im
 const financeModel = await readFile(new URL('../js/features/financeModel.js', import.meta.url), 'utf8');
 const financeViews = await readFile(new URL('../js/features/financeViews.js', import.meta.url), 'utf8');
 const portfolioEditor = await readFile(new URL('../js/features/portfolioEditor.js', import.meta.url), 'utf8');
+const portfolioViews = await readFile(new URL('../js/features/portfolioViews.js', import.meta.url), 'utf8');
 
 const requiredScripts = [
     './js/shared/appUtils.js',
@@ -60,6 +61,8 @@ assert.ok(!index.includes('id="asset-total-growth"'));
 assert.ok(!index.includes('id="asset-avg-growth"'));
 assert.ok(index.includes('id="long-goal-self-funding"'));
 assert.ok(index.includes('id="long-goal-mortgage-capacity"'));
+assert.ok(!index.includes('id="asset-forecast-observations"'), 'baseline salary must stay off Long-term Goal');
+assert.ok(!index.includes('기준 월급'), 'baseline salary label must stay off Long-term Goal');
 assert.ok(!index.includes('id="long-goal-housing-status"'), 'judgment badge must stay off Long-term Goal');
 assert.ok(index.includes('Stress DSR 40% 기준'));
 assert.ok(!index.includes('Finance Roadmap'));
@@ -108,6 +111,9 @@ assert.ok(!cfo.includes("route: '월 운영'"));
 assert.ok(!cfo.includes("route: '부채 감소'"));
 assert.ok(cfo.includes('const safeAsset = assetRows[0]'));
 assert.ok(cfo.includes('연금 · 주거 · 투자자산'));
+assert.ok(cfo.includes('lg:grid-rows-4'), 'allocation cards must share the available height');
+assert.ok(cfo.includes('grid-rows-[76px_minmax(0,1fr)]'), 'asset steps must use aligned rows');
+assert.ok(cfo.includes('lg:min-h-[298px]'), 'Personal CFO columns must share a desktop minimum height');
 assert.ok(!cfo.includes('월급은 400만원으로 고정하지 않습니다.'));
 assert.ok(!cfo.includes('${renderKpiCards(model.summary, cashFlow)}'));
 assert.ok(!cfo.includes('${renderMobileFinanceSummary(model.graph)}'));
@@ -140,10 +146,19 @@ assert.ok(financeViews.includes('getCashFlowStructureSummary'));
 assert.ok(financeViews.includes('buildIncomeTrendForecast'));
 assert.ok(financeViews.includes('buildAssetIncomeForecastPath'));
 assert.ok(financeViews.includes("setElementText('long-goal-mortgage-capacity'"));
+assert.ok(!financeViews.includes('asset-forecast-observations'), 'removed baseline salary UI must not be updated');
 assert.ok(financeViews.includes('const selfFunding = Math.max(0, liquidAndSafe + housingFunds + discountedInvestments + debt)'));
 assert.ok(portfolioEditor.includes('createPortfolioDraft(rawPortfolioData)'));
 assert.ok(portfolioEditor.includes('savePortfolioDraft(workingPortfolioData)'));
 assert.ok(!portfolioEditor.includes(".from('portfolios')"), 'portfolio editor must not issue Supabase writes directly');
 assert.ok(!/workingPortfolioData\[[^\]]+\]\[[^\]]+\]/.test(portfolioEditor), 'portfolio draft must not use indexed columns');
+assert.ok(index.includes('id="portfolio-cfo-group-summary"'));
+assert.ok(index.includes('id="pf-total-assets"'));
+assert.ok(index.includes('id="pf-total-liabilities"'));
+assert.ok(portfolioViews.includes('buildCfoAssetGroups(dynamicPortfolioData)'));
+['운영자산', '안전자산', '투자자산', '주거자산', '연금'].forEach((label) => {
+    assert.ok(portfolioViews.includes(label) || financeModel.includes(label), `${label} CFO group must exist`);
+});
+assert.ok(portfolioViews.includes("renderInvestDetail('투자 자산')"), 'investment drill-down must remain reachable');
 
 console.log('UI runtime contracts ok');
