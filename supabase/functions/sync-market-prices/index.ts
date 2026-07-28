@@ -95,6 +95,12 @@ function toTwelveDataSymbol(ticker: string, overrides: Record<string, string>) {
   return ticker
 }
 
+function toYahooSymbol(ticker: string, overrides: Record<string, string>) {
+  if (overrides[ticker]) return overrides[ticker]
+  if (/^(\d{6}|\d{4}[A-Z]\d)$/.test(ticker)) return `${ticker}.KS`
+  return ticker
+}
+
 function isKoreanExchangeSymbol(providerSymbol: string) {
   return providerSymbol.endsWith(':XKRX') || providerSymbol.endsWith(':XKOS') || providerSymbol.endsWith(':XKON')
 }
@@ -206,6 +212,78 @@ async function fetchTwelveDataQuotes(tickers: string[], currencyByTicker: Record
 
   const parsed = parseTwelveQuotePayload(await response.json(), allowedRequests)
   return { quotes: parsed.quotes, errors: [...parsed.errors, ...blockedErrors] }
+}
+
+function parseYahooQuotePayload(
+  payload: unknown,
+  request: TickerRequest,
+): MarketQuote {
+  const chart = payload && typeof payload === 'object'
+    ? (payload as Record<string, unknown>).chart as Record<string, unknown> | undefined
+    : undefined
+  const result = Array.isArray(chart?.result) ? chart.result[0] : null
+  const meta = result && typeof result === 'object'
+    ? (result as Record<string, unknown>).meta as Record<string, unknown> | undefined
+    : undefined
+  const price = Number(meta?.regularMarketPrice)
+  const timestamp = Number(meta?.regularMarketTime)
+
+  if (!Number.isFinite(price) || price <= 0) {
+    throw new Error(`${request.ticker}: invalid Yahoo Finance price`)
+  }
+
+  const returnedCurrency = String(meta?.currency || request.currency || '').trim().toUpperCase()
+  const currency = inferCurrency(request.ticker, request.providerSymbol, returnedCurrency)
+  if (request.currency && currency !== request.currency.toUpperCase()) {
+    throw new Error(`${request.ticker}: currency mismatch (${currency} != ${request.currency.toUpperCase()})`)
+  }
+
+  return {
+    ticker: request.ticker,
+    providerSymbol: request.providerSymbol,
+    price,
+    currency,
+    priceDate: Number.isFinite(timestamp) && timestamp > 0
+      ? new Date(timestamp * 1000).toISOString().slice(0, 10)
+      : getKoreaDateString(),
+  }
+}
+
+async function fetchYahooQuotes(
+  tickers: string[],
+  currencyByTicker: Record<string, string>,
+): Promise<QuoteFetchResult> {
+  const overrides = parseJsonEnv('YAHOO_SYMBOL_OVERRIDES')
+  const requests = tickers.map((ticker) => ({
+    ticker,
+    providerSymbol: toYahooSymbol(ticker, overrides),
+    currency: currencyByTicker[ticker] || '',
+  }))
+  const quotes: MarketQuote[] = []
+  const errors: string[] = []
+
+  await Promise.all(requests.map(async (request) => {
+    try {
+      const symbol = encodeURIComponent(request.providerSymbol)
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=5d`
+      const response = await fetch(url, {
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'Mozilla/5.0 (compatible; NetVisualizer/1.0)',
+        },
+      })
+      if (!response.ok) {
+        throw new Error(`${request.ticker}: Yahoo Finance failed (${response.status})`)
+      }
+      quotes.push(parseYahooQuotePayload(await response.json(), request))
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error))
+    }
+  }))
+
+  quotes.sort((a, b) => a.ticker.localeCompare(b.ticker))
+  errors.sort()
+  return { quotes, errors }
 }
 
 function getKisCredentials() {
@@ -325,6 +403,7 @@ async function fetchProviderQuotes(tickers: string[], currencyByTicker: Record<s
   }
   if (provider === 'kis') return fetchKisDomesticQuotes(tickers)
   if (provider === 'twelvedata') return fetchTwelveDataQuotes(tickers, currencyByTicker)
+  if (provider === 'yahoo') return fetchYahooQuotes(tickers, currencyByTicker)
   throw new Response(`Unsupported free-only market price provider: ${provider}`, { status: 400 })
 }
 
@@ -376,8 +455,15 @@ Deno.serve(async (req) => {
 
     if (cacheError) throw cacheError
 
+    const cacheThreshold = Date.now() - 6 * 60 * 60 * 1000
     const cachedQuotes = (cachedRows || [])
-      .filter((row) => row.source === 'api' && row.price_date === today)
+      .filter((row) => (
+        row.source === 'api'
+        && (
+          row.price_date === today
+          || new Date(String(row.updated_at || '')).getTime() >= cacheThreshold
+        )
+      ))
       .map((row) => ({
         ticker: String(row.ticker || '').trim().toUpperCase(),
         providerSymbol: String(row.ticker || '').trim().toUpperCase(),

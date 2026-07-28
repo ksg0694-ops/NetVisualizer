@@ -140,13 +140,20 @@
 | Financial Modeling Prep | 미국 주식, 재무제표, 프로필 데이터가 강하고 무료 호출량이 비교적 명확하다. | 한국 종목 커버리지와 거래소 suffix 운용이 Twelve Data보다 이번 요구에 덜 직접적이다. | 보조 후보 |
 | Finnhub | quote API가 단순하고 free tier rate가 넉넉한 편이다. | 한국 종목/ETF 커버리지와 장기 확장성은 별도 확인이 필요하다. | 보조 후보 |
 | KIS Open API | 국내주식 현재가를 공식 API로 조회할 수 있다. 증권사 앱키/시크릿 기반으로 무료 사용 가능성이 높고 비공식 크롤링보다 안정적이다. | OAuth 토큰 발급과 앱키 관리가 필요하다. 계좌/주문 API까지 확장하면 보안 설계가 커진다. | 한국 무료 provider 채택 |
-| Yahoo/Naver 비공식 API | key 없이 빠르게 붙일 수 있다. | 비공식 endpoint라 차단/스키마 변경/약관 리스크가 크다. | 제외 |
+| Yahoo Finance chart 응답 | key 없이 한국·미국 보유 ticker를 한 구조로 조회할 수 있다. | 공개 문서화된 정식 API가 아니므로 차단·스키마 변경 위험이 있다. | 개인용 편의 provider, 캐시·수동 fallback 필수 |
 
-결론: 무료 고정을 위해 기본 provider는 `disabled`로 둔다. 한국 국내 단축코드 ticker 자동 조회는 KIS Open API의 국내주식 현재가 조회 provider를 별도로 붙인다. Twelve Data는 미국/글로벌 ticker의 무료 개발 테스트에만 선택적으로 사용하고, 한국 거래소 symbol은 Twelve Data 경로에서 계속 차단한다.
+결론: 2026-07-28부터 개인용 현재 포트폴리오는 `yahoo` provider로 자동 갱신한다.
+한국 국내 단축코드는 `.KS` 심볼로 변환하고, 통화 불일치나 0 이하 가격은 저장하지 않는다.
+공식 국내 provider가 필요한 경우 KIS로 전환할 수 있으며, Yahoo 응답 실패 시 마지막 캐시와
+사용자 override가 화면을 유지한다.
 
 ### 무료 전용 시세 적용 결과
 
-- `sync-market-prices` Edge Function의 기본 provider를 `disabled`로 정했다.
+- 원격 `sync-market-prices` Edge Function provider를 `yahoo`로 설정했다.
+- 미국 8개와 한국 14개, 총 22개 고유 ticker를 2026-07-28 현재가로 동기화했다.
+- 한국 6자리·영숫자 ticker는 Yahoo `.KS` 심볼로 자동 변환한다.
+- 앱은 4시간 간격으로 백그라운드 동기화를 시도하고 서버는 최근 6시간 캐시를 사용한다.
+- 응답 통화가 보유행 통화와 다르면 해당 시세는 오류로 분리해 저장하지 않는다.
 - `TWELVE_DATA_API_KEY`는 선택적 무료 테스트용 secret으로만 사용한다.
 - `MARKET_PRICE_PROVIDER=twelvedata`일 때만 여러 ticker를 comma-separated `symbol` 파라미터로 요청한다.
 - 포트폴리오 ticker가 `005930`, `0098N0` 같은 한국 국내 단축코드이면 기본 provider symbol을 `005930:XKRX`, `0098N0:XKRX`처럼 변환하지만 실제 호출은 차단한다.

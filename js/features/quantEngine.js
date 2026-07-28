@@ -697,22 +697,26 @@
         return fallback;
     }
 
-    window.syncMarketPrices = async function() {
+    const MARKET_PRICE_AUTO_SYNC_KEY = 'netvisualizer_market_price_auto_sync_at';
+    const MARKET_PRICE_AUTO_SYNC_INTERVAL_MS = 4 * 60 * 60 * 1000;
+
+    window.syncMarketPrices = async function(options = {}) {
+        const silent = Boolean(options?.silent);
         const btn = document.getElementById('btn-sync-market-prices');
         const status = document.getElementById('invest-quant-status');
         const originalHtml = btn ? btn.innerHTML : '';
         const tickers = getActiveInvestTickers();
 
         if (tickers.length === 0) {
-            showToast('Ticker가 있는 투자 항목이 없습니다.', 'warning', 2000);
-            return;
+            if (!silent) showToast('Ticker가 있는 투자 항목이 없습니다.', 'warning', 2000);
+            return null;
         }
 
-        if (btn) {
+        if (btn && !silent) {
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin text-[9px]"></i> 시세';
         }
-        if (status) status.textContent = '시세 동기화';
+        if (status && !silent) status.textContent = '시세 동기화';
 
         try {
             const _supabase = getAuthenticatedSupabaseClient();
@@ -737,17 +741,28 @@
             const message = syncedCount > 0
                 ? (failedCount > 0 ? `시세 ${syncedCount}건 동기화, ${failedCount}건 보류` : `시세 ${syncedCount}건 동기화 완료`)
                 : `오늘 캐시 ${cachedCount}건 사용`;
-            showToast(message, failedCount > 0 ? 'warning' : 'info', 2200);
+            localStorage.setItem(MARKET_PRICE_AUTO_SYNC_KEY, new Date().toISOString());
+            if (!silent) showToast(message, failedCount > 0 ? 'warning' : 'info', 2200);
+            return data;
         } catch (error) {
             console.error('시세 동기화 실패:', error);
-            if (status) status.textContent = '시세 보류';
-            showToast(`시세 동기화 보류: ${error.message}`, 'warning', 3200);
+            if (status && !silent) status.textContent = '시세 보류';
+            if (!silent) showToast(`시세 동기화 보류: ${error.message}`, 'warning', 3200);
+            return null;
         } finally {
-            if (btn) {
+            if (btn && !silent) {
                 btn.disabled = false;
                 btn.innerHTML = originalHtml || '<i class="fas fa-cloud-download-alt text-[9px]"></i> 시세';
             }
         }
+    };
+
+    window.maybeAutoSyncMarketPrices = function() {
+        const lastSyncAt = new Date(localStorage.getItem(MARKET_PRICE_AUTO_SYNC_KEY) || '').getTime();
+        if (Number.isFinite(lastSyncAt) && Date.now() - lastSyncAt < MARKET_PRICE_AUTO_SYNC_INTERVAL_MS) {
+            return;
+        }
+        window.syncMarketPrices({ silent: true });
     };
 
     window.saveMarketPrice = async function(ticker, currency, priceInputId, dateInputId) {

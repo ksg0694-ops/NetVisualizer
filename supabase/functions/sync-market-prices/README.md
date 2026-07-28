@@ -16,12 +16,16 @@ NetVisualizer runs in free-only mode by default. No external quote provider is c
 Why:
 
 - `disabled` is the default provider, so manual prices and DB cache work without any external API.
+- `yahoo` uses Yahoo Finance's public chart response for the current US and Korean
+  portfolio symbols without an API key.
 - `kis` uses Korea Investment & Securities Open API for Korean domestic short-code quotes only.
 - `twelvedata` remains optional for US/global free-tier development tests only.
 - The function uses today's DB cache before calling any provider.
 
 Tradeoffs:
 
+- Yahoo Finance is a keyless convenience provider, so a cached last price and the
+  existing manual override remain the fallback if the response is unavailable.
 - KIS requires app credentials from KIS Developers.
 - KIS token is cached only in the Edge Function runtime memory, not in the database.
 - This function does not call account, balance, order, or paid-market-data endpoints.
@@ -29,7 +33,8 @@ Tradeoffs:
 
 ## Required Secrets
 
-- `MARKET_PRICE_PROVIDER`: `disabled` by default. Optional values: `kis`, `twelvedata`.
+- `MARKET_PRICE_PROVIDER`: `disabled` by default. Optional values: `yahoo`, `kis`, `twelvedata`.
+- `YAHOO_SYMBOL_OVERRIDES`: optional JSON map from the local ticker to the Yahoo symbol.
 - `KIS_APP_KEY`: optional KIS Developers app key for domestic Korean quotes.
 - `KIS_APP_SECRET`: optional KIS Developers app secret for domestic Korean quotes.
 - `KIS_BASE_URL`: optional, defaults to `https://openapi.koreainvestment.com:9443`.

@@ -286,20 +286,22 @@ npx http-server -p 8080
 
 ## 시세 API 설정
 
-시세 연동은 무료 전용으로 고정합니다. 기본값은 외부 시세 API를 호출하지 않는 `disabled`입니다.
+시세 연동은 무료·무키 방식의 Yahoo Finance chart 응답을 기본 provider로 사용합니다.
 
-1. 기본 상태에서는 수동 현재가 입력과 DB 캐시만 사용합니다.
-2. `supabase/functions/.env.example`을 참고해 `supabase/functions/.env`를 만듭니다.
-3. 한국 국내 단축코드 ticker 자동 조회가 필요하면 `MARKET_PRICE_PROVIDER=kis`, `KIS_APP_KEY`, `KIS_APP_SECRET`을 설정합니다.
-4. 무료 범위의 미국/글로벌 ticker 테스트가 필요할 때만 `MARKET_PRICE_PROVIDER=twelvedata`와 무료 API key를 설정합니다.
-5. 유료 플랜 호출을 켜는 override는 없습니다.
-6. 로컬에서는 `supabase functions serve sync-market-prices --env-file supabase/functions/.env`로 테스트합니다.
+1. 한국 6자리·영숫자 ticker는 `.KS` 심볼로, 미국 ticker는 원래 심볼로 조회합니다.
+2. 앱을 열 때 마지막 자동 갱신이 4시간보다 오래된 경우 백그라운드로 시세를 동기화합니다.
+3. 서버는 같은 날 또는 최근 6시간 이내 API 시세를 재사용합니다.
+4. 외부 응답 실패 시 마지막 DB 캐시, 사용자 override, 입력 원화금액 순으로 화면을 유지합니다.
+5. 필요하면 `YAHOO_SYMBOL_OVERRIDES`로 예외 심볼을 지정할 수 있습니다.
+6. 공식 국내 provider가 필요하면 `MARKET_PRICE_PROVIDER=kis`, `KIS_APP_KEY`, `KIS_APP_SECRET`으로 전환할 수 있습니다.
+7. 로컬에서는 `supabase functions serve sync-market-prices --env-file supabase/functions/.env`로 테스트합니다.
 
-현재는 자동 스케줄 배포까지는 하지 않았습니다. 무료 고정을 위해 시세 버튼은 사용자가 누를 때만 동작하고, 같은 날짜의 API 시세가 이미 있으면 외부 API를 다시 호출하지 않고 DB 캐시를 사용합니다.
+자동 갱신과 별개로 투자 상세 화면의 `시세` 버튼으로 즉시 재확인할 수 있습니다.
 
 KIS provider는 국내주식 현재가 조회만 사용합니다. 계좌잔고, 주문, 체결, 매매 API는 호출하지 않습니다.
 
-`sync-market-prices` Edge Function은 Supabase 프로젝트에 배포되어 있으며, 원격 secret `MARKET_PRICE_PROVIDER=disabled`가 설정되어 있습니다. 인증 없는 호출은 401로 차단되는 것을 확인했습니다.
+`sync-market-prices` Edge Function은 Supabase 프로젝트에 배포되어 있으며, 원격 secret
+`MARKET_PRICE_PROVIDER=yahoo`가 설정되어 있습니다. 함수 호출은 Supabase JWT 검증을 사용합니다.
 
 KIS dry run은 다음 스크립트로 확인합니다.
 
@@ -308,6 +310,8 @@ KIS dry run은 다음 스크립트로 확인합니다.
 .\scripts\kis-dry-run.ps1 -Tickers 005930
 ```
 
-원격 함수 배포는 완료되어 있습니다. 현재 남은 차단점은 `supabase/functions/.env`에 실제 KIS 앱키/시크릿이 없다는 점입니다.
+원격 함수 배포와 22개 고유 ticker의 현재가 캐시는 완료되어 있습니다. 평균매입단가는
+사용자 입력 후 `portfolios.avg_buy_price`에 반영합니다.
 
-투자 상세 화면의 `시세` 버튼은 배포된 `sync-market-prices` Edge Function을 호출합니다. 함수가 배포되지 않았거나 API key가 없으면 DB를 바꾸지 않고 보류 메시지만 표시합니다. 성공 시 `portfolio_market_prices`만 다시 가져와 현재 화면의 수익률을 갱신합니다.
+투자 상세 화면의 `시세` 버튼은 배포된 `sync-market-prices` Edge Function을 호출합니다.
+성공 시 `portfolio_market_prices`를 다시 가져와 현재 평가액과 수익률을 갱신합니다.

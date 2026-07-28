@@ -1265,6 +1265,9 @@
             if(sidebarSync) sidebarSync.innerHTML = `<i class="fas fa-check-circle text-[10px]"></i> 최근 동기화됨`;
 
             if(!isAutoSync) showToast('최신 데이터가 동기화되었습니다.', 'info');
+            if (tables.includes('portfolios')) {
+                window.setTimeout(() => window.maybeAutoSyncMarketPrices?.(), 0);
+            }
 
         } catch (error) {
             console.warn("API 연동 실패 사유:", error.message);
