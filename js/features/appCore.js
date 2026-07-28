@@ -61,6 +61,8 @@
         quantRuleOverrides: null,
         marketPrices: null,
         marketPriceOverrides: null,
+        fxRates: null,
+        portfolioMonthlySnapshots: null,
         financeMonthCloses: null,
         realEstateSubscriptions: null,
         realEstateHousingTypes: null,
@@ -73,7 +75,33 @@
     let activeInvestProcessedItems = [];
     let activeQuantHoldingItems = [];
     let activeInvestTotal = 0;
+    let activePortfolioValuationModel = null;
     let marketPriceMap = {};
+    let fxRateMap = {};
+
+    const DEFAULT_PORTFOLIO_FX_RATES = Object.freeze([
+        {
+            currency: 'USD',
+            krw_per_unit: 1470.1115,
+            rate_date: '2026-07-27',
+            source: 'ecb-cross',
+            source_label: 'ECB EUR 교차환율',
+        },
+        {
+            currency: 'JPY',
+            krw_per_unit: 8.9839,
+            rate_date: '2026-07-27',
+            source: 'ecb-cross',
+            source_label: 'ECB EUR 교차환율',
+        },
+        {
+            currency: 'EUR',
+            krw_per_unit: 1674.31,
+            rate_date: '2026-07-27',
+            source: 'ecb',
+            source_label: 'ECB 기준환율',
+        },
+    ]);
 
     let dynamicAssetHistory = { labels: [], data: [] };
     let dynamicAssetSnapshots = {};
@@ -733,6 +761,49 @@
         return key ? marketPriceMap[key] || null : null;
     }
 
+    function parseFxRates(rows = []) {
+        fxRateMap = {
+            KRW: {
+                currency: 'KRW',
+                krwPerUnit: 1,
+                rateDate: '',
+                source: 'identity',
+                sourceLabel: '원화',
+            },
+        };
+        const merged = new Map(DEFAULT_PORTFOLIO_FX_RATES.map((row) => [row.currency, row]));
+        (Array.isArray(rows) ? rows : []).forEach((row) => {
+            const currency = String(row.currency || '').trim().toUpperCase();
+            const krwPerUnit = Number(row.krw_per_unit ?? row.krwPerUnit);
+            if (!currency || !Number.isFinite(krwPerUnit) || krwPerUnit <= 0) return;
+            merged.set(currency, { ...row, currency, krw_per_unit: krwPerUnit });
+        });
+        merged.forEach((row, currency) => {
+            fxRateMap[currency] = {
+                ...row,
+                currency,
+                krwPerUnit: Number(row.krw_per_unit ?? row.krwPerUnit),
+                rateDate: String(row.rate_date || row.rateDate || ''),
+                source: String(row.source || 'manual'),
+                sourceLabel: String(row.source_label || row.sourceLabel || row.source || '수동'),
+            };
+        });
+    }
+
+    function getFxRateForCurrency(currency) {
+        const key = String(currency || 'KRW').trim().toUpperCase();
+        return fxRateMap[key] || null;
+    }
+
+    function buildCurrentPortfolioValuation(items = []) {
+        return window.FinanceModel.buildPortfolioValuation(items, {
+            getMarketPrice: getMarketPriceForTicker,
+            getFxRate: getFxRateForCurrency,
+            inferPort: inferStrategyTag,
+            getPortMeta: getStrategyMeta,
+        });
+    }
+
     function formatUnitPrice(value, currency = '') {
         const number = Number(value);
         if (!Number.isFinite(number)) return '미입력';
@@ -807,6 +878,22 @@
         return saved;
     };
 
+    window.savePortfolioMonthlySnapshotRecord = async function(record) {
+        const saved = await getFinanceRepository().savePortfolioMonthlySnapshot(record);
+        dataCache.portfolioMonthlySnapshots = financeRepositoryRuntime.mergePortfolioMonthlySnapshotRows(
+            dataCache.portfolioMonthlySnapshots || [],
+            [saved],
+        );
+        persistDataCache();
+        return saved;
+    };
+
+    window.getPortfolioMonthlySnapshots = function() {
+        return Array.isArray(dataCache.portfolioMonthlySnapshots)
+            ? dataCache.portfolioMonthlySnapshots.map((row) => ({ ...row }))
+            : [];
+    };
+
     window.refreshFinanceAfterMonthlyClose = function() {
         renderSections({ dashboard: true, cashFlow: true });
         window.PersonalCfoFeature?.render?.({ skipRemoteLoad: true });
@@ -821,6 +908,7 @@
         window.MonthlyCloseFeature?.hydrate?.(dataCache.financeMonthCloses || []);
         parseQuantStrategyRules(dataCache.quantRules, dataCache.quantRuleOverrides);
         parseMarketPrices(dataCache.marketPrices, dataCache.marketPriceOverrides);
+        parseFxRates(dataCache.fxRates);
     }
 
     function renderSections({ dashboard = false, financeSummary = false, cashFlow = false, portfolio = false, addons = false, realEstate = false, investDetail = false } = {}) {
@@ -840,7 +928,14 @@
     function getRenderTargetsForTables(tables) {
         const tableSet = new Set(tables);
         return {
-            dashboard: tableSet.has('transactions') || tableSet.has('assets') || tableSet.has('finance_month_closes'),
+            dashboard: tableSet.has('transactions')
+                || tableSet.has('assets')
+                || tableSet.has('finance_month_closes')
+                || tableSet.has('portfolios')
+                || tableSet.has('portfolio_market_prices')
+                || tableSet.has('portfolio_market_price_overrides')
+                || tableSet.has('portfolio_fx_rates')
+                || tableSet.has('portfolio_monthly_snapshots'),
             portfolio: tableSet.has('transactions') || tableSet.has('assets') || tableSet.has('portfolios'),
             addons: tableSet.has('cards') || tableSet.has('insurances'),
             realEstate: activeViewId === 'realestate-view' && (
@@ -855,7 +950,9 @@
                 tableSet.has('quant_strategy_rules') ||
                 tableSet.has('quant_strategy_rule_overrides') ||
                 tableSet.has('portfolio_market_prices') ||
-                tableSet.has('portfolio_market_price_overrides')
+                tableSet.has('portfolio_market_price_overrides') ||
+                tableSet.has('portfolio_fx_rates') ||
+                tableSet.has('portfolio_monthly_snapshots')
             )
         };
     }

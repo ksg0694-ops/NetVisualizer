@@ -54,6 +54,23 @@
             columns: ['user_id', 'ticker', 'price', 'currency', 'price_date', 'source', 'note', 'updated_at'],
             order: [['ticker', true]],
         },
+        portfolio_fx_rates: {
+            cacheKey: 'fxRates',
+            optional: true,
+            columns: ['currency', 'krw_per_unit', 'rate_date', 'source', 'source_label', 'updated_at'],
+            order: [['currency', true]],
+        },
+        portfolio_monthly_snapshots: {
+            cacheKey: 'portfolioMonthlySnapshots',
+            optional: true,
+            columns: [
+                'id', 'user_id', 'snapshot_month', 'snapshot_date', 'total_valuation_krw',
+                'total_stored_amount_krw', 'position_count', 'price_coverage_pct',
+                'fx_coverage_pct', 'port_totals', 'positions', 'source_revision',
+                'created_at', 'updated_at',
+            ],
+            order: [['snapshot_month', true]],
+        },
         finance_month_closes: {
             cacheKey: 'financeMonthCloses',
             optional: true,
@@ -120,6 +137,8 @@
         'quant_strategy_rule_overrides',
         'portfolio_market_prices',
         'portfolio_market_price_overrides',
+        'portfolio_fx_rates',
+        'portfolio_monthly_snapshots',
         'finance_month_closes',
         'real_estate_subscription_sites',
     ]);
@@ -221,6 +240,32 @@
         };
     }
 
+    function parseJsonValue(value, fallback) {
+        if (typeof value !== 'string') return value ?? fallback;
+        try { return JSON.parse(value); } catch (_error) { return fallback; }
+    }
+
+    function normalizePortfolioMonthlySnapshot(row = {}) {
+        const portTotals = parseJsonValue(row.port_totals ?? row.portTotals, []);
+        const positions = parseJsonValue(row.positions, []);
+        return {
+            id: String(row.id || ''),
+            user_id: String(row.user_id || ''),
+            snapshot_month: String(row.snapshot_month || row.snapshotMonth || ''),
+            snapshot_date: String(row.snapshot_date || row.snapshotDate || ''),
+            total_valuation_krw: Math.round(finiteNumber(row.total_valuation_krw ?? row.totalValuationKrw)),
+            total_stored_amount_krw: Math.round(finiteNumber(row.total_stored_amount_krw ?? row.totalStoredAmountKrw)),
+            position_count: Math.max(0, Math.trunc(finiteNumber(row.position_count ?? row.positionCount))),
+            price_coverage_pct: finiteNumber(row.price_coverage_pct ?? row.priceCoveragePct),
+            fx_coverage_pct: finiteNumber(row.fx_coverage_pct ?? row.fxCoveragePct),
+            port_totals: Array.isArray(portTotals) ? portTotals.map((item) => ({ ...item })) : [],
+            positions: Array.isArray(positions) ? positions.map((item) => ({ ...item })) : [],
+            source_revision: String(row.source_revision || row.sourceRevision || ''),
+            created_at: String(row.created_at || ''),
+            updated_at: String(row.updated_at || row.updatedAt || ''),
+        };
+    }
+
     function fromLegacyRows(table, rows) {
         if (!Array.isArray(rows) || !Array.isArray(rows[0])) return rows;
         const values = rows.slice(1);
@@ -255,6 +300,9 @@
         if (table === 'assets') return source.map(normalizeAsset).filter((row) => row.year && row.month);
         if (table === 'portfolios') return source.map(normalizePortfolio).filter((row) => row.name);
         if (table === 'finance_month_closes') return source.map(normalizeFinanceMonthClose).filter((row) => row.period_key);
+        if (table === 'portfolio_monthly_snapshots') {
+            return source.map(normalizePortfolioMonthlySnapshot).filter((row) => row.snapshot_month);
+        }
         return source.map((row) => ({ ...row }));
     }
 
@@ -428,6 +476,37 @@
         return Array.from(merged.values()).sort((a, b) => a.period_key.localeCompare(b.period_key));
     }
 
+    function toPortfolioMonthlySnapshotPayload(record = {}) {
+        return {
+            snapshot_month: String(record.snapshotMonth || record.snapshot_month || ''),
+            snapshot_date: String(record.snapshotDate || record.snapshot_date || ''),
+            total_valuation_krw: Math.round(finiteNumber(record.totalValuationKrw ?? record.total_valuation_krw)),
+            total_stored_amount_krw: Math.round(finiteNumber(record.totalStoredAmountKrw ?? record.total_stored_amount_krw)),
+            position_count: Math.max(0, Math.trunc(finiteNumber(record.positionCount ?? record.position_count))),
+            price_coverage_pct: finiteNumber(record.priceCoveragePct ?? record.price_coverage_pct),
+            fx_coverage_pct: finiteNumber(record.fxCoveragePct ?? record.fx_coverage_pct),
+            port_totals: Array.isArray(record.portTotals || record.port_totals)
+                ? (record.portTotals || record.port_totals)
+                : [],
+            positions: Array.isArray(record.positions) ? record.positions : [],
+            source_revision: String(record.sourceRevision || record.source_revision || ''),
+        };
+    }
+
+    function mergePortfolioMonthlySnapshotRows(currentRows = [], incomingRows = []) {
+        const merged = new Map();
+        [
+            ...normalizeTableRows('portfolio_monthly_snapshots', currentRows),
+            ...normalizeTableRows('portfolio_monthly_snapshots', incomingRows),
+        ].forEach((row) => {
+            const current = merged.get(row.snapshot_month);
+            if (!current || String(row.updated_at || '') >= String(current.updated_at || '')) {
+                merged.set(row.snapshot_month, row);
+            }
+        });
+        return Array.from(merged.values()).sort((a, b) => a.snapshot_month.localeCompare(b.snapshot_month));
+    }
+
     function buildAccountingPeriods(rows = [], resolvePeriod) {
         if (typeof resolvePeriod !== 'function') return [];
         const periods = new Map();
@@ -513,7 +592,27 @@
             if (error) throw error;
             return normalizeFinanceMonthClose(data || payload);
         }
-        return Object.freeze({ fetchTables, saveFinanceMonthClose, savePortfolioDraft });
+        async function savePortfolioMonthlySnapshot(record) {
+            const client = options.getClient();
+            const payload = toPortfolioMonthlySnapshotPayload(record);
+            if (!/^\d{4}-\d{2}$/.test(payload.snapshot_month) || !payload.snapshot_date) {
+                throw new Error('INVALID_PORTFOLIO_MONTHLY_SNAPSHOT');
+            }
+            const columns = TABLE_SPECS.portfolio_monthly_snapshots.columns.join(',');
+            const { data, error } = await client
+                .from('portfolio_monthly_snapshots')
+                .upsert(payload, { onConflict: 'user_id,snapshot_month', defaultToNull: false })
+                .select(columns)
+                .single();
+            if (error) throw error;
+            return normalizePortfolioMonthlySnapshot(data || payload);
+        }
+        return Object.freeze({
+            fetchTables,
+            saveFinanceMonthClose,
+            savePortfolioDraft,
+            savePortfolioMonthlySnapshot,
+        });
     }
 
     root.FinanceRepository = Object.freeze({
@@ -528,10 +627,12 @@
         createSupabaseFinanceRepository,
         getSnapshot,
         mergeFinanceMonthCloseRows,
+        mergePortfolioMonthlySnapshotRows,
         mergeTransactionRows,
         normalizeCache,
         normalizeTableRows,
         toFinanceMonthClosePayload,
+        toPortfolioMonthlySnapshotPayload,
         toPortfolioPayload,
     });
 })(typeof window !== 'undefined' ? window : globalThis);

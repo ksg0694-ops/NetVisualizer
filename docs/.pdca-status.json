@@ -4,9 +4,9 @@
   "feature": "August Finance Data and UX Refresh",
   "phase": "check",
   "progress": 99,
-  "updatedAt": "2026-07-28T22:40:00+09:00",
+  "updatedAt": "2026-07-28T23:15:00+09:00",
   "status": "in_progress",
-  "currentFocus": "Remove duplicate Portfolio key cards while preserving the primary summary and CFO holdings list.",
+  "currentFocus": "Validate the Portfolio Phase 2 KRW valuation model and begin filling current prices for the August opening snapshot.",
   "completed": [
     "Synchronized the July accounting-period ledger with the current source workbook.",
     "Added the structural monthly cash-flow view to Personal CFO.",
@@ -41,12 +41,18 @@
     "Compacted the CFO holdings list while preserving the five-group order and responsive layout.",
     "Moved the housing loan from operating assets to housing assets and removed the empty loan transit account.",
     "Sorted holdings and investment accounts by descending amount, with living-expense and salary accounts kept in the requested order.",
-    "Removed the duplicate five-card Portfolio summary and its unused rendering code."
+    "Removed the duplicate five-card Portfolio summary and its unused rendering code.",
+    "Added a single KRW valuation model using holding quantity, current price, and the applicable FX rate.",
+    "Kept the entered KRW amount as an explicit fallback when quantity, ticker, price, or FX data is missing.",
+    "Added ECB-derived USD, JPY, and EUR reference-rate metadata without changing June or July asset history.",
+    "Added Port-level valuation to Monthly Report and a Port trend strip to the investment drill-down.",
+    "Added per-holding price currency, FX, KRW valuation source, cost, and unrealized-return fields to the drill-down.",
+    "Created the remote portfolio FX and monthly snapshot tables and saved the 2026-08 investment baseline."
   ],
   "remaining": [
-    "Phase 2: rebuild the portfolio around holding quantity, market price, FX rate, Port, and monthly position snapshots.",
-    "Phase 2: add Port trends, holding drill-down, return history, and the portfolio section of the monthly Report.",
+    "Phase 2: enter or sync current prices and average purchase prices for the 18 ticker holdings.",
+    "Phase 2: accumulate monthly Port snapshots so the trend and return history has more than the August baseline.",
     "Recalculate loan eligibility after the real-estate policy update."
   ],
-  "nextStep": "Define and implement the Portfolio Phase 2 position, market price, FX, Port, and monthly snapshot schema on top of the CFO-purpose groups."
+  "nextStep": "Fill the 18 missing ticker prices and average purchase prices, then refresh the 2026-08 baseline."
 }

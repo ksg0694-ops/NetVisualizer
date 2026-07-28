@@ -518,6 +518,89 @@
         }
     }
 
+    function renderMonthlyReportPortfolioSummary() {
+        const totalElement = document.getElementById('monthly-report-portfolio-total');
+        const pricedElement = document.getElementById('monthly-report-portfolio-priced');
+        const fxElement = document.getElementById('monthly-report-portfolio-fx');
+        const snapshotElement = document.getElementById('monthly-report-portfolio-snapshot');
+        if (!totalElement || !dynamicPortfolioData) {
+            destroyChart('monthlyReportPortfolio');
+            return;
+        }
+        const cfoModel = window.FinanceModel.buildCfoAssetGroups(dynamicPortfolioData);
+        const investmentItems = cfoModel.groups.find((group) => group.key === 'investment')?.items || [];
+        const currentValuation = buildCurrentPortfolioValuation(investmentItems);
+        const snapshots = typeof window.getPortfolioMonthlySnapshots === 'function'
+            ? window.getPortfolioMonthlySnapshots()
+            : [];
+        const selectedSnapshot = snapshots.find((row) => row.snapshot_month === currentMonthKey);
+        const portTotals = selectedSnapshot?.port_totals?.length
+            ? selectedSnapshot.port_totals
+            : currentValuation.portTotals;
+        const totalValue = selectedSnapshot
+            ? Number(selectedSnapshot.total_valuation_krw || 0)
+            : currentValuation.totalValuationKrw;
+
+        totalElement.textContent = formatWon(totalValue);
+        if (pricedElement) {
+            const pricedCount = selectedSnapshot
+                ? Math.round((Number(selectedSnapshot.price_coverage_pct || 0) / 100) * Number(selectedSnapshot.position_count || 0))
+                : currentValuation.marketValuedCount;
+            const positionCount = selectedSnapshot
+                ? Number(selectedSnapshot.position_count || 0)
+                : currentValuation.positionCount;
+            pricedElement.textContent = `${pricedCount}/${positionCount}`;
+        }
+        if (fxElement) {
+            const coverage = selectedSnapshot
+                ? Number(selectedSnapshot.fx_coverage_pct || 0)
+                : currentValuation.fxCoveragePct;
+            fxElement.textContent = `${coverage.toFixed(0)}%`;
+        }
+        if (snapshotElement) {
+            snapshotElement.textContent = selectedSnapshot ? `${selectedSnapshot.snapshot_month} 마감` : '현재 기준';
+            snapshotElement.className = `rounded px-1.5 py-0.5 text-[9px] font-bold ${
+                selectedSnapshot
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : 'bg-slate-100 text-slate-600'
+            }`;
+        }
+
+        if (!document.getElementById('monthlyReportPortfolioChart')) return;
+        renderOrUpdateChart('monthlyReportPortfolio', 'monthlyReportPortfolioChart', {
+            type: 'bar',
+            data: {
+                labels: portTotals.map((port) => port.label || port.key),
+                datasets: [{
+                    data: portTotals.map((port) => Number(port.valuationKrw || 0)),
+                    backgroundColor: portTotals.map((port) => port.color || '#7C3AED'),
+                    borderRadius: 5,
+                    barThickness: 12,
+                }],
+            },
+            options: withChartTransitions({
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { display: false, beginAtZero: true },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#64748B', font: { size: 9, weight: 700 } },
+                    },
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => ` ${formatWon(context.raw)}`,
+                        },
+                    },
+                },
+            }, 360),
+        });
+    }
+
     function getFinanceCashFlowContext() {
         const today = window.AppUtils.toLocalDateString();
         const periods = getCashFlowPeriods();
@@ -1342,6 +1425,7 @@
         if (selectedExpense) selectedExpense.textContent = formatWon(cashFlowStructure?.spending ?? totalExpense);
         renderCashFlowAllocationPanel(cashFlowStructure);
         renderMonthlyReportSummary(db, cashFlowStructure);
+        renderMonthlyReportPortfolioSummary();
 
         const manageList = document.getElementById('manageTransactionList');
         if (manageList) manageList.innerHTML = '';

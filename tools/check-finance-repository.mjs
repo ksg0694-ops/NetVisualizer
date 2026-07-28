@@ -10,6 +10,8 @@ assert.ok(repository.TABLE_SPECS.transactions.columns.includes('id'));
 assert.ok(repository.TABLE_SPECS.portfolios.columns.includes('account_order'));
 assert.ok(repository.TABLE_SPECS.portfolios.columns.includes('asset_class'));
 assert.ok(repository.TABLE_SPECS.portfolios.columns.includes('purpose_key'));
+assert.ok(repository.DEFAULT_DATA_TABLES.includes('portfolio_fx_rates'));
+assert.ok(repository.DEFAULT_DATA_TABLES.includes('portfolio_monthly_snapshots'));
 
 const legacyTransactions = [
     ['날짜', '시간', '타입', '대분류', '소분류', '내용', '금액', '화폐', '결제수단'],
@@ -96,6 +98,21 @@ const mergedCloses = repository.mergeFinanceMonthCloseRows(
     [{ period_key: '2026-06', status: 'closed', updated_at: '2026-06-25T00:00:00Z' }],
 );
 assert.equal(mergedCloses[0].status, 'closed');
+
+const portfolioSnapshotPayload = repository.toPortfolioMonthlySnapshotPayload({
+    snapshotMonth: '2026-08',
+    snapshotDate: '2026-07-28',
+    totalValuationKrw: 42_500_000,
+    totalStoredAmountKrw: 42_402_727,
+    positionCount: 23,
+    priceCoveragePct: 60,
+    fxCoveragePct: 100,
+    portTotals: [{ key: 'index', valuationKrw: 20_000_000 }],
+    positions: [{ positionKey: 'us-etf', valuationKrw: 1_500_000 }],
+});
+assert.equal(portfolioSnapshotPayload.snapshot_month, '2026-08');
+assert.equal(portfolioSnapshotPayload.total_valuation_krw, 42_500_000);
+assert.equal(portfolioSnapshotPayload.port_totals[0].key, 'index');
 
 const queryLog = [];
 const responses = {

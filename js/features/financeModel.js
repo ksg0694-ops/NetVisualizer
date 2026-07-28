@@ -95,6 +95,217 @@
         };
     }
 
+    function normalizeCurrency(value, fallback = 'KRW') {
+        const currency = String(value || fallback).trim().toUpperCase();
+        return currency || fallback;
+    }
+
+    function normalizeFxRate(rate, currency = 'KRW') {
+        const normalizedCurrency = normalizeCurrency(currency);
+        if (normalizedCurrency === 'KRW') {
+            return {
+                currency: 'KRW',
+                krwPerUnit: 1,
+                rateDate: '',
+                source: 'identity',
+                sourceLabel: '원화',
+            };
+        }
+        if (!rate) return null;
+        const krwPerUnit = number(rate.krwPerUnit ?? rate.krw_per_unit ?? rate.rate);
+        if (krwPerUnit <= 0) return null;
+        return {
+            ...rate,
+            currency: normalizedCurrency,
+            krwPerUnit,
+            rateDate: String(rate.rateDate || rate.rate_date || ''),
+            source: String(rate.source || 'manual'),
+            sourceLabel: String(rate.sourceLabel || rate.source_label || rate.source || '수동'),
+        };
+    }
+
+    function buildPortfolioValuation(items = [], options = {}) {
+        const sourceItems = Array.isArray(items) ? items : [];
+        const getMarketPrice = typeof options.getMarketPrice === 'function'
+            ? options.getMarketPrice
+            : () => null;
+        const getFxRate = typeof options.getFxRate === 'function'
+            ? options.getFxRate
+            : () => null;
+        const inferPort = typeof options.inferPort === 'function'
+            ? options.inferPort
+            : (item) => String(item.strategyTag || item.strategy_tag || 'other');
+        const getPortMeta = typeof options.getPortMeta === 'function'
+            ? options.getPortMeta
+            : (key) => ({ key, label: key, color: '#64748B' });
+
+        const positions = sourceItems.map((item, index) => {
+            const shares = Math.max(0, number(item.shares));
+            const storedAmountKrw = Math.max(0, number(item.amount));
+            const ticker = String(item.ticker || '').trim().toUpperCase();
+            const marketPrice = ticker ? getMarketPrice(ticker) : null;
+            const marketPriceValue = number(marketPrice?.price);
+            const priceCurrency = normalizeCurrency(
+                marketPrice?.currency || item.priceCurrency || item.price_currency || item.currency,
+            );
+            const fxRate = normalizeFxRate(getFxRate(priceCurrency), priceCurrency);
+            const hasMarketPrice = Boolean(marketPrice && marketPriceValue > 0);
+            const hasFxRate = Boolean(fxRate && fxRate.krwPerUnit > 0);
+            const isMarketValued = shares > 0 && hasMarketPrice && hasFxRate;
+            const valuationKrw = isMarketValued
+                ? Math.round(shares * marketPriceValue * fxRate.krwPerUnit)
+                : storedAmountKrw;
+
+            const averageBuyPrice = Math.max(0, number(item.avgBuyPrice ?? item.avg_buy_price));
+            const averageBuyCurrency = normalizeCurrency(
+                item.avgBuyCurrency || item.avg_buy_currency || priceCurrency,
+            );
+            const hasComparableCost = isMarketValued
+                && averageBuyPrice > 0
+                && averageBuyCurrency === priceCurrency;
+            const costKrw = hasComparableCost
+                ? Math.round(shares * averageBuyPrice * fxRate.krwPerUnit)
+                : null;
+            const unrealizedPnlKrw = costKrw !== null ? valuationKrw - costKrw : null;
+            const returnPct = costKrw > 0 ? (unrealizedPnlKrw / costKrw) * 100 : null;
+            const portKey = String(inferPort(item) || 'other');
+            const portMeta = getPortMeta(portKey) || {};
+
+            let fallbackReason = '';
+            if (!isMarketValued) {
+                if (shares <= 0) fallbackReason = '수량 없음';
+                else if (!ticker) fallbackReason = '티커 없음';
+                else if (!hasMarketPrice) fallbackReason = '현재가 없음';
+                else if (!hasFxRate) fallbackReason = `${priceCurrency} 환율 없음`;
+            }
+
+            return {
+                ...item,
+                positionKey: String(item.id || ticker || item.name || `position-${index + 1}`),
+                ticker,
+                shares,
+                storedAmountKrw,
+                marketPrice,
+                marketPriceValue,
+                priceCurrency,
+                fxRate,
+                valuationKrw,
+                valuationSource: isMarketValued ? 'market' : 'stored',
+                valuationSourceLabel: isMarketValued ? '수량×현재가×환율' : '입력 원화금액',
+                fallbackReason,
+                averageBuyPrice,
+                averageBuyCurrency,
+                costKrw,
+                unrealizedPnlKrw,
+                returnPct,
+                hasMarketPrice,
+                hasFxRate,
+                hasComparableCost,
+                isMarketValued,
+                portKey,
+                portLabel: String(portMeta.label || portKey),
+                portColor: String(portMeta.color || '#64748B'),
+            };
+        });
+
+        const portTotalsMap = new Map();
+        positions.forEach((position) => {
+            const current = portTotalsMap.get(position.portKey) || {
+                key: position.portKey,
+                label: position.portLabel,
+                color: position.portColor,
+                valuationKrw: 0,
+                storedAmountKrw: 0,
+                positionCount: 0,
+                marketValuedCount: 0,
+                costKrw: 0,
+                comparableCount: 0,
+                unrealizedPnlKrw: 0,
+            };
+            current.valuationKrw += position.valuationKrw;
+            current.storedAmountKrw += position.storedAmountKrw;
+            current.positionCount += 1;
+            if (position.isMarketValued) current.marketValuedCount += 1;
+            if (position.costKrw !== null) {
+                current.costKrw += position.costKrw;
+                current.unrealizedPnlKrw += position.unrealizedPnlKrw;
+                current.comparableCount += 1;
+            }
+            portTotalsMap.set(position.portKey, current);
+        });
+        const portTotals = Array.from(portTotalsMap.values()).map((port) => ({
+            ...port,
+            returnPct: port.costKrw > 0 ? (port.unrealizedPnlKrw / port.costKrw) * 100 : null,
+        })).sort((a, b) => b.valuationKrw - a.valuationKrw || a.label.localeCompare(b.label, 'ko'));
+        const totalValuationKrw = positions.reduce((sum, position) => sum + position.valuationKrw, 0);
+        const totalStoredAmountKrw = positions.reduce((sum, position) => sum + position.storedAmountKrw, 0);
+        const marketValuedCount = positions.filter((position) => position.isMarketValued).length;
+        const foreignPositionCount = positions.filter((position) => position.priceCurrency !== 'KRW').length;
+        const fxReadyCount = positions.filter((position) => (
+            position.priceCurrency !== 'KRW' && position.hasFxRate
+        )).length;
+        const comparablePositions = positions.filter((position) => position.costKrw !== null);
+        const totalCostKrw = comparablePositions.reduce((sum, position) => sum + position.costKrw, 0);
+        const totalUnrealizedPnlKrw = comparablePositions.reduce((sum, position) => sum + position.unrealizedPnlKrw, 0);
+
+        return {
+            positions,
+            portTotals,
+            totalValuationKrw,
+            totalStoredAmountKrw,
+            valuationDifferenceKrw: totalValuationKrw - totalStoredAmountKrw,
+            totalCostKrw,
+            totalUnrealizedPnlKrw,
+            totalReturnPct: totalCostKrw > 0 ? (totalUnrealizedPnlKrw / totalCostKrw) * 100 : null,
+            positionCount: positions.length,
+            marketValuedCount,
+            storedValueCount: positions.length - marketValuedCount,
+            foreignPositionCount,
+            fxReadyCount,
+            comparableCount: comparablePositions.length,
+            priceCoveragePct: positions.length > 0 ? (marketValuedCount / positions.length) * 100 : 0,
+            fxCoveragePct: foreignPositionCount > 0 ? (fxReadyCount / foreignPositionCount) * 100 : 100,
+        };
+    }
+
+    function buildPortfolioMonthlySnapshot(valuation, options = {}) {
+        const source = valuation || buildPortfolioValuation([]);
+        const snapshotMonth = String(options.snapshotMonth || options.snapshot_month || '');
+        const snapshotDate = String(options.snapshotDate || options.snapshot_date || '');
+        return {
+            snapshotMonth,
+            snapshotDate,
+            totalValuationKrw: Math.round(number(source.totalValuationKrw)),
+            totalStoredAmountKrw: Math.round(number(source.totalStoredAmountKrw)),
+            positionCount: Math.max(0, Math.trunc(number(source.positionCount))),
+            priceCoveragePct: number(source.priceCoveragePct),
+            fxCoveragePct: number(source.fxCoveragePct),
+            portTotals: (source.portTotals || []).map((port) => ({
+                key: String(port.key || 'other'),
+                label: String(port.label || port.key || 'other'),
+                color: String(port.color || '#64748B'),
+                valuationKrw: Math.round(number(port.valuationKrw)),
+                positionCount: Math.max(0, Math.trunc(number(port.positionCount))),
+                marketValuedCount: Math.max(0, Math.trunc(number(port.marketValuedCount))),
+            })),
+            positions: (source.positions || []).map((position) => ({
+                positionKey: String(position.positionKey || ''),
+                name: String(position.name || ''),
+                ticker: String(position.ticker || ''),
+                accountName: String(position.accountName || position.account_name || ''),
+                portKey: String(position.portKey || 'other'),
+                shares: number(position.shares),
+                price: number(position.marketPriceValue),
+                priceCurrency: String(position.priceCurrency || 'KRW'),
+                priceDate: String(position.marketPrice?.priceDate || position.marketPrice?.price_date || ''),
+                fxRate: number(position.fxRate?.krwPerUnit),
+                fxDate: String(position.fxRate?.rateDate || ''),
+                valuationKrw: Math.round(number(position.valuationKrw)),
+                valuationSource: String(position.valuationSource || 'stored'),
+            })),
+        };
+    }
+
     function isTiedItem(item) {
         return Boolean(item.maturity)
             || item.assetType === 'pension'
@@ -249,6 +460,8 @@
         buildOfficialSnapshot,
         buildDecisionItems,
         buildCfoAssetGroups,
+        buildPortfolioMonthlySnapshot,
+        buildPortfolioValuation,
         classifyCfoAssetGroup,
         flattenPortfolio,
         getSourceBadge,

@@ -81,6 +81,49 @@ assert.equal(cfoGroups.totalAssets, 131_000_000);
 assert.equal(cfoGroups.totalLiabilities, 40_000_000);
 assert.equal(cfoGroups.netWorth, 91_000_000);
 
+const valuation = FinanceModel.buildPortfolioValuation([
+    {
+        id: 'usd-etf',
+        name: 'US ETF',
+        ticker: 'USX',
+        shares: 10,
+        amount: 1_300_000,
+        avgBuyPrice: 90,
+        strategyTag: 'index',
+    },
+    {
+        id: 'manual-cash',
+        name: '현금',
+        amount: 500_000,
+        strategyTag: 'cash',
+    },
+], {
+    getMarketPrice: (ticker) => ticker === 'USX'
+        ? { ticker, price: 100, currency: 'USD', priceDate: '2026-07-27' }
+        : null,
+    getFxRate: (currency) => currency === 'USD'
+        ? { currency, krwPerUnit: 1_400, rateDate: '2026-07-27', source: 'test' }
+        : null,
+    inferPort: (item) => item.strategyTag,
+    getPortMeta: (key) => ({ label: key === 'index' ? '지수추종' : '현금대기', color: '#000000' }),
+});
+assert.equal(valuation.totalValuationKrw, 1_900_000);
+assert.equal(valuation.totalStoredAmountKrw, 1_800_000);
+assert.equal(valuation.marketValuedCount, 1);
+assert.equal(valuation.storedValueCount, 1);
+assert.equal(valuation.fxCoveragePct, 100);
+assert.equal(valuation.totalCostKrw, 1_260_000);
+assert.equal(valuation.totalUnrealizedPnlKrw, 140_000);
+assert.equal(valuation.portTotals.find((port) => port.key === 'index').valuationKrw, 1_400_000);
+const portfolioMonthlySnapshot = FinanceModel.buildPortfolioMonthlySnapshot(valuation, {
+    snapshotMonth: '2026-08',
+    snapshotDate: '2026-07-28',
+});
+assert.equal(portfolioMonthlySnapshot.snapshotMonth, '2026-08');
+assert.equal(portfolioMonthlySnapshot.positions[0].priceCurrency, 'USD');
+assert.equal(portfolioMonthlySnapshot.positions[0].fxRate, 1_400);
+assert.equal(portfolioMonthlySnapshot.portTotals.length, 2);
+
 const fallback = FinanceModel.buildOfficialSnapshot({ assetHistory: { data: [900000, 1200000] } });
 assert.equal(fallback.source, 'asset-history');
 assert.equal(fallback.netWorth, 1200000);

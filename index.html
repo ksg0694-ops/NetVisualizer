@@ -78,7 +78,7 @@
                     <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
                 </div>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.03.29
+                    version 1.03.30
                 </div>
             </div>
             <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-2 space-y-2">
@@ -1025,19 +1025,25 @@
                         </div>
                     </section>
 
-                    <section id="portfolio-phase2-preview" class="min-w-0 rounded-xl border border-dashed border-violet-200 bg-violet-50/60 px-4 py-3 xl:col-span-12">
-                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <p class="text-[9px] font-bold uppercase tracking-wider text-violet-500">Portfolio</p>
-                                    <span class="rounded bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold text-violet-700">Phase 2</span>
+                    <section id="portfolio-phase2-preview" class="min-w-0 overflow-hidden rounded-xl border border-gray-100 bg-white px-3 py-2.5 shadow-sm xl:col-span-12">
+                        <div class="grid min-w-0 gap-3 md:grid-cols-[220px_minmax(0,1fr)] md:items-center">
+                            <div class="min-w-0">
+                                <div class="flex items-center justify-between gap-2">
+                                    <div>
+                                        <p class="text-[9px] font-bold uppercase tracking-wider text-violet-500">Portfolio</p>
+                                        <h3 class="text-sm font-bold text-gray-900">Port별 평가</h3>
+                                    </div>
+                                    <span id="monthly-report-portfolio-snapshot" class="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-600">현재 기준</span>
                                 </div>
-                                <p class="mt-1 text-sm font-bold text-gray-900">포트폴리오 Report 예정 공간</p>
+                                <p id="monthly-report-portfolio-total" class="mt-1 text-xl font-black tracking-tight text-gray-900">0원</p>
+                                <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] text-gray-500">
+                                    <span>시세 평가 <strong id="monthly-report-portfolio-priced" class="text-violet-700">0/0</strong></span>
+                                    <span>환율 <strong id="monthly-report-portfolio-fx" class="text-indigo-700">확인 중</strong></span>
+                                    <button onclick="switchView('invest-detail-view'); renderInvestDetail('투자 자산');" class="font-bold text-violet-600 hover:text-violet-800">상세보기 →</button>
+                                </div>
                             </div>
-                            <div class="flex flex-wrap gap-2 text-[10px] text-violet-700">
-                                <span class="rounded-md bg-white px-2 py-1">자산 4축</span>
-                                <span class="rounded-md bg-white px-2 py-1">Port별 추이</span>
-                                <span class="rounded-md bg-white px-2 py-1">보유항목 상세</span>
+                            <div class="relative h-[82px] min-w-0">
+                                <canvas id="monthlyReportPortfolioChart"></canvas>
                             </div>
                         </div>
                     </section>
@@ -1354,6 +1360,29 @@
                         <div class="w-24 h-24 relative shrink-0">
                             <canvas id="investStrategyChart"></canvas>
                         </div>
+                    </div>
+                </div>
+
+                <div class="mb-5 grid gap-3 rounded-2xl border border-violet-100 bg-white p-3 shadow-sm lg:grid-cols-[240px_minmax(0,1fr)_auto] lg:items-center">
+                    <div class="min-w-0">
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="text-xs font-bold text-gray-800">원화 평가 기준</p>
+                            <span id="invest-valuation-coverage" class="rounded bg-violet-50 px-1.5 py-0.5 text-[9px] font-bold text-violet-700">0/0</span>
+                        </div>
+                        <p class="mt-1 text-[10px] text-gray-500">수량 × 현재가 × 환율, 미입력 종목은 기존 원화금액 유지</p>
+                        <p id="invest-fx-source" class="mt-1 truncate text-[9px] text-gray-400">환율 기준 확인 중</p>
+                    </div>
+                    <div class="relative h-[76px] min-w-0">
+                        <canvas id="investPortTrendChart"></canvas>
+                    </div>
+                    <div class="flex items-end gap-2">
+                        <label class="flex flex-col gap-1">
+                            <span class="text-[9px] font-bold text-gray-400">기준월</span>
+                            <input id="portfolio-snapshot-month" type="month" class="h-8 rounded-lg border border-gray-200 px-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-violet-500">
+                        </label>
+                        <button id="btn-save-portfolio-snapshot" onclick="saveCurrentPortfolioMonthlySnapshot()" class="h-8 whitespace-nowrap rounded-lg bg-violet-600 px-3 text-[10px] font-bold text-white transition-colors hover:bg-violet-700">
+                            기준점 저장
+                        </button>
                     </div>
                 </div>
 

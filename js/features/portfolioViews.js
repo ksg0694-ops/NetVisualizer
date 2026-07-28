@@ -9,6 +9,134 @@
         pension: { icon: 'fa-landmark', iconClass: 'bg-slate-100 text-slate-700', borderClass: 'border-slate-200' },
     };
 
+    function getDefaultPortfolioSnapshotMonth() {
+        const today = window.AppUtils.toLocalDateString(new Date());
+        const accountingPeriod = typeof getMonthKeyAndPeriod === 'function'
+            ? getMonthKeyAndPeriod(today)
+            : null;
+        return accountingPeriod?.monthKey || today.slice(0, 7);
+    }
+
+    function renderPortfolioValuationStatus(valuation) {
+        const coverageElement = document.getElementById('invest-valuation-coverage');
+        const fxSourceElement = document.getElementById('invest-fx-source');
+        const monthInput = document.getElementById('portfolio-snapshot-month');
+        if (coverageElement) {
+            coverageElement.textContent = `시세 ${valuation.marketValuedCount}/${valuation.positionCount}`;
+        }
+        const fxRows = Array.from(new Map(
+            valuation.positions
+                .filter((position) => position.priceCurrency !== 'KRW' && position.fxRate)
+                .map((position) => [
+                    position.priceCurrency,
+                    `${position.priceCurrency} ${position.fxRate.krwPerUnit.toLocaleString(undefined, { maximumFractionDigits: 4 })}원 · ${position.fxRate.rateDate || '기준일 없음'} · ${position.fxRate.sourceLabel}`,
+                ]),
+        ).values());
+        if (fxSourceElement) {
+            fxSourceElement.textContent = fxRows.length > 0
+                ? fxRows.join(' / ')
+                : '외화 현재가가 연결되면 환율 기준일을 함께 표시합니다.';
+        }
+        if (monthInput && !monthInput.value) monthInput.value = getDefaultPortfolioSnapshotMonth();
+
+        const snapshots = typeof window.getPortfolioMonthlySnapshots === 'function'
+            ? window.getPortfolioMonthlySnapshots()
+            : [];
+        const currentMonth = monthInput?.value || getDefaultPortfolioSnapshotMonth();
+        const snapshotRows = snapshots.map((row) => ({
+            month: row.snapshot_month,
+            ports: Array.isArray(row.port_totals) ? row.port_totals : [],
+        }));
+        if (!snapshotRows.some((row) => row.month === currentMonth)) {
+            snapshotRows.push({ month: currentMonth, ports: valuation.portTotals });
+        }
+        snapshotRows.sort((a, b) => a.month.localeCompare(b.month));
+        const portKeys = Array.from(new Set(
+            snapshotRows.flatMap((row) => row.ports.map((port) => String(port.key || 'other'))),
+        ));
+        const portMetaMap = new Map(
+            snapshotRows.flatMap((row) => row.ports.map((port) => [
+                String(port.key || 'other'),
+                { label: port.label || port.key || '기타', color: port.color || '#64748B' },
+            ])),
+        );
+        if (!document.getElementById('investPortTrendChart')) return;
+        renderOrUpdateChart('investPortTrend', 'investPortTrendChart', {
+            type: 'line',
+            data: {
+                labels: snapshotRows.map((row) => row.month.slice(2).replace('-', '.')),
+                datasets: portKeys.map((key) => {
+                    const meta = portMetaMap.get(key) || { label: key, color: '#64748B' };
+                    return {
+                        label: meta.label,
+                        data: snapshotRows.map((row) => Number(
+                            row.ports.find((port) => String(port.key || 'other') === key)?.valuationKrw || 0,
+                        )),
+                        borderColor: meta.color,
+                        backgroundColor: meta.color,
+                        borderWidth: 2,
+                        pointRadius: 2.5,
+                        tension: 0.28,
+                    };
+                }),
+            },
+            options: withChartTransitions({
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+                    y: { display: false, beginAtZero: true },
+                },
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { boxWidth: 7, boxHeight: 7, font: { size: 8 }, padding: 8 },
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => ` ${context.dataset.label}: ${Number(context.raw || 0).toLocaleString()}원`,
+                        },
+                    },
+                },
+            }, 360),
+        });
+    }
+
+    window.saveCurrentPortfolioMonthlySnapshot = async function() {
+        if (!activePortfolioValuationModel) {
+            showToast('먼저 투자 상세 데이터를 불러와 주세요.', 'warning');
+            return;
+        }
+        const monthInput = document.getElementById('portfolio-snapshot-month');
+        const snapshotMonth = monthInput?.value || getDefaultPortfolioSnapshotMonth();
+        const snapshotDate = window.AppUtils.toLocalDateString(new Date());
+        const button = document.getElementById('btn-save-portfolio-snapshot');
+        if (button) {
+            button.disabled = true;
+            button.textContent = '저장 중';
+        }
+        try {
+            const record = window.FinanceModel.buildPortfolioMonthlySnapshot(
+                activePortfolioValuationModel,
+                { snapshotMonth, snapshotDate },
+            );
+            record.sourceRevision = `${snapshotDate}:${record.positionCount}:${record.totalValuationKrw}`;
+            await window.savePortfolioMonthlySnapshotRecord(record);
+            showToast(`${snapshotMonth} 포트폴리오 기준점을 저장했습니다.`);
+            renderPortfolioValuationStatus(activePortfolioValuationModel);
+            if (typeof renderCashFlow === 'function') renderCashFlow();
+        } catch (error) {
+            console.error(error);
+            showToast(`기준점 저장 실패: ${error.message || '데이터 테이블을 확인해 주세요.'}`, 'error', 5000);
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.textContent = '기준점 저장';
+            }
+        }
+    };
+
     function renderPortfolio() {
         if (!currentMonthKey) return;
         const shortYear = currentMonthKey.substring(2, 4);
@@ -211,40 +339,37 @@
             return;
         }
 
-        // 1. 총 자산 및 가상 수익률 계산
-        const total = groupData.items.reduce((acc, curr) => acc + curr.amount, 0);
+        // 1. 수량·현재가·환율 기반 원화 평가. 준비되지 않은 종목은 기존 원화 입력값을 유지한다.
+        const valuation = buildCurrentPortfolioValuation(groupData.items);
+        activePortfolioValuationModel = valuation;
+        const total = valuation.totalValuationKrw;
         document.getElementById('invest-detail-total').textContent = total.toLocaleString() + '원';
 
         const buildProcessedInvestItem = (item, sourceGroupName = groupName) => {
-            const strategyTag = inferStrategyTag(item);
+            const prevalued = item.valuationSource ? item : buildCurrentPortfolioValuation([item]).positions[0];
+            const strategyTag = prevalued.portKey || inferStrategyTag(prevalued);
             const strategyMeta = getStrategyMeta(strategyTag);
-            const marketPrice = getMarketPriceForTicker(item.ticker);
-            const shares = Number(item.shares || 0);
-            const avgBuyPrice = Number(item.avgBuyPrice || 0);
-            const hasComparablePrice = !!marketPrice && shares > 0 && avgBuyPrice > 0 && String(marketPrice.currency || '').toUpperCase() === String(item.currency || '').toUpperCase();
-            const investedCost = hasComparablePrice ? shares * avgBuyPrice : null;
-            const currentValue = hasComparablePrice ? shares * marketPrice.price : null;
-            const unrealizedPnl = hasComparablePrice ? currentValue - investedCost : null;
-            const returnPct = hasComparablePrice && investedCost > 0 ? (unrealizedPnl / investedCost) * 100 : null;
             return {
-                ...item,
+                ...prevalued,
                 groupName: sourceGroupName,
+                storedAmountKrw: prevalued.storedAmountKrw,
+                amount: prevalued.valuationKrw,
                 strategyTag,
                 strategy: strategyMeta.label,
                 strategyColor: strategyMeta.color,
-                marketPrice,
-                investedCost,
-                currentValue,
-                unrealizedPnl,
-                returnPct,
-                hasComparablePrice
+                investedCost: prevalued.costKrw,
+                currentValue: prevalued.valuationKrw,
+                unrealizedPnl: prevalued.unrealizedPnlKrw,
+                returnPct: prevalued.returnPct,
+                hasComparablePrice: prevalued.hasComparableCost,
             };
         };
 
         // 종목별 전략 태그 부여. DB 값이 있으면 우선 사용하고, 없으면 기존 규칙으로 추론한다.
-        const processedItems = groupData.items.map(item => buildProcessedInvestItem(item, groupName));
+        const processedItems = valuation.positions.map(item => buildProcessedInvestItem(item, groupName));
         activeInvestProcessedItems = processedItems;
         activeInvestTotal = total;
+        renderPortfolioValuationStatus(valuation);
 
         // 수동 현재가와 평균단가가 준비된 항목만 기준으로 미실현 손익을 계산한다.
         const profitEl = document.getElementById('invest-detail-profit');
@@ -254,8 +379,8 @@
             const totalPnl = pnlItems.reduce((acc, item) => acc + item.unrealizedPnl, 0);
             const totalReturnPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
             profitEl.textContent = pnlItems.length > 0
-                ? `${totalPnl >= 0 ? '+' : ''}${Math.round(totalPnl).toLocaleString()} ${pnlItems[0].currency || ''} (${totalReturnPct.toFixed(1)}%)`
-                : '현재가 입력 필요';
+                ? `${totalPnl >= 0 ? '+' : ''}${Math.round(totalPnl).toLocaleString()}원 (${totalReturnPct.toFixed(1)}%)`
+                : '평균단가·현재가 입력 필요';
             profitEl.className = `text-sm font-bold ${totalPnl >= 0 ? 'text-emerald-300' : 'text-red-300'}`;
         }
 
@@ -345,22 +470,32 @@
                         globalIdx++;
                         const tickerLabel = item.ticker ? escapeHtml(item.ticker) : '<span class="text-xs text-gray-400">미입력</span>';
                         const avgBuyPriceText = item.avgBuyPrice
-                            ? `${Number(item.avgBuyPrice).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${escapeHtml(item.currency || '')}`.trim()
+                            ? `${Number(item.avgBuyPrice).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${escapeHtml(item.averageBuyCurrency || item.priceCurrency || '')}`.trim()
                             : '<span class="text-xs text-gray-400">미입력</span>';
                         const priceInputId = `market-price-${globalIdx}`;
+                        const priceCurrencyInputId = `market-currency-${globalIdx}`;
                         const priceDateInputId = `market-date-${globalIdx}`;
                         const marketPriceText = item.marketPrice ? formatUnitPrice(item.marketPrice.price, item.marketPrice.currency) : '미입력';
                         const marketPriceValue = item.marketPrice?.price ?? '';
                         const marketPriceDate = item.marketPrice?.priceDate || new Date().toISOString().slice(0, 10);
-                        const currentValueText = item.hasComparablePrice ? formatUnitPrice(item.currentValue, item.currency) : '계산 대기';
-                        const investedCostText = item.hasComparablePrice ? formatUnitPrice(item.investedCost, item.currency) : '계산 대기';
+                        const inferredPriceCurrency = item.marketPrice?.currency
+                            || (/^[0-9]{6}$/.test(item.ticker || '') ? 'KRW' : ((item.ticker || '') ? 'USD' : 'KRW'));
+                        const currentValueText = `${Math.round(item.currentValue || 0).toLocaleString()}원`;
+                        const investedCostText = item.hasComparablePrice ? `${Math.round(item.investedCost).toLocaleString()}원` : '평균단가 필요';
                         const pnlText = item.hasComparablePrice
-                            ? `${item.unrealizedPnl >= 0 ? '+' : ''}${formatUnitPrice(item.unrealizedPnl, item.currency)} (${item.returnPct.toFixed(1)}%)`
-                            : (item.marketPrice && String(item.marketPrice.currency || '').toUpperCase() !== String(item.currency || '').toUpperCase() ? '통화 확인 필요' : '현재가/평균단가 필요');
+                            ? `${item.unrealizedPnl >= 0 ? '+' : ''}${Math.round(item.unrealizedPnl).toLocaleString()}원 (${item.returnPct.toFixed(1)}%)`
+                            : '현재가/평균단가 필요';
                         const pnlClass = item.hasComparablePrice ? (item.unrealizedPnl >= 0 ? 'text-emerald-600' : 'text-red-500') : 'text-gray-400';
                         const jsTicker = escapeJsString(item.ticker || '');
-                        const jsCurrency = escapeJsString(item.currency || 'KRW');
                         const priceSaveDisabled = item.ticker ? '' : 'disabled';
+                        const fxText = item.priceCurrency === 'KRW'
+                            ? '1 KRW'
+                            : (item.fxRate
+                                ? `1 ${escapeHtml(item.priceCurrency)} = ${Number(item.fxRate.krwPerUnit).toLocaleString(undefined, { maximumFractionDigits: 4 })}원`
+                                : `${escapeHtml(item.priceCurrency)} 환율 없음`);
+                        const valuationBadgeClass = item.valuationSource === 'market'
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-amber-50 text-amber-700';
 
                         return `
                         <div class="bg-white border border-gray-100 rounded-lg flex flex-col overflow-hidden hover:border-indigo-300 transition-colors">
@@ -371,6 +506,7 @@
                                         ${escapeHtml(item.name)}
                                         ${getAssetClassBadgeHtml(item.classification)}
                                         <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border bg-white" style="color: ${item.strategyColor}; border-color: ${item.strategyColor}33">${escapeHtml(item.strategy)}</span>
+                                        <span class="rounded px-1.5 py-0.5 text-[9px] font-bold ${valuationBadgeClass}">${escapeHtml(item.valuationSourceLabel)}</span>
                                     </h4>
                                 </div>
                                 <div class="text-right flex items-center gap-3 shrink-0">
@@ -400,22 +536,31 @@
                                         <p class="font-bold text-gray-800 text-xs">${avgBuyPriceText}</p>
                                     </div>
                                 </div>
-                                <div class="mt-3 grid grid-cols-1 md:grid-cols-[1fr_120px_auto] gap-2">
+                                <div class="mt-3 grid grid-cols-1 md:grid-cols-[1fr_88px_120px_auto] gap-2">
                                     <label class="flex flex-col gap-1">
-                                        <span class="text-[10px] text-gray-400 font-bold"><i class="fas fa-won-sign text-indigo-400 mr-1"></i>수동 현재가</span>
+                                        <span class="text-[10px] text-gray-400 font-bold"><i class="fas fa-coins text-indigo-400 mr-1"></i>수동 현재가</span>
                                         <input id="${priceInputId}" type="number" min="0" step="0.0001" value="${escapeAttr(marketPriceValue)}" class="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-right focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="현재가">
+                                    </label>
+                                    <label class="flex flex-col gap-1">
+                                        <span class="text-[10px] text-gray-400 font-bold">통화</span>
+                                        <select id="${priceCurrencyInputId}" class="h-[34px] rounded-lg border border-gray-200 px-2 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500">
+                                            <option value="KRW" ${inferredPriceCurrency === 'KRW' ? 'selected' : ''}>KRW</option>
+                                            <option value="USD" ${inferredPriceCurrency === 'USD' ? 'selected' : ''}>USD</option>
+                                            <option value="JPY" ${inferredPriceCurrency === 'JPY' ? 'selected' : ''}>JPY</option>
+                                            <option value="EUR" ${inferredPriceCurrency === 'EUR' ? 'selected' : ''}>EUR</option>
+                                        </select>
                                     </label>
                                     <label class="flex flex-col gap-1">
                                         <span class="text-[10px] text-gray-400 font-bold">가격일</span>
                                         <input id="${priceDateInputId}" type="date" value="${escapeAttr(marketPriceDate)}" class="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
                                     </label>
-                                    <button ${priceSaveDisabled} onclick="saveMarketPrice('${jsTicker}', '${jsCurrency}', '${priceInputId}', '${priceDateInputId}')" class="self-end h-[34px] px-3 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 transition-colors">
+                                    <button ${priceSaveDisabled} onclick="saveMarketPrice('${jsTicker}', document.getElementById('${priceCurrencyInputId}').value, '${priceInputId}', '${priceDateInputId}')" class="self-end h-[34px] px-3 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 transition-colors">
                                         저장
                                     </button>
                                 </div>
                                 <div class="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
                                     <div class="bg-white p-2 rounded-md border border-gray-100 shadow-sm">
-                                        <p class="text-[10px] font-bold text-gray-400 mb-1">현재가</p>
+                                        <p class="text-[10px] font-bold text-gray-400 mb-1">현재가 · ${fxText}</p>
                                         <p class="font-bold text-gray-800 text-xs">${marketPriceText}</p>
                                     </div>
                                     <div class="bg-white p-2 rounded-md border border-gray-100 shadow-sm">
@@ -423,7 +568,7 @@
                                         <p class="font-bold text-gray-800 text-xs">${investedCostText}</p>
                                     </div>
                                     <div class="bg-white p-2 rounded-md border border-gray-100 shadow-sm">
-                                        <p class="text-[10px] font-bold text-gray-400 mb-1">현재가 기준</p>
+                                        <p class="text-[10px] font-bold text-gray-400 mb-1">원화 평가</p>
                                         <p class="font-bold text-gray-800 text-xs">${currentValueText}</p>
                                     </div>
                                     <div class="bg-white p-2 rounded-md border border-gray-100 shadow-sm">
@@ -433,7 +578,7 @@
                                 </div>
                                 <div class="mt-2 bg-white p-2 rounded-md border border-gray-100 shadow-sm">
                                     <p class="text-[10px] font-bold text-gray-400 mb-1"><i class="fas fa-wallet text-emerald-400 mr-1"></i>DB 평가 금액</p>
-                                    <p class="font-bold text-gray-800 text-xs">${item.amount.toLocaleString()}원</p>
+                                    <p class="font-bold text-gray-800 text-xs">${item.storedAmountKrw.toLocaleString()}원${item.fallbackReason ? ` · <span class="text-amber-600">${escapeHtml(item.fallbackReason)}</span>` : ''}</p>
                                 </div>
                             </div>
                         </div>`;
