@@ -9,36 +9,6 @@
         pension: { icon: 'fa-landmark', iconClass: 'bg-slate-100 text-slate-700', borderClass: 'border-slate-200' },
     };
 
-    function renderPortfolioCfoGroupSummary(model) {
-        const container = document.getElementById('portfolio-cfo-group-summary');
-        if (!container) return;
-        if (!model?.groups?.length) {
-            container.innerHTML = '';
-            return;
-        }
-        container.innerHTML = model.groups.map((group) => {
-            const ui = CFO_PORTFOLIO_GROUP_UI[group.key] || CFO_PORTFOLIO_GROUP_UI.operating;
-            const liabilityText = group.liabilityAmount > 0
-                ? `<p class="mt-1 truncate text-[9px] font-bold text-rose-500">상환 ${group.liabilityAmount.toLocaleString()}원</p>`
-                : `<p class="mt-1 text-[9px] text-slate-400">${group.items.length}개 항목</p>`;
-            return `
-                <article class="min-w-0 rounded-xl border bg-white p-2.5 shadow-sm ${ui.borderClass} ${group.key === 'pension' ? 'col-span-2 lg:col-span-1' : ''}">
-                    <div class="flex items-center gap-2">
-                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${ui.iconClass}">
-                            <i class="fas ${ui.icon} text-xs" aria-hidden="true"></i>
-                        </span>
-                        <div class="min-w-0">
-                            <p class="truncate text-[10px] font-bold text-slate-700">${escapeHtml(group.label)}</p>
-                            <p class="truncate text-[9px] text-slate-400">${escapeHtml(group.purpose)}</p>
-                        </div>
-                    </div>
-                    <p class="mt-2 truncate text-sm font-bold text-slate-950">${group.assetAmount.toLocaleString()}원</p>
-                    ${liabilityText}
-                </article>
-            `;
-        }).join('');
-    }
-
     function renderPortfolio() {
         if (!currentMonthKey) return;
         const shortYear = currentMonthKey.substring(2, 4);
@@ -127,8 +97,6 @@
             wrapper.classList.remove('hidden');
             notice.classList.add('hidden');
             wrapper.innerHTML = '';
-            renderPortfolioCfoGroupSummary(cfoModel);
-
             cfoModel.groups.forEach((group) => {
                 const ui = CFO_PORTFOLIO_GROUP_UI[group.key] || CFO_PORTFOLIO_GROUP_UI.operating;
                 group.items.forEach((item) => {
@@ -182,7 +150,6 @@
         } else if (snapshot) {
             wrapper.classList.add('hidden');
             notice.classList.remove('hidden');
-            renderPortfolioCfoGroupSummary(null);
             const cashAndSafe = Number(snapshot.cash || 0) + Number(snapshot.safe || 0);
             const invested = Number(snapshot.invest || 0);
             totalLiabilities = Math.abs(Number(snapshot.debt || 0));
@@ -194,7 +161,6 @@
         } else {
             wrapper.classList.add('hidden');
             notice.classList.remove('hidden');
-            renderPortfolioCfoGroupSummary(null);
             document.getElementById('portfolio-past-notice-text').textContent = '해당 월의 자산 구성 스냅샷 데이터가 존재하지 않습니다.';
         }
 

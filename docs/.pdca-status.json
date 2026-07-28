@@ -4,9 +4,9 @@
   "feature": "August Finance Data and UX Refresh",
   "phase": "check",
   "progress": 99,
-  "updatedAt": "2026-07-26T22:24:00+09:00",
+  "updatedAt": "2026-07-28T22:40:00+09:00",
   "status": "in_progress",
-  "currentFocus": "Compact the Portfolio Phase 2 holdings list and refine operating and housing classifications.",
+  "currentFocus": "Remove duplicate Portfolio key cards while preserving the primary summary and CFO holdings list.",
   "completed": [
     "Synchronized the July accounting-period ledger with the current source workbook.",
     "Added the structural monthly cash-flow view to Personal CFO.",
@@ -40,7 +40,8 @@
     "Prioritized product attributes over source folders so IMA and issuance-note products remain safe assets.",
     "Compacted the CFO holdings list while preserving the five-group order and responsive layout.",
     "Moved the housing loan from operating assets to housing assets and removed the empty loan transit account.",
-    "Sorted holdings and investment accounts by descending amount, with living-expense and salary accounts kept in the requested order."
+    "Sorted holdings and investment accounts by descending amount, with living-expense and salary accounts kept in the requested order.",
+    "Removed the duplicate five-card Portfolio summary and its unused rendering code."
   ],
   "remaining": [
     "Phase 2: rebuild the portfolio around holding quantity, market price, FX rate, Port, and monthly position snapshots.",

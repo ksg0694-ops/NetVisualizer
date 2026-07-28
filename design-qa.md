@@ -214,3 +214,23 @@ final result: passed
 - No actionable P0, P1, or P2 design differences remain.
 
 final result: passed
+
+## Portfolio duplicate key-card removal — 2026-07-28
+
+### Evidence
+
+- Source with duplicate cards:
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-compact-1876\final-portfolio-1280x720.png`
+- Implementation without duplicate cards:
+  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-portfolio-no-keycards-1876\portfolio-no-keycards-1280x720.png`
+- Viewports: 1280 x 720 and 390 x 844 CSS px at device scale factor 1.
+
+### Findings and checks
+
+- The five top key cards duplicated the CFO holdings list and were removed.
+- Net-worth summary, CFO composition chart, group order, amounts, liability badge, and accordion interactions remain unchanged.
+- The portfolio hierarchy is clearer because the title now leads directly into the primary summary and holdings list.
+- Mobile satisfies `scrollWidth === clientWidth` at 390 x 844.
+- No actionable P0, P1, or P2 differences remain.
+
+final result: passed
