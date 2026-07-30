@@ -118,6 +118,13 @@
     let txImportAuditRuns = [];
     const AUTH_REQUIRED_FOR_REMOTE = false;
     const CLOUD_AUTH_PAUSED = true;
+    const APP_FEATURE_FLAGS = Object.freeze({
+        health: false,
+        quantStrategy: false,
+        mddDefense: false,
+        valuationExplainer: false,
+    });
+    window.APP_FEATURE_FLAGS = APP_FEATURE_FLAGS;
     let authSession = null;
     let authUser = null;
     let authReady = false;
@@ -234,20 +241,21 @@
     };
 
     const INVEST_STRATEGY_META = {
-        dividend: { label: '배당주', shortLabel: '배당', color: '#f59e0b' },
-        index: { label: '지수추종', shortLabel: '지수', color: '#10b981' },
-        growth: { label: '성장/개별주', shortLabel: '성장', color: '#3b82f6' },
-        cash: { label: '현금대기', shortLabel: '현금', color: '#06b6d4' },
-        pension: { label: '연금장기', shortLabel: '연금', color: '#ec4899' },
-        other: { label: '기타전략', shortLabel: '기타', color: '#9ca3af' }
+        cash: { label: '현금대기', shortLabel: '현금', color: '#64748b', icon: 'fa-vault' },
+        commodity: { label: '원자재', shortLabel: '원자재', color: '#d97706', icon: 'fa-gem' },
+        dividend: { label: '배당주', shortLabel: '배당', color: '#059669', icon: 'fa-coins' },
+        crypto: { label: '가상화폐', shortLabel: '가상화폐', color: '#7c3aed', icon: 'fa-bitcoin-sign' },
+        financial: { label: '금융주', shortLabel: '금융', color: '#2563eb', icon: 'fa-building-columns' },
+        ai_semiconductor: { label: 'AI(반도체)', shortLabel: 'AI', color: '#db2777', icon: 'fa-microchip' },
     };
-    const INVEST_STRATEGY_KEYS = ['dividend', 'index', 'growth', 'cash', 'pension', 'other'];
+    const INVEST_STRATEGY_KEYS = ['cash', 'commodity', 'dividend', 'crypto', 'financial', 'ai_semiconductor'];
     const DEFAULT_QUANT_STRATEGY_RULES = {
-        dividend: { targetPct: 25, bandPct: 5, trigger: '배당률' },
-        index: { targetPct: 45, bandPct: 7, trigger: '추세' },
-        growth: { targetPct: 20, bandPct: 6, trigger: '모멘텀' },
-        cash: { targetPct: 10, bandPct: 4, trigger: 'MDD 방어' },
-        pension: { targetPct: 0, bandPct: 0, trigger: '장기보유' },
+        cash: { targetPct: 20, bandPct: 5, trigger: '대기자금' },
+        commodity: { targetPct: 15, bandPct: 5, trigger: '인플레이션' },
+        dividend: { targetPct: 30, bandPct: 6, trigger: '배당률' },
+        crypto: { targetPct: 5, bandPct: 3, trigger: '변동성' },
+        financial: { targetPct: 15, bandPct: 5, trigger: '금리' },
+        ai_semiconductor: { targetPct: 15, bandPct: 5, trigger: '성장률' },
         other: { targetPct: 0, bandPct: 0, trigger: '수동검토' }
     };
     let quantStrategyRules = Object.fromEntries(
@@ -267,7 +275,12 @@
     }
 
     function getStrategyMeta(strategyTag) {
-        return INVEST_STRATEGY_META[strategyTag] || INVEST_STRATEGY_META.other;
+        return INVEST_STRATEGY_META[strategyTag] || {
+            label: '분류 검토',
+            shortLabel: '검토',
+            color: '#94a3b8',
+            icon: 'fa-circle-question',
+        };
     }
 
     function includesAny(text, keywords) {
@@ -315,12 +328,13 @@
         const assetType = item.classification?.assetType || item.assetType || item.asset_type || '';
 
         if (assetType === 'account') return 'cash';
-        if (assetType === 'pension') return 'pension';
-        if (assetType === 'etf') return 'index';
-        if (includesAny(searchableText, ['배당', 'dividend', 'schd', '리츠', '맥쿼리'])) return 'dividend';
-        if (includesAny(searchableText, ['지수', 'index', 's&p', 'sp500', 'voo', 'qqq', 'spy', 'kodex', 'tiger', 'arirang'])) return 'index';
-        if (assetType === 'stock') return 'growth';
-        return 'other';
+        if (includesAny(searchableText, ['treasury bond', '국채', '채권', 'mmf', 'sgov', 'tlt', 'ief'])) return 'cash';
+        if (includesAny(searchableText, ['crypto', 'bitcoin', 'ethereum', '가상화폐', '비트코인', ' bitw'])) return 'crypto';
+        if (includesAny(searchableText, ['commodity', 'commoditiy', 'precious', '원자재', '금현물', 'gold', ' gltr', ' pdbc', ' chile', ' ech', '태광산업'])) return 'commodity';
+        if (includesAny(searchableText, ['증권', '은행', '보험', '금융', 'broker'])) return 'financial';
+        if (includesAny(searchableText, ['반도체', 'semiconductor', '인도', 'nifty', ' ai ', 'xovr', '006260'])) return 'ai_semiconductor';
+        if (includesAny(searchableText, ['배당', 'dividend', 'schd', '리츠', 'income', '밸류업', 'value', ' qsr', ' o '])) return 'dividend';
+        return 'dividend';
     }
 
     function classifyPortfolioItem(groupName, item = {}) {

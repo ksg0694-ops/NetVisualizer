@@ -97,7 +97,7 @@
         const salaryCalendar = window.FinanceForecastFeature.buildSalaryCalendarForecast(
             monthlySalaries,
             referenceMonthNumber,
-            24,
+            36,
             [2, 9],
         );
         return {
@@ -259,7 +259,7 @@
         renderAssetTrendDashboardDiff(model);
         renderAssetTrendSummary(model);
         renderAssetTrendCharts(model);
-        if (typeof updateFinanceRoadmap === 'function') updateFinanceRoadmap(model.currentAsset);
+        if (typeof updateFinanceRoadmap === 'function') updateFinanceRoadmap(model);
         return model;
     }
 
@@ -1522,73 +1522,59 @@
         renderCashFlow();
     }
 
-    function updateFinanceRoadmap(currentAsset) {
+    function updateFinanceRoadmap(source) {
         if (!document.getElementById('roadmap-container')) return;
+        const model = source && typeof source === 'object' ? source : null;
+        const currentAsset = Number(model?.currentAsset ?? source ?? monthlyDB[currentMonthKey]?.asset ?? 0);
+        const forecast = model?.incomeTrendForecast || buildIncomeTrendForecast(currentMonthKey);
+        const roadmap = window.FinanceForecastFeature.buildThreeYearRoadmap(
+            currentAsset,
+            currentMonthKey,
+            forecast,
+            36,
+        );
+        const container = document.getElementById('roadmap-year-cards');
+        const method = document.getElementById('roadmap-method');
+        if (!container) return;
 
-        const p1Target = 145000000;
-        const p2Target = 800000000;
-        const p4Target = 3000000000;
-        const realEstateFunding = getRealEstateFundingStatus();
+        method.textContent = Number(forecast.observedMonths || 0) > 0
+            ? `최저 월급 · 설·추석 상여 · 저축+잔여 ${(Number(forecast.retentionRate || 0) * 100).toFixed(1)}% 기준`
+            : '예측에 사용할 마감 현금흐름이 부족합니다.';
 
-        let p1Pct = Math.min(100, Math.max(0, (currentAsset / p1Target) * 100));
-        let p2Pct = realEstateFunding.totalPct;
-        let p4Pct = Math.min(100, Math.max(0, (currentAsset / p4Target) * 100));
-
-        // Update bars
-        if (document.getElementById('roadmap-p1-bar')) document.getElementById('roadmap-p1-bar').style.width = p1Pct + '%';
-        if (document.getElementById('roadmap-p2-bar')) document.getElementById('roadmap-p2-bar').style.width = p2Pct + '%';
-        if (document.getElementById('roadmap-p4-bar')) document.getElementById('roadmap-p4-bar').style.width = p4Pct + '%';
-        if (document.getElementById('roadmap-p2-ready')) document.getElementById('roadmap-p2-ready').textContent = realEstateFunding.totalReady.toLocaleString() + '원';
-        if (document.getElementById('roadmap-p2-percent')) document.getElementById('roadmap-p2-percent').textContent = realEstateFunding.totalPct.toFixed(1) + '%';
-
-        const dotBase = "absolute -left-[29px] md:-left-[35px] w-4 h-4 rounded-full ring-4 ring-white";
-        const cardBase = "rounded-xl p-3 md:p-4 border shadow-sm transition-all";
-        const setBarTone = (idx, tone) => {
-            const bar = document.getElementById(`roadmap-p${idx}-bar`);
-            if (!bar) return;
-            const color = tone === 'past' ? 'bg-gray-300' : (tone === 'success' ? 'bg-emerald-400' : 'bg-indigo-500');
-            bar.className = `h-full ${color} transition-all duration-1000`;
-        };
-        const setPast = (idx) => {
-            const dot = document.getElementById(`roadmap-p${idx}-dot`);
-            const card = document.getElementById(`roadmap-p${idx}-card`);
-            if (!dot || !card) return;
-            dot.className = `${dotBase} bg-gray-300`;
-            card.className = `bg-gray-50 ${cardBase} border-gray-100 opacity-60 grayscale`;
-            setBarTone(idx, 'past');
-        };
-        const setPending = (idx) => {
-            const dot = document.getElementById(`roadmap-p${idx}-dot`);
-            const card = document.getElementById(`roadmap-p${idx}-card`);
-            if (!dot || !card) return;
-            dot.className = `${dotBase} bg-gray-200`;
-            card.className = `bg-gray-50 ${cardBase} border-gray-100`;
-            setBarTone(idx, idx === 4 ? 'success' : 'active');
-        };
-
-        const setActive = (idx) => {
-            const dot = document.getElementById(`roadmap-p${idx}-dot`);
-            const card = document.getElementById(`roadmap-p${idx}-card`);
-            if (!dot || !card) return;
-            const isFinal = idx === 4;
-            dot.className = `${dotBase} ${isFinal ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.45)]' : 'bg-indigo-400 animate-pulse'}`;
-            card.className = `bg-white ${cardBase} ${isFinal ? 'border-emerald-300' : 'border-indigo-300'} shadow-md`;
-            setBarTone(idx, isFinal ? 'success' : 'active');
-        };
-
-        // Reset
-        for(let i=1; i<=4; i++) setPending(i);
-
-        if (currentAsset >= p4Target) {
-            setPast(1); setPast(2); setPast(3); setActive(4);
-        } else if (realEstateFunding.totalReady >= p2Target) {
-            setPast(1); setPast(2); setActive(3);
-        } else if (currentAsset >= p1Target) {
-            setPast(1);
-            setActive(2);
-        } else {
-            setActive(1);
+        if (roadmap.checkpoints.length === 0) {
+            container.innerHTML = '<p class="text-xs text-gray-400">Roadmap 계산을 위한 자산 데이터가 없습니다.</p>';
+            return;
         }
+
+        const targetAsset = Number(model?.targetGoalAsset || 250000000);
+        container.innerHTML = roadmap.checkpoints.map((checkpoint, index) => {
+            const progress = targetAsset > 0
+                ? Math.max(0, Math.min(100, (checkpoint.projectedAsset / targetAsset) * 100))
+                : 0;
+            const tone = index === 2
+                ? { border: 'border-emerald-200', bg: 'bg-emerald-50/60', text: 'text-emerald-700', bar: 'bg-emerald-500' }
+                : { border: 'border-indigo-100', bg: 'bg-indigo-50/40', text: 'text-indigo-700', bar: 'bg-indigo-500' };
+            return `
+                <article class="rounded-xl border ${tone.border} ${tone.bg} p-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-[10px] font-black uppercase tracking-wider ${tone.text}">${checkpoint.year}년차</span>
+                        <span class="text-[10px] text-gray-400">${escapeHtml(checkpoint.monthKey)}</span>
+                    </div>
+                    <p class="mt-2 text-lg font-black text-gray-900">${formatWon(checkpoint.projectedAsset)}</p>
+                    <div class="mt-1 flex items-center justify-between gap-2 text-[10px]">
+                        <span class="text-gray-400">연간 증가</span>
+                        <span class="font-bold text-emerald-700">+${formatWon(checkpoint.annualIncrease)}</span>
+                    </div>
+                    <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white">
+                        <div class="h-full rounded-full ${tone.bar}" style="width:${progress}%"></div>
+                    </div>
+                    <div class="mt-1.5 flex items-center justify-between gap-2 text-[9px] text-gray-400">
+                        <span>목표 대비 ${progress.toFixed(1)}%</span>
+                        <span>월평균 +${formatWon(checkpoint.averageMonthlyRetained)}</span>
+                    </div>
+                </article>
+            `;
+        }).join('');
     }
 
     function getRealEstateFundingStatus() {

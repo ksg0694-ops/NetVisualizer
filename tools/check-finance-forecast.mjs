@@ -66,4 +66,24 @@ const noObservationProjection = forecast.buildAssetIncomeForecastPath(
 );
 assert.deepEqual(Array.from(noObservationProjection.path), [100_000_000, null]);
 
+const threeYearRoadmap = forecast.buildThreeYearRoadmap(
+    100_000_000,
+    '2026-07',
+    {
+        observedMonths: 3,
+        fittedLatestIncome: 4_000_000,
+        incomeSlope: 0,
+        retentionRate: 0.5,
+        projectedMonthlyIncomes: Array.from({ length: 36 }, () => 4_000_000),
+    },
+    36,
+);
+assert.equal(threeYearRoadmap.months.length, 36);
+assert.equal(threeYearRoadmap.checkpoints.length, 3);
+assert.equal(threeYearRoadmap.checkpoints[0].monthKey, '2027-07');
+assert.equal(threeYearRoadmap.checkpoints[0].projectedAsset, 124_000_000);
+assert.equal(threeYearRoadmap.checkpoints[1].projectedAsset, 148_000_000);
+assert.equal(threeYearRoadmap.checkpoints[2].projectedAsset, 172_000_000);
+assert.equal(threeYearRoadmap.endingAsset, 172_000_000);
+
 console.log('Finance forecast contracts ok');

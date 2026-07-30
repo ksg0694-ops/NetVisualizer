@@ -61,7 +61,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     };
 
     const financeToolViews = new Set(['personal-cfo-view', 'portfolio-view', 'stats-view', 'cashflow-view', 'asset-view', 'realestate-view', 'invest-detail-view']);
-    const lifeToolViews = new Set(['health-view', 'routine-checklist-view']);
+    const lifeToolViews = new Set(['routine-checklist-view']);
     const mobileToolNav = document.getElementById('mobile-tool-nav');
     const mobileToolGroups = {
         'dashboard-view': [
@@ -72,10 +72,22 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
             { target: 'personal-cfo-view', icon: 'fa-diagram-project', label: '개인 CFO' }
         ],
         'life-view': [
-            { target: 'health-view', icon: 'fa-heart-pulse', label: '건강' },
             { target: 'routine-checklist-view', icon: 'fa-list-check', label: '할 일' }
         ]
     };
+
+    function isFeatureEnabled(name) {
+        return window.APP_FEATURE_FLAGS?.[name] !== false;
+    }
+
+    function applyFeatureVisibility() {
+        document.querySelectorAll('[data-feature]').forEach((element) => {
+            const enabled = isFeatureEnabled(element.dataset.feature);
+            element.classList.toggle('hidden', !enabled);
+        });
+    }
+
+    applyFeatureVisibility();
 
     function resolveActiveGoalTarget(targetId) {
         if (financeToolViews.has(targetId)) return 'dashboard-view';
@@ -106,10 +118,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         if (!mobileToolNav) return;
         let toolItems = mobileToolGroups[activeGoalTarget] || mobileToolGroups['dashboard-view'];
         if (activeGoalTarget === 'life-view') {
-            toolItems = [
-                { target: 'health-view', icon: 'fa-heart-pulse', label: '건강' },
-                { target: 'routine-checklist-view', icon: 'fa-list-check', label: '할 일' }
-            ];
+            toolItems = [{ target: 'routine-checklist-view', icon: 'fa-list-check', label: '할 일' }];
         }
         mobileToolNav.innerHTML = toolItems.map(item => {
             const isActive = item.target === targetId;
@@ -169,6 +178,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
 
     function switchView(targetId) {
         if (targetId === 'project-view' || targetId === 'career-view') targetId = 'dashboard-view';
+        if (targetId === 'health-view' && !isFeatureEnabled('health')) targetId = 'life-view';
         useMonthScopeForView(targetId);
         activeViewId = targetId;
         updateAppContext(targetId);

@@ -106,10 +106,75 @@
         };
     }
 
+    function buildThreeYearRoadmap(
+        currentAsset,
+        referenceMonthKey,
+        incomeForecast,
+        horizonMonths = 36,
+    ) {
+        const [referenceYearRaw, referenceMonthRaw] = String(referenceMonthKey || '').split('-').map(Number);
+        const referenceDate = new Date(
+            Number.isInteger(referenceYearRaw) ? referenceYearRaw : new Date().getFullYear(),
+            (Number.isInteger(referenceMonthRaw) ? referenceMonthRaw : new Date().getMonth() + 1) - 1,
+            1,
+        );
+        const monthCount = Math.max(0, Number(horizonMonths) || 0);
+        const retentionRate = Math.max(0, Math.min(1, Number(incomeForecast?.retentionRate || 0)));
+        let projectedAsset = Math.max(0, Number(currentAsset) || 0);
+        const months = [];
+
+        for (let index = 0; index < monthCount; index += 1) {
+            const offset = index + 1;
+            const scheduledIncome = Number(incomeForecast?.projectedMonthlyIncomes?.[index]);
+            const projectedIncome = Number.isFinite(scheduledIncome) && scheduledIncome > 0
+                ? scheduledIncome
+                : Math.max(
+                    0,
+                    Number(incomeForecast?.fittedLatestIncome || 0)
+                        + (Number(incomeForecast?.incomeSlope || 0) * offset),
+                );
+            const retained = Math.max(0, projectedIncome * retentionRate);
+            projectedAsset += retained;
+            const monthDate = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + offset, 1);
+            months.push({
+                monthKey: `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`,
+                projectedIncome: Math.round(projectedIncome),
+                retained: Math.round(retained),
+                projectedAsset: Math.round(projectedAsset),
+            });
+        }
+
+        const checkpoints = [12, 24, 36]
+            .filter((monthNumber) => monthNumber <= months.length)
+            .map((monthNumber, index) => {
+                const month = months[monthNumber - 1];
+                const previousAsset = index === 0
+                    ? Math.max(0, Number(currentAsset) || 0)
+                    : months[monthNumber - 13].projectedAsset;
+                return {
+                    year: index + 1,
+                    monthNumber,
+                    monthKey: month.monthKey,
+                    projectedAsset: month.projectedAsset,
+                    annualIncrease: month.projectedAsset - previousAsset,
+                    averageMonthlyRetained: months
+                        .slice(monthNumber - 12, monthNumber)
+                        .reduce((sum, item) => sum + item.retained, 0) / 12,
+                };
+            });
+
+        return {
+            months,
+            checkpoints,
+            endingAsset: months.at(-1)?.projectedAsset || Math.max(0, Number(currentAsset) || 0),
+        };
+    }
+
     window.FinanceForecastFeature = {
         median,
         calculateLinearTrend,
         buildSalaryCalendarForecast,
         buildAssetIncomeForecastPath,
+        buildThreeYearRoadmap,
     };
 })(window);

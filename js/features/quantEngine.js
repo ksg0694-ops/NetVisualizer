@@ -1,6 +1,9 @@
 // Quant strategy, rebalance, and market-price helpers extracted from index.html.
 // This script intentionally shares the global app state used by the legacy static app.
 
+    let strategyBoardDraggedId = '';
+    const strategyMoveInFlight = new Set();
+
     function renderQuantStrategyStructure(processedItems = [], total = 0) {
         const container = document.getElementById('invest-quant-structure');
         if (!container) return;
@@ -327,6 +330,156 @@
                 </div>
             `;
         }).join('');
+    }
+
+    function renderStrategyBoard(processedItems = []) {
+        const container = document.getElementById('invest-strategy-board');
+        if (!container) return;
+        const items = processedItems
+            .filter((item) => item.id && Number(item.amount || 0) >= 0)
+            .map((item) => ({
+                ...item,
+                strategyTag: INVEST_STRATEGY_META[item.strategyTag]
+                    ? item.strategyTag
+                    : inferStrategyTag(item),
+            }));
+        activeQuantHoldingItems = items;
+        const total = items.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        const options = (selected) => INVEST_STRATEGY_KEYS.map((key) => (
+            `<option value="${escapeAttr(key)}" ${selected === key ? 'selected' : ''}>${escapeHtml(getStrategyMeta(key).label)}</option>`
+        )).join('');
+
+        container.innerHTML = INVEST_STRATEGY_KEYS.map((key) => {
+            const meta = getStrategyMeta(key);
+            const laneItems = items
+                .filter((item) => item.strategyTag === key)
+                .sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0) || String(a.name).localeCompare(String(b.name), 'ko-KR'));
+            const amount = laneItems.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+            const pct = total > 0 ? (amount / total) * 100 : 0;
+            return `
+                <section data-strategy-lane="${escapeAttr(key)}" class="min-h-[132px] rounded-xl border border-gray-200 bg-gray-50/70 p-2.5 transition">
+                    <div class="mb-2 flex items-start justify-between gap-2 border-b border-gray-200 pb-2">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm" style="color:${meta.color}">
+                                <i class="fas ${meta.icon} text-xs"></i>
+                            </span>
+                            <div class="min-w-0">
+                                <h4 class="truncate text-xs font-black text-gray-900">${escapeHtml(meta.label)}</h4>
+                                <p class="text-[9px] text-gray-400">${laneItems.length}개 · ${pct.toFixed(1)}%</p>
+                            </div>
+                        </div>
+                        <p class="shrink-0 text-[11px] font-black text-gray-800">${formatWon(amount)}</p>
+                    </div>
+                    <div class="space-y-1.5" data-strategy-card-list>
+                        ${laneItems.length ? laneItems.map((item) => {
+                            const pnlClass = Number(item.unrealizedPnl || 0) >= 0 ? 'text-emerald-600' : 'text-rose-500';
+                            const accountLabel = item.accountName || item.groupName || '계좌 미지정';
+                            return `
+                                <article draggable="true" tabindex="0" data-strategy-holding="${escapeAttr(item.id)}" class="group cursor-grab rounded-lg border border-gray-200 bg-white px-2.5 py-2 shadow-sm transition hover:border-violet-300 hover:shadow active:cursor-grabbing">
+                                    <div class="flex items-start gap-2">
+                                        <span class="mt-0.5 text-gray-300 group-hover:text-violet-400"><i class="fas fa-grip-vertical text-[10px]"></i></span>
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-start justify-between gap-2">
+                                                <p class="truncate text-[11px] font-bold text-gray-800">${escapeHtml(item.name || '보유자산')}</p>
+                                                <p class="shrink-0 text-[11px] font-black text-gray-900">${formatWon(item.amount)}</p>
+                                            </div>
+                                            <div class="mt-0.5 flex items-center justify-between gap-2">
+                                                <p class="min-w-0 truncate text-[9px] text-gray-400">${escapeHtml(item.ticker || accountLabel)}</p>
+                                                ${item.hasComparablePrice ? `<p class="shrink-0 text-[9px] font-bold ${pnlClass}">${Number(item.returnPct || 0).toFixed(1)}%</p>` : ''}
+                                            </div>
+                                            <label class="mt-1.5 block sm:hidden">
+                                                <span class="sr-only">전략 선택</span>
+                                                <select data-strategy-select="${escapeAttr(item.id)}" class="h-7 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-[10px] font-bold text-gray-600 outline-none focus:ring-2 focus:ring-violet-400">
+                                                    ${options(key)}
+                                                </select>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </article>
+                            `;
+                        }).join('') : '<div class="flex min-h-[58px] items-center justify-center rounded-lg border border-dashed border-gray-200 bg-white/60 text-[10px] font-bold text-gray-300">여기로 이동</div>'}
+                    </div>
+                </section>
+            `;
+        }).join('');
+        bindStrategyBoardControls(container);
+    }
+
+    function bindStrategyBoardControls(container) {
+        if (container.dataset.strategyBoardBound === 'true') return;
+        container.dataset.strategyBoardBound = 'true';
+        container.addEventListener('dragstart', (event) => {
+            const card = event.target.closest('[data-strategy-holding]');
+            if (!card) return;
+            strategyBoardDraggedId = card.dataset.strategyHolding || '';
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', strategyBoardDraggedId);
+            card.classList.add('opacity-40');
+        });
+        container.addEventListener('dragend', (event) => {
+            strategyBoardDraggedId = '';
+            event.target.closest('[data-strategy-holding]')?.classList.remove('opacity-40');
+            container.querySelectorAll('[data-strategy-lane]').forEach((lane) => lane.classList.remove('ring-2', 'ring-violet-300', 'bg-violet-50'));
+        });
+        container.addEventListener('dragover', (event) => {
+            const lane = event.target.closest('[data-strategy-lane]');
+            if (!lane || !strategyBoardDraggedId) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            container.querySelectorAll('[data-strategy-lane]').forEach((candidate) => candidate.classList.remove('ring-2', 'ring-violet-300', 'bg-violet-50'));
+            lane.classList.add('ring-2', 'ring-violet-300', 'bg-violet-50');
+        });
+        container.addEventListener('drop', async (event) => {
+            const lane = event.target.closest('[data-strategy-lane]');
+            if (!lane) return;
+            event.preventDefault();
+            const holdingId = strategyBoardDraggedId || event.dataTransfer.getData('text/plain');
+            strategyBoardDraggedId = '';
+            await movePortfolioStrategy(holdingId, lane.dataset.strategyLane);
+        });
+        container.addEventListener('change', async (event) => {
+            const select = event.target.closest('[data-strategy-select]');
+            if (!select) return;
+            await movePortfolioStrategy(select.dataset.strategySelect, select.value);
+        });
+    }
+
+    async function movePortfolioStrategy(holdingId, nextStrategy) {
+        if (!holdingId || !INVEST_STRATEGY_META[nextStrategy] || strategyMoveInFlight.has(holdingId)) return;
+        const item = (activeQuantHoldingItems || []).find((candidate) => candidate.id === holdingId);
+        if (!item) return;
+        const previousStrategy = item.strategyTag || inferStrategyTag(item);
+        if (previousStrategy === nextStrategy) return;
+        const status = document.getElementById('invest-strategy-save-status');
+        strategyMoveInFlight.add(holdingId);
+        item.strategyTag = nextStrategy;
+        item.portKey = nextStrategy;
+        renderStrategyBoard(activeQuantHoldingItems);
+        if (status) status.textContent = `${item.name} · ${getStrategyMeta(nextStrategy).label} 저장 중`;
+
+        try {
+            const _supabase = getAuthenticatedSupabaseClient();
+            const { error } = await _supabase
+                .from('portfolios')
+                .update({
+                    strategy_tag: nextStrategy,
+                    classification_updated_at: new Date().toISOString(),
+                })
+                .eq('id', holdingId);
+            if (error) throw error;
+            if (status) status.textContent = `${item.name} · ${getStrategyMeta(nextStrategy).label} 저장됨`;
+            showToast(`${item.name}을(를) ${getStrategyMeta(nextStrategy).label}(으)로 이동했습니다.`, 'info', 1700);
+            await fetchSheetData(false, ['portfolios']);
+            if (activeInvestGroupName) renderInvestDetail(activeInvestGroupName);
+        } catch (error) {
+            item.strategyTag = previousStrategy;
+            item.portKey = previousStrategy;
+            renderStrategyBoard(activeQuantHoldingItems);
+            if (status) status.textContent = '전략 저장 실패 · 이전 위치로 복원됨';
+            showToast(`전략 저장 실패: ${error.message}`, 'error', 3200);
+        } finally {
+            strategyMoveInFlight.delete(holdingId);
+        }
     }
 
     function renderQuantHoldingEditor(processedItems = []) {

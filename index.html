@@ -28,20 +28,20 @@
     <script src="./js/features/financeModel.js?v=20260726-phase2-portfolio-2"></script>
     <script src="./js/generated/personal-cfo-domain.js?v=20260726-monthly-report-1"></script>
     <script src="./js/features/monthlyClose.js?v=20260717-monthly-close-5"></script>
-    <script src="./js/features/appCore.js?v=20260728-market-price-auto-1"></script>
+    <script src="./js/features/appCore.js?v=20260730-update-104-1"></script>
     <script src="./js/features/assetTrend.js?v=20260726-monthly-report-1"></script>
-    <script src="./js/features/financeForecast.js?v=20260726-phase1-cfo-6"></script>
-    <script src="./js/features/quantEngine.js?v=20260728-market-price-auto-1"></script>
+    <script src="./js/features/financeForecast.js?v=20260730-update-104-1"></script>
+    <script src="./js/features/quantEngine.js?v=20260730-update-104-1"></script>
     <script src="./js/features/realEstate.js?v=20260726-phase1-cfo-5"></script>
     <script src="./js/features/transactionImport.js?v=20260708-auth-cloud"></script>
     <script src="./js/features/portfolioEditor.js?v=20260717-portfolio-draft-1"></script>
     <script src="./js/features/cashflowControls.js"></script>
-    <script src="./js/features/portfolioViews.js?v=20260728-phase2-portfolio-3"></script>
-    <script src="./js/features/financeViews.js?v=20260726-phase2-portfolio-1"></script>
+    <script src="./js/features/portfolioViews.js?v=20260730-update-104-1"></script>
+    <script src="./js/features/financeViews.js?v=20260730-update-104-1"></script>
     <script src="./js/features/healthTracker.js?v=20260713-public-server"></script>
-    <script src="./js/features/checklist.js?v=20260713-public-server"></script>
+    <script src="./js/features/checklist.js?v=20260730-update-104-1"></script>
     <script src="./js/features/personalCfo.js?v=20260726-phase2-portfolio-1"></script>
-    <script src="./js/features/lifeDashboard.js?v=20260717-finance-scope-1"></script>
+    <script src="./js/features/lifeDashboard.js?v=20260730-update-104-1"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -78,7 +78,7 @@
                     <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
                 </div>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.03.31
+                    version 1.04.00
                 </div>
             </div>
             <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-2 space-y-2">
@@ -118,7 +118,7 @@
                 <div>
                     <p class="px-2 mb-1 text-[9px] font-bold text-gray-400 tracking-wider">생활 도구</p>
                     <div class="space-y-0.5">
-                        <a href="#" data-target="health-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                        <a href="#" data-target="health-view" data-feature="health" class="hidden nav-link items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
                             <i class="fas fa-heart-pulse w-4 text-center text-xs"></i> <span class="truncate">건강</span>
                         </a>
                         <a href="#" data-target="routine-checklist-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
@@ -777,17 +777,17 @@
                         <p class="text-xs md:text-sm text-gray-500 mt-1">건강 기록을 우선 남기고, 다른 생활 도구는 나중에 다시 설계합니다.</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <span class="text-[10px] md:text-xs font-bold text-rose-600 bg-rose-50 border border-rose-100 px-3 py-2 rounded-xl whitespace-nowrap">Health Tracking</span>
+                        <span data-feature="health" class="hidden text-[10px] md:text-xs font-bold text-rose-600 bg-rose-50 border border-rose-100 px-3 py-2 rounded-xl whitespace-nowrap">Health Tracking</span>
                         <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">할 일</span>
                     </div>
                 </div>
 
                 <div class="mb-3 flex items-center justify-between gap-3">
                     <h3 class="text-sm md:text-base font-bold text-gray-800">생활 도구</h3>
-                    <span class="text-[10px] md:text-xs text-gray-400">건강 / 할 일</span>
+                    <span class="text-[10px] md:text-xs text-gray-400">할 일</span>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 mb-8">
-                    <button type="button" onclick="switchView('health-view')" class="text-left bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-rose-200 hover:shadow-md transition min-w-0">
+                    <button type="button" data-feature="health" onclick="switchView('health-view')" class="hidden text-left bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-rose-200 hover:shadow-md transition min-w-0">
                         <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center mb-4"><i class="fas fa-heart-pulse"></i></div>
                         <p class="text-[10px] font-bold text-rose-500 uppercase tracking-wider mb-1">Tool 01</p>
                         <h3 class="text-lg font-bold text-gray-900">건강</h3>
@@ -1312,6 +1312,19 @@
                     </div>
                 </div>
 
+                <section id="roadmap-container" class="mb-4 rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:p-5">
+                    <div class="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                            <h4 class="text-base font-bold text-gray-900">단기 Roadmap 3년</h4>
+                            <p id="roadmap-method" class="mt-0.5 text-[10px] text-gray-400">수입 추세 기반 예상 경로를 계산합니다.</p>
+                        </div>
+                        <span class="shrink-0 rounded-lg border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[10px] font-bold text-indigo-600">36개월</span>
+                    </div>
+                    <div id="roadmap-year-cards" class="grid grid-cols-1 gap-2.5 md:grid-cols-3">
+                        <!-- JS -->
+                    </div>
+                </section>
+
             </div>
 
             <!-- 5. 투자자산 상세 뷰 (Sub-page) -->
@@ -1324,7 +1337,7 @@
                 </div>
                 
                 <!-- 상단: 3대 핵심 지표 요약 -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
                     <div class="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl p-5 text-white shadow-sm relative overflow-hidden flex flex-col justify-center min-h-[140px]">
                         <div class="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-white opacity-10 rounded-full pointer-events-none"></div>
                         <p class="text-indigo-100 font-medium text-xs mb-1">총 투자 자산 (평가금액)</p>
@@ -1335,7 +1348,7 @@
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-center min-h-[140px]">
+                    <div data-feature="mddDefense" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex-col justify-center min-h-[140px]">
                         <div class="flex justify-between items-start mb-2">
                             <p class="text-xs font-bold text-gray-500">MDD 방어 상태 (현금 비중)</p>
                             <i class="fas fa-shield-alt text-emerald-400"></i>
@@ -1363,7 +1376,7 @@
                     </div>
                 </div>
 
-                <div class="mb-5 grid gap-3 rounded-2xl border border-violet-100 bg-white p-3 shadow-sm lg:grid-cols-[240px_minmax(0,1fr)_auto] lg:items-center">
+                <div data-feature="valuationExplainer" class="hidden mb-5 gap-3 rounded-2xl border border-violet-100 bg-white p-3 shadow-sm lg:grid-cols-[240px_minmax(0,1fr)_auto] lg:items-center">
                     <div class="min-w-0">
                         <div class="flex items-center justify-between gap-2">
                             <p class="text-xs font-bold text-gray-800">원화 평가 기준</p>
@@ -1386,14 +1399,27 @@
                     </div>
                 </div>
 
-                <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-5">
+                <div class="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 mb-5">
+                    <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h3 class="text-base font-bold text-gray-900 flex items-center gap-2"><i class="fas fa-layer-group text-violet-500"></i> 포트폴리오 전략</h3>
+                            <p class="mt-0.5 text-[10px] text-gray-400">보유자산을 전략 칸으로 이동하면 분류가 바로 저장됩니다.</p>
+                        </div>
+                        <button id="btn-sync-market-prices" onclick="syncMarketPrices()" class="w-fit text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                            <i class="fas fa-cloud-download-alt text-[9px]"></i> 현재가 갱신
+                        </button>
+                    </div>
+                    <div id="invest-strategy-board" class="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+                        <!-- JS -->
+                    </div>
+                    <div id="invest-strategy-save-status" class="mt-2 text-[10px] font-bold text-gray-400" aria-live="polite"></div>
+                </div>
+
+                <div data-feature="quantStrategy" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-5">
                     <div class="flex items-center justify-between gap-2 mb-3">
                         <h3 class="text-base font-bold text-gray-800 flex items-center gap-2"><i class="fas fa-sliders-h text-indigo-500"></i> Quant 전략 구조</h3>
                         <div class="flex items-center gap-2 shrink-0">
                             <span class="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded" id="invest-quant-status">구조 준비</span>
-                            <button id="btn-sync-market-prices" onclick="syncMarketPrices()" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 px-2 py-1 rounded transition-colors flex items-center gap-1">
-                                <i class="fas fa-cloud-download-alt text-[9px]"></i> 시세
-                            </button>
                             <button id="btn-save-quant-signal" onclick="saveQuantRebalanceSignals()" class="text-[10px] font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 px-2 py-1 rounded transition-colors flex items-center gap-1">
                                 <i class="fas fa-flag-checkered text-[9px]"></i> 신호
                             </button>
@@ -1855,6 +1881,6 @@
     <!-- Toast Message Container -->
     <div id="toast-container" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[90%] md:w-auto max-w-sm"></div>
 
-    <script src="./js/features/appShell.js?v=20260726-phase1-cfo-5"></script>
+    <script src="./js/features/appShell.js?v=20260730-update-104-1"></script>
 </body>
 </html>

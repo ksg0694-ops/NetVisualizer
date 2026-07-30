@@ -198,22 +198,29 @@
             });
     }
 
-    function stepsToText(steps = []) {
-        return steps.map((step) => step.title).join('\n');
+    function serializeStepEditorSteps(steps = []) {
+        return JSON.stringify(normalizeSteps(steps));
     }
 
-    function stepTitlesFromText(value) {
-        return String(value || '')
-            .split(/\r?\n/)
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .slice(0, 80);
+    function parseStepEditorSteps(value, previousSteps = []) {
+        const text = String(value || '').trim();
+        if (!text) return [];
+        try {
+            const parsed = JSON.parse(text);
+            if (Array.isArray(parsed)) return normalizeSteps(parsed);
+        } catch (_ignored) {
+            // Legacy line-separated values are converted below.
+        }
+        return parseStepsText(text, previousSteps);
     }
 
     function renderStepEditor(textareaId, value = '') {
+        const steps = Array.isArray(value)
+            ? normalizeSteps(value)
+            : parseStepEditorSteps(value);
         return `
             <div data-step-editor data-step-target="${escapeAttr(textareaId)}">
-                <textarea id="${escapeAttr(textareaId)}" class="hidden">${escapeHtml(value)}</textarea>
+                <textarea id="${escapeAttr(textareaId)}" class="hidden">${escapeHtml(serializeStepEditorSteps(steps))}</textarea>
                 <div class="flex gap-1.5">
                     <input type="text" data-step-editor-input class="min-w-0 flex-1 border border-gray-200 rounded-md px-2.5 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none bg-white" placeholder="스텝 입력">
                     <button type="button" data-step-editor-add class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gray-900 text-white hover:bg-gray-800" title="스텝 추가" aria-label="스텝 추가">
@@ -229,18 +236,19 @@
         const textarea = editor?.querySelector('textarea');
         const list = editor?.querySelector('[data-step-editor-list]');
         if (!textarea || !list) return;
-        const titles = stepTitlesFromText(textarea.value);
-        if (titles.length === 0) {
+        const steps = parseStepEditorSteps(textarea.value);
+        if (steps.length === 0) {
             list.innerHTML = '<p class="text-[11px] text-gray-400">스텝이 필요하면 하나씩 추가하세요.</p>';
             return;
         }
-        list.innerHTML = titles.map((title, index) => `
+        list.innerHTML = steps.map((step, index) => `
             <div data-step-editor-item="${index}" class="flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-700 transition">
                 <button type="button" data-step-editor-drag-handle class="flex h-6 w-5 shrink-0 cursor-grab items-center justify-center text-gray-300 hover:text-gray-600 active:cursor-grabbing" title="스텝 순서 이동" aria-label="스텝 순서 이동">
                     <i class="fas fa-grip-vertical text-xs"></i>
                 </button>
+                <input type="checkbox" data-step-editor-toggle="${index}" ${step.done ? 'checked' : ''} class="h-3.5 w-3.5 shrink-0 rounded border-gray-300 accent-indigo-600">
                 <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-white text-[10px] font-bold text-gray-400">${index + 1}</span>
-                <span class="min-w-0 flex-1 truncate">${escapeHtml(title)}</span>
+                <span class="min-w-0 flex-1 truncate ${step.done ? 'line-through text-gray-400' : ''}">${escapeHtml(step.title)}</span>
                 <button type="button" data-step-editor-remove="${index}" class="shrink-0 text-gray-300 hover:text-rose-500" title="삭제">
                     <i class="fas fa-xmark text-xs"></i>
                 </button>
@@ -258,10 +266,10 @@
         if (!input || !textarea) return;
         const title = String(input.value || '').trim();
         if (!title) return;
-        const titles = stepTitlesFromText(textarea.value);
-        if (!titles.some((item) => item.toLowerCase() === title.toLowerCase())) {
-            titles.push(title);
-            textarea.value = titles.join('\n');
+        const steps = parseStepEditorSteps(textarea.value);
+        if (!steps.some((item) => item.title.toLowerCase() === title.toLowerCase())) {
+            steps.push(normalizeStep(title));
+            textarea.value = serializeStepEditorSteps(steps);
         }
         input.value = '';
         renderStepEditorList(editor);
@@ -270,9 +278,20 @@
     function removeStepFromEditor(editor, index) {
         const textarea = editor?.querySelector('textarea');
         if (!textarea) return;
-        const titles = stepTitlesFromText(textarea.value);
-        titles.splice(Number(index), 1);
-        textarea.value = titles.join('\n');
+        const steps = parseStepEditorSteps(textarea.value);
+        steps.splice(Number(index), 1);
+        textarea.value = serializeStepEditorSteps(steps);
+        renderStepEditorList(editor);
+    }
+
+    function toggleStepFromEditor(editor, index) {
+        const textarea = editor?.querySelector('textarea');
+        if (!textarea) return;
+        const steps = parseStepEditorSteps(textarea.value);
+        const step = steps[Number(index)];
+        if (!step) return;
+        step.done = !step.done;
+        textarea.value = serializeStepEditorSteps(steps);
         renderStepEditorList(editor);
     }
 
@@ -306,12 +325,12 @@
     function reorderStepEditor(editor, fromIndex, toIndex) {
         const textarea = editor?.querySelector('textarea');
         if (!textarea) return;
-        const titles = stepTitlesFromText(textarea.value);
+        const steps = parseStepEditorSteps(textarea.value);
         const source = Number(fromIndex);
         let destination = Number(toIndex);
         if (!Number.isInteger(source) || !Number.isInteger(destination)) return;
         if (destination > source) destination -= 1;
-        textarea.value = moveArrayItem(titles, source, destination).join('\n');
+        textarea.value = serializeStepEditorSteps(moveArrayItem(steps, source, destination));
         renderStepEditorList(editor);
     }
 
@@ -586,7 +605,6 @@
 
     function fallbackTaskCompare(a, b) {
         if (a.completed !== b.completed) return a.completed ? 1 : -1;
-        if (a.dueDate !== b.dueDate) return a.dueDate.localeCompare(b.dueDate);
         if (a.priority !== b.priority) return a.priority === 'high' ? -1 : 1;
         if (a.domain !== b.domain) return a.domain.localeCompare(b.domain);
         return String(b.createdAt).localeCompare(String(a.createdAt));
@@ -789,7 +807,6 @@
                     .from(TABLE_NAME)
                     .select('id,title,note,category,domain,steps,due_date,priority,is_done,completed_at,created_at,updated_at')
                     .order('is_done', { ascending: true })
-                    .order('due_date', { ascending: true })
                     .order('created_at', { ascending: false }));
             }
             if (error) throw error;
@@ -828,10 +845,7 @@
 
     function getFilteredTasks() {
         let nextTasks = tasks.filter(matchesDomain);
-        if (activeFilter === 'today') {
-            const today = todayString();
-            nextTasks = nextTasks.filter((task) => task.dueDate <= today && !task.completed);
-        } else if (activeFilter === 'done') {
+        if (activeFilter === 'done') {
             nextTasks = nextTasks.filter((task) => task.completed);
         } else if (activeFilter !== 'all') {
             nextTasks = nextTasks.filter((task) => !task.completed);
@@ -842,10 +856,9 @@
     function getSummary() {
         const open = tasks.filter((task) => !task.completed).length;
         const done = tasks.filter((task) => task.completed).length;
-        const dueToday = tasks.filter((task) => !task.completed && task.dueDate <= todayString()).length;
         const total = open + done;
         const pct = total ? Math.round((done / total) * 100) : 0;
-        return { open, done, dueToday, total, pct };
+        return { open, done, total, pct };
     }
 
     function renderFilterButton(key, label, count) {
@@ -853,15 +866,6 @@
         return `
             <button type="button" data-checklist-filter="${key}" class="px-3 py-1.5 rounded-md text-[11px] font-bold border transition ${isActive ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-200'}">
                 ${label}${Number.isFinite(count) ? ` ${count}` : ''}
-            </button>
-        `;
-    }
-
-    function renderDomainButton(domain) {
-        const isActive = activeDomain === domain.key;
-        return `
-            <button type="button" data-checklist-domain="${escapeAttr(domain.key)}" class="px-2.5 py-1.5 rounded-md text-[11px] font-bold border transition ${isActive ? 'bg-gray-900 text-white border-gray-900' : `bg-white border-gray-200 ${TONE_CLASSES[domain.tone] || TONE_CLASSES.slate}`}">
-                ${escapeHtml(domain.label)}
             </button>
         `;
     }
@@ -891,9 +895,7 @@
                 </div>
                 <div class="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-gray-500">
                     ${domainBadge}
-                    <span class="shrink-0">${escapeHtml(task.dueDate)}</span>
                     ${stepBadge ? `<span class="shrink-0">${stepBadge}</span>` : ''}
-                    ${task.note ? `<span class="min-w-0 truncate text-gray-400">${escapeHtml(task.note)}</span>` : ''}
                 </div>
             </article>
         `;
@@ -943,7 +945,7 @@
                             <h4 class="text-lg font-black text-gray-900 leading-snug">${escapeHtml(task.title)}</h4>
                             <span class="inline-flex text-[10px] font-bold border px-2 py-0.5 rounded ${TONE_CLASSES[domain.tone] || TONE_CLASSES.slate}">${escapeHtml(domain.label)}</span>
                         </div>
-                        <p class="mt-1 text-[11px] text-gray-400">${escapeHtml(domain.label)} · ${escapeHtml(task.dueDate)} · ${stepSummary.done}/${stepSummary.total} 스텝</p>
+                        <p class="mt-1 text-[11px] text-gray-400">${escapeHtml(domain.label)} · ${stepSummary.done}/${stepSummary.total} 스텝</p>
                     </div>
                     <button type="button" data-checklist-close-detail class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 hover:text-gray-700" title="상세 닫기" aria-label="상세 닫기">
                         <i class="fas fa-xmark text-xs"></i>
@@ -956,18 +958,12 @@
                         <input id="checklist-detail-title-edit" type="text" value="${escapeAttr(task.title)}" class="mt-1 w-full border border-gray-200 rounded-md px-2.5 py-2 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none bg-white" placeholder="할 일">
                     </label>
 
-                    <div class="grid grid-cols-2 gap-2">
-                        <label class="block">
-                            <span class="text-[11px] font-bold text-gray-500">날짜</span>
-                            <input id="checklist-detail-due-edit" type="date" value="${escapeAttr(task.dueDate)}" class="mt-1 w-full border border-gray-200 rounded-md px-2.5 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                        </label>
-                        <label class="block">
-                            <span class="text-[11px] font-bold text-gray-500">영역</span>
-                            <select id="checklist-detail-domain-edit" class="mt-1 w-full border border-gray-200 rounded-md px-2.5 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                                ${DOMAINS.map((item) => `<option value="${escapeAttr(item.key)}" ${item.key === task.domain ? 'selected' : ''}>${escapeHtml(item.label)}</option>`).join('')}
-                            </select>
-                        </label>
-                    </div>
+                    <label class="block">
+                        <span class="text-[11px] font-bold text-gray-500">영역</span>
+                        <select id="checklist-detail-domain-edit" class="mt-1 w-full border border-gray-200 rounded-md px-2.5 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                            ${DOMAINS.map((item) => `<option value="${escapeAttr(item.key)}" ${item.key === task.domain ? 'selected' : ''}>${escapeHtml(item.label)}</option>`).join('')}
+                        </select>
+                    </label>
 
                     <div class="xl:col-span-2 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_260px] gap-3">
                         <label class="block">
@@ -978,7 +974,7 @@
                         <div>
                             <div class="block">
                                 <span class="text-[11px] font-bold text-gray-500">스텝 / 하위 할 일</span>
-                                <div class="mt-1">${renderStepEditor('checklist-detail-steps-edit', stepsToText(task.steps))}</div>
+                                <div class="mt-1">${renderStepEditor('checklist-detail-steps-edit', task.steps)}</div>
                             </div>
                             <div class="mt-2 space-y-1.5">
                                 ${task.steps.length ? task.steps.map((step, index) => `
@@ -1003,30 +999,31 @@
     function renderSummary() {
         const summary = getSummary();
         const openEl = document.getElementById('checklist-open-count');
-        const todayEl = document.getElementById('checklist-today-count');
         const doneEl = document.getElementById('checklist-done-count');
         const pctEl = document.getElementById('checklist-progress-percent');
         const barEl = document.getElementById('checklist-progress-bar');
         const filtersEl = document.getElementById('checklist-filters');
         const domainsEl = document.getElementById('checklist-domain-filters');
         if (openEl) openEl.textContent = summary.open.toLocaleString();
-        if (todayEl) todayEl.textContent = summary.dueToday.toLocaleString();
         if (doneEl) doneEl.textContent = summary.done.toLocaleString();
         if (pctEl) pctEl.textContent = `${summary.pct}%`;
         if (barEl) barEl.style.width = `${summary.pct}%`;
         if (filtersEl) {
             filtersEl.innerHTML = [
                 renderFilterButton('open', '열림', summary.open),
-                renderFilterButton('today', '오늘', summary.dueToday),
                 renderFilterButton('done', '완료', summary.done),
                 renderFilterButton('all', '전체', summary.total),
             ].join('');
         }
         if (domainsEl) {
-            const allActive = activeDomain === 'all';
             domainsEl.innerHTML = `
-                <button type="button" data-checklist-domain="all" class="px-2.5 py-1.5 rounded-md text-[11px] font-bold border transition ${allActive ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}">전체</button>
-                ${DOMAINS.map(renderDomainButton).join('')}
+                <label class="flex items-center gap-2">
+                    <span class="text-[11px] font-bold text-gray-500">영역</span>
+                    <select id="checklist-domain-filter" class="h-8 rounded-md border border-gray-200 bg-white px-2.5 text-[11px] font-bold text-gray-700 outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="all" ${activeDomain === 'all' ? 'selected' : ''}>전체</option>
+                        ${DOMAINS.map((domain) => `<option value="${escapeAttr(domain.key)}" ${activeDomain === domain.key ? 'selected' : ''}>${escapeHtml(domain.label)}</option>`).join('')}
+                    </select>
+                </label>
             `;
         }
     }
@@ -1092,18 +1089,12 @@
                         <div class="space-y-3 px-4 py-4">
                             <input id="checklist-title-input" type="text" class="w-full border-0 border-b border-gray-200 px-0 py-2 text-lg font-bold focus:border-indigo-500 focus:ring-0 outline-none" placeholder="할 일 제목">
 
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <label class="block sm:col-span-1">
-                                    <span class="text-[11px] font-bold text-gray-500">날짜</span>
-                                    <input id="checklist-due-input" type="date" class="mt-1 w-full border border-gray-200 rounded-md px-2.5 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
-                                </label>
-                                <label class="block sm:col-span-1">
-                                    <span class="text-[11px] font-bold text-gray-500">영역</span>
-                                    <select id="checklist-domain-input" class="mt-1 w-full border border-gray-200 rounded-md px-2.5 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                                        ${DOMAINS.map((item) => `<option value="${escapeAttr(item.key)}">${escapeHtml(item.label)}</option>`).join('')}
-                                    </select>
-                                </label>
-                            </div>
+                            <label class="block">
+                                <span class="text-[11px] font-bold text-gray-500">영역</span>
+                                <select id="checklist-domain-input" class="mt-1 w-full border border-gray-200 rounded-md px-2.5 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                    ${DOMAINS.map((item) => `<option value="${escapeAttr(item.key)}">${escapeHtml(item.label)}</option>`).join('')}
+                                </select>
+                            </label>
 
                             <label class="block">
                                 <span class="text-[11px] font-bold text-gray-500">상세내역</span>
@@ -1129,8 +1120,6 @@
         tasks = getStore();
         if (activeTaskId && !tasks.some((task) => task.id === activeTaskId)) activeTaskId = null;
         renderAddForm();
-        const dueInput = document.getElementById('checklist-due-input');
-        if (dueInput && !dueInput.value) dueInput.value = todayString();
         renderSummary();
         renderTasks();
         renderDetailPanel();
@@ -1148,13 +1137,12 @@
         const titleEl = document.getElementById('checklist-title-input');
         const noteEl = document.getElementById('checklist-note-input');
         const stepsEl = document.getElementById('checklist-steps-input');
-        const dueEl = document.getElementById('checklist-due-input');
         const domainEl = document.getElementById('checklist-domain-input');
         const task = normalizeTask({
             title: titleEl?.value,
             note: noteEl?.value,
-            steps: parseStepsText(stepsEl?.value || ''),
-            dueDate: dueEl?.value || todayString(),
+            steps: parseStepEditorSteps(stepsEl?.value || ''),
+            dueDate: todayString(),
             domain: domainEl?.value || 'life',
             priority: 'normal',
             displayOrder: getTopDisplayOrder(),
@@ -1203,7 +1191,6 @@
         const task = tasks.find((item) => item.id === id);
         if (!task) return;
         const titleEl = document.getElementById('checklist-detail-title-edit');
-        const dueEl = document.getElementById('checklist-detail-due-edit');
         const domainEl = document.getElementById('checklist-detail-domain-edit');
         const noteEl = document.getElementById('checklist-detail-note-edit');
         const stepsEl = document.getElementById('checklist-detail-steps-edit');
@@ -1213,11 +1200,10 @@
             return;
         }
         task.title = title;
-        task.dueDate = /^\d{4}-\d{2}-\d{2}$/.test(dueEl?.value || '') ? dueEl.value : todayString();
         task.domain = getDomain(domainEl?.value || task.domain).key;
         task.priority = 'normal';
         task.note = String(noteEl?.value || '').trim();
-        task.steps = parseStepsText(stepsEl?.value || '', task.steps);
+        task.steps = parseStepEditorSteps(stepsEl?.value || '', task.steps);
         task.updatedAt = now;
         tasks = saveStore(tasks);
         render({ skipRemoteLoad: true });
@@ -1252,12 +1238,6 @@
             const filterBtn = event.target.closest('[data-checklist-filter]');
             if (filterBtn) {
                 activeFilter = filterBtn.dataset.checklistFilter || 'open';
-                render({ skipRemoteLoad: true });
-                return;
-            }
-            const domainBtn = event.target.closest('[data-checklist-domain]');
-            if (domainBtn) {
-                activeDomain = domainBtn.dataset.checklistDomain || 'all';
                 render({ skipRemoteLoad: true });
                 return;
             }
@@ -1318,6 +1298,20 @@
             }
         });
         root?.addEventListener('change', (event) => {
+            const domainFilter = event.target.closest('#checklist-domain-filter');
+            if (domainFilter) {
+                activeDomain = domainFilter.value || 'all';
+                render({ skipRemoteLoad: true });
+                return;
+            }
+            const editorStepToggle = event.target.closest('[data-step-editor-toggle]');
+            if (editorStepToggle) {
+                toggleStepFromEditor(
+                    editorStepToggle.closest('[data-step-editor]'),
+                    editorStepToggle.dataset.stepEditorToggle,
+                );
+                return;
+            }
             const stepToggle = event.target.closest('[data-checklist-step-toggle]');
             if (stepToggle) {
                 toggleStep(stepToggle.dataset.checklistStepToggle, stepToggle.dataset.stepId);
@@ -1505,14 +1499,14 @@
         render,
         getDashboardSnapshot: () => {
             const sourceTasks = getStore();
-            const today = todayString();
             const openTasks = sourceTasks.filter((task) => !task.completed);
-            const dueToday = openTasks.filter((task) => task.dueDate === today).length;
-            const overdue = openTasks.filter((task) => task.dueDate < today).length;
+            const doneTasks = sourceTasks.filter((task) => task.completed);
+            const total = sourceTasks.length;
             return {
                 open: openTasks.length,
-                dueToday,
-                overdue,
+                done: doneTasks.length,
+                total,
+                progress: total ? Math.round((doneTasks.length / total) * 100) : 0,
                 tasks: openTasks
                     .slice()
                     .sort(fallbackTaskCompare)
@@ -1520,10 +1514,11 @@
                     .map((task) => ({
                         id: task.id,
                         title: task.title,
-                        dueDate: task.dueDate,
                         domain: task.domain,
                         domainLabel: getDomain(task.domain).label,
                         priority: task.priority,
+                        stepDone: task.steps.filter((step) => step.done).length,
+                        stepTotal: task.steps.length,
                     })),
             };
         },

@@ -2,27 +2,25 @@
   "project": "NetVisualizer",
   "level": "dynamic",
   "feature": "Update 1.04 Portfolio Strategy and Task UX",
-  "phase": "plan",
-  "progress": 15,
-  "updatedAt": "2026-07-30T12:00:00+09:00",
-  "status": "in_progress",
-  "currentFocus": "Finalize the six-strategy taxonomy, reversible feature deactivation, three-year roadmap scope, and todo interaction changes.",
+  "phase": "report",
+  "progress": 100,
+  "updatedAt": "2026-07-30T23:41:58+09:00",
+  "status": "completed",
+  "currentFocus": "Update 1.04 implementation, data migration, regression validation, and release reporting are complete.",
   "completed": [
     "Imported and reverified 23 average purchase prices by Portfolio ID with zero mismatches.",
     "Recalculated all 23 current portfolio positions using current prices and FX rates.",
     "Captured the Update 1.04 requirements.",
     "Audited the current portfolio strategy, roadmap, health navigation, and todo step implementation.",
     "Defined a six-strategy taxonomy independent from the existing CFO asset-purpose groups.",
-    "Defined reversible UI deactivation instead of deleting calculations or stored data."
+    "Defined reversible UI deactivation instead of deleting calculations or stored data.",
+    "Migrated every portfolio strategy_tag to the six-strategy taxonomy in Supabase.",
+    "Implemented the six-lane strategy board with desktop drag, mobile selection, optimistic save, and rollback.",
+    "Deactivated the Health entry points, Quant strategy structure, MDD defense status, and KRW valuation explanation.",
+    "Implemented the income-trend-based 36-month roadmap with 12, 24, and 36 month checkpoints.",
+    "Simplified the todo list, removed date UX, and added structured per-step completion editing.",
+    "Passed the full 13-step automated check suite and desktop/mobile browser regression checks."
   ],
-  "remaining": [
-    "Design and review the existing-to-new strategy migration preview.",
-    "Implement the six-lane strategy board with drag, mobile selection, optimistic save, and rollback.",
-    "Deactivate the Quant structure, MDD status, KRW valuation explanation, and Health entry points.",
-    "Implement the income-trend-based 36-month roadmap.",
-    "Simplify todo domain selection, list metadata, date handling, and structured step editing.",
-    "Run desktop, mobile, keyboard, repository, and regression checks.",
-    "Commit and deploy Update 1.04 after implementation."
-  ],
-  "nextStep": "Create the design document and migration preview for the six portfolio strategies before changing strategy_tag data."
+  "remaining": [],
+  "nextStep": "Review the deployed six-strategy classification and adjust individual holdings directly from the strategy board when needed."
 }

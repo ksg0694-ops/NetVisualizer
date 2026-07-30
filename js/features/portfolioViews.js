@@ -398,12 +398,14 @@
             });
         });
         const cashRatio = allTotal > 0 ? (cashTotal / allTotal) * 100 : 0;
-        document.getElementById('invest-mdd-ratio').textContent = cashRatio.toFixed(1) + '%';
-        document.getElementById('invest-mdd-bar').style.width = Math.min(100, cashRatio) + '%';
+        const mddRatio = document.getElementById('invest-mdd-ratio');
+        const mddBar = document.getElementById('invest-mdd-bar');
+        if (mddRatio) mddRatio.textContent = cashRatio.toFixed(1) + '%';
+        if (mddBar) mddBar.style.width = Math.min(100, cashRatio) + '%';
         const mddStatus = document.getElementById('invest-mdd-status');
-        if (cashRatio >= 20) { mddStatus.textContent = "매우 안정 (위기 대응 가능)"; mddStatus.className = "text-[10px] font-bold text-emerald-500 mb-1"; }
-        else if (cashRatio >= 10) { mddStatus.textContent = "보통 (적정 방어력)"; mddStatus.className = "text-[10px] font-bold text-yellow-500 mb-1"; }
-        else { mddStatus.textContent = "위험 (현금 부족)"; mddStatus.className = "text-[10px] font-bold text-red-500 mb-1"; }
+        if (mddStatus && cashRatio >= 20) { mddStatus.textContent = "매우 안정 (위기 대응 가능)"; mddStatus.className = "text-[10px] font-bold text-emerald-500 mb-1"; }
+        else if (mddStatus && cashRatio >= 10) { mddStatus.textContent = "보통 (적정 방어력)"; mddStatus.className = "text-[10px] font-bold text-yellow-500 mb-1"; }
+        else if (mddStatus) { mddStatus.textContent = "위험 (현금 부족)"; mddStatus.className = "text-[10px] font-bold text-red-500 mb-1"; }
 
         const holdingEditorItems = Object.entries(dynamicPortfolioData || {}).flatMap(([sourceGroupName, group]) => {
             const sourceText = String(sourceGroupName || '').toLowerCase();
@@ -416,8 +418,11 @@
                 });
         });
 
-        renderQuantStrategyStructure(processedItems, total);
-        renderMarketSyncStatus(processedItems);
+        renderStrategyBoard(holdingEditorItems);
+        if (window.APP_FEATURE_FLAGS?.quantStrategy !== false) {
+            renderQuantStrategyStructure(processedItems, total);
+            renderMarketSyncStatus(processedItems);
+        }
         renderQuantHoldingEditor(holdingEditorItems);
         renderStrategyPerformance(processedItems);
 
