@@ -86,4 +86,28 @@ assert.equal(threeYearRoadmap.checkpoints[1].projectedAsset, 148_000_000);
 assert.equal(threeYearRoadmap.checkpoints[2].projectedAsset, 172_000_000);
 assert.equal(threeYearRoadmap.endingAsset, 172_000_000);
 
+const calendarRoadmap = forecast.buildCalendarYearRoadmap(
+    100_000_000,
+    '2026-07',
+    {
+        observedMonths: 3,
+        fittedLatestIncome: 4_000_000,
+        incomeSlope: 0,
+        retentionRate: 0.5,
+        projectedMonthlyIncomes: Array.from({ length: 36 }, () => 4_000_000),
+    },
+    [2026, 2027, 2028],
+    { 2026: 115_000_000, 2027: 140_000_000 },
+);
+assert.equal(calendarRoadmap.months.length, 29);
+assert.deepEqual(Array.from(calendarRoadmap.calendarYears), [2026, 2027, 2028]);
+assert.equal(calendarRoadmap.checkpoints[0].monthsProjected, 5);
+assert.equal(calendarRoadmap.checkpoints[0].projectedAsset, 110_000_000);
+assert.equal(calendarRoadmap.checkpoints[0].annualIncrease, 10_000_000);
+assert.equal(calendarRoadmap.checkpoints[0].targetGap, -5_000_000);
+assert.equal(calendarRoadmap.checkpoints[1].monthsProjected, 12);
+assert.equal(calendarRoadmap.checkpoints[1].projectedAsset, 134_000_000);
+assert.equal(calendarRoadmap.checkpoints[2].projectedAsset, 158_000_000);
+assert.equal(calendarRoadmap.checkpoints[2].targetAsset, null);
+
 console.log('Finance forecast contracts ok');

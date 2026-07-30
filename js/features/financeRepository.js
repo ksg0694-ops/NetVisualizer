@@ -20,6 +20,21 @@
                 'mapping_review_status', 'mapping_source', 'mapping_updated_at',
             ],
         },
+        portfolio_strategy_definitions: {
+            cacheKey: 'portfolioStrategies',
+            optional: true,
+            columns: [
+                'id', 'user_id', 'strategy_tag', 'label', 'color', 'icon',
+                'display_order', 'is_active', 'created_at', 'updated_at',
+            ],
+            order: [['display_order', true], ['created_at', true]],
+        },
+        short_term_roadmap_goals: {
+            cacheKey: 'shortTermRoadmapGoals',
+            optional: true,
+            columns: ['id', 'user_id', 'calendar_year', 'target_asset', 'created_at', 'updated_at'],
+            order: [['calendar_year', true]],
+        },
         cards: {
             cacheKey: 'cards',
             optional: true,
@@ -131,6 +146,8 @@
         'transactions',
         'assets',
         'portfolios',
+        'portfolio_strategy_definitions',
+        'short_term_roadmap_goals',
         'cards',
         'insurances',
         'quant_strategy_rules',

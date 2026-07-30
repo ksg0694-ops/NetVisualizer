@@ -55,6 +55,8 @@
         tx: null,
         asset: null,
         portfolio: null,
+        portfolioStrategies: null,
+        shortTermRoadmapGoals: null,
         cards: null,
         insurances: null,
         quantRules: null,
@@ -240,15 +242,16 @@
         }
     };
 
-    const INVEST_STRATEGY_META = {
+    const DEFAULT_INVEST_STRATEGY_META = Object.freeze({
         cash: { label: '현금대기', shortLabel: '현금', color: '#64748b', icon: 'fa-vault' },
         commodity: { label: '원자재', shortLabel: '원자재', color: '#d97706', icon: 'fa-gem' },
         dividend: { label: '배당주', shortLabel: '배당', color: '#059669', icon: 'fa-coins' },
         crypto: { label: '가상화폐', shortLabel: '가상화폐', color: '#7c3aed', icon: 'fa-bitcoin-sign' },
         financial: { label: '금융주', shortLabel: '금융', color: '#2563eb', icon: 'fa-building-columns' },
         ai_semiconductor: { label: 'AI(반도체)', shortLabel: 'AI', color: '#db2777', icon: 'fa-microchip' },
-    };
-    const INVEST_STRATEGY_KEYS = ['cash', 'commodity', 'dividend', 'crypto', 'financial', 'ai_semiconductor'];
+    });
+    const INVEST_STRATEGY_META = {};
+    const INVEST_STRATEGY_KEYS = [];
     const DEFAULT_QUANT_STRATEGY_RULES = {
         cash: { targetPct: 20, bandPct: 5, trigger: '대기자금' },
         commodity: { targetPct: 15, bandPct: 5, trigger: '인플레이션' },
@@ -282,6 +285,43 @@
             icon: 'fa-circle-question',
         };
     }
+
+    function parsePortfolioStrategies(rows = []) {
+        const normalizedRows = (Array.isArray(rows) ? rows : [])
+            .filter((row) => row?.is_active !== false && String(row?.strategy_tag || '').trim())
+            .sort((a, b) => (
+                Number(a.display_order || 0) - Number(b.display_order || 0)
+                || String(a.created_at || '').localeCompare(String(b.created_at || ''))
+            ));
+        const definitions = normalizedRows.length
+            ? normalizedRows
+            : Object.entries(DEFAULT_INVEST_STRATEGY_META).map(([strategyTag, meta], index) => ({
+                strategy_tag: strategyTag,
+                label: meta.label,
+                color: meta.color,
+                icon: meta.icon,
+                display_order: (index + 1) * 10,
+            }));
+
+        Object.keys(INVEST_STRATEGY_META).forEach((key) => delete INVEST_STRATEGY_META[key]);
+        INVEST_STRATEGY_KEYS.splice(0, INVEST_STRATEGY_KEYS.length);
+        definitions.forEach((row, index) => {
+            const strategyTag = String(row.strategy_tag || '').trim();
+            const label = String(row.label || strategyTag).trim();
+            if (!strategyTag || INVEST_STRATEGY_META[strategyTag]) return;
+            const fallback = DEFAULT_INVEST_STRATEGY_META[strategyTag] || {};
+            INVEST_STRATEGY_META[strategyTag] = {
+                label,
+                shortLabel: label.length > 6 ? label.slice(0, 6) : label,
+                color: String(row.color || fallback.color || '#64748b'),
+                icon: String(row.icon || fallback.icon || 'fa-layer-group'),
+                displayOrder: Number(row.display_order ?? (index + 1) * 10) || (index + 1) * 10,
+            };
+            INVEST_STRATEGY_KEYS.push(strategyTag);
+        });
+    }
+
+    parsePortfolioStrategies();
 
     function includesAny(text, keywords) {
         return keywords.some(keyword => text.includes(keyword));
@@ -916,6 +956,7 @@
     function applyCachedData() {
         if (dataCache.tx) parseTxData(dataCache.tx);
         if (dataCache.asset) parseAssetData(dataCache.asset);
+        parsePortfolioStrategies(dataCache.portfolioStrategies);
         if (dataCache.portfolio) parsePortfolioData(dataCache.portfolio);
         if (dataCache.cards) addonCards = dataCache.cards;
         if (dataCache.insurances) addonInsurances = dataCache.insurances;
@@ -949,8 +990,12 @@
                 || tableSet.has('portfolio_market_prices')
                 || tableSet.has('portfolio_market_price_overrides')
                 || tableSet.has('portfolio_fx_rates')
-                || tableSet.has('portfolio_monthly_snapshots'),
-            portfolio: tableSet.has('transactions') || tableSet.has('assets') || tableSet.has('portfolios'),
+                || tableSet.has('portfolio_monthly_snapshots')
+                || tableSet.has('short_term_roadmap_goals'),
+            portfolio: tableSet.has('transactions')
+                || tableSet.has('assets')
+                || tableSet.has('portfolios')
+                || tableSet.has('portfolio_strategy_definitions'),
             addons: tableSet.has('cards') || tableSet.has('insurances'),
             realEstate: activeViewId === 'realestate-view' && (
                 tableSet.has('portfolios') ||
@@ -961,6 +1006,7 @@
             ),
             investDetail: activeViewId === 'invest-detail-view' && (
                 tableSet.has('portfolios') ||
+                tableSet.has('portfolio_strategy_definitions') ||
                 tableSet.has('quant_strategy_rules') ||
                 tableSet.has('quant_strategy_rule_overrides') ||
                 tableSet.has('portfolio_market_prices') ||

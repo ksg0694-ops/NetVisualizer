@@ -1527,11 +1527,16 @@
         const model = source && typeof source === 'object' ? source : null;
         const currentAsset = Number(model?.currentAsset ?? source ?? monthlyDB[currentMonthKey]?.asset ?? 0);
         const forecast = model?.incomeTrendForecast || buildIncomeTrendForecast(currentMonthKey);
-        const roadmap = window.FinanceForecastFeature.buildThreeYearRoadmap(
+        const goalMap = Object.fromEntries(
+            (Array.isArray(dataCache.shortTermRoadmapGoals) ? dataCache.shortTermRoadmapGoals : [])
+                .map((row) => [Number(row.calendar_year), Number(row.target_asset) || null]),
+        );
+        const roadmap = window.FinanceForecastFeature.buildCalendarYearRoadmap(
             currentAsset,
             currentMonthKey,
             forecast,
-            36,
+            [2026, 2027, 2028],
+            goalMap,
         );
         const container = document.getElementById('roadmap-year-cards');
         const method = document.getElementById('roadmap-method');
@@ -1546,36 +1551,81 @@
             return;
         }
 
-        const targetAsset = Number(model?.targetGoalAsset || 250000000);
         container.innerHTML = roadmap.checkpoints.map((checkpoint, index) => {
-            const progress = targetAsset > 0
-                ? Math.max(0, Math.min(100, (checkpoint.projectedAsset / targetAsset) * 100))
-                : 0;
+            const progress = checkpoint.progress === null
+                ? 0
+                : Math.max(0, Math.min(100, checkpoint.progress));
             const tone = index === 2
                 ? { border: 'border-emerald-200', bg: 'bg-emerald-50/60', text: 'text-emerald-700', bar: 'bg-emerald-500' }
                 : { border: 'border-indigo-100', bg: 'bg-indigo-50/40', text: 'text-indigo-700', bar: 'bg-indigo-500' };
+            const gapText = checkpoint.targetGap === null
+                ? '목표를 입력해주세요.'
+                : checkpoint.targetGap >= 0
+                    ? `예상 초과 +${formatWon(checkpoint.targetGap)}`
+                    : `예상 부족 ${formatWon(Math.abs(checkpoint.targetGap))}`;
+            const gapClass = checkpoint.targetGap === null
+                ? 'text-gray-400'
+                : checkpoint.targetGap >= 0 ? 'text-emerald-700' : 'text-rose-500';
             return `
                 <article class="rounded-xl border ${tone.border} ${tone.bg} p-3">
                     <div class="flex items-center justify-between gap-2">
-                        <span class="text-[10px] font-black uppercase tracking-wider ${tone.text}">${checkpoint.year}년차</span>
-                        <span class="text-[10px] text-gray-400">${escapeHtml(checkpoint.monthKey)}</span>
+                        <span class="text-sm font-black ${tone.text}">${checkpoint.year}년</span>
+                        <span class="text-[9px] text-gray-400">${checkpoint.monthsProjected}개월 예상</span>
                     </div>
                     <p class="mt-2 text-lg font-black text-gray-900">${formatWon(checkpoint.projectedAsset)}</p>
                     <div class="mt-1 flex items-center justify-between gap-2 text-[10px]">
-                        <span class="text-gray-400">연간 증가</span>
+                        <span class="text-gray-400">예상 증가</span>
                         <span class="font-bold text-emerald-700">+${formatWon(checkpoint.annualIncrease)}</span>
                     </div>
+                    <label class="mt-2 block">
+                        <span class="text-[9px] font-bold text-gray-500">연도 목표 자산</span>
+                        <div class="mt-1 flex h-8 items-center rounded-lg border border-white bg-white px-2 shadow-sm focus-within:ring-2 focus-within:ring-indigo-300">
+                            <input data-roadmap-goal-year="${checkpoint.year}" type="number" min="0" step="1000000" value="${checkpoint.targetAsset || ''}" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-right text-[11px] font-black text-gray-800 outline-none focus:ring-0" placeholder="목표 입력">
+                            <span class="ml-1 text-[9px] text-gray-400">원</span>
+                        </div>
+                    </label>
                     <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white">
                         <div class="h-full rounded-full ${tone.bar}" style="width:${progress}%"></div>
                     </div>
                     <div class="mt-1.5 flex items-center justify-between gap-2 text-[9px] text-gray-400">
-                        <span>목표 대비 ${progress.toFixed(1)}%</span>
+                        <span class="${gapClass}">${gapText}</span>
                         <span>월평균 +${formatWon(checkpoint.averageMonthlyRetained)}</span>
                     </div>
                 </article>
             `;
         }).join('');
     }
+
+    window.saveShortTermRoadmapGoals = async function() {
+        const inputs = [...document.querySelectorAll('[data-roadmap-goal-year]')];
+        if (!inputs.length) return;
+        const userId = getCurrentUserId();
+        const payloads = inputs.map((input) => {
+            const rawValue = String(input.value || '').replace(/[^0-9.-]/g, '');
+            const targetAsset = rawValue ? Math.max(0, Math.round(Number(rawValue) || 0)) : null;
+            const payload = {
+                calendar_year: Number(input.dataset.roadmapGoalYear),
+                target_asset: targetAsset,
+                updated_at: new Date().toISOString(),
+            };
+            if (userId) payload.user_id = userId;
+            return payload;
+        });
+        const status = document.getElementById('roadmap-goal-save-status');
+        if (status) status.textContent = '저장 중';
+        try {
+            const { error } = await getAuthenticatedSupabaseClient()
+                .from('short_term_roadmap_goals')
+                .upsert(payloads, { onConflict: 'user_id,calendar_year' });
+            if (error) throw error;
+            await fetchSheetData(false, ['short_term_roadmap_goals']);
+            if (status) status.textContent = '저장됨';
+            showToast('2026–2028 연도별 목표를 저장했습니다.', 'info', 1800);
+        } catch (error) {
+            if (status) status.textContent = '저장 실패';
+            showToast(`Roadmap 목표 저장 실패: ${error.message}`, 'error', 3200);
+        }
+    };
 
     function getRealEstateFundingStatus() {
         let liquidAndSafe = 0;

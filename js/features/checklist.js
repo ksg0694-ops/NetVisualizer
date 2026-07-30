@@ -127,6 +127,39 @@
         return DOMAINS.find((item) => item.key === key) || DOMAINS[DOMAINS.length - 1];
     }
 
+    function renderDomainChoiceButtons(inputId, selectedKey = 'life') {
+        const normalizedKey = getDomain(selectedKey).key;
+        return `
+            <input id="${escapeAttr(inputId)}" type="hidden" value="${escapeAttr(normalizedKey)}">
+            <div role="radiogroup" aria-label="할 일 영역" class="mt-1 grid grid-cols-3 gap-1.5">
+                ${DOMAINS.map((item) => {
+                    const selected = item.key === normalizedKey;
+                    return `
+                        <button type="button" role="radio" aria-checked="${selected}" data-checklist-domain-choice="${escapeAttr(item.key)}" data-domain-target="${escapeAttr(inputId)}" class="h-9 rounded-md border text-[11px] font-bold transition ${selected ? 'border-gray-900 bg-gray-900 text-white shadow-sm' : 'border-gray-200 bg-white text-gray-500 hover:border-indigo-200 hover:text-indigo-600'}">
+                            ${escapeHtml(item.label)}
+                        </button>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    function selectDomainChoice(targetId, domainKey) {
+        const input = document.getElementById(targetId);
+        if (!input) return;
+        const selectedKey = getDomain(domainKey).key;
+        input.value = selectedKey;
+        document.querySelectorAll(`[data-domain-target="${CSS.escape(targetId)}"]`).forEach((button) => {
+            const selected = button.dataset.checklistDomainChoice === selectedKey;
+            button.setAttribute('aria-checked', String(selected));
+            button.className = `h-9 rounded-md border text-[11px] font-bold transition ${
+                selected
+                    ? 'border-gray-900 bg-gray-900 text-white shadow-sm'
+                    : 'border-gray-200 bg-white text-gray-500 hover:border-indigo-200 hover:text-indigo-600'
+            }`;
+        });
+    }
+
     function getLegacyCategory(key) {
         return LEGACY_CATEGORIES.find((item) => item.key === key) || LEGACY_CATEGORIES[0];
     }
@@ -884,13 +917,15 @@
         return `
             <article data-checklist-open="${escapeAttr(task.id)}" class="group cursor-pointer rounded-md border px-2.5 py-2 transition ${selectedClass} ${doneClass}">
                 <div class="flex min-w-0 items-start gap-2">
-                    <button type="button" data-checklist-drag-handle class="mt-0.5 flex h-6 w-5 shrink-0 cursor-grab items-center justify-center text-gray-400 hover:text-gray-700 active:cursor-grabbing" title="할 일 순서 이동" aria-label="할 일 순서 이동">
-                        <i class="fas fa-grip-vertical text-xs"></i>
+                    <button type="button" data-checklist-toggle="${escapeAttr(task.id)}" aria-pressed="${task.completed}" class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${task.completed ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-300 bg-white text-transparent hover:border-indigo-400'}" title="${task.completed ? '완료 취소' : '완료'}" aria-label="${escapeAttr(task.title)} ${task.completed ? '완료 취소' : '완료'}">
+                        <i class="fas fa-check text-[8px]"></i>
                     </button>
-                    <input type="checkbox" data-checklist-toggle="${escapeAttr(task.id)}" ${task.completed ? 'checked' : ''} class="mt-0.5 h-4 w-4 rounded border-gray-300 accent-indigo-600 shrink-0">
                     <p class="min-w-0 flex-1 truncate text-[13px] font-bold leading-5 ${titleClass}">${escapeHtml(task.title)}</p>
                     <button type="button" data-checklist-delete="${escapeAttr(task.id)}" class="-mt-0.5 shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 text-gray-400 hover:text-rose-500 transition px-1 py-0.5" title="삭제" aria-label="${escapeAttr(task.title)} 삭제">
                         <i class="fas fa-trash text-xs"></i>
+                    </button>
+                    <button type="button" data-checklist-drag-handle class="-mt-0.5 flex h-6 w-5 shrink-0 cursor-grab items-center justify-center text-gray-300 hover:text-gray-700 active:cursor-grabbing" title="할 일 순서 이동" aria-label="할 일 순서 이동">
+                        <i class="fas fa-grip-vertical text-xs"></i>
                     </button>
                 </div>
                 <div class="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-gray-500">
@@ -958,12 +993,10 @@
                         <input id="checklist-detail-title-edit" type="text" value="${escapeAttr(task.title)}" class="mt-1 w-full border border-gray-200 rounded-md px-2.5 py-2 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none bg-white" placeholder="할 일">
                     </label>
 
-                    <label class="block">
+                    <div class="block">
                         <span class="text-[11px] font-bold text-gray-500">영역</span>
-                        <select id="checklist-detail-domain-edit" class="mt-1 w-full border border-gray-200 rounded-md px-2.5 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                            ${DOMAINS.map((item) => `<option value="${escapeAttr(item.key)}" ${item.key === task.domain ? 'selected' : ''}>${escapeHtml(item.label)}</option>`).join('')}
-                        </select>
-                    </label>
+                        ${renderDomainChoiceButtons('checklist-detail-domain-edit', task.domain)}
+                    </div>
 
                     <div class="xl:col-span-2 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_260px] gap-3">
                         <label class="block">
@@ -1089,12 +1122,10 @@
                         <div class="space-y-3 px-4 py-4">
                             <input id="checklist-title-input" type="text" class="w-full border-0 border-b border-gray-200 px-0 py-2 text-lg font-bold focus:border-indigo-500 focus:ring-0 outline-none" placeholder="할 일 제목">
 
-                            <label class="block">
+                            <div class="block">
                                 <span class="text-[11px] font-bold text-gray-500">영역</span>
-                                <select id="checklist-domain-input" class="mt-1 w-full border border-gray-200 rounded-md px-2.5 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                                    ${DOMAINS.map((item) => `<option value="${escapeAttr(item.key)}">${escapeHtml(item.label)}</option>`).join('')}
-                                </select>
-                            </label>
+                                ${renderDomainChoiceButtons('checklist-domain-input', 'career')}
+                            </div>
 
                             <label class="block">
                                 <span class="text-[11px] font-bold text-gray-500">상세내역</span>
@@ -1266,6 +1297,11 @@
                 render({ skipRemoteLoad: true });
                 return;
             }
+            const domainChoice = event.target.closest('[data-checklist-domain-choice]');
+            if (domainChoice) {
+                selectDomainChoice(domainChoice.dataset.domainTarget, domainChoice.dataset.checklistDomainChoice);
+                return;
+            }
             const stepAddBtn = event.target.closest('[data-step-editor-add]');
             if (stepAddBtn) {
                 addStepFromEditor(stepAddBtn.closest('[data-step-editor]'));
@@ -1289,6 +1325,11 @@
             const deleteBtn = event.target.closest('[data-checklist-delete]');
             if (deleteBtn) {
                 deleteTask(deleteBtn.dataset.checklistDelete);
+                return;
+            }
+            const toggleBtn = event.target.closest('[data-checklist-toggle]');
+            if (toggleBtn) {
+                toggleTask(toggleBtn.dataset.checklistToggle);
                 return;
             }
             const row = event.target.closest('[data-checklist-open]');
@@ -1317,8 +1358,6 @@
                 toggleStep(stepToggle.dataset.checklistStepToggle, stepToggle.dataset.stepId);
                 return;
             }
-            const toggle = event.target.closest('[data-checklist-toggle]');
-            if (toggle) toggleTask(toggle.dataset.checklistToggle);
         });
         root?.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' && event.target?.closest?.('[data-step-editor-input]')) {

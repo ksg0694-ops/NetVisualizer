@@ -24,24 +24,24 @@
     <script src="./vendor/chart.umd.min.js?v=4.4.7"></script>
     <!-- Shared runtime and feature modules -->
     <script src="./js/shared/appUtils.js?v=20260715-foundation-1"></script>
-    <script src="./js/features/financeRepository.js?v=20260717-monthly-close-1"></script>
+    <script src="./js/features/financeRepository.js?v=20260731-update-10401-1"></script>
     <script src="./js/features/financeModel.js?v=20260726-phase2-portfolio-2"></script>
     <script src="./js/generated/personal-cfo-domain.js?v=20260726-monthly-report-1"></script>
     <script src="./js/features/monthlyClose.js?v=20260717-monthly-close-5"></script>
-    <script src="./js/features/appCore.js?v=20260730-update-104-1"></script>
+    <script src="./js/features/appCore.js?v=20260731-update-10401-1"></script>
     <script src="./js/features/assetTrend.js?v=20260726-monthly-report-1"></script>
-    <script src="./js/features/financeForecast.js?v=20260730-update-104-1"></script>
-    <script src="./js/features/quantEngine.js?v=20260730-update-104-1"></script>
+    <script src="./js/features/financeForecast.js?v=20260731-update-10401-1"></script>
+    <script src="./js/features/quantEngine.js?v=20260731-update-10401-1"></script>
     <script src="./js/features/realEstate.js?v=20260726-phase1-cfo-5"></script>
     <script src="./js/features/transactionImport.js?v=20260708-auth-cloud"></script>
     <script src="./js/features/portfolioEditor.js?v=20260717-portfolio-draft-1"></script>
     <script src="./js/features/cashflowControls.js"></script>
-    <script src="./js/features/portfolioViews.js?v=20260730-update-104-1"></script>
-    <script src="./js/features/financeViews.js?v=20260730-update-104-1"></script>
+    <script src="./js/features/portfolioViews.js?v=20260731-update-10401-1"></script>
+    <script src="./js/features/financeViews.js?v=20260731-update-10401-1"></script>
     <script src="./js/features/healthTracker.js?v=20260713-public-server"></script>
-    <script src="./js/features/checklist.js?v=20260730-update-104-1"></script>
+    <script src="./js/features/checklist.js?v=20260731-update-10401-1"></script>
     <script src="./js/features/personalCfo.js?v=20260726-phase2-portfolio-1"></script>
-    <script src="./js/features/lifeDashboard.js?v=20260730-update-104-1"></script>
+    <script src="./js/features/lifeDashboard.js?v=20260731-update-10401-1"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -78,7 +78,7 @@
                     <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
                 </div>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.04.00
+                    version 1.04.01
                 </div>
             </div>
             <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-2 space-y-2">
@@ -1318,7 +1318,11 @@
                             <h4 class="text-base font-bold text-gray-900">단기 Roadmap 3년</h4>
                             <p id="roadmap-method" class="mt-0.5 text-[10px] text-gray-400">수입 추세 기반 예상 경로를 계산합니다.</p>
                         </div>
-                        <span class="shrink-0 rounded-lg border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[10px] font-bold text-indigo-600">36개월</span>
+                        <div class="flex shrink-0 items-center gap-1.5">
+                            <span id="roadmap-goal-save-status" class="text-[9px] font-bold text-gray-400" aria-live="polite"></span>
+                            <button type="button" onclick="saveShortTermRoadmapGoals()" class="h-7 rounded-lg bg-indigo-600 px-2.5 text-[10px] font-bold text-white hover:bg-indigo-700">목표 저장</button>
+                            <span class="rounded-lg border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[10px] font-bold text-indigo-600">2026–2028</span>
+                        </div>
                     </div>
                     <div id="roadmap-year-cards" class="grid grid-cols-1 gap-2.5 md:grid-cols-3">
                         <!-- JS -->
@@ -1405,9 +1409,17 @@
                             <h3 class="text-base font-bold text-gray-900 flex items-center gap-2"><i class="fas fa-layer-group text-violet-500"></i> 포트폴리오 전략</h3>
                             <p class="mt-0.5 text-[10px] text-gray-400">보유자산을 전략 칸으로 이동하면 분류가 바로 저장됩니다.</p>
                         </div>
-                        <button id="btn-sync-market-prices" onclick="syncMarketPrices()" class="w-fit text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1">
-                            <i class="fas fa-cloud-download-alt text-[9px]"></i> 현재가 갱신
-                        </button>
+                        <div class="flex items-center gap-1.5">
+                            <button id="btn-manage-portfolio-strategies" onclick="togglePortfolioStrategyManager()" class="w-fit text-[10px] font-bold text-violet-600 bg-violet-50 hover:bg-violet-100 border border-violet-100 px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                                <i class="fas fa-pen-to-square text-[9px]"></i> 전략 관리
+                            </button>
+                            <button id="btn-sync-market-prices" onclick="syncMarketPrices()" class="w-fit text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                                <i class="fas fa-cloud-download-alt text-[9px]"></i> 현재가 갱신
+                            </button>
+                        </div>
+                    </div>
+                    <div id="invest-strategy-manager" class="hidden mb-3 rounded-xl border border-violet-100 bg-violet-50/50 p-3">
+                        <!-- JS -->
                     </div>
                     <div id="invest-strategy-board" class="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
                         <!-- JS -->
@@ -1881,6 +1893,6 @@
     <!-- Toast Message Container -->
     <div id="toast-container" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[90%] md:w-auto max-w-sm"></div>
 
-    <script src="./js/features/appShell.js?v=20260730-update-104-1"></script>
+    <script src="./js/features/appShell.js?v=20260731-update-10401-1"></script>
 </body>
 </html>

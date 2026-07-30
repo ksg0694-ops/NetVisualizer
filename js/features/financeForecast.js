@@ -170,11 +170,70 @@
         };
     }
 
+    function buildCalendarYearRoadmap(
+        currentAsset,
+        referenceMonthKey,
+        incomeForecast,
+        calendarYears = [2026, 2027, 2028],
+        goals = {},
+    ) {
+        const years = [...new Set(
+            (Array.isArray(calendarYears) ? calendarYears : [])
+                .map(Number)
+                .filter((year) => Number.isInteger(year)),
+        )].sort((a, b) => a - b);
+        const [referenceYearRaw, referenceMonthRaw] = String(referenceMonthKey || '').split('-').map(Number);
+        const referenceYear = Number.isInteger(referenceYearRaw) ? referenceYearRaw : new Date().getFullYear();
+        const referenceMonth = Number.isInteger(referenceMonthRaw)
+            ? Math.max(1, Math.min(12, referenceMonthRaw))
+            : new Date().getMonth() + 1;
+        const finalYear = years.at(-1) || referenceYear;
+        const horizonMonths = Math.max(0, ((finalYear - referenceYear) * 12) + (12 - referenceMonth));
+        const projection = buildThreeYearRoadmap(
+            currentAsset,
+            `${referenceYear}-${String(referenceMonth).padStart(2, '0')}`,
+            incomeForecast,
+            horizonMonths,
+        );
+        const baseAsset = Math.max(0, Number(currentAsset) || 0);
+        let previousAsset = baseAsset;
+
+        const checkpoints = years.map((year) => {
+            const yearMonths = projection.months.filter((month) => Number(month.monthKey.slice(0, 4)) === year);
+            const finalMonth = yearMonths.at(-1);
+            const projectedAsset = finalMonth?.projectedAsset ?? previousAsset;
+            const retainedTotal = yearMonths.reduce((sum, month) => sum + Number(month.retained || 0), 0);
+            const targetValue = Number(goals?.[year]);
+            const targetAsset = Number.isFinite(targetValue) && targetValue > 0 ? Math.round(targetValue) : null;
+            const progress = targetAsset ? (projectedAsset / targetAsset) * 100 : null;
+            const checkpoint = {
+                year,
+                monthKey: finalMonth?.monthKey || `${year}-12`,
+                monthsProjected: yearMonths.length,
+                projectedAsset,
+                annualIncrease: projectedAsset - previousAsset,
+                averageMonthlyRetained: yearMonths.length ? retainedTotal / yearMonths.length : 0,
+                targetAsset,
+                targetGap: targetAsset ? projectedAsset - targetAsset : null,
+                progress,
+            };
+            previousAsset = projectedAsset;
+            return checkpoint;
+        });
+
+        return {
+            ...projection,
+            calendarYears: years,
+            checkpoints,
+        };
+    }
+
     window.FinanceForecastFeature = {
         median,
         calculateLinearTrend,
         buildSalaryCalendarForecast,
         buildAssetIncomeForecastPath,
         buildThreeYearRoadmap,
+        buildCalendarYearRoadmap,
     };
 })(window);

@@ -3,6 +3,9 @@
 
     let strategyBoardDraggedId = '';
     const strategyMoveInFlight = new Set();
+    let strategyManagerOpen = false;
+    let strategyDefinitionSaving = false;
+    const CUSTOM_STRATEGY_COLORS = ['#0f766e', '#4f46e5', '#c2410c', '#be123c', '#0369a1', '#7e22ce'];
 
     function renderQuantStrategyStructure(processedItems = [], total = 0) {
         const container = document.getElementById('invest-quant-structure');
@@ -332,6 +335,138 @@
         }).join('');
     }
 
+    function renderPortfolioStrategyManager() {
+        const container = document.getElementById('invest-strategy-manager');
+        if (!container) return;
+        container.classList.toggle('hidden', !strategyManagerOpen);
+        if (!strategyManagerOpen) {
+            container.innerHTML = '';
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="mb-2 flex items-center justify-between gap-2">
+                <div>
+                    <p class="text-xs font-black text-gray-900">전략 박스 관리</p>
+                    <p class="mt-0.5 text-[9px] text-gray-500">이름을 바꿔도 종목 분류는 유지됩니다.</p>
+                </div>
+                <button type="button" onclick="togglePortfolioStrategyManager()" class="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 hover:bg-white hover:text-gray-700" aria-label="전략 관리 닫기">
+                    <i class="fas fa-xmark text-xs"></i>
+                </button>
+            </div>
+            <div class="grid grid-cols-1 gap-1.5 md:grid-cols-2 xl:grid-cols-3">
+                ${INVEST_STRATEGY_KEYS.map((key) => {
+                    const meta = getStrategyMeta(key);
+                    return `
+                        <div class="flex items-center gap-1.5 rounded-lg border border-violet-100 bg-white p-1.5">
+                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-50" style="color:${meta.color}">
+                                <i class="fas ${meta.icon} text-[10px]"></i>
+                            </span>
+                            <input data-strategy-name-input="${escapeAttr(key)}" value="${escapeAttr(meta.label)}" maxlength="40" class="h-7 min-w-0 flex-1 rounded-md border border-gray-200 px-2 text-[10px] font-bold text-gray-700 outline-none focus:ring-2 focus:ring-violet-400">
+                            <button type="button" onclick="savePortfolioStrategyName('${escapeAttr(key)}')" class="h-7 shrink-0 rounded-md bg-gray-900 px-2 text-[9px] font-bold text-white hover:bg-gray-800">저장</button>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+            <div class="mt-2 flex flex-col gap-1.5 rounded-lg border border-dashed border-violet-200 bg-white/80 p-2 sm:flex-row sm:items-center">
+                <input id="new-portfolio-strategy-name" maxlength="40" class="h-8 min-w-0 flex-1 rounded-md border border-gray-200 px-2.5 text-[10px] font-bold text-gray-700 outline-none focus:ring-2 focus:ring-violet-400" placeholder="새 전략 이름">
+                <button type="button" onclick="addPortfolioStrategy()" class="h-8 shrink-0 rounded-md bg-violet-600 px-3 text-[10px] font-bold text-white hover:bg-violet-700">
+                    <i class="fas fa-plus mr-1 text-[9px]"></i> 전략 추가
+                </button>
+            </div>
+        `;
+    }
+
+    function togglePortfolioStrategyManager() {
+        strategyManagerOpen = !strategyManagerOpen;
+        renderPortfolioStrategyManager();
+    }
+
+    async function savePortfolioStrategyName(strategyTag) {
+        if (strategyDefinitionSaving || !INVEST_STRATEGY_META[strategyTag]) return;
+        const input = document.querySelector(`[data-strategy-name-input="${CSS.escape(strategyTag)}"]`);
+        const nextLabel = String(input?.value || '').trim();
+        const currentLabel = getStrategyMeta(strategyTag).label;
+        if (!nextLabel) {
+            showToast('전략 이름을 입력해주세요.', 'warning');
+            input?.focus();
+            return;
+        }
+        if (nextLabel === currentLabel) {
+            showToast('변경된 전략 이름이 없습니다.', 'info', 1500);
+            return;
+        }
+        if (INVEST_STRATEGY_KEYS.some((key) => key !== strategyTag && getStrategyMeta(key).label === nextLabel)) {
+            showToast('같은 이름의 전략이 이미 있습니다.', 'warning');
+            input?.focus();
+            return;
+        }
+
+        strategyDefinitionSaving = true;
+        try {
+            const { error } = await getAuthenticatedSupabaseClient()
+                .from('portfolio_strategy_definitions')
+                .update({ label: nextLabel, updated_at: new Date().toISOString() })
+                .eq('strategy_tag', strategyTag);
+            if (error) throw error;
+            await fetchSheetData(false, ['portfolio_strategy_definitions']);
+            renderPortfolioStrategyManager();
+            showToast(`${currentLabel} → ${nextLabel} 이름을 저장했습니다.`, 'info', 1800);
+        } catch (error) {
+            showToast(`전략 이름 저장 실패: ${error.message}`, 'error', 3200);
+        } finally {
+            strategyDefinitionSaving = false;
+        }
+    }
+
+    async function addPortfolioStrategy() {
+        if (strategyDefinitionSaving) return;
+        const input = document.getElementById('new-portfolio-strategy-name');
+        const label = String(input?.value || '').trim();
+        if (!label) {
+            showToast('새 전략 이름을 입력해주세요.', 'warning');
+            input?.focus();
+            return;
+        }
+        if (INVEST_STRATEGY_KEYS.some((key) => getStrategyMeta(key).label === label)) {
+            showToast('같은 이름의 전략이 이미 있습니다.', 'warning');
+            input?.focus();
+            return;
+        }
+
+        const strategyTag = `custom_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+        const displayOrder = INVEST_STRATEGY_KEYS.reduce(
+            (maxOrder, key) => Math.max(maxOrder, Number(getStrategyMeta(key).displayOrder || 0)),
+            0,
+        ) + 10;
+        const color = CUSTOM_STRATEGY_COLORS[INVEST_STRATEGY_KEYS.length % CUSTOM_STRATEGY_COLORS.length];
+        const payload = {
+            strategy_tag: strategyTag,
+            label,
+            color,
+            icon: 'fa-layer-group',
+            display_order: displayOrder,
+            is_active: true,
+        };
+        const userId = getCurrentUserId();
+        if (userId) payload.user_id = userId;
+
+        strategyDefinitionSaving = true;
+        try {
+            const { error } = await getAuthenticatedSupabaseClient()
+                .from('portfolio_strategy_definitions')
+                .insert(payload);
+            if (error) throw error;
+            await fetchSheetData(false, ['portfolio_strategy_definitions']);
+            renderPortfolioStrategyManager();
+            showToast(`${label} 전략 박스를 추가했습니다.`, 'info', 1800);
+        } catch (error) {
+            showToast(`전략 추가 실패: ${error.message}`, 'error', 3200);
+        } finally {
+            strategyDefinitionSaving = false;
+        }
+    }
+
     function renderStrategyBoard(processedItems = []) {
         const container = document.getElementById('invest-strategy-board');
         if (!container) return;
@@ -356,6 +491,16 @@
                 .sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0) || String(a.name).localeCompare(String(b.name), 'ko-KR'));
             const amount = laneItems.reduce((sum, item) => sum + Number(item.amount || 0), 0);
             const pct = total > 0 ? (amount / total) * 100 : 0;
+            const comparableItems = laneItems.filter((item) => item.hasComparablePrice);
+            const investedCost = comparableItems.reduce((sum, item) => sum + Number(item.investedCost || 0), 0);
+            const unrealizedPnl = comparableItems.reduce((sum, item) => sum + Number(item.unrealizedPnl || 0), 0);
+            const returnPct = investedCost > 0 ? (unrealizedPnl / investedCost) * 100 : null;
+            const returnClass = returnPct === null
+                ? 'text-gray-400'
+                : returnPct >= 0 ? 'text-emerald-600' : 'text-rose-500';
+            const returnLabel = returnPct === null
+                ? '수익률 계산 대기'
+                : `${returnPct >= 0 ? '+' : ''}${returnPct.toFixed(1)}% · ${comparableItems.length}/${laneItems.length}`;
             return `
                 <section data-strategy-lane="${escapeAttr(key)}" class="min-h-[132px] rounded-xl border border-gray-200 bg-gray-50/70 p-2.5 transition">
                     <div class="mb-2 flex items-start justify-between gap-2 border-b border-gray-200 pb-2">
@@ -368,7 +513,10 @@
                                 <p class="text-[9px] text-gray-400">${laneItems.length}개 · ${pct.toFixed(1)}%</p>
                             </div>
                         </div>
-                        <p class="shrink-0 text-[11px] font-black text-gray-800">${formatWon(amount)}</p>
+                        <div class="shrink-0 text-right">
+                            <p class="text-[11px] font-black text-gray-800">${formatWon(amount)}</p>
+                            <p class="mt-0.5 text-[9px] font-bold ${returnClass}">${returnLabel}</p>
+                        </div>
                     </div>
                     <div class="space-y-1.5" data-strategy-card-list>
                         ${laneItems.length ? laneItems.map((item) => {
@@ -403,6 +551,7 @@
             `;
         }).join('');
         bindStrategyBoardControls(container);
+        renderPortfolioStrategyManager();
     }
 
     function bindStrategyBoardControls(container) {

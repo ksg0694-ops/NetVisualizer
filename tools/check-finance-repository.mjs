@@ -12,6 +12,10 @@ assert.ok(repository.TABLE_SPECS.portfolios.columns.includes('asset_class'));
 assert.ok(repository.TABLE_SPECS.portfolios.columns.includes('purpose_key'));
 assert.ok(repository.DEFAULT_DATA_TABLES.includes('portfolio_fx_rates'));
 assert.ok(repository.DEFAULT_DATA_TABLES.includes('portfolio_monthly_snapshots'));
+assert.ok(repository.DEFAULT_DATA_TABLES.includes('portfolio_strategy_definitions'));
+assert.ok(repository.DEFAULT_DATA_TABLES.includes('short_term_roadmap_goals'));
+assert.ok(repository.TABLE_SPECS.portfolio_strategy_definitions.columns.includes('strategy_tag'));
+assert.ok(repository.TABLE_SPECS.short_term_roadmap_goals.columns.includes('calendar_year'));
 
 const legacyTransactions = [
     ['날짜', '시간', '타입', '대분류', '소분류', '내용', '금액', '화폐', '결제수단'],

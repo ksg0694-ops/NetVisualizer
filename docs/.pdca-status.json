@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Update 1.04 Portfolio Strategy and Task UX",
+  "feature": "Update 1.04.01 Tab Strategy Roadmap and Todo UX",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-07-30T23:41:58+09:00",
+  "updatedAt": "2026-07-31T00:35:00+09:00",
   "status": "completed",
-  "currentFocus": "Update 1.04 implementation, data migration, regression validation, and release reporting are complete.",
+  "currentFocus": "Update 1.04.01 implementation, data migration, regression validation, and release reporting are complete.",
   "completed": [
     "Imported and reverified 23 average purchase prices by Portfolio ID with zero mismatches.",
     "Recalculated all 23 current portfolio positions using current prices and FX rates.",
@@ -19,8 +19,17 @@
     "Deactivated the Health entry points, Quant strategy structure, MDD defense status, and KRW valuation explanation.",
     "Implemented the income-trend-based 36-month roadmap with 12, 24, and 36 month checkpoints.",
     "Simplified the todo list, removed date UX, and added structured per-step completion editing.",
-    "Passed the full 13-step automated check suite and desktop/mobile browser regression checks."
+    "Passed the full 13-step automated check suite and desktop/mobile browser regression checks.",
+    "Reviewed the current tab ownership and kept Update 1.04.01 inside Portfolio, Long Goal, and Todo.",
+    "Documented the Update 1.04.01 plan and data interaction design.",
+    "Added server-backed portfolio strategy definitions with add and rename controls.",
+    "Added strategy-level aggregate return rates directly to each strategy lane.",
+    "Replaced relative 12, 24, and 36 month cards with 2026, 2027, and 2028 calendar-year goals.",
+    "Added server-backed yearly target assets with projected gap and progress feedback.",
+    "Replaced todo domain listboxes in add and edit forms with three exclusive buttons.",
+    "Replaced todo list checkboxes with compact Google Calendar-style circular completion controls.",
+    "Passed the full automated suite and desktop/mobile browser tests with all temporary data restored."
   ],
   "remaining": [],
-  "nextStep": "Review the deployed six-strategy classification and adjust individual holdings directly from the strategy board when needed."
+  "nextStep": "Review the deployed strategy names and enter the 2026, 2027, and 2028 target asset amounts."
 }
