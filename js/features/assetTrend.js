@@ -47,23 +47,31 @@
     }
 
     function buildFullSeries(labels, data, currentMonthKey, currentAssetFilter) {
-        const { shortYearNumber } = getCurrentYearParts(currentMonthKey);
+        const { currentYear, shortYearNumber } = getCurrentYearParts(currentMonthKey);
         const allLabels = labels.slice();
         const allData = data.slice();
+        const referenceMonthNumber = Math.max(
+            1,
+            Math.min(12, Number(String(currentMonthKey || '').split('-')[1]) || 12),
+        );
+        const referenceYearNumber = Number(currentYear);
+        const projectionEndDate = Number.isInteger(referenceYearNumber)
+            ? new Date(referenceYearNumber, referenceMonthNumber - 1 + 36, 1)
+            : null;
 
-        if (allLabels.length > 0 && shortYearNumber !== null) {
+        if (allLabels.length > 0 && shortYearNumber !== null && projectionEndDate) {
             const lastLabel = allLabels[allLabels.length - 1];
             const [lastYStr, lastMStr] = String(lastLabel).split('.');
             const lastY = Number.parseInt(lastYStr, 10);
             const lastM = Number.parseInt(lastMStr, 10);
 
-            if (Number.isFinite(lastY) && Number.isFinite(lastM) && lastY <= shortYearNumber) {
-                for (let y = lastY; y <= shortYearNumber; y += 1) {
-                    const startMonth = y === lastY ? lastM + 1 : 1;
-                    for (let m = startMonth; m <= 12; m += 1) {
-                        allLabels.push(`${y}.${String(m).padStart(2, '0')}`);
-                        allData.push(null);
-                    }
+            if (Number.isFinite(lastY) && Number.isFinite(lastM)) {
+                const cursor = new Date(2000 + lastY, lastM - 1, 1);
+                while (cursor < projectionEndDate) {
+                    cursor.setMonth(cursor.getMonth() + 1);
+                    if (cursor > projectionEndDate) break;
+                    allLabels.push(`${String(cursor.getFullYear()).slice(-2)}.${String(cursor.getMonth() + 1).padStart(2, '0')}`);
+                    allData.push(null);
                 }
             }
         }

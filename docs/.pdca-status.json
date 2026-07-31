@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Portfolio Investment and Pension Split",
+  "feature": "Update 1.04.01 Patch v1",
   "phase": "report",
   "progress": 100,
   "updatedAt": "2026-07-31T00:35:00+09:00",
   "status": "completed",
-  "currentFocus": "Investment and pension detail views are separated, validated, and ready for deployment.",
+  "currentFocus": "Update 1.04.01 patch v1 is implemented, regression-tested, and ready for deployment.",
   "completed": [
     "Imported and reverified 23 average purchase prices by Portfolio ID with zero mismatches.",
     "Recalculated all 23 current portfolio positions using current prices and FX rates.",
@@ -33,8 +33,16 @@
     "Added separate investment and pension detail entry points.",
     "Scoped valuation, returns, strategy board, holding editor, charts, and price sync to the active CFO asset group.",
     "Validated 23 investment holdings and 6 pension holdings with no cross-scope mixing.",
-    "Passed the full 13-step automated suite and desktop/mobile browser regression checks."
+    "Passed the full 13-step automated suite and desktop/mobile browser regression checks.",
+    "Documented the Update 1.04.01 patch v1 plan and implementation design.",
+    "Extended the full asset trend from the earliest history point through the reference month plus 36 months.",
+    "Added a NetVisualizer home action and removed global arrow-key navigation.",
+    "Removed forced strategy-card tab stops while preserving strategy drag and select controls.",
+    "Standardized user-facing todo terminology to Step.",
+    "Removed duplicate Step rendering and guarded Step-add events against duplicate propagation.",
+    "Reverified strategy creation, rename controls, and lane-level return displays.",
+    "Passed the full automated suite and desktop/mobile browser regression checks for patch v1."
   ],
   "remaining": [],
-  "nextStep": "Collect and plan the Update 1.04.02 requirements on top of the separated portfolio scopes."
+  "nextStep": "Collect the next patch direction after the deployed Update 1.04.01 patch v1 is reviewed."
 }

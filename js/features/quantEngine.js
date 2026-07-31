@@ -523,7 +523,7 @@
                             const pnlClass = Number(item.unrealizedPnl || 0) >= 0 ? 'text-emerald-600' : 'text-rose-500';
                             const accountLabel = item.accountName || item.groupName || '계좌 미지정';
                             return `
-                                <article draggable="true" tabindex="0" data-strategy-holding="${escapeAttr(item.id)}" class="group cursor-grab rounded-lg border border-gray-200 bg-white px-2.5 py-2 shadow-sm transition hover:border-violet-300 hover:shadow active:cursor-grabbing">
+                                <article draggable="true" data-strategy-holding="${escapeAttr(item.id)}" class="group cursor-grab rounded-lg border border-gray-200 bg-white px-2.5 py-2 shadow-sm transition hover:border-violet-300 hover:shadow active:cursor-grabbing">
                                     <div class="flex items-start gap-2">
                                         <span class="mt-0.5 text-gray-300 group-hover:text-violet-400"><i class="fas fa-grip-vertical text-[10px]"></i></span>
                                         <div class="min-w-0 flex-1">

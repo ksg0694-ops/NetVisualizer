@@ -255,8 +255,8 @@
             <div data-step-editor data-step-target="${escapeAttr(textareaId)}">
                 <textarea id="${escapeAttr(textareaId)}" class="hidden">${escapeHtml(serializeStepEditorSteps(steps))}</textarea>
                 <div class="flex gap-1.5">
-                    <input type="text" data-step-editor-input class="min-w-0 flex-1 border border-gray-200 rounded-md px-2.5 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none bg-white" placeholder="스텝 입력">
-                    <button type="button" data-step-editor-add class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gray-900 text-white hover:bg-gray-800" title="스텝 추가" aria-label="스텝 추가">
+                    <input type="text" data-step-editor-input class="min-w-0 flex-1 border border-gray-200 rounded-md px-2.5 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none bg-white" placeholder="Step 입력">
+                    <button type="button" data-step-editor-add class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gray-900 text-white hover:bg-gray-800" title="Step 추가" aria-label="Step 추가">
                         <i class="fas fa-plus text-[10px]"></i>
                     </button>
                 </div>
@@ -271,12 +271,12 @@
         if (!textarea || !list) return;
         const steps = parseStepEditorSteps(textarea.value);
         if (steps.length === 0) {
-            list.innerHTML = '<p class="text-[11px] text-gray-400">스텝이 필요하면 하나씩 추가하세요.</p>';
+            list.innerHTML = '<p class="text-[11px] text-gray-400">Step이 필요하면 하나씩 추가하세요.</p>';
             return;
         }
         list.innerHTML = steps.map((step, index) => `
             <div data-step-editor-item="${index}" class="flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-700 transition">
-                <button type="button" data-step-editor-drag-handle class="flex h-6 w-5 shrink-0 cursor-grab items-center justify-center text-gray-300 hover:text-gray-600 active:cursor-grabbing" title="스텝 순서 이동" aria-label="스텝 순서 이동">
+                <button type="button" data-step-editor-drag-handle class="flex h-6 w-5 shrink-0 cursor-grab items-center justify-center text-gray-300 hover:text-gray-600 active:cursor-grabbing" title="Step 순서 이동" aria-label="Step 순서 이동">
                     <i class="fas fa-grip-vertical text-xs"></i>
                 </button>
                 <input type="checkbox" data-step-editor-toggle="${index}" ${step.done ? 'checked' : ''} class="h-3.5 w-3.5 shrink-0 rounded border-gray-300 accent-indigo-600">
@@ -912,7 +912,7 @@
         const titleClass = task.completed ? 'line-through text-gray-400' : 'text-gray-900';
         const domainBadge = `<span class="shrink-0 font-bold border px-1.5 py-0.5 rounded text-[10px] bg-white/75 ${TONE_CLASSES[domain.tone] || TONE_CLASSES.slate}">${escapeHtml(domain.label)}</span>`;
         const stepBadge = stepSummary.total
-            ? `<span>${stepSummary.done}/${stepSummary.total} 스텝</span>`
+            ? `<span>${stepSummary.done}/${stepSummary.total} Step</span>`
             : '';
         return `
             <article data-checklist-open="${escapeAttr(task.id)}" class="group cursor-pointer rounded-md border px-2.5 py-2 transition ${selectedClass} ${doneClass}">
@@ -980,7 +980,7 @@
                             <h4 class="text-lg font-black text-gray-900 leading-snug">${escapeHtml(task.title)}</h4>
                             <span class="inline-flex text-[10px] font-bold border px-2 py-0.5 rounded ${TONE_CLASSES[domain.tone] || TONE_CLASSES.slate}">${escapeHtml(domain.label)}</span>
                         </div>
-                        <p class="mt-1 text-[11px] text-gray-400">${escapeHtml(domain.label)} · ${stepSummary.done}/${stepSummary.total} 스텝</p>
+                        <p class="mt-1 text-[11px] text-gray-400">${escapeHtml(domain.label)} · ${stepSummary.done}/${stepSummary.total} Step</p>
                     </div>
                     <button type="button" data-checklist-close-detail class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 hover:text-gray-700" title="상세 닫기" aria-label="상세 닫기">
                         <i class="fas fa-xmark text-xs"></i>
@@ -1006,19 +1006,8 @@
 
                         <div>
                             <div class="block">
-                                <span class="text-[11px] font-bold text-gray-500">스텝 / 하위 할 일</span>
+                                <span class="text-[11px] font-bold text-gray-500">Step</span>
                                 <div class="mt-1">${renderStepEditor('checklist-detail-steps-edit', task.steps)}</div>
-                            </div>
-                            <div class="mt-2 space-y-1.5">
-                                ${task.steps.length ? task.steps.map((step, index) => `
-                                    <div data-checklist-step-item="${escapeAttr(task.id)}" data-checklist-step-index="${index}" class="flex items-start gap-2 rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-700 transition">
-                                        <button type="button" data-checklist-step-drag-handle class="mt-0.5 flex h-5 w-5 shrink-0 cursor-grab items-center justify-center text-gray-300 hover:text-gray-600 active:cursor-grabbing" title="순서 이동" aria-label="하위 할 일 순서 이동">
-                                            <i class="fas fa-grip-vertical text-xs"></i>
-                                        </button>
-                                        <input type="checkbox" data-checklist-step-toggle="${escapeAttr(task.id)}" data-step-id="${escapeAttr(step.id)}" ${step.done ? 'checked' : ''} class="mt-0.5 h-3.5 w-3.5 accent-indigo-600 shrink-0">
-                                        <span class="min-w-0 flex-1 ${step.done ? 'line-through text-gray-400' : ''}">${escapeHtml(step.title)}</span>
-                                    </div>
-                                `).join('') : '<p class="text-xs text-gray-400">등록된 스텝이 없습니다.</p>'}
                             </div>
                         </div>
                     </div>
@@ -1070,7 +1059,7 @@
                 <div>
                     <p class="text-[10px] md:text-xs font-bold text-indigo-500 mb-1">생활 도구</p>
                     <h2 class="text-xl md:text-2xl font-bold text-gray-900">할 일 보드</h2>
-                    <p class="text-xs text-gray-500 mt-1">메모와 하위 할 일까지 한곳에서 정리합니다.</p>
+                    <p class="text-xs text-gray-500 mt-1">메모와 Step까지 한곳에서 정리합니다.</p>
                 </div>
                 <span id="checklist-sync-badge" class="text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-md whitespace-nowrap w-fit">로컬 저장</span>
             </div>
@@ -1133,7 +1122,7 @@
                             </label>
 
                             <div class="block">
-                                <span class="text-[11px] font-bold text-gray-500">스텝 / Sub tasks</span>
+                                <span class="text-[11px] font-bold text-gray-500">Step</span>
                                 <div class="mt-1">${renderStepEditor('checklist-steps-input')}</div>
                             </div>
                         </div>
@@ -1304,6 +1293,8 @@
             }
             const stepAddBtn = event.target.closest('[data-step-editor-add]');
             if (stepAddBtn) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
                 addStepFromEditor(stepAddBtn.closest('[data-step-editor]'));
                 return;
             }
@@ -1362,6 +1353,7 @@
         root?.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' && event.target?.closest?.('[data-step-editor-input]')) {
                 event.preventDefault();
+                event.stopImmediatePropagation();
                 addStepFromEditor(event.target.closest('[data-step-editor]'));
                 return;
             }

@@ -3,12 +3,16 @@ import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
 
 const source = await readFile(new URL('../js/features/financeForecast.js', import.meta.url), 'utf8');
+const assetTrendSource = await readFile(new URL('../js/features/assetTrend.js', import.meta.url), 'utf8');
 const context = { window: {} };
 vm.createContext(context);
 vm.runInContext(source, context);
+vm.runInContext(assetTrendSource, context);
 
 const forecast = context.window.FinanceForecastFeature;
+const assetTrend = context.window.AssetTrendFeature;
 assert.ok(forecast, 'FinanceForecastFeature must be exposed');
+assert.ok(assetTrend, 'AssetTrendFeature must be exposed');
 
 const flatTrend = forecast.calculateLinearTrend([4_000_000, 4_000_000, 4_000_000]);
 assert.equal(flatTrend.slope, 0);
@@ -109,5 +113,21 @@ assert.equal(calendarRoadmap.checkpoints[1].monthsProjected, 12);
 assert.equal(calendarRoadmap.checkpoints[1].projectedAsset, 134_000_000);
 assert.equal(calendarRoadmap.checkpoints[2].projectedAsset, 158_000_000);
 assert.equal(calendarRoadmap.checkpoints[2].targetAsset, null);
+
+const roadmapAlignedAssetTrend = assetTrend.createModel({
+    history: {
+        labels: ['25.12', '26.06', '26.07'],
+        data: [95_000_000, 99_000_000, 100_000_000],
+    },
+    currentMonthKey: '2026-07',
+    currentAssetFilter: 'all',
+    currentAsset: 100_000_000,
+    prevAsset: 99_000_000,
+    monthIndex: 2,
+});
+assert.equal(roadmapAlignedAssetTrend.fullSeries.labels[0], '25.12');
+assert.equal(roadmapAlignedAssetTrend.fullSeries.labels.at(-1), '29.07');
+assert.equal(roadmapAlignedAssetTrend.fullSeries.labels.length, 39);
+assert.equal(roadmapAlignedAssetTrend.fullSeries.data.at(-1), null);
 
 console.log('Finance forecast contracts ok');

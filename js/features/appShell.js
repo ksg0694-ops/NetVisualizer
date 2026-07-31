@@ -252,32 +252,6 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         currentAssetFilter = e.target.value; renderFinanceSummary();
     });
 
-    document.addEventListener('keydown', (e) => {
-        if (document.getElementById('settings-modal').classList.contains('hidden') === false) return;
-        if (document.getElementById('tx-modal').classList.contains('hidden') === false) return;
-        if (document.getElementById('tx-import-modal')?.classList.contains('hidden') === false) return;
-        if (document.getElementById('pf-edit-modal').classList.contains('hidden') === false) return;
-
-        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-            const navLinks = Array.from(document.querySelectorAll('.nav-link'));
-            const activeIndex = navLinks.findIndex(link => link.classList.contains('bg-indigo-50'));
-            if (activeIndex !== -1) {
-                let nextIndex = activeIndex;
-                if (e.key === 'ArrowUp' && activeIndex > 0) nextIndex--;
-                if (e.key === 'ArrowDown' && activeIndex < navLinks.length - 1) nextIndex++;
-                if (nextIndex !== activeIndex) { e.preventDefault(); switchView(navLinks[nextIndex].getAttribute('data-target')); }
-            }
-        }
-        const prevMonthButton = document.getElementById('btn-prev-month');
-        const nextMonthButton = document.getElementById('btn-next-month');
-        const reportPrevMonthButton = document.getElementById('btn-report-prev-month');
-        const reportNextMonthButton = document.getElementById('btn-report-next-month');
-        if (activeViewId === 'cashflow-view' && e.key === 'ArrowLeft' && prevMonthButton && !prevMonthButton.disabled) prevMonthButton.click();
-        else if (activeViewId === 'cashflow-view' && e.key === 'ArrowRight' && nextMonthButton && !nextMonthButton.disabled) nextMonthButton.click();
-        else if (activeViewId === 'stats-view' && e.key === 'ArrowLeft' && reportPrevMonthButton && !reportPrevMonthButton.disabled) reportPrevMonthButton.click();
-        else if (activeViewId === 'stats-view' && e.key === 'ArrowRight' && reportNextMonthButton && !reportNextMonthButton.disabled) reportNextMonthButton.click();
-    });
-
     function updateNavigationButtons() {
         const keys = getMonthKeys();
         const idx = keys.indexOf(currentMonthKey);

@@ -209,6 +209,12 @@
 
     function renderAssetTrendCharts(model) {
         if (!model) return;
+        const periodElement = document.getElementById('asset-trend-period');
+        if (periodElement) {
+            const firstLabel = model.fullSeries.labels[0] || '-';
+            const lastLabel = model.fullSeries.labels.at(-1) || '-';
+            periodElement.textContent = `${firstLabel}–${lastLabel}`;
+        }
 
         if (document.getElementById('dashboardAssetChart')) {
             renderOrUpdateChart(

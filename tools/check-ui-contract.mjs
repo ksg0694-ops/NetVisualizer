@@ -15,6 +15,7 @@ const portfolioEditor = await readFile(new URL('../js/features/portfolioEditor.j
 const portfolioViews = await readFile(new URL('../js/features/portfolioViews.js', import.meta.url), 'utf8');
 const quantEngine = await readFile(new URL('../js/features/quantEngine.js', import.meta.url), 'utf8');
 const financeForecast = await readFile(new URL('../js/features/financeForecast.js', import.meta.url), 'utf8');
+const assetTrend = await readFile(new URL('../js/features/assetTrend.js', import.meta.url), 'utf8');
 
 const requiredScripts = [
     './js/shared/appUtils.js',
@@ -60,6 +61,9 @@ assert.ok(index.includes('id="roadmap-year-cards"'));
 assert.ok(index.includes('id="roadmap-goal-save-status"'));
 assert.ok(index.includes('>2026–2028<'));
 assert.ok(index.includes('>단기 Roadmap 3년<'));
+assert.ok(index.includes('id="asset-trend-period"'));
+assert.ok(index.includes('aria-label="재무 홈으로 이동"'));
+assert.ok(index.includes("onclick=\"switchView('dashboard-view')\""));
 assert.ok(!index.includes('포트폴리오 Report 예정 공간'));
 assert.ok(index.includes('<h3 class="text-base font-bold text-gray-900">현금흐름</h3>'));
 assert.ok(index.includes('id="cashflow-view"'));
@@ -103,6 +107,12 @@ assert.ok(checklist.includes('role="radiogroup"'));
 assert.ok(checklist.includes('aria-pressed="${task.completed}"'));
 assert.ok(!checklist.includes('<input type="checkbox" data-checklist-toggle='));
 assert.ok(checklist.includes('data-step-editor-toggle'));
+assert.ok(checklist.includes('event.stopImmediatePropagation()'));
+assert.ok(!checklist.includes('스텝'));
+assert.ok(!checklist.includes('스탭'));
+assert.ok(!checklist.includes('하위 할 일'));
+assert.ok(!checklist.includes('Sub tasks'));
+assert.ok(!checklist.includes('<div data-checklist-step-item='), 'detail view must not render a second saved Step list');
 assert.ok(!checklist.includes('id="checklist-due-input"'));
 assert.ok(!checklist.includes('id="checklist-detail-due-edit"'));
 assert.ok(!checklist.includes("renderFilterButton('today'"));
@@ -209,9 +219,13 @@ assert.ok(quantEngine.includes('async function addPortfolioStrategy'));
 assert.ok(quantEngine.includes('async function savePortfolioStrategyName'));
 assert.ok(quantEngine.includes('const returnPct = investedCost > 0'));
 assert.ok(quantEngine.includes("draggable=\"true\""));
+assert.ok(!quantEngine.includes('tabindex="0"'), 'strategy holdings must not force keyboard tab navigation');
 assert.ok(quantEngine.includes(".update({\n                    strategy_tag: nextStrategy"));
 assert.ok(financeForecast.includes('function buildThreeYearRoadmap'));
 assert.ok(financeForecast.includes('function buildCalendarYearRoadmap'));
+assert.ok(assetTrend.includes('referenceMonthNumber - 1 + 36'));
+assert.ok(!appShell.includes("e.key === 'ArrowUp'"));
+assert.ok(!appShell.includes("e.key === 'ArrowLeft'"));
 assert.ok(financeViews.includes('saveShortTermRoadmapGoals'));
 assert.ok(financeModel.includes("return 'housing'"), 'portfolio debt must be grouped under housing assets');
 assert.ok(financeModel.includes("String(item.name || '').trim() === '대출통장'"), 'loan transit account must be excluded');
