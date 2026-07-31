@@ -31,12 +31,12 @@
     <script src="./js/features/appCore.js?v=20260731-update-10401-1"></script>
     <script src="./js/features/assetTrend.js?v=20260726-monthly-report-1"></script>
     <script src="./js/features/financeForecast.js?v=20260731-update-10401-1"></script>
-    <script src="./js/features/quantEngine.js?v=20260731-update-10401-1"></script>
+    <script src="./js/features/quantEngine.js?v=20260731-portfolio-scope-split-1"></script>
     <script src="./js/features/realEstate.js?v=20260726-phase1-cfo-5"></script>
     <script src="./js/features/transactionImport.js?v=20260708-auth-cloud"></script>
     <script src="./js/features/portfolioEditor.js?v=20260717-portfolio-draft-1"></script>
     <script src="./js/features/cashflowControls.js"></script>
-    <script src="./js/features/portfolioViews.js?v=20260731-update-10401-1"></script>
+    <script src="./js/features/portfolioViews.js?v=20260731-portfolio-scope-split-2"></script>
     <script src="./js/features/financeViews.js?v=20260731-update-10401-1"></script>
     <script src="./js/features/healthTracker.js?v=20260713-public-server"></script>
     <script src="./js/features/checklist.js?v=20260731-update-10401-1"></script>
@@ -1039,7 +1039,7 @@
                                 <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] text-gray-500">
                                     <span>시세 평가 <strong id="monthly-report-portfolio-priced" class="text-violet-700">0/0</strong></span>
                                     <span>환율 <strong id="monthly-report-portfolio-fx" class="text-indigo-700">확인 중</strong></span>
-                                    <button onclick="switchView('invest-detail-view'); renderInvestDetail('투자 자산');" class="font-bold text-violet-600 hover:text-violet-800">상세보기 →</button>
+                                    <button onclick="switchView('invest-detail-view'); renderInvestDetail('investment');" class="font-bold text-violet-600 hover:text-violet-800">상세보기 →</button>
                                 </div>
                             </div>
                             <div class="relative h-[82px] min-w-0">
@@ -1337,17 +1337,17 @@
                     <button onclick="switchView('portfolio-view')" class="text-gray-500 hover:text-gray-800 transition-colors p-2 -ml-2">
                         <i class="fas fa-arrow-left text-lg"></i>
                     </button>
-                    <h2 class="text-xl font-bold text-gray-800 ml-2">투자 성과 및 전략 분석</h2>
+                    <h2 id="invest-detail-heading" class="text-xl font-bold text-gray-800 ml-2">투자자산 성과 및 전략 분석</h2>
                 </div>
                 
                 <!-- 상단: 3대 핵심 지표 요약 -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
                     <div class="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl p-5 text-white shadow-sm relative overflow-hidden flex flex-col justify-center min-h-[140px]">
                         <div class="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-white opacity-10 rounded-full pointer-events-none"></div>
-                        <p class="text-indigo-100 font-medium text-xs mb-1">총 투자 자산 (평가금액)</p>
+                        <p id="invest-detail-total-label" class="text-indigo-100 font-medium text-xs mb-1">총 투자자산 평가금액</p>
                         <h3 class="text-2xl font-bold mb-2" id="invest-detail-total">0원</h3>
                         <div class="flex items-center gap-2 border-t border-purple-500/50 pt-2">
-                            <span class="text-[10px] text-purple-200">가상 추정 수익</span>
+                            <span id="invest-detail-profit-label" class="text-[10px] text-purple-200">투자자산 미실현 손익</span>
                             <span class="text-sm font-bold text-red-300" id="invest-detail-profit">+0원 (0%)</span>
                         </div>
                     </div>
@@ -1369,7 +1369,7 @@
 
                     <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center min-h-[140px] gap-4">
                         <div class="flex-1 flex flex-col justify-center">
-                            <p class="text-xs font-bold text-gray-500 mb-2">투자 전략별 비중</p>
+                            <p id="invest-detail-strategy-label" class="text-xs font-bold text-gray-500 mb-2">투자자산 전략별 비중</p>
                             <div class="space-y-1" id="invest-strategy-legend">
                                 <!-- JS -->
                             </div>

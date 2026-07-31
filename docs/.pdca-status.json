@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Update 1.04.01 Tab Strategy Roadmap and Todo UX",
+  "feature": "Portfolio Investment and Pension Split",
   "phase": "report",
   "progress": 100,
   "updatedAt": "2026-07-31T00:35:00+09:00",
   "status": "completed",
-  "currentFocus": "Update 1.04.01 implementation, data migration, regression validation, and release reporting are complete.",
+  "currentFocus": "Investment and pension detail views are separated, validated, and ready for deployment.",
   "completed": [
     "Imported and reverified 23 average purchase prices by Portfolio ID with zero mismatches.",
     "Recalculated all 23 current portfolio positions using current prices and FX rates.",
@@ -28,8 +28,13 @@
     "Added server-backed yearly target assets with projected gap and progress feedback.",
     "Replaced todo domain listboxes in add and edit forms with three exclusive buttons.",
     "Replaced todo list checkboxes with compact Google Calendar-style circular completion controls.",
-    "Passed the full automated suite and desktop/mobile browser tests with all temporary data restored."
+    "Passed the full automated suite and desktop/mobile browser tests with all temporary data restored.",
+    "Documented the investment and pension split plan and data scope design.",
+    "Added separate investment and pension detail entry points.",
+    "Scoped valuation, returns, strategy board, holding editor, charts, and price sync to the active CFO asset group.",
+    "Validated 23 investment holdings and 6 pension holdings with no cross-scope mixing.",
+    "Passed the full 13-step automated suite and desktop/mobile browser regression checks."
   ],
   "remaining": [],
-  "nextStep": "Review the deployed strategy names and enter the 2026, 2027, and 2028 target asset amounts."
+  "nextStep": "Collect and plan the Update 1.04.02 requirements on top of the separated portfolio scopes."
 }

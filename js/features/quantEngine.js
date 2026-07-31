@@ -976,8 +976,10 @@
     };
 
     function getActiveInvestTickers() {
-        const groupData = activeInvestGroupName ? dynamicPortfolioData?.[activeInvestGroupName] : null;
-        const items = groupData?.items || rawPortfolioData || [];
+        const scopeKey = activeInvestGroupName === 'pension' ? 'pension' : 'investment';
+        const cfoModel = window.FinanceModel?.buildCfoAssetGroups(dynamicPortfolioData || {});
+        const groupData = cfoModel?.groups?.find((group) => group.key === scopeKey);
+        const items = groupData?.items || [];
         return [...new Set(
             items
                 .map(item => String(item.ticker || '').trim().toUpperCase())

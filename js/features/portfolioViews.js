@@ -8,6 +8,31 @@
         housing: { icon: 'fa-house', iconClass: 'bg-teal-50 text-teal-700', borderClass: 'border-teal-100' },
         pension: { icon: 'fa-landmark', iconClass: 'bg-slate-100 text-slate-700', borderClass: 'border-slate-200' },
     };
+    const PORTFOLIO_DETAIL_SCOPE_META = {
+        investment: {
+            label: '투자자산',
+            buttonClass: 'border-violet-200 bg-violet-50 text-violet-600 hover:bg-violet-100',
+        },
+        pension: {
+            label: '연금',
+            buttonClass: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100',
+        },
+    };
+
+    function normalizePortfolioDetailScope(scope) {
+        const value = String(scope || '').trim().toLowerCase();
+        return value === 'pension' || value.includes('연금') ? 'pension' : 'investment';
+    }
+
+    function getPortfolioDetailGroup(scope) {
+        const scopeKey = normalizePortfolioDetailScope(scope);
+        const cfoModel = window.FinanceModel.buildCfoAssetGroups(dynamicPortfolioData || {});
+        return {
+            scopeKey,
+            group: cfoModel.groups.find((group) => group.key === scopeKey),
+            meta: PORTFOLIO_DETAIL_SCOPE_META[scopeKey],
+        };
+    }
 
     function getDefaultPortfolioSnapshotMonth() {
         const today = window.AppUtils.toLocalDateString(new Date());
@@ -105,7 +130,7 @@
 
     window.saveCurrentPortfolioMonthlySnapshot = async function() {
         if (!activePortfolioValuationModel) {
-            showToast('먼저 투자 상세 데이터를 불러와 주세요.', 'warning');
+            showToast('먼저 포트폴리오 상세 데이터를 불러와 주세요.', 'warning');
             return;
         }
         const monthInput = document.getElementById('portfolio-snapshot-month');
@@ -238,8 +263,9 @@
                     chartData.push(group.assetAmount);
                     chartColors.push(group.color);
                 }
-                const investmentButton = group.key === 'investment'
-                    ? `<button onclick="event.stopPropagation(); switchView('invest-detail-view'); renderInvestDetail('투자 자산');" class="ml-1.5 rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] font-bold text-violet-600 transition-colors hover:bg-violet-100">상세보기 <i class="fas fa-chevron-right ml-1 text-[8px]"></i></button>`
+                const detailMeta = PORTFOLIO_DETAIL_SCOPE_META[group.key];
+                const detailButton = detailMeta
+                    ? `<button onclick="event.stopPropagation(); switchView('invest-detail-view'); renderInvestDetail('${group.key}');" class="ml-1.5 rounded border px-1.5 py-0.5 text-[10px] font-bold transition-colors ${detailMeta.buttonClass}">상세보기 <i class="fas fa-chevron-right ml-1 text-[8px]"></i></button>`
                     : '';
                 const liabilityBadge = group.liabilityAmount > 0
                     ? `<span class="rounded bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold text-rose-500">상환 ${group.liabilityAmount.toLocaleString()}원</span>`
@@ -254,7 +280,7 @@
                                 <div class="min-w-0">
                                     <div class="flex items-center gap-1">
                                         <span class="truncate text-sm font-bold text-gray-800">${escapeHtml(group.label)}</span>
-                                        ${investmentButton}
+                                        ${detailButton}
                                     </div>
                                     <p class="text-[8px] leading-tight text-slate-400">${escapeHtml(group.purpose)} · ${group.items.length}개 항목</p>
                                 </div>
@@ -329,23 +355,35 @@
         renderDoughnut('dashPortfolioChart', 'dashPortfolio', true);
     }
 
-    function renderInvestDetail(groupName) {
+    function renderInvestDetail(scope) {
         try {
-        activeInvestGroupName = groupName;
-        const groupData = dynamicPortfolioData[groupName];
+        const { scopeKey, group: groupData, meta: scopeMeta } = getPortfolioDetailGroup(scope);
+        activeInvestGroupName = scopeKey;
         if (!groupData) {
             activeInvestProcessedItems = [];
             activeInvestTotal = 0;
             return;
         }
 
+        const detailHeading = document.getElementById('invest-detail-heading');
+        const appContextTitle = document.getElementById('app-context-title');
+        const totalLabel = document.getElementById('invest-detail-total-label');
+        const profitLabel = document.getElementById('invest-detail-profit-label');
+        const strategyLabel = document.getElementById('invest-detail-strategy-label');
+        if (detailHeading) detailHeading.textContent = `${scopeMeta.label} 성과 및 전략 분석`;
+        if (appContextTitle) appContextTitle.textContent = `${scopeMeta.label} 상세`;
+        if (totalLabel) totalLabel.textContent = `총 ${scopeMeta.label} 평가금액`;
+        if (profitLabel) profitLabel.textContent = `${scopeMeta.label} 미실현 손익`;
+        if (strategyLabel) strategyLabel.textContent = `${scopeMeta.label} 전략별 비중`;
+
         // 1. 수량·현재가·환율 기반 원화 평가. 준비되지 않은 종목은 기존 원화 입력값을 유지한다.
-        const valuation = buildCurrentPortfolioValuation(groupData.items);
+        const scopedItems = (groupData.items || []).filter((item) => !item.isDebt);
+        const valuation = buildCurrentPortfolioValuation(scopedItems);
         activePortfolioValuationModel = valuation;
         const total = valuation.totalValuationKrw;
         document.getElementById('invest-detail-total').textContent = total.toLocaleString() + '원';
 
-        const buildProcessedInvestItem = (item, sourceGroupName = groupName) => {
+        const buildProcessedInvestItem = (item, sourceGroupName = item.groupName || scopeMeta.label) => {
             const prevalued = item.valuationSource ? item : buildCurrentPortfolioValuation([item]).positions[0];
             const strategyTag = prevalued.portKey || inferStrategyTag(prevalued);
             const strategyMeta = getStrategyMeta(strategyTag);
@@ -366,7 +404,7 @@
         };
 
         // 종목별 전략 태그 부여. DB 값이 있으면 우선 사용하고, 없으면 기존 규칙으로 추론한다.
-        const processedItems = valuation.positions.map(item => buildProcessedInvestItem(item, groupName));
+        const processedItems = valuation.positions.map(item => buildProcessedInvestItem(item));
         activeInvestProcessedItems = processedItems;
         activeInvestTotal = total;
         renderPortfolioValuationStatus(valuation);
@@ -387,15 +425,10 @@
         // 2. MDD 방어 상태 (현금 비중)
         let cashTotal = 0;
         let allTotal = 0;
-        Object.values(dynamicPortfolioData).forEach(g => {
-            g.items.forEach(item => {
-                if (item.classification?.assetType === 'debt') return;
-                const positiveAmount = Math.max(0, item.amount);
-                allTotal += positiveAmount;
-                if (item.classification?.assetType === 'account') {
-                    cashTotal += positiveAmount;
-                }
-            });
+        processedItems.forEach(item => {
+            const positiveAmount = Math.max(0, Number(item.amount || 0));
+            allTotal += positiveAmount;
+            if (item.classification?.assetType === 'account') cashTotal += positiveAmount;
         });
         const cashRatio = allTotal > 0 ? (cashTotal / allTotal) * 100 : 0;
         const mddRatio = document.getElementById('invest-mdd-ratio');
@@ -407,23 +440,12 @@
         else if (mddStatus && cashRatio >= 10) { mddStatus.textContent = "보통 (적정 방어력)"; mddStatus.className = "text-[10px] font-bold text-yellow-500 mb-1"; }
         else if (mddStatus) { mddStatus.textContent = "위험 (현금 부족)"; mddStatus.className = "text-[10px] font-bold text-red-500 mb-1"; }
 
-        const holdingEditorItems = Object.entries(dynamicPortfolioData || {}).flatMap(([sourceGroupName, group]) => {
-            const sourceText = String(sourceGroupName || '').toLowerCase();
-            return (group.items || [])
-                .map(item => buildProcessedInvestItem(item, sourceGroupName))
-                .filter(item => {
-                    const assetType = item.classification?.assetType || '';
-                    const hasShares = Number(item.shares || 0) > 0;
-                    return hasShares || assetType === 'stock' || assetType === 'etf' || assetType === 'pension' || sourceText.includes('투자') || sourceText.includes('연금');
-                });
-        });
-
-        renderStrategyBoard(holdingEditorItems);
+        renderStrategyBoard(processedItems);
         if (window.APP_FEATURE_FLAGS?.quantStrategy !== false) {
             renderQuantStrategyStructure(processedItems, total);
             renderMarketSyncStatus(processedItems);
         }
-        renderQuantHoldingEditor(holdingEditorItems);
+        renderQuantHoldingEditor(processedItems);
         renderStrategyPerformance(processedItems);
 
         // 3. 종목 상세 카드 렌더링 (2단 아코디언 UI)
