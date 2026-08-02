@@ -20,13 +20,17 @@ for explicitly approved repairs.
 
 ## Remaining review queue
 
-- 51 historical welfare-overlap candidates totaling 823,541 KRW across January,
-  February, April, May, and June 2026.
-- 11 exact-duplicate groups containing 14 excess-row candidates; most of the
-  gross 2,063,355 KRW is a 2,000,000 KRW transfer that requires confirmation.
-- 9 category/subcategory conflict groups, including an 800,000 KRW income event.
-- 925 legacy/manual rows without a stored dedupe key; future imports are still
+- The confirmed 51 historical welfare-overlap rows totaling 823,541 KRW were
+  removed while all matching `복지포인트` rows were retained.
+- The two 800,000 KRW income rows were retained as two actual bonus payments and
+  normalized to `상여금`.
+- The 2,000,000 KRW transfer group is untouched and excluded from financial
+  calculation duplicate candidates.
+- 8 remaining income/expense duplicate groups contain 11 excess-row candidates
+  totaling 11,355 KRW.
+- 1 expense identity group still has conflicting subcategory labels.
+- 874 legacy/manual rows lack a stored dedupe key; future imports are still
   protected by recomputed fingerprints.
 
-None of these residual candidates was changed. Their detailed audit is recorded
-in `docs/03-analysis/income-dedup-data-quality-check.md`.
+The remaining 11,355 KRW and one subcategory conflict were not changed. Their
+detailed audit is recorded in `docs/03-analysis/income-dedup-data-quality-check.md`.

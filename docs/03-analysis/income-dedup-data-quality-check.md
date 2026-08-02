@@ -33,12 +33,13 @@ income is:
 No financial event was removed: each deleted legacy row has a matching retained
 `복지포인트` row.
 
-## Residual findings kept audit-only
+## Confirmed historical follow-up
 
 ### Historical welfare overlap
 
-There are 51 legacy-category rows, totaling 823,541 KRW, that match retained
-welfare-point rows outside the approved July period.
+The user confirmed that the 51 legacy-category rows totaling 823,541 KRW were
+duplicates of retained welfare-point rows. GitHub Actions run `30768965841`
+removed only those matched legacy rows on 2026-08-03 KST.
 
 | Month | Candidate rows |
 | --- | ---: |
@@ -48,19 +49,35 @@ welfare-point rows outside the approved July period.
 | 2026-05 | 12 |
 | 2026-06 | 7 |
 
-These rows were not changed. A separate review should confirm the affected
-monthly reports before any repair is authorized.
+The post-repair ledger contains 2,213 unique rows. Both the July-period and the
+January-through-June welfare overlap candidate sets are now zero. Every removed
+row has a retained `복지포인트` counterpart, so no financial event was lost.
+
+### Confirmed bonus pair
+
+Two 800,000 KRW income rows dated 2026-04-09 were confirmed as two actual bonus
+payments, not a duplicate. Both rows were retained and their category and
+subcategory were normalized to `상여금`. The audit records this identity group
+as a confirmed legitimate repeat instead of a classification conflict or exact
+duplicate candidate.
+
+### Transfer exclusion
+
+The 2,000,000 KRW same-identity transfer group is outside the income and expense
+calculation scope. It remains untouched and is reported separately as one
+excluded transfer group rather than being included in the actionable duplicate
+amount.
+
+## Residual findings kept audit-only
 
 ### Exact duplicate candidates
 
-Eleven groups contain 14 excess rows with a gross absolute amount of 2,063,355
-KRW. This is not equivalent to a 2,063,355 KRW cash-flow error because the total
-includes a 2,000,000 KRW transfer candidate.
+Eight income or expense groups contain 11 excess-row candidates with a gross
+absolute amount of 11,355 KRW.
 
 | Type | Candidate impact | Review note |
 | --- | ---: | --- |
-| Transfer | 2,000,000 KRW | Confirm whether two same-time transfers are distinct |
-| Income | 52,005 KRW | Includes very small interest-like values and May entries |
+| Income | 5 KRW | Three very small interest-like duplicate candidates |
 | Expense | 11,350 KRW | Includes repeated same-time small-value groups |
 
 These candidates remain untouched because equal values can represent legitimate
@@ -68,15 +85,13 @@ separate events.
 
 ### Classification conflicts
 
-Nine identity groups covering 20 rows still have conflicting category or
-subcategory labels. Notable examples include a 2026-04-09 income event for
-800,000 KRW classified as both `금융수입` and `상여금`, and a 2026-02-04 expense
-event whose category is the same but subcategory differs. Both require semantic
+One identity group covering two rows still has conflicting subcategory labels.
+It is a 2026-02-04 expense whose category is `식비`; the rows require semantic
 review rather than automatic deletion.
 
 ### Legacy dedupe-key coverage
 
-Nine hundred twenty-five legacy/manual rows have no stored `dedupe_key`. This is
+Eight hundred seventy-four legacy/manual rows have no stored `dedupe_key`. This is
 not a missing transaction-field error. The importer now recomputes a
 classification-agnostic fingerprint for existing rows, so these records remain
 protected during future BankSalad imports. A database backfill can be planned
@@ -84,8 +99,8 @@ separately if stored-key completeness is desired.
 
 ## Automated checks
 
-- Python audit/import tests: 10 passed locally and in GitHub Actions.
+- Python audit/import tests: 13 passed locally and in GitHub Actions.
 - Full application check suite: passed.
-- GitHub Actions guarded repair and post-audit: passed.
+- GitHub Actions guarded July and historical repairs and post-audits: passed.
 - Raw memos, methods, owner IDs, and transaction UUIDs were not written to logs
   or artifacts.

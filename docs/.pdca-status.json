@@ -3,10 +3,10 @@
   "level": "dynamic",
   "feature": "Income deduplication and full-ledger data quality",
   "phase": "report",
-  "progress": 95,
-  "updatedAt": "2026-08-03T00:20:00+09:00",
-  "status": "in_progress",
-  "currentFocus": "Publishing the verified July income repair and residual full-ledger audit findings.",
+  "progress": 100,
+  "updatedAt": "2026-08-03T07:05:00+09:00",
+  "status": "complete",
+  "currentFocus": "Historical welfare duplicates resolved; confirmed bonus and transfer rules documented.",
   "completed": [
     "Removed Life Home and routed the Life area directly to Todo.",
     "Replaced mobile goal chips and bottom tabs with a header menu dialog.",
@@ -24,12 +24,16 @@
     "Removed 22 approved July-period legacy welfare-income duplicates totaling 311,200 KRW.",
     "Verified 2,264 post-repair rows and zero remaining approved-period overlap.",
     "Changed BankSalad transaction identity to exclude editable classifications.",
-    "Passed 10 Python tests, the full application check suite, and the guarded GitHub Actions repair."
+    "Passed 10 Python tests, the full application check suite, and the guarded GitHub Actions repair.",
+    "Removed 51 confirmed January-through-June welfare duplicates totaling 823,541 KRW.",
+    "Retained both 800,000 KRW bonus payments and normalized both classifications to 상여금.",
+    "Excluded the 2,000,000 KRW transfer duplicate group from calculation candidates.",
+    "Reduced actionable exact duplicate candidates to 8 groups and 11,355 KRW.",
+    "Passed 13 Python tests and the post-repair full-ledger audit."
   ],
   "remaining": [
-    "Merge the verified repair workflow and audit tooling.",
-    "Verify the corrected July total on GitHub Pages.",
-    "Review historical audit-only candidates under separate approval."
+    "Optionally review 8 small income/expense duplicate groups totaling 11,355 KRW.",
+    "Optionally resolve one food-expense subcategory conflict."
   ],
-  "nextStep": "Merge pull request #15, verify GitHub Pages, and retain historical candidates for separate approval."
+  "nextStep": "Proceed with the next NetVisualizer patch; residual low-value candidates remain audit-only."
 }
