@@ -15,6 +15,11 @@ on:
         required: false
         default: false
         type: boolean
+      repair_confirmed_historical_income:
+        description: Remove confirmed Jan-Jun welfare duplicates and normalize the confirmed bonus pair
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -55,6 +60,10 @@ jobs:
       - name: Repair approved welfare-income overlap
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.repair_approved_income_overlap == true }}
         run: python tools/finance_data_quality.py --repair-approved-income-overlap
+
+      - name: Repair confirmed historical income classifications
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.repair_confirmed_historical_income == true }}
+        run: python tools/finance_data_quality.py --repair-confirmed-historical-income
 
       - name: Sync BankSalad mail
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run != true }}
