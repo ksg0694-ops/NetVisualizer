@@ -52,6 +52,7 @@ assert.ok(index.includes('id="monthly-report-interim-spending-forecast"'));
 assert.ok(index.includes('id="monthly-report-interim-retained-rate"'));
 assert.ok(index.includes('./js/features/appCore.js?v=20260802-interim-report-1'));
 assert.ok(index.includes('./js/features/financeViews.js?v=20260802-interim-report-1'));
+assert.ok(index.includes('./js/features/financeRepository.js?v=20260802-pagination-1'));
 assert.ok(index.includes('id="monthly-report-income-category-chart"'));
 assert.ok(index.includes('id="monthly-report-expense-category-chart"'));
 assert.ok(index.includes('id="monthly-report-goal-remaining"'));

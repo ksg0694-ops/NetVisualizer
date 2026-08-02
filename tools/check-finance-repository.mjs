@@ -119,11 +119,19 @@ assert.equal(portfolioSnapshotPayload.total_valuation_krw, 42_500_000);
 assert.equal(portfolioSnapshotPayload.port_totals[0].key, 'index');
 
 const queryLog = [];
+const transactionRows = Array.from({ length: 1001 }, (_, index) => ({
+    id: `tx-${String(index).padStart(4, '0')}`,
+    date: '2026-07-01',
+    type: '지출',
+    amount: '-1000',
+}));
 const responses = {
-    transactions: { data: [{ date: '2026-07-01', type: '지출', amount: '-1000' }], error: null },
+    transactions: { data: transactionRows, error: null },
     cards: { data: null, error: { message: 'optional table unavailable' } },
 };
 function createQuery(table) {
+    let rangeStart = 0;
+    let rangeEnd = Number.POSITIVE_INFINITY;
     const query = {
         select(columns) {
             queryLog.push({ table, action: 'select', columns });
@@ -133,8 +141,18 @@ function createQuery(table) {
             queryLog.push({ table, action: 'order', column, ascending: options.ascending });
             return query;
         },
+        range(from, to) {
+            rangeStart = from;
+            rangeEnd = to;
+            queryLog.push({ table, action: 'range', from, to });
+            return query;
+        },
         then(resolve, reject) {
-            return Promise.resolve(responses[table]).then(resolve, reject);
+            const response = responses[table];
+            const rangedResponse = response.error
+                ? response
+                : { data: response.data.slice(rangeStart, rangeEnd + 1), error: null };
+            return Promise.resolve(rangedResponse).then(resolve, reject);
         },
     };
     return query;
@@ -146,9 +164,16 @@ const supabaseRepository = repository.createSupabaseFinanceRepository({
 });
 const remotePatch = await supabaseRepository.fetchTables(['transactions', 'cards']);
 assert.equal(remotePatch.tx[0].amount, -1000);
+assert.equal(remotePatch.tx.length, 1001);
 assert.equal(Object.hasOwn(remotePatch, 'cards'), false);
 assert.equal(optionalErrors[0].table, 'cards');
 assert.ok(queryLog.some((entry) => entry.table === 'transactions' && entry.action === 'order' && entry.column === 'date'));
+assert.ok(queryLog.some((entry) => entry.table === 'transactions' && entry.action === 'order' && entry.column === 'id'));
+assert.deepEqual(
+    queryLog.filter((entry) => entry.table === 'transactions' && entry.action === 'range')
+        .map(({ from, to }) => [from, to]),
+    [[0, 999], [1000, 1999]],
+);
 
 const writeLog = [];
 const writeClient = {
