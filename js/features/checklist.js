@@ -845,13 +845,12 @@
             if (error) throw error;
 
             const remoteTasks = sortTasks((data || []).map(fromRemoteRow).filter(Boolean));
-            const localTasks = getStore();
-            tasks = saveStore([...remoteTasks, ...localTasks]);
-            if (localTasks.length > 0) await persistAllRemote();
+            // An authenticated server read is authoritative. Merging stale local
+            // cache rows here would recreate tasks deleted from another device.
+            tasks = saveStore(remoteTasks);
             remoteLoaded = true;
             render({ skipRemoteLoad: true });
             renderSyncStatus('서버 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
-            window.LifeDashboardFeature?.render();
             return tasks;
         } catch (error) {
             handleRemoteError(error, 'loadRemoteTasks');
@@ -863,6 +862,12 @@
         if (remoteLoadStarted) return;
         remoteLoadStarted = true;
         loadRemoteTasks();
+    }
+
+    async function refreshFromServer() {
+        remoteLoadStarted = true;
+        remoteLoaded = false;
+        return loadRemoteTasks();
     }
 
     function renderSyncStatus(text, classes) {
@@ -957,24 +962,24 @@
         if (!panel) return;
         const task = tasks.find((item) => item.id === activeTaskId);
         if (!task) {
-            panel.className = 'min-w-0 rounded-lg border border-dashed border-gray-200 bg-gray-50 p-5 xl:min-h-[560px]';
+            panel.className = 'hidden min-w-0 rounded-lg border border-dashed border-gray-200 bg-gray-50 p-5 xl:block xl:min-h-[560px]';
             panel.innerHTML = `
                 <div class="flex h-full min-h-[220px] flex-col items-center justify-center text-center">
                     <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-white text-gray-300 shadow-sm">
                         <i class="fas fa-list-check"></i>
                     </div>
                     <p class="text-sm font-bold text-gray-600">할 일을 선택하세요</p>
-                    <p class="mt-1 text-xs text-gray-400">왼쪽 카드 하나를 누르면 이 넓은 영역에서 상세내역을 확인하고 수정할 수 있습니다.</p>
+                    <p class="mt-1 text-xs text-gray-400">왼쪽 카드 하나를 누르면 상세내역을 확인하고 수정할 수 있습니다.</p>
                 </div>
             `;
             return;
         }
-        panel.className = 'min-w-0 rounded-lg border border-gray-200 bg-white p-3 shadow-sm xl:min-h-[560px] xl:p-4';
+        panel.className = 'fixed inset-0 z-50 flex min-w-0 items-stretch justify-center bg-gray-950/30 p-0 backdrop-blur-[1px] xl:static xl:block xl:bg-transparent xl:p-0 xl:backdrop-blur-none';
         const domain = getDomain(task.domain);
         const stepSummary = getStepSummary(task);
         panel.innerHTML = `
-            <div>
-                <div class="flex items-start justify-between gap-2">
+            <div class="flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl xl:h-auto xl:min-h-[560px] xl:rounded-lg xl:border xl:border-gray-200 xl:p-4 xl:shadow-sm" role="dialog" aria-modal="true" aria-label="${escapeAttr(task.title)} 상세 편집" data-checklist-detail-dialog>
+                <div class="flex shrink-0 items-start justify-between gap-2 border-b border-gray-100 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] xl:border-0 xl:p-0">
                     <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-1.5">
                             <h4 class="text-lg font-black text-gray-900 leading-snug">${escapeHtml(task.title)}</h4>
@@ -987,7 +992,7 @@
                     </button>
                 </div>
 
-                <div class="mt-3 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_220px] gap-3">
+                <div class="grid flex-1 grid-cols-1 gap-3 overflow-y-auto px-4 py-4 xl:mt-3 xl:grid-cols-[minmax(0,1fr)_220px] xl:overflow-visible xl:p-0">
                     <label class="block">
                         <span class="text-[11px] font-bold text-gray-500">제목</span>
                         <input id="checklist-detail-title-edit" type="text" value="${escapeAttr(task.title)}" class="mt-1 w-full border border-gray-200 rounded-md px-2.5 py-2 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none bg-white" placeholder="할 일">
@@ -1001,7 +1006,7 @@
                     <div class="xl:col-span-2 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_260px] gap-3">
                         <label class="block">
                             <span class="text-[11px] font-bold text-gray-500">상세내역</span>
-                            <textarea id="checklist-detail-note-edit" class="mt-1 w-full min-h-[340px] resize-y border border-gray-200 rounded-md px-3 py-2.5 text-sm leading-relaxed focus:ring-2 focus:ring-indigo-500 outline-none bg-white" placeholder="상세내역을 길게 적어둘 수 있습니다.">${escapeHtml(task.note)}</textarea>
+                            <textarea id="checklist-detail-note-edit" class="mt-1 w-full min-h-[240px] resize-y border border-gray-200 rounded-md px-3 py-2.5 text-sm leading-relaxed focus:ring-2 focus:ring-indigo-500 outline-none bg-white xl:min-h-[340px]" placeholder="상세내역을 길게 적어둘 수 있습니다.">${escapeHtml(task.note)}</textarea>
                         </label>
 
                         <div>
@@ -1012,7 +1017,7 @@
                         </div>
                     </div>
 
-                    <button type="button" data-checklist-save-detail="${escapeAttr(task.id)}" class="xl:col-span-2 w-full rounded-md bg-gray-900 px-3 py-2 text-[11px] font-bold text-white hover:bg-gray-800">수정 저장</button>
+                    <button type="button" data-checklist-save-detail="${escapeAttr(task.id)}" class="xl:col-span-2 w-full rounded-md bg-gray-900 px-3 py-2.5 text-xs font-bold text-white hover:bg-gray-800">수정 저장</button>
                 </div>
             </div>
         `;
@@ -1032,7 +1037,7 @@
         if (barEl) barEl.style.width = `${summary.pct}%`;
         if (filtersEl) {
             filtersEl.innerHTML = [
-                renderFilterButton('open', '열림', summary.open),
+                renderFilterButton('open', '진행 중', summary.open),
                 renderFilterButton('done', '완료', summary.done),
                 renderFilterButton('all', '전체', summary.total),
             ].join('');
@@ -1078,10 +1083,7 @@
                     </div>
                     <div class="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)] gap-3 min-w-0">
                         <div class="min-w-0">
-                            <div id="checklist-task-list" class="space-y-1.5 max-h-[calc(100vh-300px)] overflow-y-auto pr-1"></div>
-                            <div class="mt-3 flex justify-end">
-                                <button type="button" id="checklist-clear-done" class="text-[11px] font-bold text-gray-400 hover:text-rose-500">완료 항목 지우기</button>
-                            </div>
+                            <div id="checklist-task-list" class="space-y-1.5 max-h-[calc(100vh-250px)] overflow-y-auto pr-1"></div>
                         </div>
                         <aside id="checklist-detail-panel" class="min-w-0"></aside>
                     </div>
@@ -1100,15 +1102,15 @@
                 <i class="fas fa-plus text-[11px]"></i>
             </button>
             ${isAddFormOpen ? `
-                <div data-checklist-close-add-form class="fixed inset-0 z-50 flex items-start justify-center bg-gray-950/30 px-4 py-8 backdrop-blur-[1px]">
-                    <div id="checklist-add-form" class="mt-8 w-full max-w-xl rounded-lg border border-gray-200 bg-white shadow-2xl" role="dialog" aria-modal="true" aria-label="새 할 일 추가" data-checklist-dialog>
-                        <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                <div data-checklist-close-add-form class="fixed inset-0 z-50 flex items-stretch justify-center bg-gray-950/30 p-0 backdrop-blur-[1px] sm:items-center sm:p-4">
+                    <div id="checklist-add-form" class="flex h-full w-full max-w-xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[calc(100vh-2rem)] sm:rounded-lg sm:border sm:border-gray-200" role="dialog" aria-modal="true" aria-label="새 할 일 추가" data-checklist-dialog>
+                        <div class="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:pt-3">
                             <p class="text-sm font-black text-gray-900">새 할 일</p>
                             <button type="button" data-checklist-close-add-form class="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="닫기" aria-label="새 할 일 창 닫기">
                                 <i class="fas fa-xmark text-sm"></i>
                             </button>
                         </div>
-                        <div class="space-y-3 px-4 py-4">
+                        <div class="flex-1 space-y-3 overflow-y-auto px-4 py-4">
                             <input id="checklist-title-input" type="text" class="w-full border-0 border-b border-gray-200 px-0 py-2 text-lg font-bold focus:border-indigo-500 focus:ring-0 outline-none" placeholder="할 일 제목">
 
                             <div class="block">
@@ -1126,7 +1128,7 @@
                                 <div class="mt-1">${renderStepEditor('checklist-steps-input')}</div>
                             </div>
                         </div>
-                        <div class="flex items-center justify-end gap-2 border-t border-gray-100 px-4 py-3">
+                        <div class="flex shrink-0 items-center justify-end gap-2 border-t border-gray-100 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-3">
                             <button type="button" data-checklist-close-add-form class="rounded-md px-3 py-2 text-[11px] font-bold text-gray-500 hover:bg-gray-100">취소</button>
                             <button type="button" id="checklist-add-button" class="rounded-md bg-gray-900 px-4 py-2 text-[11px] font-bold text-white hover:bg-gray-800">저장</button>
                         </div>
@@ -1232,22 +1234,23 @@
     }
 
     async function deleteTask(id) {
+        const previousTasks = tasks.slice();
+        const deletedTask = tasks.find((item) => item.id === id);
+        if (!deletedTask) return;
+        const hasRemoteClient = Boolean(getClient());
         tasks = tasks.filter((item) => item.id !== id);
         if (activeTaskId === id) activeTaskId = null;
         tasks = saveStore(tasks);
         render({ skipRemoteLoad: true });
-        await deleteRemoteTask(id);
-    }
-
-    async function clearDone() {
-        const doneIds = tasks.filter((task) => task.completed).map((task) => task.id);
-        if (doneIds.length === 0) return;
-        tasks = tasks.filter((task) => !task.completed);
-        if (activeTaskId && doneIds.includes(activeTaskId)) activeTaskId = null;
-        tasks = saveStore(tasks);
+        if (!hasRemoteClient) return;
+        const deletedRemotely = await deleteRemoteTask(id);
+        if (deletedRemotely) {
+            renderSyncStatus('서버 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+            return;
+        }
+        tasks = saveStore(previousTasks);
         render({ skipRemoteLoad: true });
-        for (const id of doneIds) await deleteRemoteTask(id);
-        toast('완료 항목을 지웠습니다.', 'info');
+        toast('서버 삭제에 실패해 항목을 복원했습니다.', 'error', 3200);
     }
 
     function bindControls() {
@@ -1282,6 +1285,13 @@
             }
             const closeDetailBtn = event.target.closest('[data-checklist-close-detail]');
             if (closeDetailBtn) {
+                activeTaskId = null;
+                render({ skipRemoteLoad: true });
+                return;
+            }
+            const closeDetailBackdrop = event.target.matches('#checklist-detail-panel')
+                && !event.target.closest('[data-checklist-detail-dialog]');
+            if (closeDetailBackdrop) {
                 activeTaskId = null;
                 render({ skipRemoteLoad: true });
                 return;
@@ -1522,12 +1532,12 @@
             draggedStepDrag = null;
             clearDragHints(root);
         });
-        document.getElementById('checklist-clear-done')?.addEventListener('click', clearDone);
     }
 
     window.ChecklistFeature = {
         bindControls,
         render,
+        refreshFromServer,
         getDashboardSnapshot: () => {
             const sourceTasks = getStore();
             const openTasks = sourceTasks.filter((task) => !task.completed);
