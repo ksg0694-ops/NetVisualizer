@@ -555,6 +555,11 @@
                 status = 'duplicate';
                 reason = '기존 거래와 중복';
                 duplicateMatch = existingMatch;
+            } else if (status === 'ready') {
+                addTxDedupeKeys(existingKeys, txPayload, {
+                    source: 'file',
+                    rowNumber,
+                });
             }
 
             return { rowNumber, txPayload, status, reason, dedupeKey, duplicateMatch };
@@ -681,6 +686,10 @@
                     return;
                 }
                 readyRows.push(txPayload);
+                addTxDedupeKeys(existingKeys, txPayload, {
+                    source: 'file',
+                    rowNumber: item.rowNumber,
+                });
             });
 
         if (skippedDuplicateCount > 0) {

@@ -1,0 +1,56 @@
+name: BankSalad Gmail Sync
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Parse matching mail without writing to Supabase
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: banksalad-gmail-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GMAIL_OAUTH_CLIENT_ID: ${{ secrets.GMAIL_OAUTH_CLIENT_ID }}
+      GMAIL_OAUTH_CLIENT_SECRET: ${{ secrets.GMAIL_OAUTH_CLIENT_SECRET }}
+      GMAIL_OAUTH_REFRESH_TOKEN: ${{ secrets.GMAIL_OAUTH_REFRESH_TOKEN }}
+      BANKSALAD_ZIP_PASSWORD: ${{ secrets.BANKSALAD_ZIP_PASSWORD }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      NETVISUALIZER_OWNER_USER_ID: ${{ secrets.NETVISUALIZER_OWNER_USER_ID }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-banksalad-sync.txt
+
+      - name: Install sync dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-banksalad-sync.txt
+
+      - name: Run parser tests
+        run: python -m unittest tools.tests.test_banksalad_mail_sync -v
+
+      - name: Sync BankSalad mail
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run != true }}
+        run: python tools/banksalad_mail_sync.py
+
+      - name: Dry-run BankSalad mail
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
+        run: python tools/banksalad_mail_sync.py --dry-run
