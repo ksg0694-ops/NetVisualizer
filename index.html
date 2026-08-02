@@ -39,7 +39,7 @@
     <script src="./js/features/portfolioViews.js?v=20260731-portfolio-scope-split-2"></script>
     <script src="./js/features/financeViews.js?v=20260802-forecast-input-1"></script>
     <script src="./js/features/healthTracker.js?v=20260713-public-server"></script>
-    <script src="./js/features/checklist.js?v=20260802-update-10401-patch-v02"></script>
+    <script src="./js/features/checklist.js?v=20260803-todo-ux-1"></script>
     <script src="./js/features/personalCfo.js?v=20260726-phase2-portfolio-1"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
@@ -75,10 +75,10 @@
     <aside class="w-56 bg-white border-r border-gray-200 flex flex-col hidden md:flex z-10 shrink-0">
         <div class="flex-1 min-h-0 flex flex-col">
             <div class="h-16 flex flex-col justify-center px-5 border-b border-gray-100">
-                <button type="button" onclick="switchView('dashboard-view')" class="flex items-center gap-2 text-left text-indigo-600 transition-colors hover:text-indigo-800" aria-label="재무 홈으로 이동">
+                <a href="./" data-app-home-link class="flex items-center gap-2 text-left text-indigo-600 transition-colors hover:text-indigo-800" aria-label="재무 홈으로 이동" title="클릭: 홈 · 가운데 클릭: 새 창">
                     <i class="fas fa-chart-line text-xl"></i>
                     <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
-                </button>
+                </a>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
                     version 1.04.01 · patch v02
                 </div>
@@ -89,9 +89,6 @@
                     <div class="space-y-0.5">
                         <button type="button" data-target="dashboard-view" onclick="switchView('dashboard-view')" class="goal-link w-full flex items-center gap-2 px-3 py-1.5 text-sm text-indigo-700 bg-indigo-50 rounded-lg font-semibold border border-indigo-100 transition-all">
                             <i class="fas fa-coins w-4 text-center text-xs"></i> <span class="truncate">재무</span>
-                        </button>
-                        <button type="button" data-target="routine-checklist-view" onclick="switchView('routine-checklist-view')" class="goal-link w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
-                            <i class="fas fa-compass w-4 text-center text-xs"></i> <span class="truncate">생활</span>
                         </button>
                     </div>
                 </div>
@@ -118,7 +115,7 @@
                 </div>
 
                 <div>
-                    <p class="px-2 mb-1 text-[9px] font-bold text-gray-400 tracking-wider">생활 도구</p>
+                    <p class="px-2 mb-1 text-[9px] font-bold text-gray-400 tracking-wider">도구</p>
                     <div class="space-y-0.5">
                         <a href="#" data-target="health-view" data-feature="health" class="hidden nav-link items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
                             <i class="fas fa-heart-pulse w-4 text-center text-xs"></i> <span class="truncate">건강</span>
@@ -1608,7 +1605,7 @@
         <nav class="relative flex h-full w-[min(84vw,320px)] flex-col bg-white shadow-2xl" aria-label="모바일 탭">
             <div class="flex h-16 items-center justify-between border-b border-gray-100 px-4">
                 <div>
-                    <p class="text-[10px] font-bold text-indigo-500">NetVisualizer</p>
+                    <a href="./" data-app-home-link class="text-[10px] font-bold text-indigo-500 hover:text-indigo-700" title="클릭: 홈 · 가운데 클릭: 새 창">NetVisualizer</a>
                     <h2 class="text-base font-black text-gray-900">탭 이동</h2>
                 </div>
                 <button type="button" data-mobile-menu-close class="flex h-9 w-9 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700" aria-label="탭 메뉴 닫기">
@@ -1625,7 +1622,7 @@
                     <button type="button" data-mobile-nav-target="asset-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-bullseye mr-2 w-4 text-center text-xs"></i>장기 목표</button>
                     <button type="button" data-mobile-nav-target="personal-cfo-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-diagram-project mr-2 w-4 text-center text-xs"></i>개인 CFO</button>
                 </div>
-                <p class="mt-5 px-2 pb-1 text-[10px] font-bold text-gray-400">생활</p>
+                <p class="mt-5 px-2 pb-1 text-[10px] font-bold text-gray-400">도구</p>
                 <button type="button" data-mobile-nav-target="routine-checklist-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-list-check mr-2 w-4 text-center text-xs"></i>할 일</button>
             </div>
         </nav>
@@ -1905,6 +1902,6 @@
     <!-- Toast Message Container -->
     <div id="toast-container" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[90%] md:w-auto max-w-sm"></div>
 
-    <script src="./js/features/appShell.js?v=20260802-update-10401-patch-v02"></script>
+    <script src="./js/features/appShell.js?v=20260803-todo-ux-1"></script>
 </body>
 </html>

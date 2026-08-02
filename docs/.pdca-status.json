@@ -1,39 +1,24 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Income deduplication and full-ledger data quality",
+  "feature": "Todo inline title and navigation cleanup",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-08-03T07:05:00+09:00",
+  "updatedAt": "2026-08-03T18:30:00+09:00",
   "status": "complete",
-  "currentFocus": "Historical welfare duplicates resolved; confirmed bonus and transfer rules documented.",
+  "currentFocus": "Todo title editing, Step ordering UI, Life area removal, and home-link behavior completed.",
   "completed": [
-    "Removed Life Home and routed the Life area directly to Todo.",
-    "Replaced mobile goal chips and bottom tabs with a header menu dialog.",
-    "Renamed the open Todo filter to 진행 중.",
-    "Removed bulk completed-item deletion while preserving item-level delete and completion reversal.",
-    "Made authenticated server Todo reads authoritative to prevent cross-device deletion resurrection.",
-    "Added Todo refresh to the main data sync and rollback on failed remote deletion.",
-    "Converted mobile Todo create and detail editing into full-screen forms.",
-    "Moved authentication feedback inside the login card.",
+    "Documented Plan, Design, Check, and Report phases.",
+    "Replaced the separate Todo title field with inline detail-title editing.",
+    "Added keyboard save and cancel behavior for title editing.",
+    "Moved the Step drag handle to the right edge.",
+    "Removed the top-level Life area on desktop and mobile.",
+    "Kept Todo accessible under the Tools navigation group.",
+    "Implemented SPA left-click and middle-click new-tab behavior for NetVisualizer.",
+    "Added UI regression contracts.",
     "Passed the full automated check suite.",
-    "Verified desktop 1365x768 and mobile 390x844 layouts.",
-    "Merged pull request #13 and completed the GitHub Pages deployment.",
-    "Verified the deployed mobile tab menu and Todo 진행 중 view.",
-    "Audited all 2,286 transaction rows through the service-role worker.",
-    "Removed 22 approved July-period legacy welfare-income duplicates totaling 311,200 KRW.",
-    "Verified 2,264 post-repair rows and zero remaining approved-period overlap.",
-    "Changed BankSalad transaction identity to exclude editable classifications.",
-    "Passed 10 Python tests, the full application check suite, and the guarded GitHub Actions repair.",
-    "Removed 51 confirmed January-through-June welfare duplicates totaling 823,541 KRW.",
-    "Retained both 800,000 KRW bonus payments and normalized both classifications to 상여금.",
-    "Excluded the 2,000,000 KRW transfer duplicate group from calculation candidates.",
-    "Reduced actionable exact duplicate candidates to 8 groups and 11,355 KRW.",
-    "Passed 13 Python tests and the post-repair full-ledger audit."
+    "Verified desktop and 390x844 mobile layouts with no browser console errors."
   ],
-  "remaining": [
-    "Optionally review 8 small income/expense duplicate groups totaling 11,355 KRW.",
-    "Optionally resolve one food-expense subcategory conflict."
-  ],
-  "nextStep": "Proceed with the next NetVisualizer patch; residual low-value candidates remain audit-only."
+  "remaining": [],
+  "nextStep": "Proceed with the next NetVisualizer patch after deployment verification."
 }

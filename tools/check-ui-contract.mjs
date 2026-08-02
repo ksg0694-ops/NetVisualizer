@@ -16,6 +16,10 @@ const portfolioViews = await readFile(new URL('../js/features/portfolioViews.js'
 const quantEngine = await readFile(new URL('../js/features/quantEngine.js', import.meta.url), 'utf8');
 const financeForecast = await readFile(new URL('../js/features/financeForecast.js', import.meta.url), 'utf8');
 const assetTrend = await readFile(new URL('../js/features/assetTrend.js', import.meta.url), 'utf8');
+const stepEditorMarkup = checklist.slice(
+    checklist.indexOf('list.innerHTML = steps.map'),
+    checklist.indexOf('function hydrateStepEditors'),
+);
 
 const requiredScripts = [
     './js/shared/appUtils.js',
@@ -71,7 +75,11 @@ assert.ok(index.includes('>2026–2028<'));
 assert.ok(index.includes('>단기 Roadmap 3년<'));
 assert.ok(index.includes('id="asset-trend-period"'));
 assert.ok(index.includes('aria-label="재무 홈으로 이동"'));
-assert.ok(index.includes("onclick=\"switchView('dashboard-view')\""));
+assert.ok(index.includes('data-app-home-link'));
+assert.ok(index.includes('href="./"'), 'NetVisualizer must remain a real link for middle-click new-tab behavior');
+assert.ok(appShell.includes("document.querySelectorAll('[data-app-home-link]')"));
+assert.ok(appShell.includes("link.addEventListener('auxclick'"), 'middle-click must explicitly open NetVisualizer in a new tab');
+assert.ok(appShell.includes("window.open(link.href, '_blank', 'noopener,noreferrer')"));
 assert.ok(!index.includes('포트폴리오 Report 예정 공간'));
 assert.ok(index.includes('<h3 class="text-base font-bold text-gray-900">현금흐름</h3>'));
 assert.ok(index.includes('id="cashflow-view"'));
@@ -101,6 +109,8 @@ assert.ok(index.includes('id="btn-goal-home-label"'));
 assert.ok(appShell.includes("? '재무 홈'"));
 assert.ok(!index.includes('id="life-view"'), 'Life Home must be removed');
 assert.ok(!appShell.includes("window.LifeDashboardFeature?.render()"), 'removed Life Home must not render');
+assert.ok(!index.includes('<span class="truncate">생활</span>'), 'Life area tab must be removed');
+assert.ok(!appShell.includes("targetId === 'life-view'"), 'removed Life route must not redirect to Todo');
 assert.ok(index.includes('id="btn-mobile-menu"'));
 assert.ok(index.includes('#btn-goal-home { display: none !important; }'));
 assert.ok(index.includes('id="mobile-navigation-dialog"'));
@@ -127,6 +137,11 @@ assert.ok(checklist.includes('async function refreshFromServer()'));
 assert.ok(appCore.includes('await window.ChecklistFeature?.refreshFromServer?.()'));
 assert.ok(checklist.includes('서버 삭제에 실패해 항목을 복원했습니다.'));
 assert.ok(checklist.includes('data-checklist-detail-dialog'));
+assert.ok(checklist.includes('data-checklist-title-display'));
+assert.ok(checklist.includes("root?.addEventListener('dblclick'"));
+assert.ok(!checklist.includes('<span class="text-[11px] font-bold text-gray-500">제목</span>'), 'detail title must not use a separate field row');
+assert.ok(checklist.includes("titleEl?.value || task.title"), 'detail save must retain the title outside inline edit mode');
+assert.ok(stepEditorMarkup.indexOf('data-step-editor-remove') < stepEditorMarkup.indexOf('data-step-editor-drag-handle'), 'Step drag handle must sit at the right edge');
 assert.ok(checklist.includes('sm:h-auto sm:max-h-[calc(100vh-2rem)]'));
 assert.ok(checklist.includes('aria-pressed="${task.completed}"'));
 assert.ok(!checklist.includes('<input type="checkbox" data-checklist-toggle='));
