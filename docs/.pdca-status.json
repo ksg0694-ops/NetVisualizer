@@ -1,24 +1,24 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Todo inline title and navigation cleanup",
+  "feature": "Gmail incremental cash-flow cutover",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-08-03T18:30:00+09:00",
+  "updatedAt": "2026-08-03T08:00:00+09:00",
   "status": "complete",
-  "currentFocus": "Todo title editing, Step ordering UI, Life area removal, and home-link behavior completed.",
+  "currentFocus": "Historical Gmail exports are excluded from calculation; only 2026-07-24 onward is incremental.",
   "completed": [
     "Documented Plan, Design, Check, and Report phases.",
-    "Replaced the separate Todo title field with inline detail-title editing.",
-    "Added keyboard save and cancel behavior for title editing.",
-    "Moved the Step drag handle to the right edge.",
-    "Removed the top-level Life area on desktop and mobile.",
-    "Kept Todo accessible under the Tools navigation group.",
-    "Implemented SPA left-click and middle-click new-tab behavior for NetVisualizer.",
-    "Added UI regression contracts.",
-    "Passed the full automated check suite.",
-    "Verified desktop and 390x844 mobile layouts with no browser console errors."
+    "Audited the 2,213-row transaction ledger by source and date.",
+    "Confirmed the latest 1,636-row Gmail export contains 1,592 historical rows and 44 incremental rows.",
+    "Added source-aware browser filtering for Gmail rows from 2026-07-24 onward.",
+    "Bumped the transaction cache to v5 to remove source-less stale cache calculations.",
+    "Added the same cutover to the scheduled Gmail ingestion worker.",
+    "Added incremental-scope metrics to the full-ledger audit.",
+    "Retained existing historical Gmail rows without deleting data.",
+    "Passed 15 Python tests locally and in GitHub Actions.",
+    "Passed the full NetVisualizer application check suite."
   ],
   "remaining": [],
-  "nextStep": "Proceed with the next NetVisualizer patch after deployment verification."
+  "nextStep": "Merge, deploy, and verify the corrected cash-flow totals on GitHub Pages."
 }
