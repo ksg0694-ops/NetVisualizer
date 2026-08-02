@@ -3,7 +3,8 @@
         transactions: {
             cacheKey: 'tx',
             columns: ['id', 'date', 'time', 'type', 'category', 'subcategory', 'memo', 'amount', 'currency', 'method'],
-            order: [['date', true]],
+            order: [['date', true], ['id', true]],
+            pageSize: 1000,
         },
         assets: {
             cacheKey: 'asset',
@@ -560,11 +561,26 @@
             const responses = await Promise.all(tables.map(async (table) => {
                 const spec = TABLE_SPECS[table];
                 if (!spec) throw new Error(`UNKNOWN_TABLE: ${table}`);
-                let query = client.from(table).select(spec.columns.join(','));
-                (spec.order || []).forEach(([column, ascending]) => {
-                    query = query.order(column, { ascending });
-                });
-                return { table, spec, response: await query };
+                const pageSize = Math.max(0, Number(spec.pageSize || 0));
+                const rows = [];
+                let pageIndex = 0;
+                while (true) {
+                    let query = client.from(table).select(spec.columns.join(','));
+                    (spec.order || []).forEach(([column, ascending]) => {
+                        query = query.order(column, { ascending });
+                    });
+                    if (pageSize > 0) {
+                        const from = pageIndex * pageSize;
+                        query = query.range(from, from + pageSize - 1);
+                    }
+                    const response = await query;
+                    if (response.error) return { table, spec, response };
+                    const pageRows = response.data || [];
+                    rows.push(...pageRows);
+                    if (pageSize === 0 || pageRows.length < pageSize) break;
+                    pageIndex += 1;
+                }
+                return { table, spec, response: { data: rows, error: null } };
             }));
             const patch = {};
             responses.forEach(({ table, spec, response }) => {
