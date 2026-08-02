@@ -524,6 +524,183 @@
         }
     }
 
+    function getInclusiveReportDays(startKey, endKey) {
+        const start = new Date(`${startKey}T00:00:00`);
+        const end = new Date(`${endKey}T00:00:00`);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return 0;
+        return Math.floor((end - start) / 86400000) + 1;
+    }
+
+    function formatReportDate(dateKey) {
+        const [, month = '', day = ''] = String(dateKey || '').split('-');
+        if (!month || !day) return '-';
+        return `${Number(month)}월 ${Number(day)}일`;
+    }
+
+    function buildMonthlyInterimReport(db, structure, txData = []) {
+        const todayKey = window.AppUtils.toLocalDateString();
+        const startKey = String(db?.periodStart || '');
+        const endKey = String(db?.periodEnd || '');
+        const totalDays = getInclusiveReportDays(startKey, endKey);
+        const reportKey = !startKey || !endKey
+            ? todayKey
+            : (todayKey < startKey ? startKey : (todayKey > endKey ? endKey : todayKey));
+        const progressDays = totalDays > 0 ? getInclusiveReportDays(startKey, reportKey) : 0;
+        const progressPct = totalDays > 0 ? Math.min(100, (progressDays / totalDays) * 100) : 0;
+        const latestTransactionDate = txData
+            .map((item) => String(item?.date || ''))
+            .filter(Boolean)
+            .sort()
+            .at(-1) || '';
+        const boundedLatestDate = latestTransactionDate
+            ? (endKey && latestTransactionDate > endKey ? endKey : latestTransactionDate)
+            : '';
+        const dataDays = boundedLatestDate && startKey
+            ? Math.max(1, getInclusiveReportDays(startKey, boundedLatestDate))
+            : 0;
+        const isClosed = Boolean(endKey && todayKey > endKey) || structure?.reviewStatus === 'confirmed';
+        const periodLabel = String(currentMonthKey || '').split('-');
+        const reportTitle = periodLabel.length === 2
+            ? `${periodLabel[0]}년 ${Number(periodLabel[1])}월 ${isClosed ? '마감현황' : '중간현황'}`
+            : `${db?.title || '월'} ${isClosed ? '마감현황' : '중간현황'}`;
+
+        const spending = Math.max(0, Number(structure?.spending || 0));
+        const currentDailySpending = dataDays > 0 ? spending / dataDays : 0;
+        const projectedSpending = currentDailySpending > 0 && totalDays > 0
+            ? currentDailySpending * totalDays
+            : 0;
+        const selectedIndex = sortedMonthKeys.indexOf(currentMonthKey);
+        const previousKey = selectedIndex > 0 ? sortedMonthKeys[selectedIndex - 1] : '';
+        const previousDb = previousKey ? monthlyDB[previousKey] : null;
+        const previousStructure = previousKey ? getCashFlowStructureSummary(previousKey) : null;
+        const previousLatestDate = (previousDb?.transactions || [])
+            .map((item) => String(item?.date || ''))
+            .filter(Boolean)
+            .sort()
+            .at(-1) || '';
+        const previousDataDays = previousDb?.periodStart && previousLatestDate
+            ? Math.max(1, getInclusiveReportDays(previousDb.periodStart, previousLatestDate))
+            : 0;
+        const previousDailySpending = previousDataDays > 0
+            ? Math.max(0, Number(previousStructure?.spending || 0)) / previousDataDays
+            : 0;
+        const spendingPaceDeltaPct = previousDailySpending > 0
+            ? ((currentDailySpending - previousDailySpending) / previousDailySpending) * 100
+            : null;
+
+        const categoryTotals = txData.reduce((totals, item) => {
+            if (item?.type !== '지출' || String(item?.cat || '').trim() === '상환') return totals;
+            const category = String(item?.cat || '미분류').trim() || '미분류';
+            totals[category] = (totals[category] || 0) + Math.abs(Number(item?.amount || 0));
+            return totals;
+        }, {});
+        const topCategory = Object.entries(categoryTotals)
+            .sort((a, b) => Number(b[1]) - Number(a[1]))[0] || null;
+        const income = Math.max(0, Number(structure?.totalIncome || 0));
+        const retained = Number(structure?.savingAndResidual || 0);
+        const retainedRate = income > 0 ? (retained / income) * 100 : null;
+        const paceDirection = spendingPaceDeltaPct === null
+            ? '비교 기간 없음'
+            : (Math.abs(spendingPaceDeltaPct) < 5
+                ? '직전 기간과 유사'
+                : `직전 기간보다 ${Math.abs(spendingPaceDeltaPct).toFixed(0)}% ${spendingPaceDeltaPct > 0 ? '높음' : '낮음'}`);
+
+        const insights = [
+            {
+                label: '데이터 범위',
+                text: txData.length > 0
+                    ? `${txData.length.toLocaleString()}건이 반영됐으며 최신 거래일은 ${formatReportDate(latestTransactionDate)}입니다.`
+                    : '선택 기간에 반영된 거래가 없습니다.',
+            },
+            {
+                label: '소비 속도',
+                text: dataDays > 0
+                    ? `현재 일평균 소비는 ${formatWon(currentDailySpending)}이며 ${paceDirection}입니다.`
+                    : '소비 속도를 계산할 거래 기간이 부족합니다.',
+            },
+            {
+                label: '핵심 관찰',
+                text: topCategory
+                    ? `가장 큰 소비 분야는 ${topCategory[0]} ${formatWon(topCategory[1])}입니다.`
+                    : (income > 0
+                        ? `저축+잔여는 ${formatWon(retained)}입니다.`
+                        : '수입 또는 소비 분류가 반영되면 핵심 관찰이 표시됩니다.'),
+            },
+        ];
+
+        return {
+            title: reportTitle,
+            isClosed,
+            latestTransactionDate,
+            progressDays,
+            totalDays,
+            progressPct,
+            transactionCount: txData.length,
+            projectedSpending,
+            currentDailySpending,
+            spendingPaceDeltaPct,
+            paceDirection,
+            retained,
+            retainedRate,
+            insights,
+        };
+    }
+
+    function renderMonthlyInterimReport(db, structure, txData = []) {
+        const report = buildMonthlyInterimReport(db, structure, txData);
+        const setText = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
+        };
+        setText('monthly-report-interim-title', report.title);
+        setText(
+            'monthly-report-interim-basis',
+            report.latestTransactionDate
+                ? `${db?.periodStr || ''} · 데이터 기준 ${formatReportDate(report.latestTransactionDate)}`
+                : `${db?.periodStr || ''} · 반영 거래 없음`,
+        );
+        setText('monthly-report-interim-status', report.isClosed ? '마감 리포트' : '진행 중');
+        setText('monthly-report-interim-progress', `${report.progressPct.toFixed(0)}%`);
+        setText('monthly-report-interim-progress-meta', `${report.progressDays}/${report.totalDays}일`);
+        setText('monthly-report-interim-transactions', `${report.transactionCount.toLocaleString()}건`);
+        setText('monthly-report-interim-latest', `최신 ${formatReportDate(report.latestTransactionDate)}`);
+        setText(
+            'monthly-report-interim-spending-forecast',
+            report.projectedSpending > 0 ? formatWon(report.projectedSpending) : '-',
+        );
+        setText('monthly-report-interim-spending-pace', report.paceDirection);
+        setText(
+            'monthly-report-interim-retained-rate',
+            report.retainedRate === null ? '-' : `${report.retainedRate.toFixed(0)}%`,
+        );
+        setText(
+            'monthly-report-interim-retained-meta',
+            report.retainedRate === null ? '수입 반영 전' : `저축+잔여 ${formatWon(report.retained)}`,
+        );
+
+        const progressBar = document.getElementById('monthly-report-interim-progress-bar');
+        if (progressBar) progressBar.style.width = `${Math.max(0, Math.min(100, report.progressPct))}%`;
+
+        const status = document.getElementById('monthly-report-interim-status');
+        if (status) {
+            status.className = `rounded-md border px-2 py-1 text-[10px] font-bold ${
+                report.isClosed
+                    ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
+                    : 'border-indigo-100 bg-indigo-50 text-indigo-700'
+            }`;
+        }
+
+        const insights = document.getElementById('monthly-report-interim-insights');
+        if (insights) {
+            insights.innerHTML = report.insights.map((item) => `
+                <article class="min-w-0 rounded-lg border border-gray-100 bg-white/85 px-2.5 py-2">
+                    <p class="text-[9px] font-bold text-indigo-500">${escapeHtml(item.label)}</p>
+                    <p class="mt-0.5 text-[10px] leading-4 text-gray-600">${escapeHtml(item.text)}</p>
+                </article>
+            `).join('');
+        }
+    }
+
     function renderMonthlyReportPortfolioSummary() {
         const totalElement = document.getElementById('monthly-report-portfolio-total');
         const pricedElement = document.getElementById('monthly-report-portfolio-priced');
@@ -1430,6 +1607,7 @@
         if (selectedIncome) selectedIncome.textContent = formatWon(totalIncome);
         if (selectedExpense) selectedExpense.textContent = formatWon(cashFlowStructure?.spending ?? totalExpense);
         renderCashFlowAllocationPanel(cashFlowStructure);
+        renderMonthlyInterimReport(db, cashFlowStructure, txData);
         renderMonthlyReportSummary(db, cashFlowStructure);
         renderMonthlyReportPortfolioSummary();
 
