@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Supabase Transaction Pagination",
-  "phase": "report",
-  "progress": 100,
-  "updatedAt": "2026-08-02T18:35:00+09:00",
-  "status": "completed",
-  "currentFocus": "Paginated transaction reads are deployed and verified with the signed-in August Monthly Report.",
+  "feature": "Forecast Salary Input Correction",
+  "phase": "check",
+  "progress": 80,
+  "updatedAt": "2026-08-02T18:45:00+09:00",
+  "status": "in_progress",
+  "currentFocus": "Deploy and verify the corrected 2026-2028 forecast with the signed-in server data.",
   "completed": [
     "Created the dedicated Google Cloud project and enabled Gmail API.",
     "Designed a Gmail read-only, ephemeral ZIP/XLSX processing pipeline.",
@@ -35,8 +35,14 @@
     "Implemented 1,000-row range pagination for transaction reads with stable date and ID ordering.",
     "Added and passed a 1,001-row repository regression test and the full npm check suite.",
     "Merged pull request #9 and verified the GitHub Pages deployment completed successfully.",
-    "Verified the signed-in app receives the latest 2026-08-02 transaction and shows 44 August-period transactions."
+    "Verified the signed-in app receives the latest 2026-08-02 transaction and shows 44 August-period transactions.",
+    "Excluded incomplete accounting periods and non-salary income periods from forecast observations.",
+    "Deduplicated same-date and same-amount salary events in forecast inputs without modifying server transactions.",
+    "Separated smaller regular salary events from additional same-period bonus payments.",
+    "Added salary-boundary and semantic-duplicate regression tests and passed the full npm check suite."
   ],
-  "remaining": [],
-  "nextStep": "Review the August interim metrics and decide whether to simplify authentication to magic-link-only copy."
+  "remaining": [
+    "Deploy and verify the signed-in Long-term Goal view."
+  ],
+  "nextStep": "Publish the forecast correction and verify the live Long-term Goal values."
 }
