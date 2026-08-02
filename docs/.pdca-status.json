@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Update 1.04.01 patch v02",
-  "phase": "report",
-  "progress": 100,
-  "updatedAt": "2026-08-02T21:45:00+09:00",
-  "status": "completed",
-  "currentFocus": "Update 1.04.01 patch v02 is merged and verified on GitHub Pages.",
+  "feature": "Income deduplication and full-ledger data quality",
+  "phase": "do",
+  "progress": 45,
+  "updatedAt": "2026-08-02T23:50:00+09:00",
+  "status": "in_progress",
+  "currentFocus": "Implementing guarded welfare-income repair and classification-agnostic transaction identity checks.",
   "completed": [
     "Removed Life Home and routed the Life area directly to Todo.",
     "Replaced mobile goal chips and bottom tabs with a header menu dialog.",
@@ -21,6 +21,11 @@
     "Merged pull request #13 and completed the GitHub Pages deployment.",
     "Verified the deployed mobile tab menu and Todo 진행 중 view."
   ],
-  "remaining": [],
-  "nextStep": "Provide the Update 1.04.02 patch direction after reviewing the deployed build."
+  "remaining": [
+    "Run the service-role full-ledger audit.",
+    "Repair the approved July welfare-income overlap.",
+    "Verify remaining duplicate and classification-conflict candidates.",
+    "Deploy and verify corrected GitHub Pages totals."
+  ],
+  "nextStep": "Complete the audit worker and run the guarded repair through GitHub Actions."
 }

@@ -15,6 +15,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPOSITORY_ROOT / "tools"))
 
 from banksalad_mail_sync import (  # noqa: E402
+    NormalizedTransaction,
     ZipPasswordError,
     decrypt_workbook_from_zip,
     normalize_date,
@@ -71,6 +72,30 @@ class BankSaladParserTests(unittest.TestCase):
         second = parse_workbook_bytes(build_test_workbook()).transactions[0]
         self.assertEqual(first.fingerprint(), second.fingerprint())
         self.assertEqual(len(first.fingerprint()), 64)
+
+    def test_transaction_fingerprint_ignores_classification_changes(self) -> None:
+        base = NormalizedTransaction(
+            date="2026-06-29",
+            time="13:31:33",
+            type="수입",
+            category="기타수입",
+            subcategory="미분류",
+            memo="복리후생환불",
+            amount=10000,
+            currency="KRW",
+            method="월급통장",
+        )
+        reclassified = NormalizedTransaction(
+            **{
+                **base.__dict__,
+                "category": "복지포인트",
+                "subcategory": "복리후생",
+            }
+        )
+        different_event = NormalizedTransaction(**{**base.__dict__, "amount": 12000})
+
+        self.assertEqual(base.fingerprint(), reclassified.fingerprint())
+        self.assertNotEqual(base.fingerprint(), different_event.fingerprint())
 
     def test_decrypts_password_protected_zip_without_extracting_to_disk(self) -> None:
         workbook_bytes = build_test_workbook()
