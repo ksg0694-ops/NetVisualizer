@@ -26,7 +26,7 @@
         supabaseKey: 'sb_publishable_z6KPFqll3gkD7zSPcGtZxQ_b9Bl96Wi'
     };
     const DEFAULT_WEBAPP_URL = userUrls.webapp;
-    const CACHE_KEY = 'smartbook_v2_data_cache_v4';
+    const CACHE_KEY = 'smartbook_v2_data_cache_v5';
     const CACHE_META_KEY = 'smartbook_v2_data_cache_meta_v1';
     const IMPORT_AUDIT_KEY = 'smartbook_v2_tx_import_runs';
     let lastFinanceDataSyncAt = localStorage.getItem(CACHE_META_KEY) || '';
@@ -1143,7 +1143,7 @@
     function parseTxData(rows) {
         monthlyDB = {};
         sortedMonthKeys = [];
-        const transactions = financeRepositoryRuntime.normalizeTableRows('transactions', rows || []);
+        const transactions = financeRepositoryRuntime.selectOperationalTransactionRows(rows || []);
 
         transactions.forEach(row => {
             let dateStr = String(row.date || '').replace(/[\.\/]/g, '-').replace(/\s/g, '');

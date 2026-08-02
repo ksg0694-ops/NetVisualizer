@@ -33,6 +33,7 @@ from openpyxl import load_workbook
 
 LOGGER = logging.getLogger("banksalad-mail-sync")
 SOURCE = "banksalad_gmail"
+DEFAULT_IMPORT_START_DATE = "2026-07-24"
 DEFAULT_MAIL_QUERY = (
     "from:export-noreply@banksalad.com has:attachment filename:zip newer_than:30d"
 )
@@ -178,6 +179,22 @@ def require_env(name: str) -> str:
     if not value:
         raise SyncError(f"missing_environment:{name}")
     return value
+
+
+def resolve_import_start_date() -> str:
+    value = os.getenv("BANKSALAD_IMPORT_START_DATE", DEFAULT_IMPORT_START_DATE).strip()
+    try:
+        date.fromisoformat(value)
+    except ValueError as error:
+        raise SyncError("invalid_banksalad_import_start_date") from error
+    return value
+
+
+def select_incremental_transactions(
+    transactions: Sequence[NormalizedTransaction],
+    import_start_date: str,
+) -> list[NormalizedTransaction]:
+    return [transaction for transaction in transactions if transaction.date >= import_start_date]
 
 
 def normalize_text(value: Any, fallback: str = "") -> str:
@@ -638,15 +655,20 @@ def process_attachment(
     database: SupabaseRest | None,
     existing_fingerprints: set[str],
     dry_run: bool,
+    import_start_date: str,
 ) -> dict[str, Any]:
     workbook_bytes = decrypt_workbook_from_zip(attachment.data, password)
     result = parse_workbook_bytes(workbook_bytes)
+    eligible_transactions = select_incremental_transactions(
+        result.transactions,
+        import_start_date,
+    )
     new_transactions = [
         transaction
-        for transaction in result.transactions
+        for transaction in eligible_transactions
         if transaction.fingerprint() not in existing_fingerprints
     ]
-    skipped_existing = len(result.transactions) - len(new_transactions)
+    skipped_existing = len(eligible_transactions) - len(new_transactions)
 
     inserted = 0
     if not dry_run:
@@ -663,6 +685,9 @@ def process_attachment(
         "sheet_name": result.sheet_name,
         "rows_seen": result.rows_seen,
         "rows_valid": len(result.transactions),
+        "import_start_date": import_start_date,
+        "rows_eligible_incremental": len(eligible_transactions),
+        "rows_ignored_before_start": len(result.transactions) - len(eligible_transactions),
         "rows_inserted": inserted,
         "rows_duplicate_file": result.duplicate_rows,
         "rows_duplicate_existing": skipped_existing,
@@ -672,6 +697,7 @@ def process_attachment(
 
 def run_gmail_sync(args: argparse.Namespace) -> int:
     password = require_env("BANKSALAD_ZIP_PASSWORD")
+    import_start_date = resolve_import_start_date()
     service = build_gmail_service()
     database = None if args.dry_run else build_database_from_env()
     message_ids = list_matching_message_ids(service, args.mail_query, args.max_messages)
@@ -710,6 +736,7 @@ def run_gmail_sync(args: argparse.Namespace) -> int:
                 database,
                 existing,
                 args.dry_run,
+                import_start_date,
             )
             LOGGER.info("Message %s summary: %s", attachment.message_id, json.dumps(summary, ensure_ascii=False))
             if database is not None:
@@ -742,10 +769,18 @@ def run_local_zip(args: argparse.Namespace) -> int:
     zip_bytes = Path(args.zip_file).read_bytes()
     workbook_bytes = decrypt_workbook_from_zip(zip_bytes, password)
     result = parse_workbook_bytes(workbook_bytes)
+    import_start_date = resolve_import_start_date()
+    incremental_transactions = select_incremental_transactions(
+        result.transactions,
+        import_start_date,
+    )
     summary = {
         "sheet_name": result.sheet_name,
         "rows_seen": result.rows_seen,
         "rows_valid": len(result.transactions),
+        "import_start_date": import_start_date,
+        "rows_eligible_incremental": len(incremental_transactions),
+        "rows_ignored_before_start": len(result.transactions) - len(incremental_transactions),
         "rows_duplicate_file": result.duplicate_rows,
         "rows_invalid": result.invalid_rows,
     }

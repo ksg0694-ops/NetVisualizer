@@ -15,12 +15,14 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPOSITORY_ROOT / "tools"))
 
 from banksalad_mail_sync import (  # noqa: E402
+    DEFAULT_IMPORT_START_DATE,
     NormalizedTransaction,
     ZipPasswordError,
     decrypt_workbook_from_zip,
     normalize_date,
     normalize_time,
     parse_workbook_bytes,
+    select_incremental_transactions,
 )
 
 
@@ -96,6 +98,29 @@ class BankSaladParserTests(unittest.TestCase):
 
         self.assertEqual(base.fingerprint(), reclassified.fingerprint())
         self.assertNotEqual(base.fingerprint(), different_event.fingerprint())
+
+    def test_incremental_cutover_excludes_pre_august_history(self) -> None:
+        base = NormalizedTransaction(
+            date="2026-07-23",
+            time="13:31:33",
+            type="지출",
+            category="생활비",
+            subcategory="미분류",
+            memo="점검",
+            amount=-10000,
+            currency="KRW",
+            method="생활비통장",
+        )
+        new_transaction = NormalizedTransaction(
+            **{**base.__dict__, "date": DEFAULT_IMPORT_START_DATE}
+        )
+
+        selected = select_incremental_transactions(
+            [base, new_transaction],
+            DEFAULT_IMPORT_START_DATE,
+        )
+
+        self.assertEqual(selected, [new_transaction])
 
     def test_decrypts_password_protected_zip_without_extracting_to_disk(self) -> None:
         workbook_bytes = build_test_workbook()
