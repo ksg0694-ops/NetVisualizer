@@ -65,6 +65,61 @@
         };
     }
 
+    function isCompletedForecastPeriod(period = {}, today = '') {
+        const endDate = String(period.endDate || period.periodEnd || '').slice(0, 10);
+        const todayKey = String(today || '').slice(0, 10);
+        return Boolean(endDate && todayKey && endDate < todayKey);
+    }
+
+    function getPeriodBaseSalary(transactions = []) {
+        const salaryRows = (Array.isArray(transactions) ? transactions : [])
+            .filter((transaction) => (
+                transaction?.type === '수입'
+                && /급여|월급/u.test(`${String(transaction?.category || '')} ${String(transaction?.memo || '')}`)
+            ))
+            .map((transaction) => ({
+                date: String(transaction?.date || '').replace(/[./]/g, '-').slice(0, 10),
+                amount: Math.abs(Number(transaction?.amount || 0)),
+            }))
+            .filter((event) => event.date && Number.isFinite(event.amount) && event.amount > 0);
+        const uniqueEvents = [];
+        const seen = new Set();
+        salaryRows.forEach((event) => {
+            const key = `${event.date}|${event.amount}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            uniqueEvents.push(event);
+        });
+        const amounts = uniqueEvents.map((event) => event.amount);
+        return {
+            baseSalary: amounts.length ? Math.min(...amounts) : 0,
+            rawEventCount: salaryRows.length,
+            uniqueEventCount: uniqueEvents.length,
+            duplicateCount: salaryRows.length - uniqueEvents.length,
+        };
+    }
+
+    function buildCompletedSalaryObservations(
+        periods = [],
+        today = '',
+        referenceMonthKey = '',
+        summarizePeriod = () => null,
+    ) {
+        return (Array.isArray(periods) ? periods : [])
+            .filter((period) => !referenceMonthKey || String(period?.key || '') <= referenceMonthKey)
+            .filter((period) => isCompletedForecastPeriod(period, today))
+            .sort((a, b) => String(a?.key || '').localeCompare(String(b?.key || '')))
+            .map((period) => ({
+                key: period.key,
+                summary: summarizePeriod(period),
+                salaryEvidence: getPeriodBaseSalary(period.transactions),
+            }))
+            .filter((item) => (
+                Number(item.summary?.totalIncome || 0) > 0
+                && Number(item.salaryEvidence?.baseSalary || 0) > 0
+            ));
+    }
+
     function buildAssetIncomeForecastPath(data, incomeForecast) {
         const values = Array.isArray(data) ? data : [];
         const lastActualIndex = values.reduce(
@@ -232,6 +287,9 @@
         median,
         calculateLinearTrend,
         buildSalaryCalendarForecast,
+        isCompletedForecastPeriod,
+        getPeriodBaseSalary,
+        buildCompletedSalaryObservations,
         buildAssetIncomeForecastPath,
         buildThreeYearRoadmap,
         buildCalendarYearRoadmap,

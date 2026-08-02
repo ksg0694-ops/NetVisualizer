@@ -38,6 +38,52 @@ assert.equal(
     52_000_000,
 );
 
+assert.equal(
+    forecast.isCompletedForecastPeriod({ endDate: '2026-07-23' }, '2026-08-02'),
+    true,
+);
+assert.equal(
+    forecast.isCompletedForecastPeriod({ endDate: '2026-08-24' }, '2026-08-02'),
+    false,
+);
+
+const salaryEvidence = forecast.getPeriodBaseSalary([
+    { date: '2026-01-23', type: '수입', category: '급여', memo: '1월 급여', amount: 3_497_000, method: '계좌 A' },
+    { date: '2026-01-23', type: '수입', category: '급여', memo: '1월 급여 입금', amount: 3_497_000, method: '계좌 B' },
+    { date: '2026-02-06', type: '수입', category: '급여', memo: '상여', amount: 7_556_000, method: '계좌 A' },
+    { date: '2026-02-06', type: '수입', category: '급여', memo: '상여 입금', amount: 7_556_000, method: '계좌 B' },
+    { date: '2026-02-07', type: '수입', category: '금융수입', memo: '이자', amount: 277, method: '계좌 A' },
+]);
+assert.deepEqual(
+    { ...salaryEvidence },
+    { baseSalary: 3_497_000, rawEventCount: 4, uniqueEventCount: 2, duplicateCount: 2 },
+);
+
+const completedSalaryObservations = forecast.buildCompletedSalaryObservations(
+    [
+        {
+            key: '2025-08',
+            endDate: '2025-08-24',
+            transactions: [{ date: '2025-08-02', type: '수입', category: '금융수입', memo: '이자', amount: 466_938 }],
+        },
+        {
+            key: '2026-07',
+            endDate: '2026-07-23',
+            transactions: [{ date: '2026-06-25', type: '수입', category: '급여', memo: '월급', amount: 3_998_000 }],
+        },
+        {
+            key: '2026-08',
+            endDate: '2026-08-24',
+            transactions: [{ date: '2026-07-24', type: '수입', category: '급여', memo: '월급', amount: 3_902_000 }],
+        },
+    ],
+    '2026-08-02',
+    '2026-08',
+    (period) => ({ totalIncome: period.transactions.reduce((sum, row) => sum + row.amount, 0) }),
+);
+assert.deepEqual(Array.from(completedSalaryObservations, (item) => item.key), ['2026-07']);
+assert.equal(completedSalaryObservations[0].salaryEvidence.baseSalary, 3_998_000);
+
 const flatProjection = forecast.buildAssetIncomeForecastPath(
     [100_000_000, null, null, null],
     {

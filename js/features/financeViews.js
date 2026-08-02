@@ -79,14 +79,16 @@
     }
 
     function buildIncomeTrendForecast(referenceMonthKey) {
-        const observations = getCashFlowPeriods()
-            .filter((period) => !referenceMonthKey || period.key <= referenceMonthKey)
-            .sort((a, b) => a.key.localeCompare(b.key))
-            .map((period) => ({ key: period.key, summary: getCashFlowStructureSummary(period.key) }))
-            .filter((item) => Number(item.summary?.totalIncome || 0) > 0);
+        const today = window.AppUtils?.toLocalDateString?.() || '';
+        const observations = window.FinanceForecastFeature.buildCompletedSalaryObservations(
+            getCashFlowPeriods(),
+            today,
+            referenceMonthKey,
+            (period) => getCashFlowStructureSummary(period.key),
+        );
         const incomes = observations.map((item) => Number(item.summary.totalIncome || 0));
         const monthlySalaries = observations
-            .map((item) => Number(item.summary.salaryAllocation?.salaryIncome || item.summary.totalIncome || 0))
+            .map((item) => Number(item.salaryEvidence.baseSalary || 0))
             .filter((value) => value > 0);
         const retentionRates = observations
             .map((item) => Number(item.summary.savingAndResidual || 0) / Number(item.summary.totalIncome || 1))
@@ -107,6 +109,10 @@
             incomeSlope: trend.slope,
             fittedLatestIncome: trend.fittedLatest,
             retentionRate: retentionRates.length ? median(retentionRates) : 0,
+            duplicateSalaryEvents: observations.reduce(
+                (sum, item) => sum + Number(item.salaryEvidence?.duplicateCount || 0),
+                0,
+            ),
             ...salaryCalendar,
         };
     }
