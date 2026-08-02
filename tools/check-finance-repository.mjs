@@ -7,6 +7,7 @@ assert.ok(repository, 'FinanceRepository global must be available');
 assert.ok(repository.DEFAULT_DATA_TABLES.includes('transactions'));
 assert.ok(repository.DEFAULT_DATA_TABLES.includes('finance_month_closes'));
 assert.ok(repository.TABLE_SPECS.transactions.columns.includes('id'));
+assert.ok(repository.TABLE_SPECS.transactions.columns.includes('source'));
 assert.ok(repository.TABLE_SPECS.portfolios.columns.includes('account_order'));
 assert.ok(repository.TABLE_SPECS.portfolios.columns.includes('asset_class'));
 assert.ok(repository.TABLE_SPECS.portfolios.columns.includes('purpose_key'));
@@ -25,6 +26,14 @@ const legacyTransactions = [
 const normalizedTransactions = repository.normalizeTableRows('transactions', legacyTransactions);
 assert.equal(normalizedTransactions.length, 2);
 assert.equal(normalizedTransactions[0].amount, 3_908_580);
+assert.equal(normalizedTransactions[0].source, 'manual');
+
+const operationalTransactions = repository.selectOperationalTransactionRows([
+    { ...normalizedTransactions[0], id: 'manual-old', date: '2026-07-22', source: 'manual' },
+    { ...normalizedTransactions[1], id: 'gmail-old', date: '2026-07-23', source: 'banksalad_gmail' },
+    { ...normalizedTransactions[1], id: 'gmail-new', date: '2026-07-24', source: 'banksalad_gmail' },
+]);
+assert.deepEqual(operationalTransactions.map((row) => row.id), ['manual-old', 'gmail-new']);
 assert.equal(normalizedTransactions[1].category, '식비');
 
 const normalizedPortfolio = repository.normalizeTableRows('portfolios', [{

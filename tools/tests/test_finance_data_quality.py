@@ -11,6 +11,7 @@ sys.path.insert(0, str(REPOSITORY_ROOT / "tools"))
 from finance_data_quality import (  # noqa: E402
     approved_refund_delete_candidates,
     audit_transactions,
+    calculation_scope_summary,
     confirmed_bonus_reclassification_candidates,
     confirmed_historical_refund_delete_candidates,
     welfare_refund_overlap_candidates,
@@ -47,6 +48,25 @@ def transaction(
 
 
 class FinanceDataQualityTests(unittest.TestCase):
+    def test_calculation_scope_keeps_manual_history_and_only_new_gmail_rows(self) -> None:
+        manual = transaction("manual-old", date="2026-07-22", amount=-10000, transaction_type="지출")
+        gmail_old = {
+            **transaction("gmail-old", date="2026-07-22", amount=-10000, transaction_type="지출"),
+            "source": "banksalad_gmail",
+        }
+        gmail_new = {
+            **transaction("gmail-new", date="2026-07-24", amount=-12000, transaction_type="지출"),
+            "source": "banksalad_gmail",
+        }
+
+        scope = calculation_scope_summary([manual, gmail_old, gmail_new])
+
+        self.assertEqual(scope["raw_rows"], 3)
+        self.assertEqual(scope["counted_rows"], 2)
+        self.assertEqual(scope["excluded_historical_gmail_rows"], 1)
+        self.assertEqual(scope["excluded_by_type"]["지출"]["absolute_amount"], 10000)
+        self.assertEqual(scope["source_ranges"]["manual"]["last_date"], "2026-07-22")
+
     def test_audit_separates_exact_duplicates_from_classification_conflicts(self) -> None:
         rows = [
             transaction("legacy-1"),

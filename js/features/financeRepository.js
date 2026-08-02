@@ -1,8 +1,10 @@
 (function (root) {
+    const BANKSALAD_SOURCE = 'banksalad_gmail';
+    const BANKSALAD_INCREMENTAL_START_DATE = '2026-07-24';
     const TABLE_SPECS = Object.freeze({
         transactions: {
             cacheKey: 'tx',
-            columns: ['id', 'date', 'time', 'type', 'category', 'subcategory', 'memo', 'amount', 'currency', 'method'],
+            columns: ['id', 'date', 'time', 'type', 'category', 'subcategory', 'memo', 'amount', 'currency', 'method', 'source'],
             order: [['date', true], ['id', true]],
             pageSize: 1000,
         },
@@ -190,6 +192,7 @@
             amount: Math.round(finiteNumber(row.amount)),
             currency: String(row.currency || 'KRW'),
             method: String(row.method || ''),
+            source: String(row.source || 'manual'),
         };
     }
 
@@ -324,11 +327,27 @@
         return source.map((row) => ({ ...row }));
     }
 
+    function selectOperationalTransactionRows(
+        rows = [],
+        incrementalStartDate = BANKSALAD_INCREMENTAL_START_DATE,
+    ) {
+        const startDate = String(incrementalStartDate || BANKSALAD_INCREMENTAL_START_DATE);
+        return normalizeTableRows('transactions', rows).filter((row) => (
+            row.source !== BANKSALAD_SOURCE || row.date >= startDate
+        ));
+    }
+
     function normalizeCache(data = {}) {
         const normalized = {};
         Object.entries(TABLE_SPECS).forEach(([table, spec]) => {
             const rows = data[spec.cacheKey];
-            normalized[spec.cacheKey] = Array.isArray(rows) ? normalizeTableRows(table, rows) : null;
+            if (!Array.isArray(rows)) {
+                normalized[spec.cacheKey] = null;
+                return;
+            }
+            normalized[spec.cacheKey] = table === 'transactions'
+                ? selectOperationalTransactionRows(rows)
+                : normalizeTableRows(table, rows);
         });
         return normalized;
     }
@@ -464,7 +483,7 @@
     }
 
     function mergeTransactionRows(currentRows = [], insertedRows = []) {
-        return [...normalizeTableRows('transactions', currentRows), ...normalizeTableRows('transactions', insertedRows)]
+        return selectOperationalTransactionRows([...currentRows, ...insertedRows])
             .sort((a, b) => `${a.date} ${a.time || '00:00'}`.localeCompare(`${b.date} ${b.time || '00:00'}`));
     }
 
@@ -528,7 +547,7 @@
     function buildAccountingPeriods(rows = [], resolvePeriod) {
         if (typeof resolvePeriod !== 'function') return [];
         const periods = new Map();
-        normalizeTableRows('transactions', rows).forEach((row) => {
+        selectOperationalTransactionRows(rows).forEach((row) => {
             const period = resolvePeriod(row.date);
             if (!period?.monthKey || !period.periodStart || !period.periodEnd) return;
             const current = periods.get(period.monthKey) || {
@@ -649,6 +668,8 @@
     }
 
     root.FinanceRepository = Object.freeze({
+        BANKSALAD_INCREMENTAL_START_DATE,
+        BANKSALAD_SOURCE,
         ALL_DATA_TABLES,
         DEFAULT_DATA_TABLES,
         REAL_ESTATE_DETAIL_TABLES,
@@ -664,6 +685,7 @@
         mergeTransactionRows,
         normalizeCache,
         normalizeTableRows,
+        selectOperationalTransactionRows,
         toFinanceMonthClosePayload,
         toPortfolioMonthlySnapshotPayload,
         toPortfolioPayload,

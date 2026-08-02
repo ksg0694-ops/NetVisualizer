@@ -14,3 +14,7 @@ tools/external/
 
 # Local Node toolchain
 node_modules/
+
+# Local Python test caches
+__pycache__/
+*.py[cod]

@@ -28,6 +28,8 @@ CONFIRMED_BONUS_DATE = "2026-04-09"
 CONFIRMED_BONUS_AMOUNT = 800000
 LEGACY_BONUS_CATEGORY = "금융수입"
 CONFIRMED_BONUS_CATEGORY = "상여금"
+BANKSALAD_SOURCE = "banksalad_gmail"
+BANKSALAD_IMPORT_START_DATE = "2026-07-24"
 PAGE_SIZE = 1000
 TRANSACTION_SELECT = ",".join(
     [
@@ -198,7 +200,53 @@ def hashed_key(key: tuple[Any, ...]) -> str:
     return sha256(serialized.encode("utf-8")).hexdigest()[:12]
 
 
+def calculation_scope_summary(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    excluded = [
+        row
+        for row in rows
+        if normalize_text(row.get("source")) == BANKSALAD_SOURCE
+        and normalize_text(row.get("date")) < BANKSALAD_IMPORT_START_DATE
+    ]
+    counted = [row for row in rows if row not in excluded]
+    source_dates: dict[str, list[str]] = defaultdict(list)
+    for row in rows:
+        source = normalize_text(row.get("source")) or "legacy"
+        row_date = normalize_text(row.get("date"))
+        if row_date:
+            source_dates[source].append(row_date)
+    source_ranges = {
+        source: {
+            "rows": len([row for row in rows if (normalize_text(row.get("source")) or "legacy") == source]),
+            "first_date": min(dates),
+            "last_date": max(dates),
+        }
+        for source, dates in sorted(source_dates.items())
+    }
+    excluded_type_counts = Counter(normalize_text(row.get("type")) for row in excluded)
+    excluded_type_amounts: Counter[str] = Counter()
+    for row in excluded:
+        excluded_type_amounts[normalize_text(row.get("type"))] += abs(amount_value(row.get("amount")))
+    return {
+        "banksalad_import_start_date": BANKSALAD_IMPORT_START_DATE,
+        "raw_rows": len(rows),
+        "counted_rows": len(counted),
+        "excluded_historical_gmail_rows": len(excluded),
+        "excluded_month_counts": dict(
+            sorted(Counter(normalize_text(row.get("date"))[:7] for row in excluded).items())
+        ),
+        "excluded_by_type": {
+            key: {
+                "rows": excluded_type_counts[key],
+                "absolute_amount": excluded_type_amounts[key],
+            }
+            for key in sorted(excluded_type_counts)
+        },
+        "source_ranges": source_ranges,
+    }
+
+
 def audit_transactions(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    calculation_scope = calculation_scope_summary(rows)
     raw_exact_groups = [
         group for group in group_rows(rows, exact_business_key).values() if len(group) > 1
     ]
@@ -303,6 +351,7 @@ def audit_transactions(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             "source_counts": dict(sorted(source_counts.items())),
             "month_counts": dict(sorted(month_counts.items())),
         },
+        "calculation_scope": calculation_scope,
         "validity": {
             "missing_required_rows": missing_required,
             "invalid_type_rows": sum(
