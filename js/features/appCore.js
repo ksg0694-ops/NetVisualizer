@@ -118,8 +118,8 @@
     let txImportRawRows = null;
     let txImportSourceMeta = null;
     let txImportAuditRuns = [];
-    const AUTH_REQUIRED_FOR_REMOTE = false;
-    const CLOUD_AUTH_PAUSED = true;
+    const AUTH_REQUIRED_FOR_REMOTE = true;
+    const CLOUD_AUTH_PAUSED = false;
     const APP_FEATURE_FLAGS = Object.freeze({
         health: false,
         quantStrategy: false,
@@ -532,6 +532,7 @@
         const statusEl = document.getElementById('auth-status');
         const emailEl = document.getElementById('auth-email');
         const passwordEl = document.getElementById('auth-password');
+        const magicLinkBtn = document.getElementById('btn-auth-sign-in');
         const passwordSignInBtn = document.getElementById('btn-auth-password-sign-in');
         const passwordSignUpBtn = document.getElementById('btn-auth-password-sign-up');
         const signOutBtn = document.getElementById('btn-auth-sign-out');
@@ -543,7 +544,7 @@
                 statusEl.className = 'rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700';
                 statusEl.innerHTML = '<i class="fas fa-database text-xs mr-1"></i> 로그인 없이 서버 데이터에 연결합니다.';
             }
-            [emailEl, passwordEl, passwordSignInBtn, passwordSignUpBtn, signOutBtn].forEach((el) => el?.classList.add('hidden'));
+            [emailEl, passwordEl, magicLinkBtn, passwordSignInBtn, passwordSignUpBtn, signOutBtn].forEach((el) => el?.classList.add('hidden'));
             if (sidebarSync) sidebarSync.innerHTML = `<i class="fas fa-database text-[10px] text-emerald-500"></i> 서버 연결`;
             if (syncStatus) {
                 syncStatus.textContent = '서버 연결';
@@ -562,6 +563,7 @@
         }
         if (emailEl) emailEl.value = emailEl.value || email;
         if (passwordEl) passwordEl.classList.toggle('hidden', signedIn);
+        if (magicLinkBtn) magicLinkBtn.classList.toggle('hidden', signedIn);
         if (passwordSignInBtn) passwordSignInBtn.classList.toggle('hidden', signedIn);
         if (passwordSignUpBtn) passwordSignUpBtn.classList.toggle('hidden', signedIn);
         if (signOutBtn) signOutBtn.classList.toggle('hidden', !signedIn);
