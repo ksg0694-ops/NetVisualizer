@@ -938,6 +938,47 @@
                 </div>
 
                 <div class="grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-12">
+                    <section id="monthly-report-interim-summary" class="min-w-0 rounded-xl border border-indigo-100 bg-gradient-to-br from-white via-white to-indigo-50/70 p-3 shadow-sm xl:col-span-12">
+                        <div class="grid min-w-0 gap-2 lg:grid-cols-[190px_minmax(0,1.25fr)_minmax(420px,0.9fr)] lg:items-stretch">
+                            <div class="min-w-0">
+                                <p class="text-[9px] font-bold uppercase tracking-[0.16em] text-indigo-500">Executive Summary</p>
+                                <h2 id="monthly-report-interim-title" class="mt-0.5 text-lg font-black tracking-tight text-gray-900">월 중간현황</h2>
+                                <p id="monthly-report-interim-basis" class="mt-0.5 text-[10px] text-gray-500">데이터 기준 확인 중</p>
+                                <div class="mt-2 flex items-center gap-2">
+                                    <div class="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-indigo-100" aria-hidden="true">
+                                        <div id="monthly-report-interim-progress-bar" class="h-full rounded-full bg-indigo-500 transition-all" style="width:0%"></div>
+                                    </div>
+                                    <span id="monthly-report-interim-status" class="rounded-md border border-indigo-100 bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700">확인 중</span>
+                                </div>
+                            </div>
+                            <div id="monthly-report-interim-insights" class="grid min-w-0 gap-1.5 sm:grid-cols-3">
+                                <p class="rounded-lg border border-gray-100 bg-white/80 px-2.5 py-2 text-[10px] leading-4 text-gray-500">거래 데이터를 분석하고 있습니다.</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                                <article class="min-w-0 rounded-lg border border-gray-100 bg-white/85 px-2.5 py-2">
+                                    <p class="text-[9px] font-bold text-gray-400">기간 진행</p>
+                                    <p id="monthly-report-interim-progress" class="mt-0.5 text-sm font-black text-indigo-700">0%</p>
+                                    <p id="monthly-report-interim-progress-meta" class="truncate text-[9px] text-gray-400">0/0일</p>
+                                </article>
+                                <article class="min-w-0 rounded-lg border border-gray-100 bg-white/85 px-2.5 py-2">
+                                    <p class="text-[9px] font-bold text-gray-400">반영 거래</p>
+                                    <p id="monthly-report-interim-transactions" class="mt-0.5 text-sm font-black text-gray-800">0건</p>
+                                    <p id="monthly-report-interim-latest" class="truncate text-[9px] text-gray-400">최신 -</p>
+                                </article>
+                                <article class="min-w-0 rounded-lg border border-gray-100 bg-white/85 px-2.5 py-2">
+                                    <p class="text-[9px] font-bold text-gray-400">월말 소비 추정</p>
+                                    <p id="monthly-report-interim-spending-forecast" class="mt-0.5 truncate text-sm font-black text-rose-700">-</p>
+                                    <p id="monthly-report-interim-spending-pace" class="truncate text-[9px] text-gray-400">비교 기간 확인 중</p>
+                                </article>
+                                <article class="min-w-0 rounded-lg border border-gray-100 bg-white/85 px-2.5 py-2">
+                                    <p class="text-[9px] font-bold text-gray-400">저축+잔여율</p>
+                                    <p id="monthly-report-interim-retained-rate" class="mt-0.5 text-sm font-black text-emerald-700">-</p>
+                                    <p id="monthly-report-interim-retained-meta" class="truncate text-[9px] text-gray-400">수입 반영 전</p>
+                                </article>
+                            </div>
+                        </div>
+                    </section>
+
                     <section class="min-w-0 rounded-xl border border-gray-100 bg-white p-3 shadow-sm xl:col-span-7">
                         <div class="mb-2 flex items-center justify-between gap-3">
                             <div>
