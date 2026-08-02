@@ -24,7 +24,6 @@ const requiredScripts = [
     './js/features/financeForecast.js',
     './js/generated/personal-cfo-domain.js',
     './js/features/monthlyClose.js',
-    './js/features/lifeDashboard.js',
 ];
 requiredScripts.forEach((script) => assert.ok(index.includes(script), `${script} must be loaded`));
 
@@ -50,7 +49,7 @@ assert.ok(index.includes('id="monthly-report-interim-title"'));
 assert.ok(index.includes('id="monthly-report-interim-insights"'));
 assert.ok(index.includes('id="monthly-report-interim-spending-forecast"'));
 assert.ok(index.includes('id="monthly-report-interim-retained-rate"'));
-assert.ok(index.includes('./js/features/appCore.js?v=20260802-interim-report-1'));
+assert.ok(index.includes('./js/features/appCore.js?v=20260802-update-10401-patch-v02'));
 assert.ok(index.includes('./js/features/financeForecast.js?v=20260802-forecast-input-1'));
 assert.ok(index.includes('./js/features/financeViews.js?v=20260802-forecast-input-1'));
 assert.ok(index.includes('./js/features/financeRepository.js?v=20260802-pagination-1'));
@@ -100,8 +99,14 @@ assert.ok(!index.includes('id="realestate-map"'));
 assert.ok(index.indexOf('id="finance-decision-inbox"') < index.indexOf('id="dashboardAssetChart"'), 'finance decisions must appear before the asset chart');
 assert.ok(index.includes('id="btn-goal-home-label"'));
 assert.ok(appShell.includes("? '재무 홈'"));
-assert.ok(appShell.includes("? '생활 홈'"));
-assert.ok(appShell.includes("window.LifeDashboardFeature?.render()"));
+assert.ok(!index.includes('id="life-view"'), 'Life Home must be removed');
+assert.ok(!appShell.includes("window.LifeDashboardFeature?.render()"), 'removed Life Home must not render');
+assert.ok(index.includes('id="btn-mobile-menu"'));
+assert.ok(index.includes('#btn-goal-home { display: none !important; }'));
+assert.ok(index.includes('id="mobile-navigation-dialog"'));
+assert.ok(index.includes('data-mobile-nav-target="routine-checklist-view"'));
+assert.ok(!index.includes('id="mobile-tool-nav"'), 'mobile bottom tabs must be replaced by the menu dialog');
+assert.ok(!index.includes('mobile-goal-link'), 'mobile goal chips must be replaced by the menu dialog');
 assert.ok(appCore.includes('health: false'));
 assert.ok(appCore.includes('quantStrategy: false'));
 assert.ok(appCore.includes('const DEFAULT_INVEST_STRATEGY_META = Object.freeze'));
@@ -113,6 +118,16 @@ assert.ok(checklist.includes('selectTask'));
 assert.ok(checklist.includes('id="checklist-domain-filter"'));
 assert.ok(checklist.includes('data-checklist-domain-choice'));
 assert.ok(checklist.includes('role="radiogroup"'));
+assert.ok(checklist.includes("renderFilterButton('open', '진행 중'"));
+assert.ok(!checklist.includes('완료 항목 지우기'));
+assert.ok(!checklist.includes('function clearDone()'));
+assert.ok(checklist.includes('tasks = saveStore(remoteTasks)'));
+assert.ok(!checklist.includes('saveStore([...remoteTasks, ...localTasks])'), 'stale local tasks must not resurrect remote deletions');
+assert.ok(checklist.includes('async function refreshFromServer()'));
+assert.ok(appCore.includes('await window.ChecklistFeature?.refreshFromServer?.()'));
+assert.ok(checklist.includes('서버 삭제에 실패해 항목을 복원했습니다.'));
+assert.ok(checklist.includes('data-checklist-detail-dialog'));
+assert.ok(checklist.includes('sm:h-auto sm:max-h-[calc(100vh-2rem)]'));
 assert.ok(checklist.includes('aria-pressed="${task.completed}"'));
 assert.ok(!checklist.includes('<input type="checkbox" data-checklist-toggle='));
 assert.ok(checklist.includes('data-step-editor-toggle'));
@@ -130,6 +145,9 @@ assert.ok(!lifeDashboard.includes('PersonalCfoFeature'), 'Life dashboard must no
 assert.ok(!lifeDashboard.includes('data-life-project'), 'Life dashboard must not expose CFO project routes');
 assert.ok(!lifeDashboard.includes('HealthTrackerFeature'), 'disabled health must not remain on the Life dashboard');
 assert.ok(!lifeDashboard.includes('task.dueDate'), 'todo dates must not appear on the Life dashboard');
+assert.ok(index.includes('id="auth-feedback"'));
+assert.ok(appCore.includes('function setAuthFeedback'));
+assert.ok(appCore.includes('setAuthFeedback(`로그인 실패: ${error.message}`, \'error\')'));
 assert.ok(cfo.includes('renderMobileFinanceSummary'));
 assert.ok(cfo.includes('getDashboardSnapshot'));
 assert.ok(cfo.includes('const emptySnapshot = domain.createEmptyPersonalCfoSnapshot()'));

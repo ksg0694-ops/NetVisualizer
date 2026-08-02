@@ -37,7 +37,6 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     const views = {
         'dashboard-view': document.getElementById('dashboard-view'), 'portfolio-view': document.getElementById('portfolio-view'),
         'career-view': document.getElementById('career-view'), 'project-view': document.getElementById('project-view'),
-        'life-view': document.getElementById('life-view'),
         'routine-checklist-view': document.getElementById('routine-checklist-view'),
         'health-view': document.getElementById('health-view'),
         'personal-cfo-view': document.getElementById('personal-cfo-view'),
@@ -48,7 +47,6 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
 
     const viewContextMeta = {
         'dashboard-view': { label: '재무 목표', title: '재무 홈' },
-        'life-view': { label: '생활 관리', title: '생활 홈' },
         'routine-checklist-view': { label: '생활 도구', title: '할 일' },
         'health-view': { label: '생활 도구', title: '건강 기록' },
         'personal-cfo-view': { label: '재무 도구', title: '개인 CFO' },
@@ -61,20 +59,8 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     };
 
     const financeToolViews = new Set(['personal-cfo-view', 'portfolio-view', 'stats-view', 'cashflow-view', 'asset-view', 'realestate-view', 'invest-detail-view']);
-    const lifeToolViews = new Set(['routine-checklist-view']);
-    const mobileToolNav = document.getElementById('mobile-tool-nav');
-    const mobileToolGroups = {
-        'dashboard-view': [
-            { target: 'stats-view', icon: 'fa-file-invoice-dollar', label: 'Report' },
-            { target: 'cashflow-view', icon: 'fa-arrow-right-arrow-left', label: '현금흐름' },
-            { target: 'portfolio-view', icon: 'fa-briefcase', label: '포트폴리오' },
-            { target: 'asset-view', icon: 'fa-bullseye', label: '장기 목표' },
-            { target: 'personal-cfo-view', icon: 'fa-diagram-project', label: '개인 CFO' }
-        ],
-        'life-view': [
-            { target: 'routine-checklist-view', icon: 'fa-list-check', label: '할 일' }
-        ]
-    };
+    const mobileNavigationDialog = document.getElementById('mobile-navigation-dialog');
+    const mobileMenuButton = document.getElementById('btn-mobile-menu');
 
     function isFeatureEnabled(name) {
         return window.APP_FEATURE_FLAGS?.[name] !== false;
@@ -91,7 +77,6 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
 
     function resolveActiveGoalTarget(targetId) {
         if (financeToolViews.has(targetId)) return 'dashboard-view';
-        if (lifeToolViews.has(targetId)) return 'life-view';
         return targetId;
     }
 
@@ -104,32 +89,10 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         button.dataset.target = homeTarget;
         button.classList.toggle('hidden', !shouldShow);
         button.classList.toggle('flex', shouldShow);
-        const homeLabel = homeTarget === 'dashboard-view'
-            ? '재무 홈'
-            : homeTarget === 'life-view'
-                ? '생활 홈'
-                : '홈';
+        const homeLabel = homeTarget === 'dashboard-view' ? '재무 홈' : '홈';
         if (label) label.textContent = homeLabel;
         button.title = `${homeLabel}으로 돌아가기`;
         button.setAttribute('aria-label', button.title);
-    }
-
-    function renderMobileToolNavigation(activeGoalTarget, targetId) {
-        if (!mobileToolNav) return;
-        let toolItems = mobileToolGroups[activeGoalTarget] || mobileToolGroups['dashboard-view'];
-        if (activeGoalTarget === 'life-view') {
-            toolItems = [{ target: 'routine-checklist-view', icon: 'fa-list-check', label: '할 일' }];
-        }
-        mobileToolNav.innerHTML = toolItems.map(item => {
-            const isActive = item.target === targetId;
-            const stateClasses = isActive ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600';
-            return `
-                <a href="#" data-target="${item.target}" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full ${stateClasses} transition-colors min-w-0">
-                    <i class="fas ${item.icon} text-lg mb-1"></i>
-                    <span class="text-[10px] font-medium truncate max-w-full px-1">${item.label}</span>
-                </a>
-            `;
-        }).join('');
     }
 
     function updateAppContext(targetId) {
@@ -154,31 +117,18 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
             nav.classList.toggle('hover:bg-gray-50', !isActive);
             nav.classList.toggle('font-medium', !isActive);
         });
-        document.querySelectorAll('.mobile-goal-link').forEach(nav => {
-            const isActive = nav.getAttribute('data-target') === activeGoalTarget;
-            nav.classList.toggle('bg-indigo-600', isActive);
-            nav.classList.toggle('text-white', isActive);
-            nav.classList.toggle('border-indigo-600', isActive);
-            nav.classList.toggle('shadow-sm', isActive);
-            nav.classList.toggle('bg-white', !isActive);
-            nav.classList.toggle('text-gray-500', !isActive);
-            nav.classList.toggle('border-gray-100', !isActive);
+        document.querySelectorAll('[data-mobile-nav-target]').forEach(nav => {
+            const isActive = nav.getAttribute('data-mobile-nav-target') === targetId;
+            nav.classList.toggle('bg-indigo-50', isActive);
+            nav.classList.toggle('text-indigo-700', isActive);
+            nav.classList.toggle('text-gray-600', !isActive);
         });
-        renderMobileToolNavigation(activeGoalTarget, targetId);
-    }
-
-    function normalizeGoalShellText() {
-        return;
-        const lifeTitle = document.querySelector('#life-view h2');
-        if (lifeTitle) {
-            const description = lifeTitle.nextElementSibling;
-            if (description) description.textContent = '??????諛몄カ?????댁뢿援?????????? ??? ??????????????????????????????耀붾굝????????????饔낅떽???????';
-        }
     }
 
     function switchView(targetId) {
         if (targetId === 'project-view' || targetId === 'career-view') targetId = 'dashboard-view';
-        if (targetId === 'health-view' && !isFeatureEnabled('health')) targetId = 'life-view';
+        if (targetId === 'life-view') targetId = 'routine-checklist-view';
+        if (targetId === 'health-view' && !isFeatureEnabled('health')) targetId = 'routine-checklist-view';
         useMonthScopeForView(targetId);
         activeViewId = targetId;
         updateAppContext(targetId);
@@ -187,13 +137,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
             if(nav.getAttribute('data-target') === targetId) { nav.classList.add('text-indigo-600', 'bg-indigo-50'); nav.classList.remove('text-gray-600', 'hover:bg-gray-50'); }
             else { nav.classList.remove('text-indigo-600', 'bg-indigo-50'); nav.classList.add('text-gray-600', 'hover:bg-gray-50'); }
         });
-        document.querySelectorAll('.mobile-nav-link').forEach(nav => {
-            if(nav.getAttribute('data-target') === targetId) { nav.classList.add('text-indigo-600'); nav.classList.remove('text-gray-400', 'hover:text-gray-600'); }
-            else { nav.classList.remove('text-indigo-600'); nav.classList.add('text-gray-400', 'hover:text-gray-600'); }
-        });
-
         Object.values(views).forEach(v => { if(v) v.classList.add('hidden'); });
-        if (targetId === 'life-view') window.LifeDashboardFeature?.render();
         if (targetId === 'routine-checklist-view') window.ChecklistFeature?.render({ skipRemoteLoad: true });
         if (targetId === 'personal-cfo-view') window.PersonalCfoFeature?.render();
         if(views[targetId]) views[targetId].classList.remove('hidden');
@@ -212,7 +156,6 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
 
         setTimeout(() => {
             if (targetId === 'dashboard-view') renderSections({ financeSummary: true, portfolio: true });
-            else if (targetId === 'life-view') window.LifeDashboardFeature?.render();
             else if (targetId === 'portfolio-view') renderSections({ portfolio: true });
             else if (targetId === 'stats-view' || targetId === 'cashflow-view') renderSections({ cashFlow: true });
             else if (targetId === 'asset-view') renderSections({ financeSummary: true });
@@ -233,11 +176,30 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         link.addEventListener('click', (e) => { e.preventDefault(); switchView(e.currentTarget.getAttribute('data-target')); });
     });
 
-    mobileToolNav?.addEventListener('click', (e) => {
-        const link = e.target.closest('.mobile-nav-link');
-        if (!link || !mobileToolNav.contains(link)) return;
-        e.preventDefault();
-        switchView(link.getAttribute('data-target'));
+    function setMobileMenuOpen(open) {
+        if (!mobileNavigationDialog || !mobileMenuButton) return;
+        mobileNavigationDialog.classList.toggle('hidden', !open);
+        mobileMenuButton.setAttribute('aria-expanded', String(open));
+        document.body.classList.toggle('overflow-hidden', open);
+        if (open) mobileNavigationDialog.querySelector('[data-mobile-nav-target]')?.focus();
+        else mobileMenuButton.focus();
+    }
+
+    mobileMenuButton?.addEventListener('click', () => setMobileMenuOpen(true));
+    mobileNavigationDialog?.addEventListener('click', (event) => {
+        const navButton = event.target.closest('[data-mobile-nav-target]');
+        if (navButton) {
+            const target = navButton.dataset.mobileNavTarget;
+            setMobileMenuOpen(false);
+            switchView(target);
+            return;
+        }
+        if (event.target.closest('[data-mobile-menu-close]')) setMobileMenuOpen(false);
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && mobileNavigationDialog && !mobileNavigationDialog.classList.contains('hidden')) {
+            setMobileMenuOpen(false);
+        }
     });
 
     document.getElementById('btn-goal-home')?.addEventListener('click', (event) => {
@@ -245,7 +207,6 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         switchView(target);
     });
 
-    renderMobileToolNavigation(resolveActiveGoalTarget(activeViewId), activeViewId);
     updateGoalHomeButton(activeViewId);
 
     document.getElementById('asset-year-filter')?.addEventListener('change', (e) => {
@@ -299,7 +260,6 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     // Real-estate subscription schedule and map rendering lives in js/features/realEstate.js.
 
     window.addEventListener('DOMContentLoaded', async () => {
-        normalizeGoalShellText();
         loadSettings();
         if (typeof initAuth === 'function') await initAuth();
         fetchSheetData(true);

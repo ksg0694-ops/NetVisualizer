@@ -28,7 +28,7 @@
     <script src="./js/features/financeModel.js?v=20260726-phase2-portfolio-2"></script>
     <script src="./js/generated/personal-cfo-domain.js?v=20260726-monthly-report-1"></script>
     <script src="./js/features/monthlyClose.js?v=20260717-monthly-close-5"></script>
-    <script src="./js/features/appCore.js?v=20260802-interim-report-1"></script>
+    <script src="./js/features/appCore.js?v=20260802-update-10401-patch-v02"></script>
     <script src="./js/features/assetTrend.js?v=20260731-update-10401-patch-v1"></script>
     <script src="./js/features/financeForecast.js?v=20260802-forecast-input-1"></script>
     <script src="./js/features/quantEngine.js?v=20260731-update-10401-patch-v1"></script>
@@ -39,9 +39,8 @@
     <script src="./js/features/portfolioViews.js?v=20260731-portfolio-scope-split-2"></script>
     <script src="./js/features/financeViews.js?v=20260802-forecast-input-1"></script>
     <script src="./js/features/healthTracker.js?v=20260713-public-server"></script>
-    <script src="./js/features/checklist.js?v=20260731-update-10401-patch-v1"></script>
+    <script src="./js/features/checklist.js?v=20260802-update-10401-patch-v02"></script>
     <script src="./js/features/personalCfo.js?v=20260726-phase2-portfolio-1"></script>
-    <script src="./js/features/lifeDashboard.js?v=20260731-update-10401-1"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -50,6 +49,9 @@
         @keyframes spin-slow { 100% { transform: rotate(360deg); } }
         .animate-spin-slow { animation: spin-slow 1s linear infinite; }
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        @media (max-width: 767px) {
+            #btn-goal-home { display: none !important; }
+        }
         
         @keyframes slideInUp {
             from { transform: translateY(100%); opacity: 0; }
@@ -78,7 +80,7 @@
                     <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
                 </button>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.04.01 · patch v1
+                    version 1.04.01 · patch v02
                 </div>
             </div>
             <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-2 space-y-2">
@@ -88,7 +90,7 @@
                         <button type="button" data-target="dashboard-view" onclick="switchView('dashboard-view')" class="goal-link w-full flex items-center gap-2 px-3 py-1.5 text-sm text-indigo-700 bg-indigo-50 rounded-lg font-semibold border border-indigo-100 transition-all">
                             <i class="fas fa-coins w-4 text-center text-xs"></i> <span class="truncate">재무</span>
                         </button>
-                        <button type="button" data-target="life-view" onclick="switchView('life-view')" class="goal-link w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                        <button type="button" data-target="routine-checklist-view" onclick="switchView('routine-checklist-view')" class="goal-link w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
                             <i class="fas fa-compass w-4 text-center text-xs"></i> <span class="truncate">생활</span>
                         </button>
                     </div>
@@ -149,6 +151,9 @@
         <!-- 상단 헤더 -->
         <header class="h-16 md:h-20 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-20 shrink-0">
             <div class="flex items-center gap-2 md:gap-3 min-w-0">
+                <button id="btn-mobile-menu" type="button" class="md:hidden h-9 w-9 rounded-md border border-gray-200 bg-white text-gray-600 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 transition-colors shadow-sm shrink-0 flex items-center justify-center" title="탭 메뉴" aria-label="탭 메뉴 열기" aria-controls="mobile-navigation-dialog" aria-expanded="false">
+                    <i class="fas fa-bars text-sm" aria-hidden="true"></i>
+                </button>
                 <button id="btn-goal-home" type="button" class="hidden h-9 md:h-10 rounded-md border border-gray-200 bg-white px-2.5 md:px-3 text-gray-600 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 transition-colors shadow-sm shrink-0 items-center justify-center gap-1.5" title="홈으로" aria-label="현재 영역 홈으로 이동">
                     <i class="fas fa-arrow-left text-xs" aria-hidden="true"></i>
                     <span id="btn-goal-home-label" class="text-xs font-bold whitespace-nowrap">재무 홈</span>
@@ -170,17 +175,7 @@
         </header>
 
         <!-- 스크롤 가능한 뷰 영역 -->
-        <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-36 md:pb-8 scrollbar-hide relative pb-safe">
-            <div class="md:hidden max-w-6xl mx-auto mb-4">
-                <div class="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-                    <button type="button" data-target="dashboard-view" onclick="switchView('dashboard-view')" class="mobile-goal-link shrink-0 flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-sm border border-indigo-600">
-                        <i class="fas fa-coins"></i> 재무
-                    </button>
-                    <button type="button" data-target="life-view" onclick="switchView('life-view')" class="mobile-goal-link shrink-0 flex items-center gap-2 bg-white text-gray-500 border border-gray-100 px-3 py-2 rounded-xl text-xs font-bold">
-                        <i class="fas fa-compass"></i> 생활
-                    </button>
-                </div>
-            </div>
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-8 scrollbar-hide relative pb-safe">
             
             <!-- 1. 대시보드 뷰 -->
             <div id="dashboard-view" class="view-section block max-w-6xl mx-auto">
@@ -765,40 +760,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- 1-4. Life Goal -->
-            <div id="life-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
-                <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-                    <div>
-                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 tracking-wider mb-1">생활 목표</p>
-                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">오늘의 생활 상태</h2>
-                        <p class="text-xs md:text-sm text-gray-500 mt-1">건강 기록을 우선 남기고, 다른 생활 도구는 나중에 다시 설계합니다.</p>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <span data-feature="health" class="hidden text-[10px] md:text-xs font-bold text-rose-600 bg-rose-50 border border-rose-100 px-3 py-2 rounded-xl whitespace-nowrap">Health Tracking</span>
-                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">할 일</span>
-                    </div>
-                </div>
-
-                <div class="mb-3 flex items-center justify-between gap-3">
-                    <h3 class="text-sm md:text-base font-bold text-gray-800">생활 도구</h3>
-                    <span class="text-[10px] md:text-xs text-gray-400">할 일</span>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 mb-8">
-                    <button type="button" data-feature="health" onclick="switchView('health-view')" class="hidden text-left bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-rose-200 hover:shadow-md transition min-w-0">
-                        <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center mb-4"><i class="fas fa-heart-pulse"></i></div>
-                        <p class="text-[10px] font-bold text-rose-500 uppercase tracking-wider mb-1">Tool 01</p>
-                        <h3 class="text-lg font-bold text-gray-900">건강</h3>
-                        <p class="text-xs text-gray-500 mt-2 leading-relaxed">체중을 날짜별로 기록하고 일별 변화와 7일 평균을 추적합니다.</p>
-                    </button>
-                    <button type="button" onclick="switchView('routine-checklist-view')" class="text-left bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-md transition min-w-0">
-                        <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-4"><i class="fas fa-list-check"></i></div>
-                        <p class="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-1">Tool 02</p>
-                        <h3 class="text-lg font-bold text-gray-900">할 일</h3>
-                        <p class="text-xs text-gray-500 mt-2 leading-relaxed">메모와 Step까지 나눠서 관리합니다.</p>
-                    </button>
                 </div>
             </div>
 
@@ -1630,7 +1591,7 @@
             </div>
 
             <!-- 스페이서 -->
-            <div class="h-32 md:h-12 w-full shrink-0"></div>
+            <div class="h-8 md:h-12 w-full shrink-0"></div>
 
         </div> <!-- End of scroll area -->
         
@@ -1641,29 +1602,34 @@
         
     </main>
 
-    <!-- 모바일 전용 하단 탭 네비게이션 -->
-    <nav id="mobile-tool-nav" class="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around items-center h-[68px] z-50 pb-safe px-1">
-        <a href="#" data-target="stats-view" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 transition-colors">
-            <i class="fas fa-file-invoice-dollar text-lg mb-1"></i>
-            <span class="text-[9px] font-medium">Report</span>
-        </a>
-        <a href="#" data-target="cashflow-view" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 transition-colors">
-            <i class="fas fa-arrow-right-arrow-left text-lg mb-1"></i>
-            <span class="text-[9px] font-medium">현금흐름</span>
-        </a>
-        <a href="#" data-target="portfolio-view" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 transition-colors">
-            <i class="fas fa-briefcase text-lg mb-1"></i>
-            <span class="text-[9px] font-medium">포트폴리오</span>
-        </a>
-        <a href="#" data-target="asset-view" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 transition-colors">
-            <i class="fas fa-bullseye text-lg mb-1"></i>
-            <span class="text-[9px] font-medium">장기 목표</span>
-        </a>
-        <a href="#" data-target="personal-cfo-view" class="mobile-nav-link flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 transition-colors">
-            <i class="fas fa-diagram-project text-lg mb-1"></i>
-            <span class="text-[9px] font-medium">개인 CFO</span>
-        </a>
-    </nav>
+    <!-- 모바일 전용 탭 메뉴 -->
+    <div id="mobile-navigation-dialog" class="md:hidden fixed inset-0 z-[90] hidden" role="dialog" aria-modal="true" aria-label="탭 메뉴">
+        <button type="button" data-mobile-menu-close class="absolute inset-0 bg-gray-950/35 backdrop-blur-[1px]" aria-label="탭 메뉴 닫기"></button>
+        <nav class="relative flex h-full w-[min(84vw,320px)] flex-col bg-white shadow-2xl" aria-label="모바일 탭">
+            <div class="flex h-16 items-center justify-between border-b border-gray-100 px-4">
+                <div>
+                    <p class="text-[10px] font-bold text-indigo-500">NetVisualizer</p>
+                    <h2 class="text-base font-black text-gray-900">탭 이동</h2>
+                </div>
+                <button type="button" data-mobile-menu-close class="flex h-9 w-9 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700" aria-label="탭 메뉴 닫기">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-3">
+                <p class="px-2 pb-1 text-[10px] font-bold text-gray-400">재무</p>
+                <div class="space-y-1">
+                    <button type="button" data-mobile-nav-target="dashboard-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-coins mr-2 w-4 text-center text-xs"></i>재무 홈</button>
+                    <button type="button" data-mobile-nav-target="stats-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-file-invoice-dollar mr-2 w-4 text-center text-xs"></i>Monthly Report</button>
+                    <button type="button" data-mobile-nav-target="cashflow-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-arrow-right-arrow-left mr-2 w-4 text-center text-xs"></i>현금흐름</button>
+                    <button type="button" data-mobile-nav-target="portfolio-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-briefcase mr-2 w-4 text-center text-xs"></i>포트폴리오</button>
+                    <button type="button" data-mobile-nav-target="asset-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-bullseye mr-2 w-4 text-center text-xs"></i>장기 목표</button>
+                    <button type="button" data-mobile-nav-target="personal-cfo-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-diagram-project mr-2 w-4 text-center text-xs"></i>개인 CFO</button>
+                </div>
+                <p class="mt-5 px-2 pb-1 text-[10px] font-bold text-gray-400">생활</p>
+                <button type="button" data-mobile-nav-target="routine-checklist-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-list-check mr-2 w-4 text-center text-xs"></i>할 일</button>
+            </div>
+        </nav>
+    </div>
 
     <!-- 시스템 설정 모달 -->
     <div id="settings-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center modal-overlay p-4">
@@ -1707,6 +1673,7 @@
                             <i class="fas fa-right-from-bracket"></i> 로그아웃
                         </button>
                     </div>
+                    <div id="auth-feedback" class="hidden rounded-xl border px-3 py-2 text-sm" role="alert" aria-live="assertive"></div>
                 </div>
 
                 <div class="flex flex-col gap-3 mt-4">
@@ -1938,6 +1905,6 @@
     <!-- Toast Message Container -->
     <div id="toast-container" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[90%] md:w-auto max-w-sm"></div>
 
-    <script src="./js/features/appShell.js?v=20260731-update-10401-patch-v1"></script>
+    <script src="./js/features/appShell.js?v=20260802-update-10401-patch-v02"></script>
 </body>
 </html>
