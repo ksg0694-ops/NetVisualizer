@@ -584,7 +584,7 @@
         const previousDailySpending = previousDataDays > 0
             ? Math.max(0, Number(previousStructure?.spending || 0)) / previousDataDays
             : 0;
-        const spendingPaceDeltaPct = previousDailySpending > 0
+        const spendingPaceDeltaPct = dataDays > 0 && previousDailySpending > 0
             ? ((currentDailySpending - previousDailySpending) / previousDailySpending) * 100
             : null;
 
@@ -599,11 +599,13 @@
         const income = Math.max(0, Number(structure?.totalIncome || 0));
         const retained = Number(structure?.savingAndResidual || 0);
         const retainedRate = income > 0 ? (retained / income) * 100 : null;
-        const paceDirection = spendingPaceDeltaPct === null
-            ? '비교 기간 없음'
+        const paceDirection = dataDays === 0
+            ? '계산할 데이터 없음'
+            : (spendingPaceDeltaPct === null
+                ? '비교 기간 없음'
             : (Math.abs(spendingPaceDeltaPct) < 5
                 ? '직전 기간과 유사'
-                : `직전 기간보다 ${Math.abs(spendingPaceDeltaPct).toFixed(0)}% ${spendingPaceDeltaPct > 0 ? '높음' : '낮음'}`);
+                : `직전 기간보다 ${Math.abs(spendingPaceDeltaPct).toFixed(0)}% ${spendingPaceDeltaPct > 0 ? '높음' : '낮음'}`));
 
         const insights = [
             {

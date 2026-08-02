@@ -956,7 +956,7 @@
     };
 
     function applyCachedData() {
-        if (dataCache.tx) parseTxData(dataCache.tx);
+        parseTxData(dataCache.tx || []);
         if (dataCache.asset) parseAssetData(dataCache.asset);
         parsePortfolioStrategies(dataCache.portfolioStrategies);
         if (dataCache.portfolio) parsePortfolioData(dataCache.portfolio);
@@ -1121,7 +1121,6 @@
         monthlyDB = {};
         sortedMonthKeys = [];
         const transactions = financeRepositoryRuntime.normalizeTableRows('transactions', rows || []);
-        if (transactions.length === 0) return;
 
         transactions.forEach(row => {
             let dateStr = String(row.date || '').replace(/[\.\/]/g, '-').replace(/\s/g, '');
@@ -1144,9 +1143,24 @@
             monthlyDB[monthKey].transactions.push(tx);
         });
 
+        const todayPeriod = getMonthKeyAndPeriod(window.AppUtils.toLocalDateString());
+        if (todayPeriod?.monthKey && !monthlyDB[todayPeriod.monthKey]) {
+            monthlyDB[todayPeriod.monthKey] = {
+                title: todayPeriod.title,
+                periodStr: todayPeriod.periodStr,
+                periodStart: todayPeriod.periodStart,
+                periodEnd: todayPeriod.periodEnd,
+                transactions: [],
+            };
+        }
+
         sortedMonthKeys = Object.keys(monthlyDB).sort();
         if (sortedMonthKeys.length > 0) {
-            if (!currentMonthKey || !monthlyDB[currentMonthKey]) currentMonthKey = sortedMonthKeys[sortedMonthKeys.length - 1];
+            if (!currentMonthKey || !monthlyDB[currentMonthKey]) {
+                currentMonthKey = todayPeriod?.monthKey && monthlyDB[todayPeriod.monthKey]
+                    ? todayPeriod.monthKey
+                    : sortedMonthKeys[sortedMonthKeys.length - 1];
+            }
             if (!cashFlowMonthKey || !monthlyDB[cashFlowMonthKey]) cashFlowMonthKey = currentMonthKey;
         }
     }
@@ -1290,7 +1304,10 @@
         const hasCache = isAutoSync ? loadCachedData() : false;
 
         if (AUTH_REQUIRED_FOR_REMOTE && !isSignedIn()) {
-            if (!hasCache) renderSections({ dashboard: true, portfolio: true, addons: true });
+            if (!hasCache) {
+                parseTxData([]);
+                renderSections({ dashboard: true, portfolio: true, addons: true });
+            }
             if(syncStatus) {
                 syncStatus.textContent = '로그인 필요';
                 syncStatus.className = "hidden md:inline-block text-xs text-amber-500 font-medium mr-2 max-w-[150px] truncate";
