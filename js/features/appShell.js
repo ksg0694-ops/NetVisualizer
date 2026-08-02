@@ -47,7 +47,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
 
     const viewContextMeta = {
         'dashboard-view': { label: '재무 목표', title: '재무 홈' },
-        'routine-checklist-view': { label: '생활 도구', title: '할 일' },
+        'routine-checklist-view': { label: '도구', title: '할 일' },
         'health-view': { label: '생활 도구', title: '건강 기록' },
         'personal-cfo-view': { label: '재무 도구', title: '개인 CFO' },
         'portfolio-view': { label: '재무 도구', title: '포트폴리오' },
@@ -127,7 +127,6 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
 
     function switchView(targetId) {
         if (targetId === 'project-view' || targetId === 'career-view') targetId = 'dashboard-view';
-        if (targetId === 'life-view') targetId = 'routine-checklist-view';
         if (targetId === 'health-view' && !isFeatureEnabled('health')) targetId = 'routine-checklist-view';
         useMonthScopeForView(targetId);
         activeViewId = targetId;
@@ -174,6 +173,19 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
 
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', (e) => { e.preventDefault(); switchView(e.currentTarget.getAttribute('data-target')); });
+    });
+
+    document.querySelectorAll('[data-app-home-link]').forEach((link) => {
+        link.addEventListener('click', (event) => {
+            if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            switchView('dashboard-view');
+        });
+        link.addEventListener('auxclick', (event) => {
+            if (event.button !== 1) return;
+            event.preventDefault();
+            window.open(link.href, '_blank', 'noopener,noreferrer');
+        });
     });
 
     function setMobileMenuOpen(open) {

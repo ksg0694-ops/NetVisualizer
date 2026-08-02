@@ -21,16 +21,16 @@
     };
     const CARD_TONE_CLASSES = {
         sky: {
-            base: 'bg-sky-100 border-sky-300 hover:bg-sky-200/80 hover:border-sky-400',
-            active: 'bg-sky-200 border-sky-400 ring-2 ring-sky-300',
+            base: 'bg-white border-gray-200 hover:border-sky-300 hover:bg-sky-50/50',
+            active: 'bg-sky-50 border-sky-300 ring-2 ring-sky-100',
         },
         emerald: {
-            base: 'bg-emerald-100 border-emerald-300 hover:bg-emerald-200/80 hover:border-emerald-400',
-            active: 'bg-emerald-200 border-emerald-400 ring-2 ring-emerald-300',
+            base: 'bg-white border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/50',
+            active: 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-100',
         },
         indigo: {
-            base: 'bg-violet-100 border-violet-300 hover:bg-violet-200/80 hover:border-violet-400',
-            active: 'bg-violet-200 border-violet-400 ring-2 ring-violet-300',
+            base: 'bg-white border-gray-200 hover:border-violet-300 hover:bg-violet-50/50',
+            active: 'bg-violet-50 border-violet-300 ring-2 ring-violet-100',
         },
         slate: {
             base: 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300',
@@ -51,6 +51,7 @@
     let draggedTaskId = null;
     let draggedStepDrag = null;
     let pointerDrag = null;
+    let editingTitleTaskId = null;
 
     function escapeHtml(value) {
         return window.AppUtils.escapeHtml(value);
@@ -275,15 +276,15 @@
             return;
         }
         list.innerHTML = steps.map((step, index) => `
-            <div data-step-editor-item="${index}" class="flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-700 transition">
-                <button type="button" data-step-editor-drag-handle class="flex h-6 w-5 shrink-0 cursor-grab items-center justify-center text-gray-300 hover:text-gray-600 active:cursor-grabbing" title="Step 순서 이동" aria-label="Step 순서 이동">
-                    <i class="fas fa-grip-vertical text-xs"></i>
-                </button>
+            <div data-step-editor-item="${index}" class="group/step flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50/70 px-2 py-1.5 text-xs text-gray-700 transition hover:border-gray-300 hover:bg-white">
                 <input type="checkbox" data-step-editor-toggle="${index}" ${step.done ? 'checked' : ''} class="h-3.5 w-3.5 shrink-0 rounded border-gray-300 accent-indigo-600">
                 <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-white text-[10px] font-bold text-gray-400">${index + 1}</span>
                 <span class="min-w-0 flex-1 truncate ${step.done ? 'line-through text-gray-400' : ''}">${escapeHtml(step.title)}</span>
                 <button type="button" data-step-editor-remove="${index}" class="shrink-0 text-gray-300 hover:text-rose-500" title="삭제">
                     <i class="fas fa-xmark text-xs"></i>
+                </button>
+                <button type="button" data-step-editor-drag-handle class="flex h-6 w-5 shrink-0 cursor-grab items-center justify-center text-gray-300 hover:text-gray-700 active:cursor-grabbing" title="Step 순서 이동" aria-label="Step 순서 이동">
+                    <i class="fas fa-grip-vertical text-xs"></i>
                 </button>
             </div>
         `).join('');
@@ -920,7 +921,7 @@
             ? `<span>${stepSummary.done}/${stepSummary.total} Step</span>`
             : '';
         return `
-            <article data-checklist-open="${escapeAttr(task.id)}" class="group cursor-pointer rounded-md border px-2.5 py-2 transition ${selectedClass} ${doneClass}">
+            <article data-checklist-open="${escapeAttr(task.id)}" class="group cursor-pointer rounded-lg border px-3 py-2.5 transition ${selectedClass} ${doneClass}">
                 <div class="flex min-w-0 items-start gap-2">
                     <button type="button" data-checklist-toggle="${escapeAttr(task.id)}" aria-pressed="${task.completed}" class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${task.completed ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-300 bg-white text-transparent hover:border-indigo-400'}" title="${task.completed ? '완료 취소' : '완료'}" aria-label="${escapeAttr(task.title)} ${task.completed ? '완료 취소' : '완료'}">
                         <i class="fas fa-check text-[8px]"></i>
@@ -977,33 +978,37 @@
         panel.className = 'fixed inset-0 z-50 flex min-w-0 items-stretch justify-center bg-gray-950/30 p-0 backdrop-blur-[1px] xl:static xl:block xl:bg-transparent xl:p-0 xl:backdrop-blur-none';
         const domain = getDomain(task.domain);
         const stepSummary = getStepSummary(task);
+        const isEditingTitle = editingTitleTaskId === task.id;
         panel.innerHTML = `
             <div class="flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl xl:h-auto xl:min-h-[560px] xl:rounded-lg xl:border xl:border-gray-200 xl:p-4 xl:shadow-sm" role="dialog" aria-modal="true" aria-label="${escapeAttr(task.title)} 상세 편집" data-checklist-detail-dialog>
                 <div class="flex shrink-0 items-start justify-between gap-2 border-b border-gray-100 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] xl:border-0 xl:p-0">
-                    <div class="min-w-0">
+                    <div class="min-w-0 flex-1">
                         <div class="flex flex-wrap items-center gap-1.5">
-                            <h4 class="text-lg font-black text-gray-900 leading-snug">${escapeHtml(task.title)}</h4>
+                            ${isEditingTitle ? `
+                                <div class="flex min-w-0 flex-1 items-center gap-1.5">
+                                    <input id="checklist-detail-title-edit" type="text" value="${escapeAttr(task.title)}" class="min-w-0 flex-1 rounded-md border border-indigo-300 bg-white px-2.5 py-1.5 text-lg font-black text-gray-900 outline-none ring-2 ring-indigo-100" aria-label="할 일 제목 수정">
+                                    <button type="button" data-checklist-save-title="${escapeAttr(task.id)}" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gray-900 text-white hover:bg-gray-800" title="제목 저장" aria-label="제목 저장"><i class="fas fa-check text-[10px]"></i></button>
+                                    <button type="button" data-checklist-cancel-title class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 hover:text-gray-700" title="제목 수정 취소" aria-label="제목 수정 취소"><i class="fas fa-xmark text-[10px]"></i></button>
+                                </div>
+                            ` : `
+                                <h4 data-checklist-title-display="${escapeAttr(task.id)}" tabindex="0" class="min-w-0 cursor-text truncate rounded px-1 py-0.5 text-lg font-black leading-snug text-gray-900 outline-none hover:bg-gray-50 focus:ring-2 focus:ring-indigo-200" title="더블클릭하여 제목 수정">${escapeHtml(task.title)}</h4>
+                            `}
                             <span class="inline-flex text-[10px] font-bold border px-2 py-0.5 rounded ${TONE_CLASSES[domain.tone] || TONE_CLASSES.slate}">${escapeHtml(domain.label)}</span>
                         </div>
-                        <p class="mt-1 text-[11px] text-gray-400">${escapeHtml(domain.label)} · ${stepSummary.done}/${stepSummary.total} Step</p>
+                        <p class="mt-1 text-[11px] text-gray-400">${escapeHtml(domain.label)} · ${stepSummary.done}/${stepSummary.total} Step · 제목은 더블클릭으로 수정</p>
                     </div>
                     <button type="button" data-checklist-close-detail class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 hover:text-gray-700" title="상세 닫기" aria-label="상세 닫기">
                         <i class="fas fa-xmark text-xs"></i>
                     </button>
                 </div>
 
-                <div class="grid flex-1 grid-cols-1 gap-3 overflow-y-auto px-4 py-4 xl:mt-3 xl:grid-cols-[minmax(0,1fr)_220px] xl:overflow-visible xl:p-0">
-                    <label class="block">
-                        <span class="text-[11px] font-bold text-gray-500">제목</span>
-                        <input id="checklist-detail-title-edit" type="text" value="${escapeAttr(task.title)}" class="mt-1 w-full border border-gray-200 rounded-md px-2.5 py-2 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none bg-white" placeholder="할 일">
-                    </label>
-
-                    <div class="block">
+                <div class="grid flex-1 grid-cols-1 gap-3 overflow-y-auto px-4 py-4 xl:mt-3 xl:overflow-visible xl:p-0">
+                    <div class="block max-w-sm">
                         <span class="text-[11px] font-bold text-gray-500">영역</span>
                         ${renderDomainChoiceButtons('checklist-detail-domain-edit', task.domain)}
                     </div>
 
-                    <div class="xl:col-span-2 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_260px] gap-3">
+                    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px] gap-3">
                         <label class="block">
                             <span class="text-[11px] font-bold text-gray-500">상세내역</span>
                             <textarea id="checklist-detail-note-edit" class="mt-1 w-full min-h-[240px] resize-y border border-gray-200 rounded-md px-3 py-2.5 text-sm leading-relaxed focus:ring-2 focus:ring-indigo-500 outline-none bg-white xl:min-h-[340px]" placeholder="상세내역을 길게 적어둘 수 있습니다.">${escapeHtml(task.note)}</textarea>
@@ -1017,7 +1022,7 @@
                         </div>
                     </div>
 
-                    <button type="button" data-checklist-save-detail="${escapeAttr(task.id)}" class="xl:col-span-2 w-full rounded-md bg-gray-900 px-3 py-2.5 text-xs font-bold text-white hover:bg-gray-800">수정 저장</button>
+                    <button type="button" data-checklist-save-detail="${escapeAttr(task.id)}" class="w-full rounded-md bg-gray-900 px-3 py-2.5 text-xs font-bold text-white hover:bg-gray-800">수정 저장</button>
                 </div>
             </div>
         `;
@@ -1062,9 +1067,9 @@
         root.innerHTML = `
             <div class="mb-3 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
                 <div>
-                    <p class="text-[10px] md:text-xs font-bold text-indigo-500 mb-1">생활 도구</p>
+                    <p class="text-[10px] md:text-xs font-bold text-indigo-500 mb-1">작업 관리</p>
                     <h2 class="text-xl md:text-2xl font-bold text-gray-900">할 일 보드</h2>
-                    <p class="text-xs text-gray-500 mt-1">메모와 Step까지 한곳에서 정리합니다.</p>
+                    <p class="text-xs text-gray-500 mt-1">목록은 빠르게 훑고, 상세내역과 Step은 선택한 항목에서 관리합니다.</p>
                 </div>
                 <span id="checklist-sync-badge" class="text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-md whitespace-nowrap w-fit">로컬 저장</span>
             </div>
@@ -1081,7 +1086,7 @@
                         </div>
                         <div id="checklist-domain-filters" class="flex flex-wrap gap-1.5"></div>
                     </div>
-                    <div class="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)] gap-3 min-w-0">
+                    <div class="grid grid-cols-1 xl:grid-cols-[380px_minmax(0,1fr)] gap-3 min-w-0">
                         <div class="min-w-0">
                             <div id="checklist-task-list" class="space-y-1.5 max-h-[calc(100vh-250px)] overflow-y-auto pr-1"></div>
                         </div>
@@ -1146,6 +1151,11 @@
         renderTasks();
         renderDetailPanel();
         hydrateStepEditors();
+        if (editingTitleTaskId) {
+            const titleInput = document.getElementById('checklist-detail-title-edit');
+            titleInput?.focus();
+            titleInput?.select();
+        }
         if (isAddFormOpen) document.getElementById('checklist-title-input')?.focus();
         if (remoteAvailable) {
             if (remoteLoaded) renderSyncStatus('서버 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
@@ -1216,7 +1226,7 @@
         const domainEl = document.getElementById('checklist-detail-domain-edit');
         const noteEl = document.getElementById('checklist-detail-note-edit');
         const stepsEl = document.getElementById('checklist-detail-steps-edit');
-        const title = String(titleEl?.value || '').trim();
+        const title = String(titleEl?.value || task.title).trim();
         if (!title) {
             toast('할 일 제목을 입력해주세요.', 'warning');
             return;
@@ -1227,10 +1237,46 @@
         task.note = String(noteEl?.value || '').trim();
         task.steps = parseStepEditorSteps(stepsEl?.value || '', task.steps);
         task.updatedAt = now;
+        editingTitleTaskId = null;
         tasks = saveStore(tasks);
         render({ skipRemoteLoad: true });
         await persistRemoteTask(task);
         toast('할 일을 수정했습니다.', 'info');
+    }
+
+    function startTitleEditing(id) {
+        if (!tasks.some((item) => item.id === id)) return;
+        editingTitleTaskId = id;
+        render({ skipRemoteLoad: true });
+    }
+
+    function cancelTitleEditing() {
+        editingTitleTaskId = null;
+        render({ skipRemoteLoad: true });
+    }
+
+    async function saveTaskTitle(id) {
+        const task = tasks.find((item) => item.id === id);
+        if (!task) return;
+        const titleEl = document.getElementById('checklist-detail-title-edit');
+        const title = String(titleEl?.value || '').trim();
+        if (!title) {
+            toast('할 일 제목을 입력해주세요.', 'warning');
+            titleEl?.focus();
+            return;
+        }
+        if (task.title === title) {
+            editingTitleTaskId = null;
+            render({ skipRemoteLoad: true });
+            return;
+        }
+        task.title = title;
+        task.updatedAt = new Date().toISOString();
+        editingTitleTaskId = null;
+        tasks = saveStore(tasks);
+        render({ skipRemoteLoad: true });
+        await persistRemoteTask(task);
+        toast('제목을 수정했습니다.', 'info');
     }
 
     async function deleteTask(id) {
@@ -1285,6 +1331,7 @@
             }
             const closeDetailBtn = event.target.closest('[data-checklist-close-detail]');
             if (closeDetailBtn) {
+                editingTitleTaskId = null;
                 activeTaskId = null;
                 render({ skipRemoteLoad: true });
                 return;
@@ -1292,6 +1339,7 @@
             const closeDetailBackdrop = event.target.matches('#checklist-detail-panel')
                 && !event.target.closest('[data-checklist-detail-dialog]');
             if (closeDetailBackdrop) {
+                editingTitleTaskId = null;
                 activeTaskId = null;
                 render({ skipRemoteLoad: true });
                 return;
@@ -1328,6 +1376,15 @@
                 deleteTask(deleteBtn.dataset.checklistDelete);
                 return;
             }
+            const saveTitleBtn = event.target.closest('[data-checklist-save-title]');
+            if (saveTitleBtn) {
+                saveTaskTitle(saveTitleBtn.dataset.checklistSaveTitle);
+                return;
+            }
+            if (event.target.closest('[data-checklist-cancel-title]')) {
+                cancelTitleEditing();
+                return;
+            }
             const toggleBtn = event.target.closest('[data-checklist-toggle]');
             if (toggleBtn) {
                 toggleTask(toggleBtn.dataset.checklistToggle);
@@ -1338,6 +1395,12 @@
                 activeTaskId = row.dataset.checklistOpen;
                 render({ skipRemoteLoad: true });
             }
+        });
+        root?.addEventListener('dblclick', (event) => {
+            const title = event.target.closest('[data-checklist-title-display]');
+            if (!title) return;
+            event.preventDefault();
+            startTitleEditing(title.dataset.checklistTitleDisplay);
         });
         root?.addEventListener('change', (event) => {
             const domainFilter = event.target.closest('#checklist-domain-filter');
@@ -1361,6 +1424,23 @@
             }
         });
         root?.addEventListener('keydown', (event) => {
+            const titleDisplay = event.target?.closest?.('[data-checklist-title-display]');
+            if (titleDisplay && (event.key === 'Enter' || event.key === ' ')) {
+                event.preventDefault();
+                startTitleEditing(titleDisplay.dataset.checklistTitleDisplay);
+                return;
+            }
+            const titleInput = event.target?.closest?.('#checklist-detail-title-edit');
+            if (titleInput && event.key === 'Enter') {
+                event.preventDefault();
+                saveTaskTitle(activeTaskId);
+                return;
+            }
+            if (titleInput && event.key === 'Escape') {
+                event.preventDefault();
+                cancelTitleEditing();
+                return;
+            }
             if (event.key === 'Enter' && event.target?.closest?.('[data-step-editor-input]')) {
                 event.preventDefault();
                 event.stopImmediatePropagation();
