@@ -2,11 +2,11 @@
   "project": "NetVisualizer",
   "level": "dynamic",
   "feature": "BankSalad Gmail Auto Sync",
-  "phase": "check",
-  "progress": 88,
-  "updatedAt": "2026-08-02T16:15:00+09:00",
-  "status": "in_progress",
-  "currentFocus": "Deploy the scheduled Gmail worker and Auth boundary, then verify dry-run and live idempotency against Supabase.",
+  "phase": "report",
+  "progress": 100,
+  "updatedAt": "2026-08-02T16:20:00+09:00",
+  "status": "completed",
+  "currentFocus": "BankSalad Gmail automation is deployed, secured, and verified end to end.",
   "completed": [
     "Created the dedicated Google Cloud project and enabled Gmail API.",
     "Designed a Gmail read-only, ephemeral ZIP/XLSX processing pipeline.",
@@ -19,12 +19,12 @@
     "Published the personal OAuth consent app and registered Gmail read-only OAuth values as GitHub Actions secrets.",
     "Removed the downloaded OAuth client JSON and local authorization environment after secret registration.",
     "Passed five parser/ZIP unit tests and the full NetVisualizer automated check suite.",
-    "Validated the real BankSalad export: 1,670 rows, 34 exact duplicates removed, 1,636 valid transactions."
+    "Validated the real BankSalad export: 1,670 rows, 34 exact duplicates removed, 1,636 valid transactions.",
+    "Applied the Supabase provenance and owner-only RLS migration.",
+    "Completed the first live import with 297 existing duplicates skipped and 1,339 new transactions inserted.",
+    "Verified a second live run skipped the completed Gmail message and inserted zero duplicate transactions.",
+    "Merged the deployment PR and verified the GitHub Pages release returned HTTP 200 with the new Auth copy."
   ],
-  "remaining": [
-    "Run Gmail dry-run and first live Supabase import.",
-    "Verify a second run inserts zero duplicate transactions.",
-    "Commit, push, merge to main, apply the migration, and verify GitHub Pages."
-  ],
-  "nextStep": "Commit and merge the implementation, apply the Supabase migration, then run dry-run and two live workflow checks."
+  "remaining": [],
+  "nextStep": "Send future BankSalad exports by email and verify the new rows in NetVisualizer after the next 15-minute sync window."
 }
