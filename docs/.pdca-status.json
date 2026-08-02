@@ -2,11 +2,11 @@
   "project": "NetVisualizer",
   "level": "dynamic",
   "feature": "Income deduplication and full-ledger data quality",
-  "phase": "do",
-  "progress": 45,
-  "updatedAt": "2026-08-02T23:50:00+09:00",
+  "phase": "report",
+  "progress": 95,
+  "updatedAt": "2026-08-03T00:20:00+09:00",
   "status": "in_progress",
-  "currentFocus": "Implementing guarded welfare-income repair and classification-agnostic transaction identity checks.",
+  "currentFocus": "Publishing the verified July income repair and residual full-ledger audit findings.",
   "completed": [
     "Removed Life Home and routed the Life area directly to Todo.",
     "Replaced mobile goal chips and bottom tabs with a header menu dialog.",
@@ -19,13 +19,17 @@
     "Passed the full automated check suite.",
     "Verified desktop 1365x768 and mobile 390x844 layouts.",
     "Merged pull request #13 and completed the GitHub Pages deployment.",
-    "Verified the deployed mobile tab menu and Todo 진행 중 view."
+    "Verified the deployed mobile tab menu and Todo 진행 중 view.",
+    "Audited all 2,286 transaction rows through the service-role worker.",
+    "Removed 22 approved July-period legacy welfare-income duplicates totaling 311,200 KRW.",
+    "Verified 2,264 post-repair rows and zero remaining approved-period overlap.",
+    "Changed BankSalad transaction identity to exclude editable classifications.",
+    "Passed 10 Python tests, the full application check suite, and the guarded GitHub Actions repair."
   ],
   "remaining": [
-    "Run the service-role full-ledger audit.",
-    "Repair the approved July welfare-income overlap.",
-    "Verify remaining duplicate and classification-conflict candidates.",
-    "Deploy and verify corrected GitHub Pages totals."
+    "Merge the verified repair workflow and audit tooling.",
+    "Verify the corrected July total on GitHub Pages.",
+    "Review historical audit-only candidates under separate approval."
   ],
-  "nextStep": "Complete the audit worker and run the guarded repair through GitHub Actions."
+  "nextStep": "Merge pull request #15, verify GitHub Pages, and retain historical candidates for separate approval."
 }
