@@ -2,11 +2,11 @@
   "project": "NetVisualizer",
   "level": "dynamic",
   "feature": "Forecast Salary Input Correction",
-  "phase": "check",
-  "progress": 80,
-  "updatedAt": "2026-08-02T18:45:00+09:00",
-  "status": "in_progress",
-  "currentFocus": "Deploy and verify the corrected 2026-2028 forecast with the signed-in server data.",
+  "phase": "report",
+  "progress": 100,
+  "updatedAt": "2026-08-02T19:00:00+09:00",
+  "status": "completed",
+  "currentFocus": "The corrected salary-based forecast is deployed and verified in Long-term Goal and Monthly Report.",
   "completed": [
     "Created the dedicated Google Cloud project and enabled Gmail API.",
     "Designed a Gmail read-only, ephemeral ZIP/XLSX processing pipeline.",
@@ -39,10 +39,11 @@
     "Excluded incomplete accounting periods and non-salary income periods from forecast observations.",
     "Deduplicated same-date and same-amount salary events in forecast inputs without modifying server transactions.",
     "Separated smaller regular salary events from additional same-period bonus payments.",
-    "Added salary-boundary and semantic-duplicate regression tests and passed the full npm check suite."
+    "Added salary-boundary and semantic-duplicate regression tests and passed the full npm check suite.",
+    "Merged pull request #11 and verified the GitHub Pages deployment completed successfully.",
+    "Verified the signed-in Long-term Goal shows 243,576,392 KRW for 2026, 266,283,637 KRW for 2027, and 288,990,882 KRW for 2028.",
+    "Verified Monthly Report still shows 44 August transactions and the corrected 2026 year-end forecast."
   ],
-  "remaining": [
-    "Deploy and verify the signed-in Long-term Goal view."
-  ],
-  "nextStep": "Publish the forecast correction and verify the live Long-term Goal values."
+  "remaining": [],
+  "nextStep": "Decide whether to reconcile semantic duplicate salary rows in the underlying server ledger as a separate data-cleanup task."
 }
