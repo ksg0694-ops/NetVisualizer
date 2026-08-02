@@ -124,6 +124,9 @@ class NormalizedTransaction:
     method: str
 
     def fingerprint(self) -> str:
+        # Category and subcategory describe a transaction; they do not identify
+        # the underlying bank event. Keeping them out of the digest prevents a
+        # later classification correction from inserting a second transaction.
         payload = [
             self.date,
             self.time or "",
@@ -131,8 +134,6 @@ class NormalizedTransaction:
             self.amount,
             normalize_dedupe_text(self.memo),
             normalize_dedupe_text(self.method),
-            normalize_dedupe_text(self.category),
-            normalize_dedupe_text(self.subcategory),
             self.currency,
         ]
         serialized = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
@@ -572,9 +573,6 @@ class SupabaseRest:
             )
             rows = response.json()
             for row in rows:
-                if row.get("dedupe_key"):
-                    fingerprints.add(row["dedupe_key"])
-                    continue
                 transaction = NormalizedTransaction(
                     date=normalize_date(row.get("date")),
                     time=normalize_time(row.get("time")),
@@ -586,6 +584,9 @@ class SupabaseRest:
                     currency=normalize_text(row.get("currency"), "KRW").upper(),
                     method=normalize_text(row.get("method")),
                 )
+                # Always recompute with the current identity contract. Legacy
+                # stored digests included category fields and cannot safely be
+                # compared with the classification-agnostic digest.
                 fingerprints.add(transaction.fingerprint())
             if len(rows) < page_size:
                 break

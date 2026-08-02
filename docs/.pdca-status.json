@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Update 1.04.01 patch v02",
+  "feature": "Income deduplication and full-ledger data quality",
   "phase": "report",
-  "progress": 100,
-  "updatedAt": "2026-08-02T21:45:00+09:00",
-  "status": "completed",
-  "currentFocus": "Update 1.04.01 patch v02 is merged and verified on GitHub Pages.",
+  "progress": 95,
+  "updatedAt": "2026-08-03T00:20:00+09:00",
+  "status": "in_progress",
+  "currentFocus": "Publishing the verified July income repair and residual full-ledger audit findings.",
   "completed": [
     "Removed Life Home and routed the Life area directly to Todo.",
     "Replaced mobile goal chips and bottom tabs with a header menu dialog.",
@@ -19,8 +19,17 @@
     "Passed the full automated check suite.",
     "Verified desktop 1365x768 and mobile 390x844 layouts.",
     "Merged pull request #13 and completed the GitHub Pages deployment.",
-    "Verified the deployed mobile tab menu and Todo 진행 중 view."
+    "Verified the deployed mobile tab menu and Todo 진행 중 view.",
+    "Audited all 2,286 transaction rows through the service-role worker.",
+    "Removed 22 approved July-period legacy welfare-income duplicates totaling 311,200 KRW.",
+    "Verified 2,264 post-repair rows and zero remaining approved-period overlap.",
+    "Changed BankSalad transaction identity to exclude editable classifications.",
+    "Passed 10 Python tests, the full application check suite, and the guarded GitHub Actions repair."
   ],
-  "remaining": [],
-  "nextStep": "Provide the Update 1.04.02 patch direction after reviewing the deployed build."
+  "remaining": [
+    "Merge the verified repair workflow and audit tooling.",
+    "Verify the corrected July total on GitHub Pages.",
+    "Review historical audit-only candidates under separate approval."
+  ],
+  "nextStep": "Merge pull request #15, verify GitHub Pages, and retain historical candidates for separate approval."
 }
