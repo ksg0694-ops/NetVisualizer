@@ -28,7 +28,7 @@
     <script src="./js/features/financeModel.js?v=20260726-phase2-portfolio-2"></script>
     <script src="./js/generated/personal-cfo-domain.js?v=20260726-monthly-report-1"></script>
     <script src="./js/features/monthlyClose.js?v=20260717-monthly-close-5"></script>
-    <script src="./js/features/appCore.js?v=20260803-gmail-incremental-1"></script>
+    <script src="./js/features/appCore.js?v=20260803-mobile-state-1"></script>
     <script src="./js/features/assetTrend.js?v=20260731-update-10401-patch-v1"></script>
     <script src="./js/features/financeForecast.js?v=20260802-forecast-input-1"></script>
     <script src="./js/features/quantEngine.js?v=20260731-update-10401-patch-v1"></script>
@@ -39,7 +39,7 @@
     <script src="./js/features/portfolioViews.js?v=20260731-portfolio-scope-split-2"></script>
     <script src="./js/features/financeViews.js?v=20260802-forecast-input-1"></script>
     <script src="./js/features/healthTracker.js?v=20260713-public-server"></script>
-    <script src="./js/features/checklist.js?v=20260803-todo-ux-1"></script>
+    <script src="./js/features/checklist.js?v=20260803-mobile-state-1"></script>
     <script src="./js/features/personalCfo.js?v=20260726-phase2-portfolio-1"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
@@ -866,7 +866,7 @@
                             <p class="text-sm text-gray-500 max-w-xs mx-auto" id="portfolio-past-notice-text">
                                 상세 포트폴리오는 '현재 달' 기준으로만 갱신/관리됩니다. 과거는 총액 비율만 표시됩니다.
                             </p>
-                            <button onclick="if(!document.getElementById('btn-next-month').disabled){ const keys = getMonthKeys(); currentMonthKey = keys[keys.length - 1]; renderSections({ financeSummary: true, portfolio: true }); }" class="mt-3 text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-4 py-2 rounded-full transition-colors">
+                            <button onclick="if(!document.getElementById('btn-next-month').disabled){ const keys = getMonthKeys(); currentMonthKey = keys[keys.length - 1]; persistAppUiState(); renderSections({ financeSummary: true, portfolio: true }); }" class="mt-3 text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-4 py-2 rounded-full transition-colors">
                                 현재 포트폴리오 보기 &rarr;
                             </button>
                         </div>
@@ -1902,6 +1902,6 @@
     <!-- Toast Message Container -->
     <div id="toast-container" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[90%] md:w-auto max-w-sm"></div>
 
-    <script src="./js/features/appShell.js?v=20260803-todo-ux-1"></script>
+    <script src="./js/features/appShell.js?v=20260803-mobile-state-1"></script>
 </body>
 </html>

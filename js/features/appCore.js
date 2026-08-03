@@ -29,7 +29,48 @@
     const CACHE_KEY = 'smartbook_v2_data_cache_v5';
     const CACHE_META_KEY = 'smartbook_v2_data_cache_meta_v1';
     const IMPORT_AUDIT_KEY = 'smartbook_v2_tx_import_runs';
+    const APP_UI_STATE_KEY = 'netvisualizer.app.ui-state.v1';
+    const RESTORABLE_VIEW_IDS = new Set([
+        'dashboard-view',
+        'portfolio-view',
+        'routine-checklist-view',
+        'personal-cfo-view',
+        'stats-view',
+        'cashflow-view',
+        'asset-view',
+        'invest-detail-view',
+    ]);
     let lastFinanceDataSyncAt = localStorage.getItem(CACHE_META_KEY) || '';
+
+    function readAppUiState() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(APP_UI_STATE_KEY) || '{}');
+            const isMonthKey = (value) => /^\d{4}-\d{2}$/.test(String(value || ''));
+            return {
+                activeViewId: RESTORABLE_VIEW_IDS.has(parsed.activeViewId) ? parsed.activeViewId : 'dashboard-view',
+                currentMonthKey: isMonthKey(parsed.currentMonthKey) ? parsed.currentMonthKey : '',
+                cashFlowMonthKey: isMonthKey(parsed.cashFlowMonthKey) ? parsed.cashFlowMonthKey : '',
+            };
+        } catch (error) {
+            console.warn('Saved UI state could not be restored.', error);
+            return { activeViewId: 'dashboard-view', currentMonthKey: '', cashFlowMonthKey: '' };
+        }
+    }
+
+    const restoredAppUiState = readAppUiState();
+
+    function persistAppUiState() {
+        try {
+            localStorage.setItem(APP_UI_STATE_KEY, JSON.stringify({
+                activeViewId: RESTORABLE_VIEW_IDS.has(activeViewId) ? activeViewId : 'dashboard-view',
+                currentMonthKey,
+                cashFlowMonthKey,
+                savedAt: new Date().toISOString(),
+            }));
+        } catch (error) {
+            console.warn('UI state could not be saved.', error);
+        }
+    }
 
     function loadSettings() {
         // 설정 로드 로직 제거됨 (URL 하드코딩 사용)
@@ -46,8 +87,8 @@
     // 전역 상태 변수 및 모의(Demo) 데이터
     // ==========================================
     let monthlyDB = {};
-    let currentMonthKey = '';
-    let cashFlowMonthKey = '';
+    let currentMonthKey = restoredAppUiState.currentMonthKey;
+    let cashFlowMonthKey = restoredAppUiState.cashFlowMonthKey;
     let currentAssetFilter = 'all';
     let txSortOrder = 'asc';
     const myCharts = {};
@@ -72,7 +113,7 @@
         realEstatePriceRefs: null
     };
     let sortedMonthKeys = [];
-    let activeViewId = 'dashboard-view';
+    let activeViewId = restoredAppUiState.activeViewId;
     let activeInvestGroupName = '';
     let activeInvestProcessedItems = [];
     let activeQuantHoldingItems = [];

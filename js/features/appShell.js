@@ -130,6 +130,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         if (targetId === 'health-view' && !isFeatureEnabled('health')) targetId = 'routine-checklist-view';
         useMonthScopeForView(targetId);
         activeViewId = targetId;
+        persistAppUiState();
         updateAppContext(targetId);
         updateGoalNavigation(targetId);
         document.querySelectorAll('.nav-link').forEach(nav => {
@@ -219,7 +220,8 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         switchView(target);
     });
 
-    updateGoalHomeButton(activeViewId);
+    if (!views[activeViewId]) activeViewId = 'dashboard-view';
+    switchView(activeViewId);
 
     document.getElementById('asset-year-filter')?.addEventListener('change', (e) => {
         currentAssetFilter = e.target.value; renderFinanceSummary();
@@ -240,23 +242,28 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
 
     document.getElementById('btn-prev-month')?.addEventListener('click', () => {
         const keys = getMonthKeys(); const idx = keys.indexOf(currentMonthKey);
-        if (idx > 0) { currentMonthKey = keys[idx - 1]; cashFlowMonthKey = currentMonthKey; renderSections({ cashFlow: true }); }
+        if (idx > 0) { currentMonthKey = keys[idx - 1]; cashFlowMonthKey = currentMonthKey; persistAppUiState(); renderSections({ cashFlow: true }); }
     });
 
     document.getElementById('btn-next-month')?.addEventListener('click', () => {
         const keys = getMonthKeys(); const idx = keys.indexOf(currentMonthKey);
-        if (idx !== -1 && idx < keys.length - 1) { currentMonthKey = keys[idx + 1]; cashFlowMonthKey = currentMonthKey; renderSections({ cashFlow: true }); }
+        if (idx !== -1 && idx < keys.length - 1) { currentMonthKey = keys[idx + 1]; cashFlowMonthKey = currentMonthKey; persistAppUiState(); renderSections({ cashFlow: true }); }
     });
 
     document.getElementById('btn-report-prev-month')?.addEventListener('click', () => {
         const keys = getMonthKeys(); const idx = keys.indexOf(currentMonthKey);
-        if (idx > 0) { currentMonthKey = keys[idx - 1]; cashFlowMonthKey = currentMonthKey; renderSections({ cashFlow: true }); }
+        if (idx > 0) { currentMonthKey = keys[idx - 1]; cashFlowMonthKey = currentMonthKey; persistAppUiState(); renderSections({ cashFlow: true }); }
     });
 
     document.getElementById('btn-report-next-month')?.addEventListener('click', () => {
         const keys = getMonthKeys(); const idx = keys.indexOf(currentMonthKey);
-        if (idx !== -1 && idx < keys.length - 1) { currentMonthKey = keys[idx + 1]; cashFlowMonthKey = currentMonthKey; renderSections({ cashFlow: true }); }
+        if (idx !== -1 && idx < keys.length - 1) { currentMonthKey = keys[idx + 1]; cashFlowMonthKey = currentMonthKey; persistAppUiState(); renderSections({ cashFlow: true }); }
     });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') persistAppUiState();
+    });
+    window.addEventListener('pagehide', persistAppUiState);
 
     window.toggleAccordion = function(btn) {
         const content = btn.nextElementSibling; const icon = btn.querySelector('.accordion-icon');
