@@ -1,24 +1,22 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Gmail incremental cash-flow cutover",
+  "feature": "Mobile state restoration and Todo formatting",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-08-03T08:00:00+09:00",
+  "updatedAt": "2026-08-03T12:00:00+09:00",
   "status": "complete",
-  "currentFocus": "Historical Gmail exports are excluded from calculation; only 2026-07-24 onward is incremental.",
+  "currentFocus": "Restore the last mobile view and Todo context while improving Todo card color and note formatting.",
   "completed": [
     "Documented Plan, Design, Check, and Report phases.",
-    "Audited the 2,213-row transaction ledger by source and date.",
-    "Confirmed the latest 1,636-row Gmail export contains 1,592 historical rows and 44 incremental rows.",
-    "Added source-aware browser filtering for Gmail rows from 2026-07-24 onward.",
-    "Bumped the transaction cache to v5 to remove source-less stale cache calculations.",
-    "Added the same cutover to the scheduled Gmail ingestion worker.",
-    "Added incremental-scope metrics to the full-ledger audit.",
-    "Retained existing historical Gmail rows without deleting data.",
-    "Passed 15 Python tests locally and in GitHub Actions.",
+    "Persisted and restored the active view and selected finance month.",
+    "Persisted and restored Todo filter, domain, and selected task state.",
+    "Restored low-saturation domain color fills to Todo cards.",
+    "Added safe token-based bold, underline, and strike formatting with live preview.",
+    "Bumped the PWA cache to v152.",
+    "Verified the mobile restore flow at a 390 by 844 viewport.",
     "Passed the full NetVisualizer application check suite."
   ],
   "remaining": [],
-  "nextStep": "Merge, deploy, and verify the corrected cash-flow totals on GitHub Pages."
+  "nextStep": "Merge, deploy, and verify mobile background restoration on the installed GitHub Pages PWA."
 }

@@ -1,5 +1,6 @@
 (function (window) {
     const STORAGE_KEY = 'netvisualizer.life.checklist.v1';
+    const UI_STATE_KEY = 'netvisualizer.checklist.ui-state.v1';
     const TABLE_NAME = 'life_todos';
     const DOMAINS = [
         { key: 'career', label: 'Career', tone: 'sky' },
@@ -21,27 +22,45 @@
     };
     const CARD_TONE_CLASSES = {
         sky: {
-            base: 'bg-white border-gray-200 hover:border-sky-300 hover:bg-sky-50/50',
-            active: 'bg-sky-50 border-sky-300 ring-2 ring-sky-100',
+            base: 'bg-sky-50 border-sky-200 hover:border-sky-300 hover:bg-sky-100/80',
+            active: 'bg-sky-100 border-sky-300 ring-2 ring-sky-200',
         },
         emerald: {
-            base: 'bg-white border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/50',
-            active: 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-100',
+            base: 'bg-emerald-50 border-emerald-200 hover:border-emerald-300 hover:bg-emerald-100/80',
+            active: 'bg-emerald-100 border-emerald-300 ring-2 ring-emerald-200',
         },
         indigo: {
-            base: 'bg-white border-gray-200 hover:border-violet-300 hover:bg-violet-50/50',
-            active: 'bg-violet-50 border-violet-300 ring-2 ring-violet-100',
+            base: 'bg-violet-50 border-violet-200 hover:border-violet-300 hover:bg-violet-100/80',
+            active: 'bg-violet-100 border-violet-300 ring-2 ring-violet-200',
         },
         slate: {
-            base: 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300',
-            active: 'bg-gray-50 border-gray-300 ring-2 ring-gray-200',
+            base: 'bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300',
+            active: 'bg-slate-100 border-slate-300 ring-2 ring-slate-200',
         },
     };
 
+    function readChecklistUiState() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(UI_STATE_KEY) || '{}');
+            const validFilters = new Set(['open', 'done', 'all']);
+            const validDomains = new Set(['all', ...DOMAINS.map((domain) => domain.key)]);
+            return {
+                activeFilter: validFilters.has(parsed.activeFilter) ? parsed.activeFilter : 'open',
+                activeDomain: validDomains.has(parsed.activeDomain) ? parsed.activeDomain : 'all',
+                activeTaskId: typeof parsed.activeTaskId === 'string' && parsed.activeTaskId ? parsed.activeTaskId : null,
+            };
+        } catch (error) {
+            console.warn('Saved Todo UI state could not be restored.', error);
+            return { activeFilter: 'open', activeDomain: 'all', activeTaskId: null };
+        }
+    }
+
+    const restoredChecklistUiState = readChecklistUiState();
+
     let tasks = [];
-    let activeFilter = 'open';
-    let activeDomain = 'all';
-    let activeTaskId = null;
+    let activeFilter = restoredChecklistUiState.activeFilter;
+    let activeDomain = restoredChecklistUiState.activeDomain;
+    let activeTaskId = restoredChecklistUiState.activeTaskId;
     let isBound = false;
     let isAddFormOpen = false;
     let remoteAvailable = true;
@@ -59,6 +78,77 @@
 
     function escapeAttr(value) {
         return window.AppUtils.escapeAttr(value);
+    }
+
+    function persistChecklistUiState() {
+        try {
+            localStorage.setItem(UI_STATE_KEY, JSON.stringify({
+                activeFilter,
+                activeDomain,
+                activeTaskId,
+                savedAt: new Date().toISOString(),
+            }));
+        } catch (error) {
+            console.warn('Todo UI state could not be saved.', error);
+        }
+    }
+
+    const NOTE_FORMATS = Object.freeze({
+        bold: { open: '**', close: '**', placeholder: '굵게' },
+        underline: { open: '++', close: '++', placeholder: '밑줄' },
+        strike: { open: '~~', close: '~~', placeholder: '취소선' },
+    });
+
+    function formatNotePreview(value) {
+        return escapeHtml(String(value || ''))
+            .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/\+\+([^+\n]+)\+\+/g, '<u>$1</u>')
+            .replace(/~~([^~\n]+)~~/g, '<s>$1</s>')
+            .replace(/\n/g, '<br>');
+    }
+
+    function renderNoteEditor({ id, value = '', minHeightClass = 'min-h-[180px]', placeholder = '' }) {
+        return `
+            <div class="mt-1 overflow-hidden rounded-md border border-gray-200 bg-white focus-within:ring-2 focus-within:ring-indigo-500">
+                <div class="flex items-center gap-1 border-b border-gray-100 bg-gray-50 px-2 py-1.5">
+                    <button type="button" data-checklist-note-format="bold" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-black text-gray-700 hover:border-indigo-300 hover:text-indigo-700" title="굵게 (**텍스트**)" aria-label="선택한 글자 굵게"><span aria-hidden="true">B</span></button>
+                    <button type="button" data-checklist-note-format="underline" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-bold text-gray-700 underline hover:border-indigo-300 hover:text-indigo-700" title="밑줄 (++텍스트++)" aria-label="선택한 글자 밑줄"><span aria-hidden="true">U</span></button>
+                    <button type="button" data-checklist-note-format="strike" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-bold text-gray-700 line-through hover:border-indigo-300 hover:text-indigo-700" title="취소선 (~~텍스트~~)" aria-label="선택한 글자 취소선"><span aria-hidden="true">S</span></button>
+                    <span class="ml-1 text-[10px] text-gray-400">글자를 선택한 뒤 적용</span>
+                </div>
+                <textarea id="${escapeAttr(id)}" data-checklist-note-editor class="block w-full ${minHeightClass} resize-y border-0 px-3 py-2.5 text-sm leading-relaxed outline-none bg-white focus:ring-0" placeholder="${escapeAttr(placeholder)}">${escapeHtml(value)}</textarea>
+                <div data-note-preview-for="${escapeAttr(id)}" class="hidden border-t border-gray-100 bg-gray-50/70 px-3 py-2">
+                    <span class="text-[9px] font-bold uppercase tracking-wide text-gray-400">미리보기</span>
+                    <div data-note-preview-content class="mt-1 break-words text-sm leading-relaxed text-gray-700"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    function updateNotePreview(targetId) {
+        const textarea = document.getElementById(targetId);
+        const preview = document.querySelector(`[data-note-preview-for="${CSS.escape(targetId)}"]`);
+        const content = preview?.querySelector('[data-note-preview-content]');
+        if (!textarea || !preview || !content) return;
+        const value = textarea.value || '';
+        const hasFormatting = /\*\*[^*\n]+\*\*|\+\+[^+\n]+\+\+|~~[^~\n]+~~/.test(value);
+        preview.classList.toggle('hidden', !hasFormatting);
+        content.innerHTML = hasFormatting ? formatNotePreview(value) : '';
+    }
+
+    function applyNoteFormat(targetId, formatKey) {
+        const textarea = document.getElementById(targetId);
+        const format = NOTE_FORMATS[formatKey];
+        if (!textarea || !format) return;
+        const start = Number.isFinite(textarea.selectionStart) ? textarea.selectionStart : textarea.value.length;
+        const end = Number.isFinite(textarea.selectionEnd) ? textarea.selectionEnd : start;
+        const selected = textarea.value.slice(start, end) || format.placeholder;
+        const replacement = `${format.open}${selected}${format.close}`;
+        textarea.setRangeText(replacement, start, end, 'end');
+        const contentStart = start + format.open.length;
+        textarea.setSelectionRange(contentStart, contentStart + selected.length);
+        textarea.focus();
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
     function toast(message, type = 'info', duration = 1600) {
@@ -1009,10 +1099,15 @@
                     </div>
 
                     <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px] gap-3">
-                        <label class="block">
+                        <div class="block">
                             <span class="text-[11px] font-bold text-gray-500">상세내역</span>
-                            <textarea id="checklist-detail-note-edit" class="mt-1 w-full min-h-[240px] resize-y border border-gray-200 rounded-md px-3 py-2.5 text-sm leading-relaxed focus:ring-2 focus:ring-indigo-500 outline-none bg-white xl:min-h-[340px]" placeholder="상세내역을 길게 적어둘 수 있습니다.">${escapeHtml(task.note)}</textarea>
-                        </label>
+                            ${renderNoteEditor({
+                                id: 'checklist-detail-note-edit',
+                                value: task.note,
+                                minHeightClass: 'min-h-[220px] xl:min-h-[320px]',
+                                placeholder: '상세내역을 길게 적어둘 수 있습니다.',
+                            })}
+                        </div>
 
                         <div>
                             <div class="block">
@@ -1123,10 +1218,14 @@
                                 ${renderDomainChoiceButtons('checklist-domain-input', 'career')}
                             </div>
 
-                            <label class="block">
+                            <div class="block">
                                 <span class="text-[11px] font-bold text-gray-500">상세내역</span>
-                                <textarea id="checklist-note-input" class="mt-1 w-full min-h-[180px] resize-y border border-gray-200 rounded-md px-3 py-2.5 text-sm leading-relaxed focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="필요한 맥락, 참고 내용, 처리 기준을 길게 적어두세요."></textarea>
-                            </label>
+                                ${renderNoteEditor({
+                                    id: 'checklist-note-input',
+                                    minHeightClass: 'min-h-[160px]',
+                                    placeholder: '필요한 맥락, 참고 내용, 처리 기준을 길게 적어두세요.',
+                                })}
+                            </div>
 
                             <div class="block">
                                 <span class="text-[11px] font-bold text-gray-500">Step</span>
@@ -1151,6 +1250,8 @@
         renderTasks();
         renderDetailPanel();
         hydrateStepEditors();
+        document.querySelectorAll('[data-checklist-note-editor]').forEach((textarea) => updateNotePreview(textarea.id));
+        persistChecklistUiState();
         if (editingTitleTaskId) {
             const titleInput = document.getElementById('checklist-detail-title-edit');
             titleInput?.focus();
@@ -1304,6 +1405,11 @@
         isBound = true;
         const root = document.getElementById('routine-checklist-view');
         root?.addEventListener('click', (event) => {
+            const noteFormatButton = event.target.closest('[data-checklist-note-format]');
+            if (noteFormatButton) {
+                applyNoteFormat(noteFormatButton.dataset.noteTarget, noteFormatButton.dataset.checklistNoteFormat);
+                return;
+            }
             const filterBtn = event.target.closest('[data-checklist-filter]');
             if (filterBtn) {
                 activeFilter = filterBtn.dataset.checklistFilter || 'open';
@@ -1422,6 +1528,10 @@
                 toggleStep(stepToggle.dataset.checklistStepToggle, stepToggle.dataset.stepId);
                 return;
             }
+        });
+        root?.addEventListener('input', (event) => {
+            const noteEditor = event.target.closest('[data-checklist-note-editor]');
+            if (noteEditor) updateNotePreview(noteEditor.id);
         });
         root?.addEventListener('keydown', (event) => {
             const titleDisplay = event.target?.closest?.('[data-checklist-title-display]');
