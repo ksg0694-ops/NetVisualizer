@@ -2,19 +2,21 @@
 
 ## 정보 구조
 
-- 생활 도구: `할 일`, `생활 노트`, `학습 아카이브`
-- Todo 그룹: 사용자 입력 `group_name`으로 목록을 구획한다.
+- 생활 도구: `할 일`, `학습 아카이브`
+- Todo 그룹: 고정된 `Career / Finance / Life`가 그룹이므로 사용자 입력 그룹은 두지 않는다.
+- Life 그룹: Pocket Notebook과 Life 할 일 목록을 같은 `할 일` 탭에 연속 배치한다.
 - Todo 상태: `is_done`과 `is_paused`를 독립 값으로 유지한다.
 - Step: 기존 JSON 배열에 `groupName`, `detail`을 추가한다.
 - 완료 보고서: 요약/성과/Monitor 내용을 `completion_report`에, 업로드 메타데이터를 `report_files`에 저장한다.
 
-## 생활 노트
+## Life 그룹의 생활 노트
 
 선택된 5안인 Pocket Notebook을 기준으로 구현한다.
 
 - PC: 왼쪽 Quick Capture·카드 목록 + 오른쪽 넓은 상세 편집기
 - 모바일: 메모/체크/보류 탭 + Quick Capture + 2열 카드
 - 보류 카드: 낮은 채도와 높은 투명도로 Monitor 상태를 표현한다.
+- 내비게이션: 별도 `생활 노트` 메뉴를 만들지 않고 `할 일 > Life`에서 접근한다.
 
 ## 학습 아카이브
 

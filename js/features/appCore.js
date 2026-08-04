@@ -34,7 +34,6 @@
         'dashboard-view',
         'portfolio-view',
         'routine-checklist-view',
-        'life-notes-view',
         'learning-archive-view',
         'personal-cfo-view',
         'stats-view',

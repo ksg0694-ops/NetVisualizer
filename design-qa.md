@@ -71,6 +71,30 @@ P3 follow-up: replace the Tailwind CDN runtime with a compiled production styles
 
 final result: passed
 
+---
+
+# Update 1.04.02 Career / Finance / Life Group Correction QA
+
+Reference: `C:/Users/ksg06/.codex/generated_images/019f9d05-5144-78a0-ae59-b967f9a0f24b/exec-cb4bbd37-00e1-4ccd-b110-1905bbd14b47.png`
+
+Desktop implementation: `docs/audits/update-10402-group-correction/desktop-life-group.png`
+
+Mobile implementation: `docs/audits/update-10402-group-correction/mobile-life-group.png`
+
+## Comparison pass
+
+- Information architecture: the top-level navigation has one `할 일` entry; Career, Finance, and Life are the three fixed groups inside it.
+- Life integration: the selected Pocket Notebook pattern and the Life Todo list render in the same Life group screen.
+- Removed concepts: no separate Life Notes navigation or user-entered Todo group field remains.
+- Visual match: the existing NetVisualizer shell is preserved while the reference's violet notebook accent, quick-capture block, card/list column, and spacious editor are retained.
+- Responsiveness: desktop 1487×1058 and mobile 390×844 show the group controls, Life notes, and Life Todo without horizontal overflow.
+- Interaction: group switching, mobile Todo form, default Life group selection, note controls, filters, and completion-report entry points are wired.
+- Console: zero application errors during the tested flow.
+
+No open P0, P1, or P2 findings.
+
+final result: passed
+
 ## Portfolio Phase 2 compact list — 2026-07-26
 
 ### Evidence
