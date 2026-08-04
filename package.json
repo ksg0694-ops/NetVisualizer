@@ -1,6 +1,6 @@
 {
   "name": "netvisualizer",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -20,7 +20,11 @@
     "check:static-assets": "node tools/check-static-assets.mjs"
   },
   "devDependencies": {
+    "postcss": "^8.5.25",
     "typescript": "^5.5.4",
     "vite": "^8.1.4"
+  },
+  "dependencies": {
+    "pptxgenjs": "^3.12.0"
   }
 }

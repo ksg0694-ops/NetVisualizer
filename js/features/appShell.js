@@ -38,6 +38,8 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         'dashboard-view': document.getElementById('dashboard-view'), 'portfolio-view': document.getElementById('portfolio-view'),
         'career-view': document.getElementById('career-view'), 'project-view': document.getElementById('project-view'),
         'routine-checklist-view': document.getElementById('routine-checklist-view'),
+        'life-notes-view': document.getElementById('life-notes-view'),
+        'learning-archive-view': document.getElementById('learning-archive-view'),
         'health-view': document.getElementById('health-view'),
         'personal-cfo-view': document.getElementById('personal-cfo-view'),
         'stats-view': document.getElementById('stats-view'), 'cashflow-view': document.getElementById('cashflow-view'),
@@ -47,7 +49,9 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
 
     const viewContextMeta = {
         'dashboard-view': { label: '재무 목표', title: '재무 홈' },
-        'routine-checklist-view': { label: '도구', title: '할 일' },
+        'routine-checklist-view': { label: '생활 도구', title: '할 일' },
+        'life-notes-view': { label: '생활 도구', title: '생활 노트' },
+        'learning-archive-view': { label: '생활 도구', title: '학습 아카이브' },
         'health-view': { label: '생활 도구', title: '건강 기록' },
         'personal-cfo-view': { label: '재무 도구', title: '개인 CFO' },
         'portfolio-view': { label: '재무 도구', title: '포트폴리오' },
@@ -139,6 +143,8 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         });
         Object.values(views).forEach(v => { if(v) v.classList.add('hidden'); });
         if (targetId === 'routine-checklist-view') window.ChecklistFeature?.render({ skipRemoteLoad: true });
+        if (targetId === 'life-notes-view') window.LifeNotesFeature?.render();
+        if (targetId === 'learning-archive-view') window.LearningArchiveFeature?.render();
         if (targetId === 'personal-cfo-view') window.PersonalCfoFeature?.render();
         if(views[targetId]) views[targetId].classList.remove('hidden');
 
@@ -168,6 +174,14 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
             else if (targetId === 'routine-checklist-view') {
                 window.ChecklistFeature?.bindControls();
                 window.ChecklistFeature?.render();
+            }
+            else if (targetId === 'life-notes-view') {
+                window.LifeNotesFeature?.bindControls();
+                window.LifeNotesFeature?.render();
+            }
+            else if (targetId === 'learning-archive-view') {
+                window.LearningArchiveFeature?.bindControls();
+                window.LearningArchiveFeature?.render();
             }
         }, 20);
     }
