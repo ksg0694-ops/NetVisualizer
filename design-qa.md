@@ -73,6 +73,30 @@ final result: passed
 
 ---
 
+# Update 1.04.02 Per-Todo Report Library QA — 2026-08-05
+
+## Evidence
+
+- Prior completion-report interpretation at 1280×720: `docs/audits/update-10402-report-links/desktop.png`
+- Corrected per-Todo Library at 1280×720: `docs/audits/update-10402-task-report-library/desktop.png`
+- Corrected mobile Library in a 390×844 CSS-pixel frame: `docs/audits/update-10402-task-report-library/mobile.png`
+- State: an in-progress Career task selected with two temporary Report links; both links were deleted and the task completion state restored after capture.
+
+## Findings and checks
+
+- The right rail is titled `Report Library` and follows the selected Todo instead of filtering completed Todos.
+- The screenshot demonstrates two Report links attached while the Todo completion control is unchecked.
+- Report title, URL, open, delete, search, sort, and file upload controls fit without widening the three-column workbench.
+- Multiple Report links use the existing task `report_files` JSON and do not change Todo completion fields.
+- Mobile closing the full-screen detail retains task selection and scrolls to its Report Library.
+- Legacy single PPT links remain available as `이전 PPT 링크`.
+- Desktop and 390px mobile frames have no horizontal overflow.
+- No open P0, P1, or P2 findings remain.
+
+final result: passed
+
+---
+
 # Update 1.04.02 Completion Report Link Design QA — 2026-08-05
 
 ## Evidence
