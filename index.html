@@ -42,7 +42,7 @@
     <script src="./js/features/portfolioViews.js?v=20260731-portfolio-scope-split-2"></script>
     <script src="./js/features/financeViews.js?v=20260802-forecast-input-1"></script>
     <script src="./js/features/healthTracker.js?v=20260713-public-server"></script>
-    <script src="./js/features/checklist.js?v=20260805-update-10402-1"></script>
+    <script src="./js/features/checklist.js?v=20260805-update-10402-2"></script>
     <script src="./js/features/personalCfo.js?v=20260726-phase2-portfolio-1"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
@@ -83,7 +83,7 @@
                     <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
                 </a>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.04.02 · patch 2026.08.05
+                    version 1.04.02 · correction 2026.08.05
                 </div>
             </div>
             <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-2 space-y-2">
@@ -125,9 +125,6 @@
                         </a>
                         <a href="#" data-target="routine-checklist-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
                             <i class="fas fa-list-check w-4 text-center text-xs"></i> <span class="truncate">할 일</span>
-                        </a>
-                        <a href="#" data-target="life-notes-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
-                            <i class="fas fa-note-sticky w-4 text-center text-xs"></i> <span class="truncate">생활 노트</span>
                         </a>
                         <a href="#" data-target="learning-archive-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
                             <i class="fas fa-book-open-reader w-4 text-center text-xs"></i> <span class="truncate">학습 아카이브</span>
@@ -810,8 +807,6 @@
                     </div>
                 </div>
             </div>
-
-            <div id="life-notes-view" class="view-section hidden mx-auto w-full max-w-7xl flex-col"></div>
 
             <div id="learning-archive-view" class="view-section hidden mx-auto w-full max-w-7xl flex-col"></div>
 
@@ -1637,7 +1632,6 @@
                 </div>
                 <p class="mt-5 px-2 pb-1 text-[10px] font-bold text-gray-400">생활 도구</p>
                 <button type="button" data-mobile-nav-target="routine-checklist-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-list-check mr-2 w-4 text-center text-xs"></i>할 일</button>
-                <button type="button" data-mobile-nav-target="life-notes-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-note-sticky mr-2 w-4 text-center text-xs"></i>생활 노트</button>
                 <button type="button" data-mobile-nav-target="learning-archive-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-book-open-reader mr-2 w-4 text-center text-xs"></i>학습 아카이브</button>
             </div>
         </nav>
@@ -1917,8 +1911,8 @@
     <!-- Toast Message Container -->
     <div id="toast-container" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[90%] md:w-auto max-w-sm"></div>
 
-    <script src="./js/features/lifeNotes.js?v=20260805-update-10402-1"></script>
+    <script src="./js/features/lifeNotes.js?v=20260805-update-10402-2"></script>
     <script src="./js/features/learningArchive.js?v=20260805-update-10402-1"></script>
-    <script src="./js/features/appShell.js?v=20260805-update-10402-1"></script>
+    <script src="./js/features/appShell.js?v=20260805-update-10402-2"></script>
 </body>
 </html>

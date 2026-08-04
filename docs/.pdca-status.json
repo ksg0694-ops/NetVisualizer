@@ -1,23 +1,25 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Update 1.04.02 Todo reports and Life knowledge tools",
+  "feature": "Update 1.04.02 Career Finance Life group correction",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-08-04T21:20:00+09:00",
+  "updatedAt": "2026-08-05T00:55:00+09:00",
   "status": "complete",
-  "currentFocus": "Group Todo work, add completion-report PPTs, and separate lightweight Life notes and learning knowledge.",
+  "currentFocus": "Use Career, Finance, and Life as the Todo groups and embed Pocket Notebook with Life Todo in one tab.",
   "completed": [
     "Documented Plan, Design, Check, Report, and design QA phases.",
-    "Grouped Todo items and added Monitor pause state.",
+    "Replaced arbitrary Todo groups with Career, Finance, and Life.",
+    "Embedded Pocket Notebook and Life Todo in the same Todo tab.",
+    "Removed the separate Life Notes navigation entry.",
     "Added Step subgroup and per-Step details.",
     "Added completion-report fields, PPT export, and Upload Library.",
-    "Built the selected Pocket Notebook Life experience.",
+    "Built the selected Pocket Notebook Life experience inside the Life group.",
     "Built the four-level Learning Archive.",
     "Added Supabase tables, Todo columns, and private report storage migration.",
-    "Bumped the app to 1.04.02 and the PWA cache to v153.",
+    "Bumped the correction cache to v154.",
     "Passed the full check suite and responsive browser QA."
   ],
   "remaining": [],
-  "nextStep": "Apply the Supabase migration, merge, deploy, and verify the GitHub Pages build."
+  "nextStep": "Commit, publish, merge, and verify the GitHub Pages build."
 }

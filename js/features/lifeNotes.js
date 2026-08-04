@@ -14,6 +14,10 @@
     let bound = false;
     let loaded = false;
 
+    function getRoot() {
+        return document.getElementById('checklist-life-notes-panel') || document.getElementById('life-notes-view');
+    }
+
     const escapeHtml = (value) => window.AppUtils.escapeHtml(value);
     const escapeAttr = (value) => window.AppUtils.escapeAttr(value);
     const createId = () => (window.crypto?.randomUUID?.() || `life-note-${Date.now()}-${Math.random().toString(16).slice(2)}`);
@@ -164,7 +168,7 @@
     }
 
     function render(options = {}) {
-        const root = document.getElementById('life-notes-view');
+        const root = getRoot();
         if (!root) return;
         const visible = filteredNotes();
         if (activeId && !notes.some((note) => note.id === activeId)) activeId = null;
@@ -217,7 +221,7 @@
     function bindControls() {
         if (bound) return;
         bound = true;
-        const root = document.getElementById('life-notes-view');
+        const root = getRoot();
         root?.addEventListener('submit', async (event) => {
             if (event.target.id !== 'life-quick-form') return;
             event.preventDefault();

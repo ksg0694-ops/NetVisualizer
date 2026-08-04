@@ -43,15 +43,15 @@
         try {
             const parsed = JSON.parse(localStorage.getItem(UI_STATE_KEY) || '{}');
             const validFilters = new Set(['open', 'paused', 'done', 'all']);
-            const validDomains = new Set(['all', ...DOMAINS.map((domain) => domain.key)]);
+            const validDomains = new Set(DOMAINS.map((domain) => domain.key));
             return {
                 activeFilter: validFilters.has(parsed.activeFilter) ? parsed.activeFilter : 'open',
-                activeDomain: validDomains.has(parsed.activeDomain) ? parsed.activeDomain : 'all',
+                activeDomain: validDomains.has(parsed.activeDomain) ? parsed.activeDomain : 'career',
                 activeTaskId: typeof parsed.activeTaskId === 'string' && parsed.activeTaskId ? parsed.activeTaskId : null,
             };
         } catch (error) {
             console.warn('Saved Todo UI state could not be restored.', error);
-            return { activeFilter: 'open', activeDomain: 'all', activeTaskId: null };
+            return { activeFilter: 'open', activeDomain: 'career', activeTaskId: null };
         }
     }
 
@@ -222,10 +222,10 @@
 
     function renderDomainChoiceButtons(inputId, selectedKey = 'career') {
         const normalizedKey = getDomain(selectedKey).key;
-        const visibleDomains = DOMAINS.filter((item) => item.key !== 'life' || normalizedKey === 'life');
+        const visibleDomains = DOMAINS;
         return `
             <input id="${escapeAttr(inputId)}" type="hidden" value="${escapeAttr(normalizedKey)}">
-            <div role="radiogroup" aria-label="할 일 영역" class="mt-1 grid ${visibleDomains.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} gap-1.5">
+            <div role="radiogroup" aria-label="할 일 그룹" class="mt-1 grid grid-cols-3 gap-1.5">
                 ${visibleDomains.map((item) => {
                     const selected = item.key === normalizedKey;
                     return `
@@ -745,7 +745,6 @@
             dueDate: /^\d{4}-\d{2}-\d{2}$/.test(dueDate) ? dueDate : todayString(),
             priority: raw.priority === 'high' ? 'high' : 'normal',
             steps: normalizeSteps(raw.steps || raw.subtasks || []),
-            groupName: String(raw.groupName || raw.group_name || '기본 그룹').trim() || '기본 그룹',
             paused: Boolean(raw.paused ?? raw.is_paused),
             completionReport: typeof (raw.completionReport || raw.completion_report) === 'object' && (raw.completionReport || raw.completion_report) !== null ? (raw.completionReport || raw.completion_report) : {},
             reportFiles: Array.isArray(raw.reportFiles || raw.report_files) ? (raw.reportFiles || raw.report_files) : [],
@@ -831,7 +830,7 @@
 
     function isUpdate10402SchemaError(error) {
         const text = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`.toLowerCase();
-        return ['group_name', 'is_paused', 'completion_report', 'report_files'].some((column) => text.includes(column));
+        return ['is_paused', 'completion_report', 'report_files'].some((column) => text.includes(column));
     }
 
     function handleRemoteError(error, context) {
@@ -866,7 +865,6 @@
         if (userId) payload.user_id = userId;
         if (remoteSupportsDisplayOrder) payload.display_order = normalized.displayOrder;
         if (remoteSupportsUpdate10402) {
-            payload.group_name = normalized.groupName;
             payload.is_paused = normalized.paused;
             payload.completion_report = normalized.completionReport;
             payload.report_files = normalized.reportFiles;
@@ -884,7 +882,6 @@
             steps: row.steps,
             dueDate: row.due_date,
             priority: row.priority,
-            groupName: row.group_name,
             paused: row.is_paused,
             completionReport: row.completion_report,
             reportFiles: row.report_files,
@@ -975,7 +972,7 @@
         try {
             let { data, error } = await client
                 .from(TABLE_NAME)
-                .select('id,title,note,category,domain,steps,due_date,priority,is_done,completed_at,created_at,updated_at,display_order,group_name,is_paused,completion_report,report_files')
+                .select('id,title,note,category,domain,steps,due_date,priority,is_done,completed_at,created_at,updated_at,display_order,is_paused,completion_report,report_files')
                 .order('display_order', { ascending: true, nullsFirst: false })
                 .order('created_at', { ascending: false });
             if (error && remoteSupportsUpdate10402 && isUpdate10402SchemaError(error)) {
@@ -1030,7 +1027,7 @@
     }
 
     function matchesDomain(task) {
-        return activeDomain === 'all' || task.domain === activeDomain;
+        return task.domain === activeDomain;
     }
 
     function getFilteredTasks() {
@@ -1046,9 +1043,10 @@
     }
 
     function getSummary() {
-        const open = tasks.filter((task) => !task.completed && !task.paused).length;
-        const paused = tasks.filter((task) => !task.completed && task.paused).length;
-        const done = tasks.filter((task) => task.completed).length;
+        const scopedTasks = tasks.filter(matchesDomain);
+        const open = scopedTasks.filter((task) => !task.completed && !task.paused).length;
+        const paused = scopedTasks.filter((task) => !task.completed && task.paused).length;
+        const done = scopedTasks.filter((task) => task.completed).length;
         const total = open + paused + done;
         const pct = total ? Math.round((done / total) * 100) : 0;
         return { open, paused, done, total, pct };
@@ -1090,7 +1088,6 @@
                 </div>
                 <div class="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-gray-500">
                     ${domainBadge}
-                    <span class="shrink-0 rounded bg-white/70 px-1.5 py-0.5 font-semibold text-gray-500">${escapeHtml(task.groupName)}</span>
                     ${task.paused ? '<span class="shrink-0 font-bold text-amber-600"><i class="fas fa-pause mr-1"></i>Monitor</span>' : ''}
                     ${stepBadge ? `<span class="shrink-0">${stepBadge}</span>` : ''}
                 </div>
@@ -1111,16 +1108,12 @@
             `;
             return;
         }
-        const grouped = new Map();
-        visibleTasks.forEach((task) => {
-            if (!grouped.has(task.groupName)) grouped.set(task.groupName, []);
-            grouped.get(task.groupName).push(task);
-        });
-        list.innerHTML = [...grouped.entries()].map(([groupName, groupTasks]) => `
-            <section class="space-y-1.5" data-checklist-group="${escapeAttr(groupName)}">
-                <div class="sticky top-0 z-[1] flex items-center justify-between rounded-md bg-gray-50/95 px-2 py-1 backdrop-blur"><h4 class="text-[10px] font-black tracking-wide text-gray-500">${escapeHtml(groupName)}</h4><span class="text-[10px] text-gray-400">${groupTasks.length}</span></div>
-                ${groupTasks.map(renderTaskCard).join('')}
-            </section>`).join('');
+        const domain = getDomain(activeDomain);
+        list.innerHTML = `
+            <section class="space-y-1.5" data-checklist-group="${escapeAttr(domain.key)}">
+                <div class="sticky top-0 z-[1] flex items-center justify-between rounded-md bg-gray-50/95 px-2 py-1 backdrop-blur"><h4 class="text-[10px] font-black tracking-wide text-gray-500">${escapeHtml(domain.label)}</h4><span class="text-[10px] text-gray-400">${visibleTasks.length}</span></div>
+                ${visibleTasks.map(renderTaskCard).join('')}
+            </section>`;
     }
 
     function renderCompletionReport(task) {
@@ -1154,7 +1147,7 @@
             <div data-checklist-report-library-close class="fixed inset-0 z-[70] flex items-stretch justify-end bg-gray-950/35 backdrop-blur-[1px]">
                 <section data-checklist-report-library-dialog class="h-full w-full max-w-xl overflow-y-auto bg-white p-4 shadow-2xl md:p-6">
                     <div class="flex items-start justify-between"><div><p class="text-[10px] font-black tracking-wider text-indigo-500">UPLOAD LIBRARY</p><h3 class="mt-1 text-xl font-black text-gray-900">완료 보고서 Library</h3><p class="mt-1 text-xs text-gray-400">할 일별 PPT·PDF 결과물을 한곳에서 확인합니다.</p></div><button type="button" data-checklist-report-library-close class="h-9 w-9 rounded-lg text-gray-400 hover:bg-gray-100"><i class="fas fa-xmark"></i></button></div>
-                    <div class="mt-5 space-y-2">${reports.length ? reports.map(({ task, file, index }) => `<button type="button" data-checklist-report-open="${escapeAttr(task.id)}" data-report-index="${index}" class="flex w-full items-center gap-3 rounded-xl border border-gray-200 p-3 text-left hover:border-indigo-200 hover:bg-indigo-50/40"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-500"><i class="fas fa-file-powerpoint"></i></span><span class="min-w-0 flex-1"><strong class="block truncate text-sm text-gray-800">${escapeHtml(file.name || '완료 보고서')}</strong><span class="mt-0.5 block truncate text-[10px] text-gray-400">${escapeHtml(task.groupName)} · ${escapeHtml(task.title)}</span></span><i class="fas fa-arrow-up-right-from-square text-xs text-gray-300"></i></button>`).join('') : '<div class="rounded-xl border border-dashed border-gray-200 px-5 py-14 text-center text-sm text-gray-400">업로드된 완료 보고서가 없습니다.</div>'}</div>
+                    <div class="mt-5 space-y-2">${reports.length ? reports.map(({ task, file, index }) => `<button type="button" data-checklist-report-open="${escapeAttr(task.id)}" data-report-index="${index}" class="flex w-full items-center gap-3 rounded-xl border border-gray-200 p-3 text-left hover:border-indigo-200 hover:bg-indigo-50/40"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-500"><i class="fas fa-file-powerpoint"></i></span><span class="min-w-0 flex-1"><strong class="block truncate text-sm text-gray-800">${escapeHtml(file.name || '완료 보고서')}</strong><span class="mt-0.5 block truncate text-[10px] text-gray-400">${escapeHtml(getDomain(task.domain).label)} · ${escapeHtml(task.title)}</span></span><i class="fas fa-arrow-up-right-from-square text-xs text-gray-300"></i></button>`).join('') : '<div class="rounded-xl border border-dashed border-gray-200 px-5 py-14 text-center text-sm text-gray-400">업로드된 완료 보고서가 없습니다.</div>'}</div>
                 </section>
             </div>` : '';
     }
@@ -1205,9 +1198,8 @@
                 </div>
 
                 <div class="grid flex-1 grid-cols-1 gap-3 overflow-y-auto px-4 py-4 xl:mt-3 xl:overflow-visible xl:p-0">
-                    <div class="grid max-w-2xl gap-3 sm:grid-cols-2">
-                        <div class="block"><span class="text-[11px] font-bold text-gray-500">영역</span>${renderDomainChoiceButtons('checklist-detail-domain-edit', task.domain)}</div>
-                        <label class="block"><span class="text-[11px] font-bold text-gray-500">그룹</span><input id="checklist-detail-group-edit" value="${escapeAttr(task.groupName)}" class="mt-1 block h-9 w-full rounded-md border border-gray-200 px-3 text-sm outline-none focus:border-indigo-400" placeholder="예: 1.04.02 패치"></label>
+                    <div class="max-w-2xl">
+                        <div class="block"><span class="text-[11px] font-bold text-gray-500">그룹</span>${renderDomainChoiceButtons('checklist-detail-domain-edit', task.domain)}</div>
                     </div>
 
                     <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px] gap-3">
@@ -1258,15 +1250,11 @@
             ].join('');
         }
         if (domainsEl) {
-            domainsEl.innerHTML = `
-                <label class="flex items-center gap-2">
-                    <span class="text-[11px] font-bold text-gray-500">영역</span>
-                    <select id="checklist-domain-filter" class="h-8 rounded-md border border-gray-200 bg-white px-2.5 text-[11px] font-bold text-gray-700 outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="all" ${activeDomain === 'all' ? 'selected' : ''}>전체</option>
-                        ${DOMAINS.map((domain) => `<option value="${escapeAttr(domain.key)}" ${activeDomain === domain.key ? 'selected' : ''}>${escapeHtml(domain.label)}</option>`).join('')}
-                    </select>
-                </label>
-            `;
+            domainsEl.innerHTML = DOMAINS.map((domain) => {
+                const count = tasks.filter((task) => task.domain === domain.key).length;
+                const active = activeDomain === domain.key;
+                return `<button type="button" data-checklist-domain-filter="${escapeAttr(domain.key)}" aria-pressed="${active}" class="flex min-w-0 flex-1 items-center justify-between rounded-lg border px-3 py-2 text-left transition ${active ? `font-black ${TONE_CLASSES[domain.tone]}` : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'}"><span class="text-xs">${escapeHtml(domain.label)}</span><span class="text-[10px] opacity-70">${count}</span></button>`;
+            }).join('');
         }
     }
 
@@ -1277,15 +1265,19 @@
         root.innerHTML = `
             <div class="mb-3 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
                 <div>
-                    <p class="text-[10px] md:text-xs font-bold text-indigo-500 mb-1">작업 관리</p>
-                    <h2 class="text-xl md:text-2xl font-bold text-gray-900">할 일 보드</h2>
-                    <p class="text-xs text-gray-500 mt-1">목록은 빠르게 훑고, 상세내역과 Step은 선택한 항목에서 관리합니다.</p>
+                    <p class="text-[10px] md:text-xs font-bold text-indigo-500 mb-1">Career · Finance · Life</p>
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-900">할 일</h2>
                 </div>
                 <div class="flex items-center gap-2"><button type="button" data-checklist-report-library-open class="rounded-md border border-indigo-100 bg-indigo-50 px-2.5 py-1.5 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100"><i class="fas fa-box-archive mr-1"></i>완료 보고서</button><span id="checklist-sync-badge" class="text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-md whitespace-nowrap w-fit">로컬 저장</span></div>
             </div>
 
+            <div id="checklist-domain-filters" class="mb-3 flex gap-2"></div>
+
             <div class="space-y-2.5 md:space-y-3 mb-8">
-                <section class="bg-white p-2.5 md:p-3 rounded-lg border border-gray-100 min-w-0">
+                <section id="checklist-life-notes-wrap" class="hidden min-w-0">
+                    <div id="checklist-life-notes-panel"></div>
+                </section>
+                <section id="checklist-task-board" class="bg-white p-2.5 md:p-3 rounded-lg border border-gray-100 min-w-0">
                     <div class="flex flex-col gap-2 mb-2.5">
                         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                             <h3 class="text-sm font-bold text-gray-900">할 일 목록</h3>
@@ -1294,7 +1286,6 @@
                                 <div id="checklist-add-panel"></div>
                             </div>
                         </div>
-                        <div id="checklist-domain-filters" class="flex flex-wrap gap-1.5"></div>
                     </div>
                     <div class="grid grid-cols-1 xl:grid-cols-[380px_minmax(0,1fr)] gap-3 min-w-0">
                         <div class="min-w-0">
@@ -1330,11 +1321,9 @@
                             <input id="checklist-title-input" type="text" class="w-full border-0 border-b border-gray-200 px-0 py-2 text-lg font-bold focus:border-indigo-500 focus:ring-0 outline-none" placeholder="할 일 제목">
 
                             <div class="block">
-                                <span class="text-[11px] font-bold text-gray-500">영역</span>
-                                ${renderDomainChoiceButtons('checklist-domain-input', 'career')}
+                                <span class="text-[11px] font-bold text-gray-500">그룹</span>
+                                ${renderDomainChoiceButtons('checklist-domain-input', activeDomain)}
                             </div>
-
-                            <label class="block"><span class="text-[11px] font-bold text-gray-500">그룹</span><input id="checklist-group-input" class="mt-1 block h-9 w-full rounded-md border border-gray-200 px-3 text-sm outline-none focus:border-indigo-400" placeholder="예: Version 1.04.02"></label>
 
                             <div class="block">
                                 <span class="text-[11px] font-bold text-gray-500">상세내역</span>
@@ -1368,6 +1357,12 @@
         renderTasks();
         renderDetailPanel();
         renderReportLibrary();
+        const lifeNotesWrap = document.getElementById('checklist-life-notes-wrap');
+        if (lifeNotesWrap) lifeNotesWrap.classList.toggle('hidden', activeDomain !== 'life');
+        if (activeDomain === 'life') {
+            window.LifeNotesFeature?.bindControls?.();
+            window.LifeNotesFeature?.render?.();
+        }
         hydrateStepEditors();
         document.querySelectorAll('[data-checklist-note-editor]').forEach((textarea) => updateNotePreview(textarea.id));
         persistChecklistUiState();
@@ -1390,14 +1385,12 @@
         const noteEl = document.getElementById('checklist-note-input');
         const stepsEl = document.getElementById('checklist-steps-input');
         const domainEl = document.getElementById('checklist-domain-input');
-        const groupEl = document.getElementById('checklist-group-input');
         const task = normalizeTask({
             title: titleEl?.value,
             note: noteEl?.value,
             steps: parseStepEditorSteps(stepsEl?.value || ''),
             dueDate: todayString(),
-            domain: domainEl?.value || 'life',
-            groupName: groupEl?.value || '기본 그룹',
+            domain: domainEl?.value || activeDomain,
             priority: 'normal',
             displayOrder: getTopDisplayOrder(),
         });
@@ -1527,7 +1520,7 @@
             slide.background = { color: 'F8FAFC' };
             slide.addText('NetVisualizer · Completion Report', { x: 0.7, y: 0.55, w: 5.8, h: 0.25, fontSize: 11, bold: true, color: '6366F1', charSpacing: 1.2 });
             slide.addText(task.title, { x: 0.7, y: 1.0, w: 11.8, h: 0.75, fontSize: 28, bold: true, color: '111827', breakLine: false, margin: 0 });
-            slide.addText(`${task.groupName}  ·  ${getDomain(task.domain).label}  ·  ${task.completedAt ? new Date(task.completedAt).toLocaleDateString('ko-KR') : '완료'}`, { x: 0.7, y: 1.82, w: 11.8, h: 0.3, fontSize: 11, color: '64748B', margin: 0 });
+            slide.addText(`${getDomain(task.domain).label}  ·  ${task.completedAt ? new Date(task.completedAt).toLocaleDateString('ko-KR') : '완료'}`, { x: 0.7, y: 1.82, w: 11.8, h: 0.3, fontSize: 11, color: '64748B', margin: 0 });
             const sections = [
                 ['결과 요약', task.completionReport.summary || '기록 없음'],
                 ['핵심 성과', task.completionReport.outcome || '기록 없음'],
@@ -1579,7 +1572,6 @@
         if (!task) return;
         const titleEl = document.getElementById('checklist-detail-title-edit');
         const domainEl = document.getElementById('checklist-detail-domain-edit');
-        const groupEl = document.getElementById('checklist-detail-group-edit');
         const noteEl = document.getElementById('checklist-detail-note-edit');
         const stepsEl = document.getElementById('checklist-detail-steps-edit');
         const title = String(titleEl?.value || task.title).trim();
@@ -1589,7 +1581,6 @@
         }
         task.title = title;
         task.domain = getDomain(domainEl?.value || task.domain).key;
-        task.groupName = String(groupEl?.value || '기본 그룹').trim() || '기본 그룹';
         task.priority = 'normal';
         task.note = String(noteEl?.value || '').trim();
         task.steps = parseStepEditorSteps(stepsEl?.value || '', task.steps);
@@ -1677,6 +1668,13 @@
             const filterBtn = event.target.closest('[data-checklist-filter]');
             if (filterBtn) {
                 activeFilter = filterBtn.dataset.checklistFilter || 'open';
+                render({ skipRemoteLoad: true });
+                return;
+            }
+            const domainFilter = event.target.closest('[data-checklist-domain-filter]');
+            if (domainFilter) {
+                activeDomain = getDomain(domainFilter.dataset.checklistDomainFilter).key;
+                if (activeTaskId && tasks.find((task) => task.id === activeTaskId)?.domain !== activeDomain) activeTaskId = null;
                 render({ skipRemoteLoad: true });
                 return;
             }
@@ -1804,12 +1802,6 @@
             startTitleEditing(title.dataset.checklistTitleDisplay);
         });
         root?.addEventListener('change', (event) => {
-            const domainFilter = event.target.closest('#checklist-domain-filter');
-            if (domainFilter) {
-                activeDomain = domainFilter.value || 'all';
-                render({ skipRemoteLoad: true });
-                return;
-            }
             const editorStepToggle = event.target.closest('[data-step-editor-toggle]');
             if (editorStepToggle) {
                 toggleStepFromEditor(
