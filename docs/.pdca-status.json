@@ -1,22 +1,23 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Mobile state restoration and Todo formatting",
+  "feature": "Update 1.04.02 Todo reports and Life knowledge tools",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-08-03T12:00:00+09:00",
+  "updatedAt": "2026-08-04T21:20:00+09:00",
   "status": "complete",
-  "currentFocus": "Restore the last mobile view and Todo context while improving Todo card color and note formatting.",
+  "currentFocus": "Group Todo work, add completion-report PPTs, and separate lightweight Life notes and learning knowledge.",
   "completed": [
-    "Documented Plan, Design, Check, and Report phases.",
-    "Persisted and restored the active view and selected finance month.",
-    "Persisted and restored Todo filter, domain, and selected task state.",
-    "Restored low-saturation domain color fills to Todo cards.",
-    "Added safe token-based bold, underline, and strike formatting with live preview.",
-    "Bumped the PWA cache to v152.",
-    "Verified the mobile restore flow at a 390 by 844 viewport.",
-    "Passed the full NetVisualizer application check suite."
+    "Documented Plan, Design, Check, Report, and design QA phases.",
+    "Grouped Todo items and added Monitor pause state.",
+    "Added Step subgroup and per-Step details.",
+    "Added completion-report fields, PPT export, and Upload Library.",
+    "Built the selected Pocket Notebook Life experience.",
+    "Built the four-level Learning Archive.",
+    "Added Supabase tables, Todo columns, and private report storage migration.",
+    "Bumped the app to 1.04.02 and the PWA cache to v153.",
+    "Passed the full check suite and responsive browser QA."
   ],
   "remaining": [],
-  "nextStep": "Merge, deploy, and verify mobile background restoration on the installed GitHub Pages PWA."
+  "nextStep": "Apply the Supabase migration, merge, deploy, and verify the GitHub Pages build."
 }

@@ -42,7 +42,7 @@
     function readChecklistUiState() {
         try {
             const parsed = JSON.parse(localStorage.getItem(UI_STATE_KEY) || '{}');
-            const validFilters = new Set(['open', 'done', 'all']);
+            const validFilters = new Set(['open', 'paused', 'done', 'all']);
             const validDomains = new Set(['all', ...DOMAINS.map((domain) => domain.key)]);
             return {
                 activeFilter: validFilters.has(parsed.activeFilter) ? parsed.activeFilter : 'open',
@@ -67,10 +67,12 @@
     let remoteLoaded = false;
     let remoteLoadStarted = false;
     let remoteSupportsDisplayOrder = true;
+    let remoteSupportsUpdate10402 = true;
     let draggedTaskId = null;
     let draggedStepDrag = null;
     let pointerDrag = null;
     let editingTitleTaskId = null;
+    let reportLibraryOpen = false;
 
     function escapeHtml(value) {
         return window.AppUtils.escapeHtml(value);
@@ -218,12 +220,13 @@
         return DOMAINS.find((item) => item.key === key) || DOMAINS[DOMAINS.length - 1];
     }
 
-    function renderDomainChoiceButtons(inputId, selectedKey = 'life') {
+    function renderDomainChoiceButtons(inputId, selectedKey = 'career') {
         const normalizedKey = getDomain(selectedKey).key;
+        const visibleDomains = DOMAINS.filter((item) => item.key !== 'life' || normalizedKey === 'life');
         return `
             <input id="${escapeAttr(inputId)}" type="hidden" value="${escapeAttr(normalizedKey)}">
-            <div role="radiogroup" aria-label="할 일 영역" class="mt-1 grid grid-cols-3 gap-1.5">
-                ${DOMAINS.map((item) => {
+            <div role="radiogroup" aria-label="할 일 영역" class="mt-1 grid ${visibleDomains.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} gap-1.5">
+                ${visibleDomains.map((item) => {
                     const selected = item.key === normalizedKey;
                     return `
                         <button type="button" role="radio" aria-checked="${selected}" data-checklist-domain-choice="${escapeAttr(item.key)}" data-domain-target="${escapeAttr(inputId)}" class="h-9 rounded-md border text-[11px] font-bold transition ${selected ? 'border-gray-900 bg-gray-900 text-white shadow-sm' : 'border-gray-200 bg-white text-gray-500 hover:border-indigo-200 hover:text-indigo-600'}">
@@ -272,6 +275,8 @@
                 id: createId(),
                 title,
                 done: false,
+                groupName: '기본 Step',
+                detail: '',
                 createdAt: new Date().toISOString(),
             };
         }
@@ -281,6 +286,8 @@
             id: String(raw.id || createId()),
             title,
             done: Boolean(raw.done ?? raw.completed ?? raw.is_done),
+            groupName: String(raw.groupName || raw.group_name || raw.group || '기본 Step').trim() || '기본 Step',
+            detail: String(raw.detail || raw.note || '').trim(),
             createdAt: raw.createdAt || raw.created_at || new Date().toISOString(),
         };
     }
@@ -345,8 +352,9 @@
         return `
             <div data-step-editor data-step-target="${escapeAttr(textareaId)}">
                 <textarea id="${escapeAttr(textareaId)}" class="hidden">${escapeHtml(serializeStepEditorSteps(steps))}</textarea>
-                <div class="flex gap-1.5">
-                    <input type="text" data-step-editor-input class="min-w-0 flex-1 border border-gray-200 rounded-md px-2.5 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none bg-white" placeholder="Step 입력">
+                <div class="grid grid-cols-[minmax(0,1fr)_120px_32px] gap-1.5">
+                    <input type="text" data-step-editor-input class="min-w-0 border border-gray-200 rounded-md px-2.5 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none bg-white" placeholder="Step 입력">
+                    <input type="text" data-step-editor-group-input class="min-w-0 border border-gray-200 rounded-md px-2 py-2 text-[11px] outline-none focus:border-indigo-400" placeholder="Subgroup">
                     <button type="button" data-step-editor-add class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gray-900 text-white hover:bg-gray-800" title="Step 추가" aria-label="Step 추가">
                         <i class="fas fa-plus text-[10px]"></i>
                     </button>
@@ -369,7 +377,13 @@
             <div data-step-editor-item="${index}" class="group/step flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50/70 px-2 py-1.5 text-xs text-gray-700 transition hover:border-gray-300 hover:bg-white">
                 <input type="checkbox" data-step-editor-toggle="${index}" ${step.done ? 'checked' : ''} class="h-3.5 w-3.5 shrink-0 rounded border-gray-300 accent-indigo-600">
                 <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-white text-[10px] font-bold text-gray-400">${index + 1}</span>
-                <span class="min-w-0 flex-1 truncate ${step.done ? 'line-through text-gray-400' : ''}">${escapeHtml(step.title)}</span>
+                <span class="min-w-0 flex-1">
+                    <span class="block truncate ${step.done ? 'line-through text-gray-400' : ''}">${escapeHtml(step.title)}</span>
+                    <span class="mt-1 grid gap-1 sm:grid-cols-[110px_minmax(0,1fr)]">
+                        <input type="text" data-step-editor-group="${index}" value="${escapeAttr(step.groupName)}" class="min-w-0 rounded border border-gray-200 bg-white/80 px-1.5 py-1 text-[10px] text-gray-500 outline-none focus:border-indigo-300" aria-label="Step subgroup">
+                        <input type="text" data-step-editor-detail="${index}" value="${escapeAttr(step.detail)}" class="min-w-0 rounded border border-gray-200 bg-white/80 px-1.5 py-1 text-[10px] text-gray-500 outline-none focus:border-indigo-300" placeholder="Step 상세내역" aria-label="Step 상세내역">
+                    </span>
+                </span>
                 <button type="button" data-step-editor-remove="${index}" class="shrink-0 text-gray-300 hover:text-rose-500" title="삭제">
                     <i class="fas fa-xmark text-xs"></i>
                 </button>
@@ -386,17 +400,29 @@
 
     function addStepFromEditor(editor) {
         const input = editor?.querySelector('[data-step-editor-input]');
+        const groupInput = editor?.querySelector('[data-step-editor-group-input]');
         const textarea = editor?.querySelector('textarea');
         if (!input || !textarea) return;
         const title = String(input.value || '').trim();
         if (!title) return;
         const steps = parseStepEditorSteps(textarea.value);
         if (!steps.some((item) => item.title.toLowerCase() === title.toLowerCase())) {
-            steps.push(normalizeStep(title));
+            steps.push(normalizeStep({ title, groupName: groupInput?.value || '기본 Step' }));
             textarea.value = serializeStepEditorSteps(steps);
         }
         input.value = '';
+        if (groupInput) groupInput.value = '';
         renderStepEditorList(editor);
+    }
+
+    function updateStepMetadata(editor, index, key, value) {
+        const textarea = editor?.querySelector('textarea');
+        if (!textarea) return;
+        const steps = parseStepEditorSteps(textarea.value);
+        const step = steps[Number(index)];
+        if (!step) return;
+        step[key] = String(value || '').trim() || (key === 'groupName' ? '기본 Step' : '');
+        textarea.value = serializeStepEditorSteps(steps);
     }
 
     function removeStepFromEditor(editor, index) {
@@ -719,6 +745,10 @@
             dueDate: /^\d{4}-\d{2}-\d{2}$/.test(dueDate) ? dueDate : todayString(),
             priority: raw.priority === 'high' ? 'high' : 'normal',
             steps: normalizeSteps(raw.steps || raw.subtasks || []),
+            groupName: String(raw.groupName || raw.group_name || '기본 그룹').trim() || '기본 그룹',
+            paused: Boolean(raw.paused ?? raw.is_paused),
+            completionReport: typeof (raw.completionReport || raw.completion_report) === 'object' && (raw.completionReport || raw.completion_report) !== null ? (raw.completionReport || raw.completion_report) : {},
+            reportFiles: Array.isArray(raw.reportFiles || raw.report_files) ? (raw.reportFiles || raw.report_files) : [],
             completed: Boolean(raw.completed ?? raw.is_done),
             completedAt: raw.completedAt || raw.completed_at || null,
             createdAt: raw.createdAt || raw.created_at || new Date().toISOString(),
@@ -799,6 +829,11 @@
         return text.includes('display_order') || String(error?.code || '') === 'PGRST204';
     }
 
+    function isUpdate10402SchemaError(error) {
+        const text = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`.toLowerCase();
+        return ['group_name', 'is_paused', 'completion_report', 'report_files'].some((column) => text.includes(column));
+    }
+
     function handleRemoteError(error, context) {
         remoteLoaded = false;
         if (isMissingSchemaError(error)) {
@@ -830,6 +865,12 @@
         };
         if (userId) payload.user_id = userId;
         if (remoteSupportsDisplayOrder) payload.display_order = normalized.displayOrder;
+        if (remoteSupportsUpdate10402) {
+            payload.group_name = normalized.groupName;
+            payload.is_paused = normalized.paused;
+            payload.completion_report = normalized.completionReport;
+            payload.report_files = normalized.reportFiles;
+        }
         return payload;
     }
 
@@ -843,6 +884,10 @@
             steps: row.steps,
             dueDate: row.due_date,
             priority: row.priority,
+            groupName: row.group_name,
+            paused: row.is_paused,
+            completionReport: row.completion_report,
+            reportFiles: row.report_files,
             completed: row.is_done,
             completedAt: row.completed_at,
             createdAt: row.created_at,
@@ -859,6 +904,10 @@
             let { error } = await client
                 .from(TABLE_NAME)
                 .upsert(toRemotePayload(normalized), { onConflict: 'id' });
+            if (error && remoteSupportsUpdate10402 && isUpdate10402SchemaError(error)) {
+                remoteSupportsUpdate10402 = false;
+                ({ error } = await client.from(TABLE_NAME).upsert(toRemotePayload(normalized), { onConflict: 'id' }));
+            }
             if (error && remoteSupportsDisplayOrder && isDisplayOrderSchemaError(error)) {
                 remoteSupportsDisplayOrder = false;
                 ({ error } = await client
@@ -882,6 +931,10 @@
             let { error } = await client
                 .from(TABLE_NAME)
                 .upsert(tasks.map(toRemotePayload), { onConflict: 'id' });
+            if (error && remoteSupportsUpdate10402 && isUpdate10402SchemaError(error)) {
+                remoteSupportsUpdate10402 = false;
+                ({ error } = await client.from(TABLE_NAME).upsert(tasks.map(toRemotePayload), { onConflict: 'id' }));
+            }
             if (error && remoteSupportsDisplayOrder && isDisplayOrderSchemaError(error)) {
                 remoteSupportsDisplayOrder = false;
                 ({ error } = await client
@@ -922,9 +975,17 @@
         try {
             let { data, error } = await client
                 .from(TABLE_NAME)
-                .select('id,title,note,category,domain,steps,due_date,priority,is_done,completed_at,created_at,updated_at,display_order')
+                .select('id,title,note,category,domain,steps,due_date,priority,is_done,completed_at,created_at,updated_at,display_order,group_name,is_paused,completion_report,report_files')
                 .order('display_order', { ascending: true, nullsFirst: false })
                 .order('created_at', { ascending: false });
+            if (error && remoteSupportsUpdate10402 && isUpdate10402SchemaError(error)) {
+                remoteSupportsUpdate10402 = false;
+                ({ data, error } = await client
+                    .from(TABLE_NAME)
+                    .select('id,title,note,category,domain,steps,due_date,priority,is_done,completed_at,created_at,updated_at,display_order')
+                    .order('display_order', { ascending: true, nullsFirst: false })
+                    .order('created_at', { ascending: false }));
+            }
             if (error && remoteSupportsDisplayOrder && isDisplayOrderSchemaError(error)) {
                 remoteSupportsDisplayOrder = false;
                 ({ data, error } = await client
@@ -976,18 +1037,21 @@
         let nextTasks = tasks.filter(matchesDomain);
         if (activeFilter === 'done') {
             nextTasks = nextTasks.filter((task) => task.completed);
+        } else if (activeFilter === 'paused') {
+            nextTasks = nextTasks.filter((task) => task.paused && !task.completed);
         } else if (activeFilter !== 'all') {
-            nextTasks = nextTasks.filter((task) => !task.completed);
+            nextTasks = nextTasks.filter((task) => !task.completed && !task.paused);
         }
         return nextTasks;
     }
 
     function getSummary() {
-        const open = tasks.filter((task) => !task.completed).length;
+        const open = tasks.filter((task) => !task.completed && !task.paused).length;
+        const paused = tasks.filter((task) => !task.completed && task.paused).length;
         const done = tasks.filter((task) => task.completed).length;
-        const total = open + done;
+        const total = open + paused + done;
         const pct = total ? Math.round((done / total) * 100) : 0;
-        return { open, done, total, pct };
+        return { open, paused, done, total, pct };
     }
 
     function renderFilterButton(key, label, count) {
@@ -1004,7 +1068,7 @@
         const stepSummary = getStepSummary(task);
         const cardTone = CARD_TONE_CLASSES[domain.tone] || CARD_TONE_CLASSES.slate;
         const selectedClass = activeTaskId === task.id ? cardTone.active : `${cardTone.base} hover:shadow-sm`;
-        const doneClass = task.completed ? 'opacity-60' : '';
+        const doneClass = task.completed ? 'opacity-60' : task.paused ? 'opacity-45 grayscale-[15%]' : '';
         const titleClass = task.completed ? 'line-through text-gray-400' : 'text-gray-900';
         const domainBadge = `<span class="shrink-0 font-bold border px-1.5 py-0.5 rounded text-[10px] bg-white/75 ${TONE_CLASSES[domain.tone] || TONE_CLASSES.slate}">${escapeHtml(domain.label)}</span>`;
         const stepBadge = stepSummary.total
@@ -1026,6 +1090,8 @@
                 </div>
                 <div class="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-gray-500">
                     ${domainBadge}
+                    <span class="shrink-0 rounded bg-white/70 px-1.5 py-0.5 font-semibold text-gray-500">${escapeHtml(task.groupName)}</span>
+                    ${task.paused ? '<span class="shrink-0 font-bold text-amber-600"><i class="fas fa-pause mr-1"></i>Monitor</span>' : ''}
                     ${stepBadge ? `<span class="shrink-0">${stepBadge}</span>` : ''}
                 </div>
             </article>
@@ -1045,7 +1111,52 @@
             `;
             return;
         }
-        list.innerHTML = visibleTasks.map(renderTaskCard).join('');
+        const grouped = new Map();
+        visibleTasks.forEach((task) => {
+            if (!grouped.has(task.groupName)) grouped.set(task.groupName, []);
+            grouped.get(task.groupName).push(task);
+        });
+        list.innerHTML = [...grouped.entries()].map(([groupName, groupTasks]) => `
+            <section class="space-y-1.5" data-checklist-group="${escapeAttr(groupName)}">
+                <div class="sticky top-0 z-[1] flex items-center justify-between rounded-md bg-gray-50/95 px-2 py-1 backdrop-blur"><h4 class="text-[10px] font-black tracking-wide text-gray-500">${escapeHtml(groupName)}</h4><span class="text-[10px] text-gray-400">${groupTasks.length}</span></div>
+                ${groupTasks.map(renderTaskCard).join('')}
+            </section>`).join('');
+    }
+
+    function renderCompletionReport(task) {
+        if (!task.completed) return '';
+        const report = task.completionReport || {};
+        const files = Array.isArray(task.reportFiles) ? task.reportFiles : [];
+        return `
+            <section class="rounded-lg border border-indigo-100 bg-indigo-50/40 p-3">
+                <div class="mb-3 flex items-center justify-between gap-2">
+                    <div><p class="text-[10px] font-black tracking-wider text-indigo-500">COMPLETION REPORT</p><h5 class="mt-0.5 text-sm font-bold text-gray-900">완료 보고서</h5></div>
+                    <span class="rounded-md bg-white px-2 py-1 text-[10px] font-bold text-indigo-600">${files.length}개 파일</span>
+                </div>
+                <div class="grid gap-2 md:grid-cols-3">
+                    <label class="text-[10px] font-bold text-gray-500">결과 요약<textarea id="checklist-report-summary" class="mt-1 min-h-[82px] w-full rounded-md border border-indigo-100 bg-white p-2 text-xs leading-5 outline-none focus:border-indigo-300" placeholder="무엇을 완료했나요?">${escapeHtml(report.summary || '')}</textarea></label>
+                    <label class="text-[10px] font-bold text-gray-500">핵심 성과<textarea id="checklist-report-outcome" class="mt-1 min-h-[82px] w-full rounded-md border border-indigo-100 bg-white p-2 text-xs leading-5 outline-none focus:border-indigo-300" placeholder="결과와 배운 점">${escapeHtml(report.outcome || '')}</textarea></label>
+                    <label class="text-[10px] font-bold text-gray-500">Monitor 항목<textarea id="checklist-report-followup" class="mt-1 min-h-[82px] w-full rounded-md border border-indigo-100 bg-white p-2 text-xs leading-5 outline-none focus:border-indigo-300" placeholder="추후 확인할 항목">${escapeHtml(report.followUp || '')}</textarea></label>
+                </div>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <button type="button" data-checklist-report-ppt="${escapeAttr(task.id)}" class="rounded-md bg-indigo-600 px-3 py-2 text-[11px] font-bold text-white hover:bg-indigo-700"><i class="fas fa-file-powerpoint mr-1.5"></i>PPT 생성</button>
+                    <label class="cursor-pointer rounded-md border border-indigo-200 bg-white px-3 py-2 text-[11px] font-bold text-indigo-700 hover:bg-indigo-50"><i class="fas fa-cloud-arrow-up mr-1.5"></i>파일 업로드<input type="file" data-checklist-report-upload="${escapeAttr(task.id)}" accept=".ppt,.pptx,.pdf" class="hidden"></label>
+                </div>
+                ${files.length ? `<div class="mt-3 space-y-1">${files.map((file, index) => `<button type="button" data-checklist-report-open="${escapeAttr(task.id)}" data-report-index="${index}" class="flex w-full items-center gap-2 rounded-md bg-white px-2.5 py-2 text-left text-[11px] text-gray-600 hover:text-indigo-700"><i class="fas fa-file-lines text-indigo-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(file.name || '완료 보고서')}</span><span class="text-[9px] text-gray-400">${escapeHtml(file.createdAt ? new Date(file.createdAt).toLocaleDateString('ko-KR') : '')}</span></button>`).join('')}</div>` : ''}
+            </section>`;
+    }
+
+    function renderReportLibrary() {
+        const panel = document.getElementById('checklist-report-library');
+        if (!panel) return;
+        const reports = tasks.flatMap((task) => (task.reportFiles || []).map((file, index) => ({ task, file, index })));
+        panel.innerHTML = reportLibraryOpen ? `
+            <div data-checklist-report-library-close class="fixed inset-0 z-[70] flex items-stretch justify-end bg-gray-950/35 backdrop-blur-[1px]">
+                <section data-checklist-report-library-dialog class="h-full w-full max-w-xl overflow-y-auto bg-white p-4 shadow-2xl md:p-6">
+                    <div class="flex items-start justify-between"><div><p class="text-[10px] font-black tracking-wider text-indigo-500">UPLOAD LIBRARY</p><h3 class="mt-1 text-xl font-black text-gray-900">완료 보고서 Library</h3><p class="mt-1 text-xs text-gray-400">할 일별 PPT·PDF 결과물을 한곳에서 확인합니다.</p></div><button type="button" data-checklist-report-library-close class="h-9 w-9 rounded-lg text-gray-400 hover:bg-gray-100"><i class="fas fa-xmark"></i></button></div>
+                    <div class="mt-5 space-y-2">${reports.length ? reports.map(({ task, file, index }) => `<button type="button" data-checklist-report-open="${escapeAttr(task.id)}" data-report-index="${index}" class="flex w-full items-center gap-3 rounded-xl border border-gray-200 p-3 text-left hover:border-indigo-200 hover:bg-indigo-50/40"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-500"><i class="fas fa-file-powerpoint"></i></span><span class="min-w-0 flex-1"><strong class="block truncate text-sm text-gray-800">${escapeHtml(file.name || '완료 보고서')}</strong><span class="mt-0.5 block truncate text-[10px] text-gray-400">${escapeHtml(task.groupName)} · ${escapeHtml(task.title)}</span></span><i class="fas fa-arrow-up-right-from-square text-xs text-gray-300"></i></button>`).join('') : '<div class="rounded-xl border border-dashed border-gray-200 px-5 py-14 text-center text-sm text-gray-400">업로드된 완료 보고서가 없습니다.</div>'}</div>
+                </section>
+            </div>` : '';
     }
 
     function renderDetailPanel() {
@@ -1087,15 +1198,16 @@
                         </div>
                         <p class="mt-1 text-[11px] text-gray-400">${escapeHtml(domain.label)} · ${stepSummary.done}/${stepSummary.total} Step · 제목은 더블클릭으로 수정</p>
                     </div>
-                    <button type="button" data-checklist-close-detail class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 hover:text-gray-700" title="상세 닫기" aria-label="상세 닫기">
-                        <i class="fas fa-xmark text-xs"></i>
-                    </button>
+                    <div class="flex shrink-0 gap-1">
+                        <button type="button" data-checklist-pause="${escapeAttr(task.id)}" class="inline-flex h-7 w-7 items-center justify-center rounded-md border ${task.paused ? 'border-amber-200 bg-amber-50 text-amber-600' : 'border-gray-200 bg-white text-gray-400 hover:text-amber-600'}" title="${task.paused ? '다시 활성화' : 'Monitor로 보류'}" aria-label="${task.paused ? '다시 활성화' : 'Monitor로 보류'}"><i class="fas ${task.paused ? 'fa-play' : 'fa-pause'} text-xs"></i></button>
+                        <button type="button" data-checklist-close-detail class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 hover:text-gray-700" title="상세 닫기" aria-label="상세 닫기"><i class="fas fa-xmark text-xs"></i></button>
+                    </div>
                 </div>
 
                 <div class="grid flex-1 grid-cols-1 gap-3 overflow-y-auto px-4 py-4 xl:mt-3 xl:overflow-visible xl:p-0">
-                    <div class="block max-w-sm">
-                        <span class="text-[11px] font-bold text-gray-500">영역</span>
-                        ${renderDomainChoiceButtons('checklist-detail-domain-edit', task.domain)}
+                    <div class="grid max-w-2xl gap-3 sm:grid-cols-2">
+                        <div class="block"><span class="text-[11px] font-bold text-gray-500">영역</span>${renderDomainChoiceButtons('checklist-detail-domain-edit', task.domain)}</div>
+                        <label class="block"><span class="text-[11px] font-bold text-gray-500">그룹</span><input id="checklist-detail-group-edit" value="${escapeAttr(task.groupName)}" class="mt-1 block h-9 w-full rounded-md border border-gray-200 px-3 text-sm outline-none focus:border-indigo-400" placeholder="예: 1.04.02 패치"></label>
                     </div>
 
                     <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px] gap-3">
@@ -1116,6 +1228,8 @@
                             </div>
                         </div>
                     </div>
+
+                    ${renderCompletionReport(task)}
 
                     <button type="button" data-checklist-save-detail="${escapeAttr(task.id)}" class="w-full rounded-md bg-gray-900 px-3 py-2.5 text-xs font-bold text-white hover:bg-gray-800">수정 저장</button>
                 </div>
@@ -1138,6 +1252,7 @@
         if (filtersEl) {
             filtersEl.innerHTML = [
                 renderFilterButton('open', '진행 중', summary.open),
+                renderFilterButton('paused', 'Monitor', summary.paused),
                 renderFilterButton('done', '완료', summary.done),
                 renderFilterButton('all', '전체', summary.total),
             ].join('');
@@ -1166,7 +1281,7 @@
                     <h2 class="text-xl md:text-2xl font-bold text-gray-900">할 일 보드</h2>
                     <p class="text-xs text-gray-500 mt-1">목록은 빠르게 훑고, 상세내역과 Step은 선택한 항목에서 관리합니다.</p>
                 </div>
-                <span id="checklist-sync-badge" class="text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-md whitespace-nowrap w-fit">로컬 저장</span>
+                <div class="flex items-center gap-2"><button type="button" data-checklist-report-library-open class="rounded-md border border-indigo-100 bg-indigo-50 px-2.5 py-1.5 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100"><i class="fas fa-box-archive mr-1"></i>완료 보고서</button><span id="checklist-sync-badge" class="text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-md whitespace-nowrap w-fit">로컬 저장</span></div>
             </div>
 
             <div class="space-y-2.5 md:space-y-3 mb-8">
@@ -1189,6 +1304,7 @@
                     </div>
                 </section>
             </div>
+            <div id="checklist-report-library"></div>
         `;
         isBound = false;
         bindControls();
@@ -1217,6 +1333,8 @@
                                 <span class="text-[11px] font-bold text-gray-500">영역</span>
                                 ${renderDomainChoiceButtons('checklist-domain-input', 'career')}
                             </div>
+
+                            <label class="block"><span class="text-[11px] font-bold text-gray-500">그룹</span><input id="checklist-group-input" class="mt-1 block h-9 w-full rounded-md border border-gray-200 px-3 text-sm outline-none focus:border-indigo-400" placeholder="예: Version 1.04.02"></label>
 
                             <div class="block">
                                 <span class="text-[11px] font-bold text-gray-500">상세내역</span>
@@ -1249,6 +1367,7 @@
         renderSummary();
         renderTasks();
         renderDetailPanel();
+        renderReportLibrary();
         hydrateStepEditors();
         document.querySelectorAll('[data-checklist-note-editor]').forEach((textarea) => updateNotePreview(textarea.id));
         persistChecklistUiState();
@@ -1271,12 +1390,14 @@
         const noteEl = document.getElementById('checklist-note-input');
         const stepsEl = document.getElementById('checklist-steps-input');
         const domainEl = document.getElementById('checklist-domain-input');
+        const groupEl = document.getElementById('checklist-group-input');
         const task = normalizeTask({
             title: titleEl?.value,
             note: noteEl?.value,
             steps: parseStepEditorSteps(stepsEl?.value || ''),
             dueDate: todayString(),
             domain: domainEl?.value || 'life',
+            groupName: groupEl?.value || '기본 그룹',
             priority: 'normal',
             displayOrder: getTopDisplayOrder(),
         });
@@ -1307,6 +1428,16 @@
         await persistRemoteTask(task);
     }
 
+    async function togglePaused(id) {
+        const task = tasks.find((item) => item.id === id);
+        if (!task) return;
+        task.paused = !task.paused;
+        task.updatedAt = new Date().toISOString();
+        tasks = saveStore(tasks);
+        render({ skipRemoteLoad: true });
+        await persistRemoteTask(task);
+    }
+
     async function toggleStep(taskId, stepId) {
         const now = new Date().toISOString();
         const task = tasks.find((item) => item.id === taskId);
@@ -1319,12 +1450,136 @@
         await persistRemoteTask(task);
     }
 
+    function syncCompletionReportFromUi(task) {
+        if (!task) return;
+        task.completionReport = {
+            summary: String(document.getElementById('checklist-report-summary')?.value || task.completionReport?.summary || '').trim(),
+            outcome: String(document.getElementById('checklist-report-outcome')?.value || task.completionReport?.outcome || '').trim(),
+            followUp: String(document.getElementById('checklist-report-followup')?.value || task.completionReport?.followUp || '').trim(),
+            updatedAt: new Date().toISOString(),
+        };
+    }
+
+    function safeFileName(value) {
+        return String(value || '완료-보고서').replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-').slice(0, 70);
+    }
+
+    function loadPptxGenJS() {
+        if (window.NetVisualizerPptxGenJS || window.PptxGenJS) return Promise.resolve(window.NetVisualizerPptxGenJS || window.PptxGenJS);
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = './vendor/pptxgen.bundle.js?v=3.12.0';
+            script.onload = () => {
+                window.NetVisualizerPptxGenJS = window.NetVisualizerPptxGenJS || window.PptxGenJS || (typeof PptxGenJS === 'function' ? PptxGenJS : null);
+                if (window.NetVisualizerPptxGenJS) resolve(window.NetVisualizerPptxGenJS);
+                else reject(new Error('PPT 생성 모듈 초기화에 실패했습니다.'));
+            };
+            script.onerror = () => reject(new Error('PPT 생성 모듈을 불러오지 못했습니다.'));
+            document.head.appendChild(script);
+        });
+    }
+
+    function downloadBlob(blob, fileName) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function uploadReportBlob(task, blob, fileName) {
+        const client = getClient();
+        const userId = typeof getCurrentUserId === 'function' ? getCurrentUserId() : '';
+        if (!client || !userId) return { uploaded: false, reason: 'auth' };
+        const path = `${userId}/${task.id}/${Date.now()}-${safeFileName(fileName)}`;
+        const { error } = await client.storage.from('todo-reports').upload(path, blob, {
+            contentType: blob.type || 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            upsert: false,
+        });
+        if (error) return { uploaded: false, reason: error.message || 'upload' };
+        task.reportFiles = [...(task.reportFiles || []), { name: fileName, path, createdAt: new Date().toISOString() }];
+        task.updatedAt = new Date().toISOString();
+        tasks = saveStore(tasks);
+        await persistRemoteTask(task);
+        return { uploaded: true, path };
+    }
+
+    async function generateCompletionReport(taskId) {
+        const task = tasks.find((item) => item.id === taskId);
+        if (!task) return;
+        syncCompletionReportFromUi(task);
+        task.updatedAt = new Date().toISOString();
+        tasks = saveStore(tasks);
+        try {
+            const PptxGenJS = await loadPptxGenJS();
+            const pptx = new PptxGenJS();
+            pptx.layout = 'LAYOUT_WIDE';
+            pptx.author = 'NetVisualizer';
+            pptx.subject = `${task.title} 완료 보고서`;
+            pptx.title = `${task.title} 완료 보고서`;
+            pptx.company = 'NetVisualizer';
+            pptx.lang = 'ko-KR';
+            pptx.theme = { headFontFace: 'Aptos Display', bodyFontFace: 'Aptos', lang: 'ko-KR' };
+            const slide = pptx.addSlide();
+            slide.background = { color: 'F8FAFC' };
+            slide.addText('NetVisualizer · Completion Report', { x: 0.7, y: 0.55, w: 5.8, h: 0.25, fontSize: 11, bold: true, color: '6366F1', charSpacing: 1.2 });
+            slide.addText(task.title, { x: 0.7, y: 1.0, w: 11.8, h: 0.75, fontSize: 28, bold: true, color: '111827', breakLine: false, margin: 0 });
+            slide.addText(`${task.groupName}  ·  ${getDomain(task.domain).label}  ·  ${task.completedAt ? new Date(task.completedAt).toLocaleDateString('ko-KR') : '완료'}`, { x: 0.7, y: 1.82, w: 11.8, h: 0.3, fontSize: 11, color: '64748B', margin: 0 });
+            const sections = [
+                ['결과 요약', task.completionReport.summary || '기록 없음'],
+                ['핵심 성과', task.completionReport.outcome || '기록 없음'],
+                ['Monitor 항목', task.completionReport.followUp || '없음'],
+            ];
+            sections.forEach(([label, value], index) => {
+                const x = 0.7 + index * 4.12;
+                slide.addShape(pptx.ShapeType.roundRect, { x, y: 2.45, w: 3.82, h: 3.55, rectRadius: 0.08, fill: { color: index === 2 ? 'FFF7ED' : 'FFFFFF' }, line: { color: index === 2 ? 'FED7AA' : 'E2E8F0', width: 1 } });
+                slide.addText(label, { x: x + 0.25, y: 2.72, w: 3.3, h: 0.3, fontSize: 13, bold: true, color: index === 2 ? 'C2410C' : '4338CA', margin: 0 });
+                slide.addText(value, { x: x + 0.25, y: 3.22, w: 3.3, h: 2.35, fontSize: 14, color: '334155', breakLine: false, valign: 'top', margin: 0.03, fit: 'shrink' });
+            });
+            slide.addText(`생성 ${new Date().toLocaleString('ko-KR')}`, { x: 0.7, y: 6.85, w: 4, h: 0.2, fontSize: 9, color: '94A3B8', margin: 0 });
+            const blob = await pptx.write({ outputType: 'blob' });
+            const fileName = `${safeFileName(task.title)}-완료보고서.pptx`;
+            downloadBlob(blob, fileName);
+            const result = await uploadReportBlob(task, blob, fileName);
+            render({ skipRemoteLoad: true });
+            toast(result.uploaded ? 'PPT를 생성하고 Library에 업로드했습니다.' : 'PPT를 내려받았습니다. 로그인하면 Library에도 자동 업로드됩니다.', result.uploaded ? 'info' : 'warning', 3600);
+        } catch (error) {
+            console.error('Completion report generation failed.', error);
+            toast('PPT 생성에 실패했습니다.', 'error');
+        }
+    }
+
+    async function uploadReportFile(taskId, file) {
+        const task = tasks.find((item) => item.id === taskId);
+        if (!task || !file) return;
+        syncCompletionReportFromUi(task);
+        task.updatedAt = new Date().toISOString();
+        tasks = saveStore(tasks);
+        const result = await uploadReportBlob(task, file, file.name);
+        render({ skipRemoteLoad: true });
+        toast(result.uploaded ? '완료 보고서를 Library에 업로드했습니다.' : '로그인 후 파일을 업로드할 수 있습니다.', result.uploaded ? 'info' : 'warning');
+    }
+
+    async function openReportFile(taskId, index) {
+        const task = tasks.find((item) => item.id === taskId);
+        const file = task?.reportFiles?.[Number(index)];
+        const client = getClient();
+        if (!file?.path || !client) return;
+        const { data, error } = await client.storage.from('todo-reports').createSignedUrl(file.path, 120);
+        if (error || !data?.signedUrl) { toast('파일 링크를 열지 못했습니다.', 'error'); return; }
+        window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    }
+
     async function saveTaskDetail(id) {
         const now = new Date().toISOString();
         const task = tasks.find((item) => item.id === id);
         if (!task) return;
         const titleEl = document.getElementById('checklist-detail-title-edit');
         const domainEl = document.getElementById('checklist-detail-domain-edit');
+        const groupEl = document.getElementById('checklist-detail-group-edit');
         const noteEl = document.getElementById('checklist-detail-note-edit');
         const stepsEl = document.getElementById('checklist-detail-steps-edit');
         const title = String(titleEl?.value || task.title).trim();
@@ -1334,9 +1589,18 @@
         }
         task.title = title;
         task.domain = getDomain(domainEl?.value || task.domain).key;
+        task.groupName = String(groupEl?.value || '기본 그룹').trim() || '기본 그룹';
         task.priority = 'normal';
         task.note = String(noteEl?.value || '').trim();
         task.steps = parseStepEditorSteps(stepsEl?.value || '', task.steps);
+        if (task.completed) {
+            task.completionReport = {
+                summary: String(document.getElementById('checklist-report-summary')?.value || '').trim(),
+                outcome: String(document.getElementById('checklist-report-outcome')?.value || '').trim(),
+                followUp: String(document.getElementById('checklist-report-followup')?.value || '').trim(),
+                updatedAt: now,
+            };
+        }
         task.updatedAt = now;
         editingTitleTaskId = null;
         tasks = saveStore(tasks);
@@ -1442,6 +1706,22 @@
                 render({ skipRemoteLoad: true });
                 return;
             }
+            if (event.target.closest('[data-checklist-report-library-open]')) {
+                reportLibraryOpen = true;
+                render({ skipRemoteLoad: true });
+                return;
+            }
+            const reportLibraryClose = event.target.closest('[data-checklist-report-library-close]');
+            if (reportLibraryClose && !event.target.closest('[data-checklist-report-library-dialog]')) {
+                reportLibraryOpen = false;
+                render({ skipRemoteLoad: true });
+                return;
+            }
+            if (event.target.closest('button[data-checklist-report-library-close]')) {
+                reportLibraryOpen = false;
+                render({ skipRemoteLoad: true });
+                return;
+            }
             const closeDetailBackdrop = event.target.matches('#checklist-detail-panel')
                 && !event.target.closest('[data-checklist-detail-dialog]');
             if (closeDetailBackdrop) {
@@ -1496,6 +1776,21 @@
                 toggleTask(toggleBtn.dataset.checklistToggle);
                 return;
             }
+            const pauseBtn = event.target.closest('[data-checklist-pause]');
+            if (pauseBtn) {
+                togglePaused(pauseBtn.dataset.checklistPause);
+                return;
+            }
+            const reportPptBtn = event.target.closest('[data-checklist-report-ppt]');
+            if (reportPptBtn) {
+                generateCompletionReport(reportPptBtn.dataset.checklistReportPpt);
+                return;
+            }
+            const reportOpenBtn = event.target.closest('[data-checklist-report-open]');
+            if (reportOpenBtn) {
+                openReportFile(reportOpenBtn.dataset.checklistReportOpen, reportOpenBtn.dataset.reportIndex);
+                return;
+            }
             const row = event.target.closest('[data-checklist-open]');
             if (row && !event.target.closest('input, button, textarea, select, a')) {
                 activeTaskId = row.dataset.checklistOpen;
@@ -1528,10 +1823,19 @@
                 toggleStep(stepToggle.dataset.checklistStepToggle, stepToggle.dataset.stepId);
                 return;
             }
+            const reportUpload = event.target.closest('[data-checklist-report-upload]');
+            if (reportUpload?.files?.[0]) {
+                uploadReportFile(reportUpload.dataset.checklistReportUpload, reportUpload.files[0]);
+                return;
+            }
         });
         root?.addEventListener('input', (event) => {
             const noteEditor = event.target.closest('[data-checklist-note-editor]');
             if (noteEditor) updateNotePreview(noteEditor.id);
+            const groupInput = event.target.closest('[data-step-editor-group]');
+            if (groupInput) updateStepMetadata(groupInput.closest('[data-step-editor]'), groupInput.dataset.stepEditorGroup, 'groupName', groupInput.value);
+            const detailInput = event.target.closest('[data-step-editor-detail]');
+            if (detailInput) updateStepMetadata(detailInput.closest('[data-step-editor]'), detailInput.dataset.stepEditorDetail, 'detail', detailInput.value);
         });
         root?.addEventListener('keydown', (event) => {
             const titleDisplay = event.target?.closest?.('[data-checklist-title-display]');
