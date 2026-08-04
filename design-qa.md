@@ -73,6 +73,31 @@ final result: passed
 
 ---
 
+# Update 1.04.02 Todo Workbench Design QA — 2026-08-05
+
+## Evidence
+
+- Annotated reference normalized to 1280×720: `docs/audits/update-10402-todo-workbench/reference.png`
+- Desktop implementation at 1280×720: `docs/audits/update-10402-todo-workbench/desktop.png`
+- Mobile implementation in a 390×844 CSS-pixel frame: `docs/audits/update-10402-todo-workbench/mobile.png`
+- State: completed Career task selected, status set to All, completion-report preview selected.
+
+## Interaction and visual checks
+
+- Left rail shows Career, Finance, and Life together in fixed order and omits the redundant list title and per-card domain labels.
+- Selected-task header uses compact status and domain selects; wide filter buttons and top domain tabs are absent.
+- The center Step panel and duplicate completion-report form are absent; the note editor uses the full center width and height.
+- Completion-report library is persistent on desktop and includes search, sorting, report selection, PPT generation, upload, and file-open controls.
+- At 1280×720 the three columns fit without horizontal overflow; below the desktop breakpoint the columns stack.
+- At 390×844 the full-screen detail header splits into title and controls, avoiding clipped controls.
+- Existing Step data is preserved when the detail editor saves without a Step field.
+- Status filtering, report searching, report selection, and detail saving were exercised in the local preview.
+- No open P0, P1, or P2 findings remain.
+
+final result: passed
+
+---
+
 # Update 1.04.02 Career / Finance / Life Group Correction QA
 
 Reference: `C:/Users/ksg06/.codex/generated_images/019f9d05-5144-78a0-ae59-b967f9a0f24b/exec-cb4bbd37-00e1-4ccd-b110-1905bbd14b47.png`
