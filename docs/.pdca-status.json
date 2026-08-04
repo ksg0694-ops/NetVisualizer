@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Update 1.04.02 Per-Todo Report Library",
+  "feature": "Update 1.04.02 OneNote Editor Tools",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-08-05T03:30:00+09:00",
+  "updatedAt": "2026-08-05T13:30:00+09:00",
   "status": "complete",
-  "currentFocus": "Separate Todo completion from a per-Todo Report Library that stores multiple links and files.",
+  "currentFocus": "Simplify Report Library links and add OneNote-style Todo note tools.",
   "completed": [
     "Documented Plan, Design, Check, Report, and design QA phases.",
     "Replaced arbitrary Todo groups with Career, Finance, and Life.",
@@ -17,7 +17,7 @@
     "Built the selected Pocket Notebook Life experience inside the Life group.",
     "Built the four-level Learning Archive.",
     "Added Supabase tables, Todo columns, and private report storage migration.",
-    "Bumped the correction cache to v157.",
+    "Bumped the correction cache to v158.",
     "Rebuilt Todo as a three-column workbench with all fixed domains visible together.",
     "Moved status and domain controls into compact selects in the selected-task header.",
     "Expanded the detail editor while preserving hidden Step data.",
@@ -26,7 +26,10 @@
     "Decoupled Report Library ownership from Todo completion state.",
     "Allowed every Todo to store multiple titled Report links and uploaded files.",
     "Preserved the selected Todo when mobile detail closes so its Library remains accessible.",
-    "Passed the full check suite and responsive browser QA."
+    "Passed the full check suite and responsive browser QA.",
+    "Removed the Report upload control and server-saved status badge.",
+    "Added automatic PowerPoint, Excel, and generic link icons.",
+    "Added exact three-space indentation, interactive checkboxes, and a safe icon picker."
   ],
   "remaining": [],
   "nextStep": "Commit, publish, merge, and verify the GitHub Pages build."

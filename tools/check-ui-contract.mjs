@@ -172,6 +172,15 @@ assert.ok(checklist.includes("base: 'bg-sky-50 border-sky-200"), 'Todo cards mus
 assert.ok(checklist.includes('data-checklist-note-format="bold"'));
 assert.ok(checklist.includes('data-checklist-note-format="underline"'));
 assert.ok(checklist.includes('data-checklist-note-format="strike"'));
+assert.ok(checklist.includes('data-checklist-note-command="indent"'), 'Todo notes must support exact three-space indentation');
+assert.ok(checklist.includes('data-checklist-note-command="checkbox"'), 'Todo notes must support checkboxes');
+assert.ok(checklist.includes('data-checklist-icon-picker-toggle'), 'Todo notes must expose the icon picker');
+assert.ok(checklist.includes('data-note-preview-checkbox'), 'note preview checkboxes must be interactive');
+assert.ok(checklist.includes("reportType: getReportAssetType"), 'Report links must persist their detected document type');
+assert.ok(checklist.includes("icon: 'fa-file-powerpoint'"), 'PowerPoint Report links must use the PowerPoint icon');
+assert.ok(checklist.includes("icon: 'fa-file-excel'"), 'Excel Report links must use the Excel icon');
+assert.ok(!checklist.includes('Report 파일 업로드'), 'Report Library must remain link-only');
+assert.ok(!checklist.includes('id="checklist-sync-badge"'), 'Todo must not show a server-saved status badge');
 assert.ok(checklist.includes('function formatNotePreview'));
 assert.ok(checklist.includes('data-checklist-title-display'));
 assert.ok(checklist.includes("root?.addEventListener('dblclick'"));
