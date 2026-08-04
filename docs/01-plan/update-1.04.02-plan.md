@@ -33,3 +33,9 @@
 
 - 완료보고서는 NetVisualizer 내부에서만 생성하지 않고 Google Slides, Drive, PowerPoint 등 외부 PPT 주소도 연결할 수 있어야 한다.
 - 링크는 선택한 완료 할 일의 `completion_report`에 저장하고 파일 업로드 메타데이터와 함께 유지한다.
+
+## Report Library 의미 정정
+
+- Report Library는 완료 상태의 결과물이 아니라 모든 할 일이 각각 소유하는 독립 자료함이다.
+- 진행 중, Monitor, 완료 여부와 관계없이 링크와 파일을 여러 개 등록할 수 있다.
+- 할 일 상태가 바뀌어도 해당 Library 항목은 유지한다.

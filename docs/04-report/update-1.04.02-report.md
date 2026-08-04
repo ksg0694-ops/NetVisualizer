@@ -14,7 +14,7 @@
 ## 버전
 
 - 앱: `1.04.02 · correction 2026.08.05`
-- PWA cache: `v156`
+- PWA cache: `v157`
 
 ## Todo Workbench 보정 결과
 
@@ -31,3 +31,11 @@
 - 저장된 링크는 우측 미리보기에서 새 창으로 열 수 있다.
 - 빈 링크를 저장하면 연결만 삭제되며 완료 할 일과 기존 보고서 내용은 유지된다.
 - 외부 링크는 기존 `completion_report` JSON에 저장되어 별도 DB migration 없이 서버 동기화된다.
+
+## Report Library 의미 정정 결과
+
+- `완료보고서 라이브러리`를 `Report Library`로 변경했다.
+- 각 할 일이 자신의 Library를 소유하며 완료 여부와 Report 등록 여부를 분리했다.
+- 한 할 일에 제목이 있는 PPT 링크를 여러 개 추가하고 열거나 삭제할 수 있다.
+- 업로드 파일과 외부 링크를 기존 `report_files` JSON 배열에서 함께 관리하므로 신규 DB migration은 없다.
+- 모바일 상세 닫기는 선택을 해제하지 않고 해당 할 일의 Library로 이동한다.
