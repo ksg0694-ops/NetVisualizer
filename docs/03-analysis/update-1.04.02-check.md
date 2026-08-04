@@ -27,3 +27,12 @@
 
 - PPT는 로그인하지 않아도 로컬 다운로드가 가능하다.
 - 서버 Upload Library는 로그인과 `todo-reports` Storage migration이 필요하다.
+
+## Todo Workbench 최종 검사
+
+- PC 1280×720: 좌측 3개 영역 목록, 중앙 전체 폭 상세 편집기, 우측 영구 완료보고서 라이브러리 확인
+- 모바일 390×844: 상세 제목과 상태/영역 컨트롤이 2행으로 정렬되고 가로 잘림 없음
+- 상태 select 전환, 보고서 검색 초기화, 상세 저장 동작 확인
+- 숨겨진 Step 입력 DOM 없이 상세 저장 후 기존 Step 데이터 보존 계약 확인
+- `npm run check`: 전체 통과
+- `npm audit --audit-level=moderate`: 취약점 0건

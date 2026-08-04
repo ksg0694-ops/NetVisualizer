@@ -72,7 +72,9 @@
     let draggedStepDrag = null;
     let pointerDrag = null;
     let editingTitleTaskId = null;
-    let reportLibraryOpen = false;
+    let activeReportTaskId = null;
+    let reportSearch = '';
+    let reportSort = 'recent';
 
     function escapeHtml(value) {
         return window.AppUtils.escapeHtml(value);
@@ -1026,12 +1028,8 @@
         el.textContent = text;
     }
 
-    function matchesDomain(task) {
-        return task.domain === activeDomain;
-    }
-
     function getFilteredTasks() {
-        let nextTasks = tasks.filter(matchesDomain);
+        let nextTasks = tasks.slice();
         if (activeFilter === 'done') {
             nextTasks = nextTasks.filter((task) => task.completed);
         } else if (activeFilter === 'paused') {
@@ -1043,22 +1041,13 @@
     }
 
     function getSummary() {
-        const scopedTasks = tasks.filter(matchesDomain);
+        const scopedTasks = tasks;
         const open = scopedTasks.filter((task) => !task.completed && !task.paused).length;
         const paused = scopedTasks.filter((task) => !task.completed && task.paused).length;
         const done = scopedTasks.filter((task) => task.completed).length;
         const total = open + paused + done;
         const pct = total ? Math.round((done / total) * 100) : 0;
         return { open, paused, done, total, pct };
-    }
-
-    function renderFilterButton(key, label, count) {
-        const isActive = activeFilter === key;
-        return `
-            <button type="button" data-checklist-filter="${key}" class="px-3 py-1.5 rounded-md text-[11px] font-bold border transition ${isActive ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-200'}">
-                ${label}${Number.isFinite(count) ? ` ${count}` : ''}
-            </button>
-        `;
     }
 
     function renderTaskCard(task) {
@@ -1068,7 +1057,6 @@
         const selectedClass = activeTaskId === task.id ? cardTone.active : `${cardTone.base} hover:shadow-sm`;
         const doneClass = task.completed ? 'opacity-60' : task.paused ? 'opacity-45 grayscale-[15%]' : '';
         const titleClass = task.completed ? 'line-through text-gray-400' : 'text-gray-900';
-        const domainBadge = `<span class="shrink-0 font-bold border px-1.5 py-0.5 rounded text-[10px] bg-white/75 ${TONE_CLASSES[domain.tone] || TONE_CLASSES.slate}">${escapeHtml(domain.label)}</span>`;
         const stepBadge = stepSummary.total
             ? `<span>${stepSummary.done}/${stepSummary.total} Step</span>`
             : '';
@@ -1086,11 +1074,10 @@
                         <i class="fas fa-grip-vertical text-xs"></i>
                     </button>
                 </div>
-                <div class="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-gray-500">
-                    ${domainBadge}
+                ${(task.paused || stepBadge) ? `<div class="mt-1 flex min-w-0 items-center gap-1.5 pl-7 text-[10px] text-gray-500">
                     ${task.paused ? '<span class="shrink-0 font-bold text-amber-600"><i class="fas fa-pause mr-1"></i>Monitor</span>' : ''}
                     ${stepBadge ? `<span class="shrink-0">${stepBadge}</span>` : ''}
-                </div>
+                </div>` : ''}
             </article>
         `;
     }
@@ -1108,12 +1095,14 @@
             `;
             return;
         }
-        const domain = getDomain(activeDomain);
-        list.innerHTML = `
-            <section class="space-y-1.5" data-checklist-group="${escapeAttr(domain.key)}">
-                <div class="sticky top-0 z-[1] flex items-center justify-between rounded-md bg-gray-50/95 px-2 py-1 backdrop-blur"><h4 class="text-[10px] font-black tracking-wide text-gray-500">${escapeHtml(domain.label)}</h4><span class="text-[10px] text-gray-400">${visibleTasks.length}</span></div>
-                ${visibleTasks.map(renderTaskCard).join('')}
-            </section>`;
+        list.innerHTML = DOMAINS.map((domain) => {
+            const domainTasks = visibleTasks.filter((task) => task.domain === domain.key);
+            return `
+                <section class="space-y-1.5" data-checklist-group="${escapeAttr(domain.key)}">
+                    <div class="sticky top-0 z-[1] flex items-center justify-between rounded-md bg-gray-50/95 px-2 py-1 backdrop-blur"><h4 class="text-[10px] font-black tracking-wide text-gray-600">${escapeHtml(domain.label)}</h4><span class="text-[10px] text-gray-400">${domainTasks.length}</span></div>
+                    ${domainTasks.length ? domainTasks.map(renderTaskCard).join('') : '<p class="px-2 py-2 text-[10px] text-gray-300">표시할 할 일이 없습니다.</p>'}
+                </section>`;
+        }).join('');
     }
 
     function renderCompletionReport(task) {
@@ -1142,14 +1131,45 @@
     function renderReportLibrary() {
         const panel = document.getElementById('checklist-report-library');
         if (!panel) return;
-        const reports = tasks.flatMap((task) => (task.reportFiles || []).map((file, index) => ({ task, file, index })));
-        panel.innerHTML = reportLibraryOpen ? `
-            <div data-checklist-report-library-close class="fixed inset-0 z-[70] flex items-stretch justify-end bg-gray-950/35 backdrop-blur-[1px]">
-                <section data-checklist-report-library-dialog class="h-full w-full max-w-xl overflow-y-auto bg-white p-4 shadow-2xl md:p-6">
-                    <div class="flex items-start justify-between"><div><p class="text-[10px] font-black tracking-wider text-indigo-500">UPLOAD LIBRARY</p><h3 class="mt-1 text-xl font-black text-gray-900">완료 보고서 Library</h3><p class="mt-1 text-xs text-gray-400">할 일별 PPT·PDF 결과물을 한곳에서 확인합니다.</p></div><button type="button" data-checklist-report-library-close class="h-9 w-9 rounded-lg text-gray-400 hover:bg-gray-100"><i class="fas fa-xmark"></i></button></div>
-                    <div class="mt-5 space-y-2">${reports.length ? reports.map(({ task, file, index }) => `<button type="button" data-checklist-report-open="${escapeAttr(task.id)}" data-report-index="${index}" class="flex w-full items-center gap-3 rounded-xl border border-gray-200 p-3 text-left hover:border-indigo-200 hover:bg-indigo-50/40"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-500"><i class="fas fa-file-powerpoint"></i></span><span class="min-w-0 flex-1"><strong class="block truncate text-sm text-gray-800">${escapeHtml(file.name || '완료 보고서')}</strong><span class="mt-0.5 block truncate text-[10px] text-gray-400">${escapeHtml(getDomain(task.domain).label)} · ${escapeHtml(task.title)}</span></span><i class="fas fa-arrow-up-right-from-square text-xs text-gray-300"></i></button>`).join('') : '<div class="rounded-xl border border-dashed border-gray-200 px-5 py-14 text-center text-sm text-gray-400">업로드된 완료 보고서가 없습니다.</div>'}</div>
-                </section>
-            </div>` : '';
+        const reportTasks = tasks
+            .filter((task) => task.completed || Object.values(task.completionReport || {}).some(Boolean) || (task.reportFiles || []).length)
+            .filter((task) => !reportSearch || `${task.title} ${getDomain(task.domain).label}`.toLowerCase().includes(reportSearch.toLowerCase()))
+            .sort((a, b) => {
+                if (reportSort === 'title') return a.title.localeCompare(b.title, 'ko');
+                return new Date(b.completionReport?.updatedAt || b.updatedAt || 0) - new Date(a.completionReport?.updatedAt || a.updatedAt || 0);
+            });
+        if (!activeReportTaskId || !reportTasks.some((task) => task.id === activeReportTaskId)) {
+            activeReportTaskId = reportTasks[0]?.id || null;
+        }
+        const selectedTask = tasks.find((task) => task.id === activeReportTaskId);
+        const report = selectedTask?.completionReport || {};
+        const files = selectedTask?.reportFiles || [];
+        panel.innerHTML = `
+            <section class="flex min-h-[560px] flex-col rounded-lg border border-gray-200 bg-white p-3 shadow-sm xl:min-h-[calc(100vh-205px)]">
+                <h3 class="text-sm font-black text-gray-900">완료보고서 라이브러리</h3>
+                <div class="mt-3 grid grid-cols-[minmax(0,1fr)_92px] gap-2">
+                    <label class="relative"><i class="fas fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-300"></i><input id="checklist-report-search" type="search" value="${escapeAttr(reportSearch)}" placeholder="보고서 제목 검색" class="h-8 w-full rounded-md border border-gray-200 pl-7 pr-2 text-[11px] outline-none focus:border-indigo-300"></label>
+                    <select id="checklist-report-sort" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-[11px] font-bold text-gray-500 outline-none"><option value="recent" ${reportSort === 'recent' ? 'selected' : ''}>최신순</option><option value="title" ${reportSort === 'title' ? 'selected' : ''}>제목순</option></select>
+                </div>
+                <div class="mt-3 max-h-[310px] space-y-1.5 overflow-y-auto pr-1">
+                    ${reportTasks.length ? reportTasks.map((task) => {
+                        const selected = task.id === activeReportTaskId;
+                        const date = task.completionReport?.updatedAt || task.updatedAt;
+                        return `<button type="button" data-checklist-report-select="${escapeAttr(task.id)}" class="flex w-full items-center gap-2 rounded-md border p-2 text-left transition ${selected ? 'border-indigo-300 bg-indigo-50/70' : 'border-gray-100 bg-white hover:border-indigo-200'}"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-orange-50 text-orange-500"><i class="fas fa-file-powerpoint text-xs"></i></span><span class="min-w-0 flex-1"><strong class="block truncate text-[11px] text-gray-800">${escapeHtml(task.title)} 완료 보고서</strong><span class="mt-0.5 flex items-center justify-between gap-2 text-[9px] text-gray-400"><span>${escapeHtml(getDomain(task.domain).label)}</span><span>${date ? escapeHtml(new Date(date).toLocaleDateString('ko-KR')) : ''}</span></span></span></button>`;
+                    }).join('') : '<div class="rounded-lg border border-dashed border-gray-200 px-4 py-10 text-center text-xs text-gray-400">완료된 할 일의 보고서가 여기에 모입니다.</div>'}
+                </div>
+                ${selectedTask ? `
+                    <div class="mt-3 flex-1 rounded-lg border border-indigo-100 bg-indigo-50/30 p-3">
+                        <div class="flex items-start justify-between gap-2"><div><h4 class="text-sm font-black text-gray-900">${escapeHtml(selectedTask.title)} 완료 보고서</h4><p class="mt-0.5 text-[10px] text-gray-400">작성일 ${escapeHtml(new Date(report.updatedAt || selectedTask.updatedAt || Date.now()).toLocaleDateString('ko-KR'))}</p></div></div>
+                        <div class="mt-3 space-y-3 text-[11px] leading-5 text-gray-600">
+                            <div><strong class="block text-[10px] text-gray-800">결과 요약</strong><p class="whitespace-pre-wrap">${escapeHtml(report.summary || '아직 작성된 결과 요약이 없습니다.')}</p></div>
+                            <div><strong class="block text-[10px] text-gray-800">핵심 성과</strong><p class="whitespace-pre-wrap">${escapeHtml(report.outcome || '아직 작성된 핵심 성과가 없습니다.')}</p></div>
+                            <div><strong class="block text-[10px] text-gray-800">추후 확인할 항목 (Monitor)</strong><p class="whitespace-pre-wrap">${escapeHtml(report.followUp || '등록된 Monitor 항목이 없습니다.')}</p></div>
+                        </div>
+                        ${files.length ? `<div class="mt-3 space-y-1">${files.map((file, index) => `<button type="button" data-checklist-report-open="${escapeAttr(selectedTask.id)}" data-report-index="${index}" class="flex w-full items-center gap-2 rounded-md border border-white bg-white/80 px-2 py-1.5 text-left text-[10px] text-gray-600 hover:text-indigo-700"><i class="fas fa-download text-indigo-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(file.name || '완료 보고서')}</span></button>`).join('')}</div>` : ''}
+                        <div class="mt-4 flex flex-wrap gap-2"><button type="button" data-checklist-report-ppt="${escapeAttr(selectedTask.id)}" class="rounded-md bg-indigo-600 px-3 py-2 text-[10px] font-bold text-white hover:bg-indigo-700"><i class="fas fa-file-powerpoint mr-1.5"></i>PPT 생성</button><label class="cursor-pointer rounded-md border border-indigo-200 bg-white px-3 py-2 text-[10px] font-bold text-indigo-700 hover:bg-indigo-50"><i class="fas fa-cloud-arrow-up mr-1.5"></i>파일 업로드<input type="file" data-checklist-report-upload="${escapeAttr(selectedTask.id)}" accept=".ppt,.pptx,.pdf" class="hidden"></label></div>
+                    </div>` : ''}
+            </section>`;
     }
 
     function renderDetailPanel() {
@@ -1175,7 +1195,7 @@
         const isEditingTitle = editingTitleTaskId === task.id;
         panel.innerHTML = `
             <div class="flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl xl:h-auto xl:min-h-[560px] xl:rounded-lg xl:border xl:border-gray-200 xl:p-4 xl:shadow-sm" role="dialog" aria-modal="true" aria-label="${escapeAttr(task.title)} 상세 편집" data-checklist-detail-dialog>
-                <div class="flex shrink-0 items-start justify-between gap-2 border-b border-gray-100 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] xl:border-0 xl:p-0">
+                <div class="flex shrink-0 flex-col items-stretch gap-2 border-b border-gray-100 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:flex-row sm:items-start sm:justify-between xl:border-0 xl:p-0">
                     <div class="min-w-0 flex-1">
                         <div class="flex flex-wrap items-center gap-1.5">
                             ${isEditingTitle ? `
@@ -1187,41 +1207,34 @@
                             ` : `
                                 <h4 data-checklist-title-display="${escapeAttr(task.id)}" tabindex="0" class="min-w-0 cursor-text truncate rounded px-1 py-0.5 text-lg font-black leading-snug text-gray-900 outline-none hover:bg-gray-50 focus:ring-2 focus:ring-indigo-200" title="더블클릭하여 제목 수정">${escapeHtml(task.title)}</h4>
                             `}
-                            <span class="inline-flex text-[10px] font-bold border px-2 py-0.5 rounded ${TONE_CLASSES[domain.tone] || TONE_CLASSES.slate}">${escapeHtml(domain.label)}</span>
                         </div>
                         <p class="mt-1 text-[11px] text-gray-400">${escapeHtml(domain.label)} · ${stepSummary.done}/${stepSummary.total} Step · 제목은 더블클릭으로 수정</p>
                     </div>
-                    <div class="flex shrink-0 gap-1">
+                    <div class="flex w-full shrink-0 items-center gap-1 sm:w-auto">
+                        <select id="checklist-status-filter" class="h-8 min-w-0 flex-1 rounded-md border border-gray-200 bg-white px-2 text-[10px] font-bold text-gray-600 outline-none focus:border-indigo-300 sm:max-w-[104px] sm:flex-none" aria-label="할 일 상태 필터">
+                            <option value="open" ${activeFilter === 'open' ? 'selected' : ''}>진행 중 ${getSummary().open}</option>
+                            <option value="paused" ${activeFilter === 'paused' ? 'selected' : ''}>Monitor ${getSummary().paused}</option>
+                            <option value="done" ${activeFilter === 'done' ? 'selected' : ''}>완료 ${getSummary().done}</option>
+                            <option value="all" ${activeFilter === 'all' ? 'selected' : ''}>전체 ${getSummary().total}</option>
+                        </select>
+                        <select id="checklist-detail-domain-edit" class="h-8 min-w-0 flex-1 rounded-md border border-gray-200 bg-white px-2 text-[10px] font-bold text-gray-600 outline-none focus:border-indigo-300 sm:max-w-[94px] sm:flex-none" aria-label="할 일 영역">
+                            ${DOMAINS.map((item) => `<option value="${escapeAttr(item.key)}" ${item.key === task.domain ? 'selected' : ''}>${escapeHtml(item.label)}</option>`).join('')}
+                        </select>
                         <button type="button" data-checklist-pause="${escapeAttr(task.id)}" class="inline-flex h-7 w-7 items-center justify-center rounded-md border ${task.paused ? 'border-amber-200 bg-amber-50 text-amber-600' : 'border-gray-200 bg-white text-gray-400 hover:text-amber-600'}" title="${task.paused ? '다시 활성화' : 'Monitor로 보류'}" aria-label="${task.paused ? '다시 활성화' : 'Monitor로 보류'}"><i class="fas ${task.paused ? 'fa-play' : 'fa-pause'} text-xs"></i></button>
                         <button type="button" data-checklist-close-detail class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 hover:text-gray-700" title="상세 닫기" aria-label="상세 닫기"><i class="fas fa-xmark text-xs"></i></button>
                     </div>
                 </div>
 
                 <div class="grid flex-1 grid-cols-1 gap-3 overflow-y-auto px-4 py-4 xl:mt-3 xl:overflow-visible xl:p-0">
-                    <div class="max-w-2xl">
-                        <div class="block"><span class="text-[11px] font-bold text-gray-500">그룹</span>${renderDomainChoiceButtons('checklist-detail-domain-edit', task.domain)}</div>
+                    <div class="block">
+                        <span class="text-[11px] font-bold text-gray-500">상세내역</span>
+                        ${renderNoteEditor({
+                            id: 'checklist-detail-note-edit',
+                            value: task.note,
+                            minHeightClass: 'min-h-[360px] xl:min-h-[calc(100vh-345px)]',
+                            placeholder: '상세내역을 길게 적어둘 수 있습니다.',
+                        })}
                     </div>
-
-                    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px] gap-3">
-                        <div class="block">
-                            <span class="text-[11px] font-bold text-gray-500">상세내역</span>
-                            ${renderNoteEditor({
-                                id: 'checklist-detail-note-edit',
-                                value: task.note,
-                                minHeightClass: 'min-h-[220px] xl:min-h-[320px]',
-                                placeholder: '상세내역을 길게 적어둘 수 있습니다.',
-                            })}
-                        </div>
-
-                        <div>
-                            <div class="block">
-                                <span class="text-[11px] font-bold text-gray-500">Step</span>
-                                <div class="mt-1">${renderStepEditor('checklist-detail-steps-edit', task.steps)}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    ${renderCompletionReport(task)}
 
                     <button type="button" data-checklist-save-detail="${escapeAttr(task.id)}" class="w-full rounded-md bg-gray-900 px-3 py-2.5 text-xs font-bold text-white hover:bg-gray-800">수정 저장</button>
                 </div>
@@ -1230,32 +1243,7 @@
     }
 
     function renderSummary() {
-        const summary = getSummary();
-        const openEl = document.getElementById('checklist-open-count');
-        const doneEl = document.getElementById('checklist-done-count');
-        const pctEl = document.getElementById('checklist-progress-percent');
-        const barEl = document.getElementById('checklist-progress-bar');
-        const filtersEl = document.getElementById('checklist-filters');
-        const domainsEl = document.getElementById('checklist-domain-filters');
-        if (openEl) openEl.textContent = summary.open.toLocaleString();
-        if (doneEl) doneEl.textContent = summary.done.toLocaleString();
-        if (pctEl) pctEl.textContent = `${summary.pct}%`;
-        if (barEl) barEl.style.width = `${summary.pct}%`;
-        if (filtersEl) {
-            filtersEl.innerHTML = [
-                renderFilterButton('open', '진행 중', summary.open),
-                renderFilterButton('paused', 'Monitor', summary.paused),
-                renderFilterButton('done', '완료', summary.done),
-                renderFilterButton('all', '전체', summary.total),
-            ].join('');
-        }
-        if (domainsEl) {
-            domainsEl.innerHTML = DOMAINS.map((domain) => {
-                const count = tasks.filter((task) => task.domain === domain.key).length;
-                const active = activeDomain === domain.key;
-                return `<button type="button" data-checklist-domain-filter="${escapeAttr(domain.key)}" aria-pressed="${active}" class="flex min-w-0 flex-1 items-center justify-between rounded-lg border px-3 py-2 text-left transition ${active ? `font-black ${TONE_CLASSES[domain.tone]}` : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'}"><span class="text-xs">${escapeHtml(domain.label)}</span><span class="text-[10px] opacity-70">${count}</span></button>`;
-            }).join('');
-        }
+        return getSummary();
     }
 
     function ensureShell() {
@@ -1263,39 +1251,15 @@
         ensureDragStyles();
         if (!root || document.getElementById('checklist-task-list')) return;
         root.innerHTML = `
-            <div class="mb-3 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
-                <div>
-                    <p class="text-[10px] md:text-xs font-bold text-indigo-500 mb-1">Career · Finance · Life</p>
-                    <h2 class="text-xl md:text-2xl font-bold text-gray-900">할 일</h2>
-                </div>
-                <div class="flex items-center gap-2"><button type="button" data-checklist-report-library-open class="rounded-md border border-indigo-100 bg-indigo-50 px-2.5 py-1.5 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100"><i class="fas fa-box-archive mr-1"></i>완료 보고서</button><span id="checklist-sync-badge" class="text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-md whitespace-nowrap w-fit">로컬 저장</span></div>
-            </div>
-
-            <div id="checklist-domain-filters" class="mb-3 flex gap-2"></div>
-
-            <div class="space-y-2.5 md:space-y-3 mb-8">
-                <section id="checklist-life-notes-wrap" class="hidden min-w-0">
-                    <div id="checklist-life-notes-panel"></div>
+            <div class="grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-[minmax(210px,0.75fr)_minmax(430px,1.9fr)_minmax(270px,1fr)]">
+                <section class="min-w-0 rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
+                    <div class="mb-2 flex items-center justify-between gap-2"><span id="checklist-sync-badge" class="text-[9px] font-bold text-slate-500 bg-slate-50 border border-slate-100 px-2 py-1 rounded-md whitespace-nowrap w-fit">로컬 저장</span><div id="checklist-add-panel"></div></div>
+                    <div id="checklist-task-list" class="space-y-3 max-h-[calc(100vh-215px)] overflow-y-auto pr-1"></div>
                 </section>
-                <section id="checklist-task-board" class="bg-white p-2.5 md:p-3 rounded-lg border border-gray-100 min-w-0">
-                    <div class="flex flex-col gap-2 mb-2.5">
-                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                            <h3 class="text-sm font-bold text-gray-900">할 일 목록</h3>
-                            <div class="flex flex-wrap items-center gap-1.5">
-                                <div id="checklist-filters" class="flex flex-wrap gap-1.5"></div>
-                                <div id="checklist-add-panel"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 xl:grid-cols-[380px_minmax(0,1fr)] gap-3 min-w-0">
-                        <div class="min-w-0">
-                            <div id="checklist-task-list" class="space-y-1.5 max-h-[calc(100vh-250px)] overflow-y-auto pr-1"></div>
-                        </div>
-                        <aside id="checklist-detail-panel" class="min-w-0"></aside>
-                    </div>
-                </section>
+                <aside id="checklist-detail-panel" class="min-w-0"></aside>
+                <aside id="checklist-report-library" class="min-w-0"></aside>
             </div>
-            <div id="checklist-report-library"></div>
+            <section id="checklist-life-notes-wrap" class="hidden mt-3 min-w-0"><div id="checklist-life-notes-panel"></div></section>
         `;
         isBound = false;
         bindControls();
@@ -1583,8 +1547,8 @@
         task.domain = getDomain(domainEl?.value || task.domain).key;
         task.priority = 'normal';
         task.note = String(noteEl?.value || '').trim();
-        task.steps = parseStepEditorSteps(stepsEl?.value || '', task.steps);
-        if (task.completed) {
+        if (stepsEl) task.steps = parseStepEditorSteps(stepsEl.value || '', task.steps);
+        if (task.completed && document.getElementById('checklist-report-summary')) {
             task.completionReport = {
                 summary: String(document.getElementById('checklist-report-summary')?.value || '').trim(),
                 outcome: String(document.getElementById('checklist-report-outcome')?.value || '').trim(),
@@ -1593,6 +1557,7 @@
             };
         }
         task.updatedAt = now;
+        activeDomain = task.domain;
         editingTitleTaskId = null;
         tasks = saveStore(tasks);
         render({ skipRemoteLoad: true });
@@ -1704,22 +1669,6 @@
                 render({ skipRemoteLoad: true });
                 return;
             }
-            if (event.target.closest('[data-checklist-report-library-open]')) {
-                reportLibraryOpen = true;
-                render({ skipRemoteLoad: true });
-                return;
-            }
-            const reportLibraryClose = event.target.closest('[data-checklist-report-library-close]');
-            if (reportLibraryClose && !event.target.closest('[data-checklist-report-library-dialog]')) {
-                reportLibraryOpen = false;
-                render({ skipRemoteLoad: true });
-                return;
-            }
-            if (event.target.closest('button[data-checklist-report-library-close]')) {
-                reportLibraryOpen = false;
-                render({ skipRemoteLoad: true });
-                return;
-            }
             const closeDetailBackdrop = event.target.matches('#checklist-detail-panel')
                 && !event.target.closest('[data-checklist-detail-dialog]');
             if (closeDetailBackdrop) {
@@ -1789,9 +1738,16 @@
                 openReportFile(reportOpenBtn.dataset.checklistReportOpen, reportOpenBtn.dataset.reportIndex);
                 return;
             }
+            const reportSelectBtn = event.target.closest('[data-checklist-report-select]');
+            if (reportSelectBtn) {
+                activeReportTaskId = reportSelectBtn.dataset.checklistReportSelect;
+                renderReportLibrary();
+                return;
+            }
             const row = event.target.closest('[data-checklist-open]');
             if (row && !event.target.closest('input, button, textarea, select, a')) {
                 activeTaskId = row.dataset.checklistOpen;
+                activeDomain = tasks.find((task) => task.id === activeTaskId)?.domain || activeDomain;
                 render({ skipRemoteLoad: true });
             }
         });
@@ -1802,6 +1758,16 @@
             startTitleEditing(title.dataset.checklistTitleDisplay);
         });
         root?.addEventListener('change', (event) => {
+            if (event.target.matches('#checklist-status-filter')) {
+                activeFilter = event.target.value || 'open';
+                render({ skipRemoteLoad: true });
+                return;
+            }
+            if (event.target.matches('#checklist-report-sort')) {
+                reportSort = event.target.value || 'recent';
+                renderReportLibrary();
+                return;
+            }
             const editorStepToggle = event.target.closest('[data-step-editor-toggle]');
             if (editorStepToggle) {
                 toggleStepFromEditor(
@@ -1822,6 +1788,16 @@
             }
         });
         root?.addEventListener('input', (event) => {
+            if (event.target.matches('#checklist-report-search')) {
+                reportSearch = event.target.value;
+                renderReportLibrary();
+                requestAnimationFrame(() => {
+                    const search = document.getElementById('checklist-report-search');
+                    search?.focus();
+                    search?.setSelectionRange(reportSearch.length, reportSearch.length);
+                });
+                return;
+            }
             const noteEditor = event.target.closest('[data-checklist-note-editor]');
             if (noteEditor) updateNotePreview(noteEditor.id);
             const groupInput = event.target.closest('[data-step-editor-group]');

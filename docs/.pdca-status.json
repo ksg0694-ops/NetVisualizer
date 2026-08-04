@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Update 1.04.02 Career Finance Life group correction",
+  "feature": "Update 1.04.02 Todo Workbench",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-08-05T00:55:00+09:00",
+  "updatedAt": "2026-08-05T02:20:00+09:00",
   "status": "complete",
-  "currentFocus": "Use Career, Finance, and Life as the Todo groups and embed Pocket Notebook with Life Todo in one tab.",
+  "currentFocus": "Deliver the selected three-column Todo workbench with a full-width detail editor and persistent completion-report library.",
   "completed": [
     "Documented Plan, Design, Check, Report, and design QA phases.",
     "Replaced arbitrary Todo groups with Career, Finance, and Life.",
@@ -17,7 +17,11 @@
     "Built the selected Pocket Notebook Life experience inside the Life group.",
     "Built the four-level Learning Archive.",
     "Added Supabase tables, Todo columns, and private report storage migration.",
-    "Bumped the correction cache to v154.",
+    "Bumped the correction cache to v155.",
+    "Rebuilt Todo as a three-column workbench with all fixed domains visible together.",
+    "Moved status and domain controls into compact selects in the selected-task header.",
+    "Expanded the detail editor while preserving hidden Step data.",
+    "Made the completion-report library persistent with search, sort, and preview.",
     "Passed the full check suite and responsive browser QA."
   ],
   "remaining": [],
