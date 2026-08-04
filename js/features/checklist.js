@@ -116,22 +116,57 @@
         strike: { open: '~~', close: '~~', placeholder: '취소선' },
     });
 
-    function formatNotePreview(value) {
+    const NOTE_ICONS = Object.freeze({
+        star: { label: '중요', icon: 'fa-star', tone: 'text-amber-500' },
+        lightbulb: { label: '아이디어', icon: 'fa-lightbulb', tone: 'text-amber-500' },
+        calendar: { label: '일정', icon: 'fa-calendar-days', tone: 'text-sky-500' },
+        paperclip: { label: '첨부', icon: 'fa-paperclip', tone: 'text-indigo-500' },
+        warning: { label: '주의', icon: 'fa-triangle-exclamation', tone: 'text-rose-500' },
+    });
+
+    function formatNoteInline(value) {
         return escapeHtml(String(value || ''))
             .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
             .replace(/\+\+([^+\n]+)\+\+/g, '<u>$1</u>')
             .replace(/~~([^~\n]+)~~/g, '<s>$1</s>')
-            .replace(/\n/g, '<br>');
+            .replace(/\{\{icon:(star|lightbulb|calendar|paperclip|warning)\}\}/g, (match, key) => {
+                const meta = NOTE_ICONS[key];
+                return `<i class="fas ${meta.icon} ${meta.tone} mr-1" title="${meta.label}" aria-label="${meta.label}"></i>`;
+            });
+    }
+
+    function renderNoteIndent(spaceCount) {
+        const groups = Math.floor(spaceCount / 3);
+        const remainder = spaceCount % 3;
+        return `${'<span class="inline-block w-5" aria-hidden="true"></span>'.repeat(groups)}${'&nbsp;'.repeat(remainder)}`;
+    }
+
+    function formatNotePreview(value, targetId) {
+        return String(value || '').split('\n').map((line, lineIndex) => {
+            const checkbox = line.match(/^(\s*)- \[([ xX])\]\s?(.*)$/);
+            if (checkbox) {
+                const checked = checkbox[2].toLowerCase() === 'x';
+                return `${renderNoteIndent(checkbox[1].length)}<label class="inline-flex items-start gap-1.5"><input type="checkbox" data-note-preview-checkbox data-note-target="${escapeAttr(targetId)}" data-note-line="${lineIndex}" class="mt-0.5 h-3.5 w-3.5 rounded border-gray-300 text-indigo-600" ${checked ? 'checked' : ''}><span class="${checked ? 'text-gray-400 line-through' : ''}">${formatNoteInline(checkbox[3])}</span></label>`;
+            }
+            const leadingSpaces = line.match(/^\s*/)?.[0]?.length || 0;
+            return `${renderNoteIndent(leadingSpaces)}${formatNoteInline(line.slice(leadingSpaces))}`;
+        }).join('<br>');
     }
 
     function renderNoteEditor({ id, value = '', minHeightClass = 'min-h-[180px]', placeholder = '' }) {
         return `
             <div class="mt-1 overflow-hidden rounded-md border border-gray-200 bg-white focus-within:ring-2 focus-within:ring-indigo-500">
-                <div class="flex items-center gap-1 border-b border-gray-100 bg-gray-50 px-2 py-1.5">
+                <div class="flex flex-wrap items-center gap-1 border-b border-gray-100 bg-gray-50 px-2 py-1.5">
                     <button type="button" data-checklist-note-format="bold" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-black text-gray-700 hover:border-indigo-300 hover:text-indigo-700" title="굵게 (**텍스트**)" aria-label="선택한 글자 굵게"><span aria-hidden="true">B</span></button>
                     <button type="button" data-checklist-note-format="underline" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-bold text-gray-700 underline hover:border-indigo-300 hover:text-indigo-700" title="밑줄 (++텍스트++)" aria-label="선택한 글자 밑줄"><span aria-hidden="true">U</span></button>
                     <button type="button" data-checklist-note-format="strike" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-bold text-gray-700 line-through hover:border-indigo-300 hover:text-indigo-700" title="취소선 (~~텍스트~~)" aria-label="선택한 글자 취소선"><span aria-hidden="true">S</span></button>
-                    <span class="ml-1 text-[10px] text-gray-400">글자를 선택한 뒤 적용</span>
+                    <span class="mx-0.5 h-5 w-px bg-gray-200" aria-hidden="true"></span>
+                    <button type="button" data-checklist-note-command="indent" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-700" title="3칸 들여쓰기" aria-label="선택한 줄 3칸 들여쓰기"><i class="fas fa-indent text-[11px]"></i></button>
+                    <button type="button" data-checklist-note-command="checkbox" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-700" title="체크박스 추가" aria-label="선택한 줄에 체크박스 추가"><i class="fas fa-square-check text-[11px]"></i></button>
+                    <button type="button" data-checklist-icon-picker-toggle data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-700" title="아이콘 추가" aria-label="아이콘 선택 열기" aria-expanded="false"><i class="fas fa-icons text-[11px]"></i></button>
+                    <div data-checklist-icon-picker-for="${escapeAttr(id)}" class="hidden flex flex-wrap items-center gap-1 rounded-md border border-indigo-100 bg-white p-1 shadow-sm">
+                        ${Object.entries(NOTE_ICONS).map(([key, meta]) => `<button type="button" data-checklist-note-icon="${key}" data-note-target="${escapeAttr(id)}" class="flex h-7 w-7 items-center justify-center rounded hover:bg-gray-50 ${meta.tone}" title="${meta.label}" aria-label="${meta.label} 아이콘 추가"><i class="fas ${meta.icon} text-[11px]"></i></button>`).join('')}
+                    </div>
                 </div>
                 <textarea id="${escapeAttr(id)}" data-checklist-note-editor class="block w-full ${minHeightClass} resize-y border-0 px-3 py-2.5 text-sm leading-relaxed outline-none bg-white focus:ring-0" placeholder="${escapeAttr(placeholder)}">${escapeHtml(value)}</textarea>
                 <div data-note-preview-for="${escapeAttr(id)}" class="hidden border-t border-gray-100 bg-gray-50/70 px-3 py-2">
@@ -148,9 +183,9 @@
         const content = preview?.querySelector('[data-note-preview-content]');
         if (!textarea || !preview || !content) return;
         const value = textarea.value || '';
-        const hasFormatting = /\*\*[^*\n]+\*\*|\+\+[^+\n]+\+\+|~~[^~\n]+~~/.test(value);
+        const hasFormatting = /\*\*[^*\n]+\*\*|\+\+[^+\n]+\+\+|~~[^~\n]+~~|^\s{3}|^\s*- \[[ xX]\]|\{\{icon:(?:star|lightbulb|calendar|paperclip|warning)\}\}/m.test(value);
         preview.classList.toggle('hidden', !hasFormatting);
-        content.innerHTML = hasFormatting ? formatNotePreview(value) : '';
+        content.innerHTML = hasFormatting ? formatNotePreview(value, targetId) : '';
     }
 
     function applyNoteFormat(targetId, formatKey) {
@@ -165,6 +200,46 @@
         const contentStart = start + format.open.length;
         textarea.setSelectionRange(contentStart, contentStart + selected.length);
         textarea.focus();
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function applyNoteCommand(targetId, command) {
+        const textarea = document.getElementById(targetId);
+        if (!textarea || !['indent', 'checkbox'].includes(command)) return;
+        const start = Number.isFinite(textarea.selectionStart) ? textarea.selectionStart : textarea.value.length;
+        const end = Number.isFinite(textarea.selectionEnd) ? textarea.selectionEnd : start;
+        const lineStart = textarea.value.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
+        const nextLineBreak = textarea.value.indexOf('\n', end);
+        const lineEnd = nextLineBreak === -1 ? textarea.value.length : nextLineBreak;
+        const block = textarea.value.slice(lineStart, lineEnd);
+        const replacement = block.split('\n').map((line) => {
+            if (command === 'indent') return `   ${line}`;
+            if (/^\s*- \[[ xX]\]/.test(line)) return line;
+            const leading = line.match(/^\s*/)?.[0] || '';
+            return `${leading}- [ ] ${line.slice(leading.length)}`;
+        }).join('\n');
+        textarea.setRangeText(replacement, lineStart, lineEnd, 'end');
+        textarea.focus();
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function insertNoteIcon(targetId, iconKey) {
+        const textarea = document.getElementById(targetId);
+        if (!textarea || !NOTE_ICONS[iconKey]) return;
+        const start = Number.isFinite(textarea.selectionStart) ? textarea.selectionStart : textarea.value.length;
+        const end = Number.isFinite(textarea.selectionEnd) ? textarea.selectionEnd : start;
+        textarea.setRangeText(`{{icon:${iconKey}}} `, start, end, 'end');
+        textarea.focus();
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function toggleNotePreviewCheckbox(targetId, lineIndex, checked) {
+        const textarea = document.getElementById(targetId);
+        if (!textarea) return;
+        const lines = textarea.value.split('\n');
+        if (!lines[lineIndex] || !/^\s*- \[[ xX]\]/.test(lines[lineIndex])) return;
+        lines[lineIndex] = lines[lineIndex].replace(/^(\s*)- \[[ xX]\]/, `$1- [${checked ? 'x' : ' '}]`);
+        textarea.value = lines.join('\n');
         textarea.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
@@ -1118,6 +1193,17 @@
         }).join('');
     }
 
+    function getReportAssetType(item = {}) {
+        const source = `${item.name || ''} ${item.url || ''} ${item.path || ''}`.toLowerCase();
+        if (/(docs\.google\.com\/spreadsheets|google\s*sheets?|spreadsheet|excel|엑셀|\.xlsx?(?:$|[?#/]))/.test(source)) {
+            return { key: 'excel', label: 'Excel', icon: 'fa-file-excel', tone: 'bg-emerald-50 text-emerald-600' };
+        }
+        if (/(docs\.google\.com\/presentation|google\s*slides?|presentation|powerpoint|파워포인트|ppt|\.pptx?(?:$|[?#/]))/.test(source)) {
+            return { key: 'powerpoint', label: 'PowerPoint', icon: 'fa-file-powerpoint', tone: 'bg-orange-50 text-orange-600' };
+        }
+        return { key: 'link', label: '외부', icon: 'fa-link', tone: 'bg-indigo-50 text-indigo-500' };
+    }
+
     function renderReportLibrary() {
         const panel = document.getElementById('checklist-report-library');
         if (!panel) return;
@@ -1144,7 +1230,7 @@
                 ${selectedTask ? `
                     ${isReportLinkFormOpen ? `<div class="mt-3 space-y-2 rounded-lg border border-indigo-100 bg-indigo-50/40 p-2.5">
                         <label class="block text-[9px] font-bold text-gray-600">Report 제목<input id="checklist-report-link-title" type="text" placeholder="예: 8월 자산점검 PPT" class="mt-1 h-8 w-full rounded-md border border-gray-200 bg-white px-2 text-[10px] outline-none focus:border-indigo-300"></label>
-                        <label class="block text-[9px] font-bold text-gray-600">PPT 링크<input id="checklist-report-external-url" type="url" inputmode="url" placeholder="Google Slides, Drive, PowerPoint 링크" class="mt-1 h-8 w-full rounded-md border border-gray-200 bg-white px-2 text-[10px] outline-none focus:border-indigo-300"></label>
+                        <label class="block text-[9px] font-bold text-gray-600">Report 링크<input id="checklist-report-external-url" type="url" inputmode="url" placeholder="Google Slides, Sheets, Drive 또는 문서 링크" class="mt-1 h-8 w-full rounded-md border border-gray-200 bg-white px-2 text-[10px] outline-none focus:border-indigo-300"></label>
                         <div class="flex justify-end gap-1.5"><button type="button" data-checklist-report-link-cancel class="rounded-md px-2.5 py-1.5 text-[9px] font-bold text-gray-500 hover:bg-white">취소</button><button type="button" data-checklist-report-link-save="${escapeAttr(selectedTask.id)}" class="rounded-md bg-gray-900 px-2.5 py-1.5 text-[9px] font-bold text-white hover:bg-gray-800">Library에 추가</button></div>
                     </div>` : ''}
                     <div class="mt-3 grid grid-cols-[minmax(0,1fr)_82px] gap-2">
@@ -1155,12 +1241,10 @@
                         ${libraryItems.length ? libraryItems.map((item) => {
                             const linkUrl = normalizeReportUrl(item.url);
                             const isLink = Boolean(linkUrl);
+                            const assetType = getReportAssetType(item);
                             const date = item.createdAt ? new Date(item.createdAt).toLocaleDateString('ko-KR') : '';
-                            return `<article class="group flex items-center gap-2 rounded-md border border-gray-100 bg-white p-2 hover:border-indigo-200"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${isLink ? 'bg-indigo-50 text-indigo-500' : 'bg-orange-50 text-orange-500'}"><i class="fas ${isLink ? 'fa-link' : 'fa-file-powerpoint'} text-xs"></i></span><div class="min-w-0 flex-1"><strong class="block truncate text-[10px] text-gray-800">${escapeHtml(item.name || (isLink ? 'PPT 링크' : 'Report 파일'))}</strong><span class="mt-0.5 block text-[9px] text-gray-400">${isLink ? '외부 링크' : '업로드 파일'}${date ? ` · ${escapeHtml(date)}` : ''}</span></div>${isLink ? `<a href="${escapeAttr(linkUrl)}" target="_blank" rel="noopener noreferrer" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-indigo-500 hover:bg-indigo-50" title="Report 열기" aria-label="${escapeAttr(item.name || 'Report')} 열기"><i class="fas fa-arrow-up-right-from-square text-[10px]"></i></a><button type="button" data-checklist-report-link-delete="${escapeAttr(selectedTask.id)}" data-report-index="${escapeAttr(item.sourceIndex)}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-300 hover:bg-rose-50 hover:text-rose-500" title="링크 삭제" aria-label="${escapeAttr(item.name || 'Report')} 링크 삭제"><i class="fas fa-trash text-[10px]"></i></button>` : `<button type="button" data-checklist-report-open="${escapeAttr(selectedTask.id)}" data-report-index="${escapeAttr(item.sourceIndex)}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-indigo-500 hover:bg-indigo-50" title="파일 열기" aria-label="${escapeAttr(item.name || 'Report')} 파일 열기"><i class="fas fa-download text-[10px]"></i></button>`}</article>`;
-                        }).join('') : '<div class="rounded-lg border border-dashed border-gray-200 px-4 py-12 text-center"><p class="text-xs font-bold text-gray-500">아직 등록된 Report가 없습니다.</p><p class="mt-1 text-[9px] text-gray-400">이 할 일의 PPT 링크나 파일을 추가하세요.</p></div>'}
-                    </div>
-                    <div class="mt-3 border-t border-gray-100 pt-3">
-                        <label class="inline-flex cursor-pointer items-center rounded-md border border-indigo-100 bg-indigo-50 px-3 py-2 text-[9px] font-bold text-indigo-700 hover:bg-indigo-100"><i class="fas fa-cloud-arrow-up mr-1.5"></i>Report 파일 업로드<input type="file" data-checklist-report-upload="${escapeAttr(selectedTask.id)}" accept=".ppt,.pptx,.pdf" class="hidden"></label>
+                            return `<article class="group flex items-center gap-2 rounded-md border border-gray-100 bg-white p-2 hover:border-indigo-200"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${assetType.tone}"><i class="fas ${assetType.icon} text-xs"></i></span><div class="min-w-0 flex-1"><strong class="block truncate text-[10px] text-gray-800">${escapeHtml(item.name || (isLink ? 'Report 링크' : 'Report 파일'))}</strong><span class="mt-0.5 block text-[9px] text-gray-400">${escapeHtml(assetType.label)} ${isLink ? '링크' : '파일'}${date ? ` · ${escapeHtml(date)}` : ''}</span></div>${isLink ? `<a href="${escapeAttr(linkUrl)}" target="_blank" rel="noopener noreferrer" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-indigo-500 hover:bg-indigo-50" title="Report 열기" aria-label="${escapeAttr(item.name || 'Report')} 열기"><i class="fas fa-arrow-up-right-from-square text-[10px]"></i></a><button type="button" data-checklist-report-link-delete="${escapeAttr(selectedTask.id)}" data-report-index="${escapeAttr(item.sourceIndex)}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-300 hover:bg-rose-50 hover:text-rose-500" title="링크 삭제" aria-label="${escapeAttr(item.name || 'Report')} 링크 삭제"><i class="fas fa-trash text-[10px]"></i></button>` : `<button type="button" data-checklist-report-open="${escapeAttr(selectedTask.id)}" data-report-index="${escapeAttr(item.sourceIndex)}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-indigo-500 hover:bg-indigo-50" title="파일 열기" aria-label="${escapeAttr(item.name || 'Report')} 파일 열기"><i class="fas fa-download text-[10px]"></i></button>`}</article>`;
+                        }).join('') : '<div class="rounded-lg border border-dashed border-gray-200 px-4 py-12 text-center"><p class="text-xs font-bold text-gray-500">아직 등록된 Report가 없습니다.</p><p class="mt-1 text-[9px] text-gray-400">이 할 일의 Report 링크를 추가하세요.</p></div>'}
                     </div>
                 ` : `
                     <div class="flex flex-1 flex-col items-center justify-center py-16 text-center"><div class="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 text-gray-300"><i class="fas fa-folder-open"></i></div><p class="mt-3 text-xs font-bold text-gray-600">할 일을 선택하세요</p><p class="mt-1 text-[9px] text-gray-400">선택한 할 일의 Report Library가 표시됩니다.</p></div>
@@ -1251,7 +1335,7 @@
         root.innerHTML = `
             <div class="grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-[minmax(210px,0.75fr)_minmax(430px,1.9fr)_minmax(270px,1fr)]">
                 <section class="min-w-0 rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
-                    <div class="mb-2 flex items-center justify-between gap-2"><span id="checklist-sync-badge" class="text-[9px] font-bold text-slate-500 bg-slate-50 border border-slate-100 px-2 py-1 rounded-md whitespace-nowrap w-fit">로컬 저장</span><div id="checklist-add-panel"></div></div>
+                    <div class="mb-2 flex justify-end"><div id="checklist-add-panel"></div></div>
                     <div id="checklist-task-list" class="space-y-3 max-h-[calc(100vh-215px)] overflow-y-auto pr-1"></div>
                 </section>
                 <aside id="checklist-detail-panel" class="min-w-0"></aside>
@@ -1551,12 +1635,14 @@
             return;
         }
         const now = new Date().toISOString();
-        let defaultTitle = 'PPT Report';
+        let defaultTitle = 'Report 링크';
         try { defaultTitle = new URL(normalizedUrl).hostname.replace(/^www\./, '') || defaultTitle; } catch (error) { /* normalized above */ }
+        const reportName = String(titleInput?.value || '').trim() || defaultTitle;
         task.reportFiles = [...(task.reportFiles || []), {
             kind: 'link',
-            name: String(titleInput?.value || '').trim() || defaultTitle,
+            name: reportName,
             url: normalizedUrl,
+            reportType: getReportAssetType({ name: reportName, url: normalizedUrl }).key,
             createdAt: now,
         }];
         task.updatedAt = now;
@@ -1685,6 +1771,27 @@
             const noteFormatButton = event.target.closest('[data-checklist-note-format]');
             if (noteFormatButton) {
                 applyNoteFormat(noteFormatButton.dataset.noteTarget, noteFormatButton.dataset.checklistNoteFormat);
+                return;
+            }
+            const noteCommandButton = event.target.closest('[data-checklist-note-command]');
+            if (noteCommandButton) {
+                applyNoteCommand(noteCommandButton.dataset.noteTarget, noteCommandButton.dataset.checklistNoteCommand);
+                return;
+            }
+            const iconPickerToggle = event.target.closest('[data-checklist-icon-picker-toggle]');
+            if (iconPickerToggle) {
+                const targetId = iconPickerToggle.dataset.noteTarget;
+                const picker = document.querySelector(`[data-checklist-icon-picker-for="${CSS.escape(targetId)}"]`);
+                const willOpen = picker?.classList.contains('hidden');
+                picker?.classList.toggle('hidden', !willOpen);
+                iconPickerToggle.setAttribute('aria-expanded', String(Boolean(willOpen)));
+                return;
+            }
+            const noteIconButton = event.target.closest('[data-checklist-note-icon]');
+            if (noteIconButton) {
+                insertNoteIcon(noteIconButton.dataset.noteTarget, noteIconButton.dataset.checklistNoteIcon);
+                const picker = document.querySelector(`[data-checklist-icon-picker-for="${CSS.escape(noteIconButton.dataset.noteTarget)}"]`);
+                picker?.classList.add('hidden');
                 return;
             }
             const filterBtn = event.target.closest('[data-checklist-filter]');
@@ -1841,6 +1948,11 @@
             startTitleEditing(title.dataset.checklistTitleDisplay);
         });
         root?.addEventListener('change', (event) => {
+            const noteCheckbox = event.target.closest('[data-note-preview-checkbox]');
+            if (noteCheckbox) {
+                toggleNotePreviewCheckbox(noteCheckbox.dataset.noteTarget, Number(noteCheckbox.dataset.noteLine), noteCheckbox.checked);
+                return;
+            }
             if (event.target.matches('#checklist-status-filter')) {
                 activeFilter = event.target.value || 'open';
                 render({ skipRemoteLoad: true });

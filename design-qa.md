@@ -73,6 +73,25 @@ final result: passed
 
 ---
 
+# Update 1.04.02 OneNote Editor Tools Design QA
+
+Implementation:
+
+- `docs/audits/update-10402-editor-tools/desktop.png`
+- `docs/audits/update-10402-editor-tools/mobile.png`
+
+## Findings and checks
+
+- 기존 B/U/S 도구와 들여쓰기, 체크박스, 아이콘 도구가 한 줄에서 같은 크기와 간격을 사용한다.
+- 좁은 화면에서는 도구 모음이 줄바꿈되어 편집 영역을 밀어내거나 가로 스크롤을 만들지 않는다.
+- Report Library는 링크 등록에 집중하며 업로드 버튼과 저장 상태 배지를 제거해 시각적 잡음을 줄였다.
+- PowerPoint는 주황색, Excel은 초록색, 일반 링크는 인디고 아이콘으로 구분한다.
+- PC와 모바일에서 열린 P0, P1, P2 디자인 문제가 없다.
+
+final result: passed
+
+---
+
 # Update 1.04.02 Per-Todo Report Library QA — 2026-08-05
 
 ## Evidence
