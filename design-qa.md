@@ -73,6 +73,30 @@ final result: passed
 
 ---
 
+# Update 1.04.02 Completion Report Link Design QA — 2026-08-05
+
+## Evidence
+
+- Existing Todo Workbench reference at 1280×720: `docs/audits/update-10402-todo-workbench/desktop.png`
+- External PPT link implementation at 1280×720: `docs/audits/update-10402-report-links/desktop.png`
+- Mobile completion-report library in a 390×844 CSS-pixel frame: `docs/audits/update-10402-report-links/mobile.png`
+- State: completed Career task selected with a temporary Google Slides-format link; the test link was removed after capture.
+
+## Findings and checks
+
+- The right library preserves the existing hierarchy and adds one restrained `PPT 링크 추가` action.
+- URL input, save action, and saved-link open action fit inside the report preview card without widening the three-column layout.
+- The completed report list identifies linked items without adding another card or KPI.
+- Desktop 1280×720 has no horizontal overflow.
+- Mobile 390×844 exposes the same link field and save action after closing the full-screen task detail.
+- Link registration, opening target, Enter-to-save, and empty-value deletion are connected.
+- PPT generation and upload helpers preserve `externalUrl` in the existing completion report JSON.
+- No open P0, P1, or P2 findings remain.
+
+final result: passed
+
+---
+
 # Update 1.04.02 Todo Workbench Design QA — 2026-08-05
 
 ## Evidence
