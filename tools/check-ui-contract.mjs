@@ -141,6 +141,11 @@ assert.ok(!checklist.includes('>할 일 목록<'), 'the redundant task-list head
 assert.ok(!checklist.includes('data-checklist-report-library-open'), 'the report library must remain visible without a separate open button');
 assert.ok(checklist.includes('완료보고서 라이브러리'));
 assert.ok(checklist.includes('data-checklist-report-select'));
+assert.ok(checklist.includes('id="checklist-report-external-url"'), 'completed reports must accept an external PPT link');
+assert.ok(checklist.includes('data-checklist-report-link-save'), 'external PPT links must have an explicit save action');
+assert.ok(checklist.includes('externalUrl: normalizedUrl'), 'the PPT link must persist inside completion_report');
+assert.ok(checklist.includes('등록한 PPT 열기'), 'saved PPT links must open from the report library');
+assert.ok(checklist.includes('...(task.completionReport || {})'), 'PPT generation and uploads must preserve the saved external link');
 assert.ok(checklist.includes("DOMAINS.map((domain) =>"), 'the left rail must show Career, Finance, and Life together');
 assert.ok(!checklist.includes("renderStepEditor('checklist-detail-steps-edit'"), 'the detail note must use the full center width');
 assert.ok(checklist.includes("if (stepsEl) task.steps = parseStepEditorSteps"), 'hidden Step data must be preserved on detail save');

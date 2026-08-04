@@ -84,6 +84,18 @@
         return window.AppUtils.escapeAttr(value);
     }
 
+    function normalizeReportUrl(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+        try {
+            const parsed = new URL(candidate);
+            return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
     function persistChecklistUiState() {
         try {
             localStorage.setItem(UI_STATE_KEY, JSON.stringify({
@@ -1146,7 +1158,10 @@
         const files = selectedTask?.reportFiles || [];
         panel.innerHTML = `
             <section class="flex min-h-[560px] flex-col rounded-lg border border-gray-200 bg-white p-3 shadow-sm xl:min-h-[calc(100vh-205px)]">
-                <h3 class="text-sm font-black text-gray-900">완료보고서 라이브러리</h3>
+                <div class="flex items-center justify-between gap-2">
+                    <h3 class="text-sm font-black text-gray-900">완료보고서 라이브러리</h3>
+                    ${selectedTask ? '<button type="button" data-checklist-report-link-focus class="rounded-md border border-indigo-100 bg-indigo-50 px-2 py-1.5 text-[9px] font-bold text-indigo-700 hover:bg-indigo-100"><i class="fas fa-link mr-1"></i>PPT 링크 추가</button>' : ''}
+                </div>
                 <div class="mt-3 grid grid-cols-[minmax(0,1fr)_92px] gap-2">
                     <label class="relative"><i class="fas fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-300"></i><input id="checklist-report-search" type="search" value="${escapeAttr(reportSearch)}" placeholder="보고서 제목 검색" class="h-8 w-full rounded-md border border-gray-200 pl-7 pr-2 text-[11px] outline-none focus:border-indigo-300"></label>
                     <select id="checklist-report-sort" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-[11px] font-bold text-gray-500 outline-none"><option value="recent" ${reportSort === 'recent' ? 'selected' : ''}>최신순</option><option value="title" ${reportSort === 'title' ? 'selected' : ''}>제목순</option></select>
@@ -1155,7 +1170,8 @@
                     ${reportTasks.length ? reportTasks.map((task) => {
                         const selected = task.id === activeReportTaskId;
                         const date = task.completionReport?.updatedAt || task.updatedAt;
-                        return `<button type="button" data-checklist-report-select="${escapeAttr(task.id)}" class="flex w-full items-center gap-2 rounded-md border p-2 text-left transition ${selected ? 'border-indigo-300 bg-indigo-50/70' : 'border-gray-100 bg-white hover:border-indigo-200'}"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-orange-50 text-orange-500"><i class="fas fa-file-powerpoint text-xs"></i></span><span class="min-w-0 flex-1"><strong class="block truncate text-[11px] text-gray-800">${escapeHtml(task.title)} 완료 보고서</strong><span class="mt-0.5 flex items-center justify-between gap-2 text-[9px] text-gray-400"><span>${escapeHtml(getDomain(task.domain).label)}</span><span>${date ? escapeHtml(new Date(date).toLocaleDateString('ko-KR')) : ''}</span></span></span></button>`;
+                        const hasLink = Boolean(normalizeReportUrl(task.completionReport?.externalUrl));
+                        return `<button type="button" data-checklist-report-select="${escapeAttr(task.id)}" class="flex w-full items-center gap-2 rounded-md border p-2 text-left transition ${selected ? 'border-indigo-300 bg-indigo-50/70' : 'border-gray-100 bg-white hover:border-indigo-200'}"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-orange-50 text-orange-500"><i class="fas fa-file-powerpoint text-xs"></i></span><span class="min-w-0 flex-1"><strong class="block truncate text-[11px] text-gray-800">${escapeHtml(task.title)} 완료 보고서</strong><span class="mt-0.5 flex items-center justify-between gap-2 text-[9px] text-gray-400"><span>${escapeHtml(getDomain(task.domain).label)}${hasLink ? ' · 링크' : ''}</span><span>${date ? escapeHtml(new Date(date).toLocaleDateString('ko-KR')) : ''}</span></span></span></button>`;
                     }).join('') : '<div class="rounded-lg border border-dashed border-gray-200 px-4 py-10 text-center text-xs text-gray-400">완료된 할 일의 보고서가 여기에 모입니다.</div>'}
                 </div>
                 ${selectedTask ? `
@@ -1165,6 +1181,14 @@
                             <div><strong class="block text-[10px] text-gray-800">결과 요약</strong><p class="whitespace-pre-wrap">${escapeHtml(report.summary || '아직 작성된 결과 요약이 없습니다.')}</p></div>
                             <div><strong class="block text-[10px] text-gray-800">핵심 성과</strong><p class="whitespace-pre-wrap">${escapeHtml(report.outcome || '아직 작성된 핵심 성과가 없습니다.')}</p></div>
                             <div><strong class="block text-[10px] text-gray-800">추후 확인할 항목 (Monitor)</strong><p class="whitespace-pre-wrap">${escapeHtml(report.followUp || '등록된 Monitor 항목이 없습니다.')}</p></div>
+                        </div>
+                        <div class="mt-4 rounded-md border border-indigo-100 bg-white/80 p-2.5">
+                            <label for="checklist-report-external-url" class="text-[10px] font-black text-gray-800">외부 PPT 링크</label>
+                            <div class="mt-1.5 flex min-w-0 gap-1.5">
+                                <input id="checklist-report-external-url" type="url" inputmode="url" value="${escapeAttr(report.externalUrl || '')}" placeholder="Google Slides, Drive, PowerPoint 링크" class="h-8 min-w-0 flex-1 rounded-md border border-gray-200 bg-white px-2 text-[10px] outline-none focus:border-indigo-300">
+                                <button type="button" data-checklist-report-link-save="${escapeAttr(selectedTask.id)}" class="shrink-0 rounded-md bg-gray-900 px-2.5 text-[10px] font-bold text-white hover:bg-gray-800">링크 저장</button>
+                            </div>
+                            ${normalizeReportUrl(report.externalUrl) ? `<a href="${escapeAttr(normalizeReportUrl(report.externalUrl))}" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex max-w-full items-center gap-1.5 text-[10px] font-bold text-indigo-600 hover:text-indigo-800"><i class="fas fa-arrow-up-right-from-square"></i><span class="truncate">등록한 PPT 열기</span></a>` : '<p class="mt-2 text-[9px] text-gray-400">외부에서 작성한 PPT 주소를 연결할 수 있습니다.</p>'}
                         </div>
                         ${files.length ? `<div class="mt-3 space-y-1">${files.map((file, index) => `<button type="button" data-checklist-report-open="${escapeAttr(selectedTask.id)}" data-report-index="${index}" class="flex w-full items-center gap-2 rounded-md border border-white bg-white/80 px-2 py-1.5 text-left text-[10px] text-gray-600 hover:text-indigo-700"><i class="fas fa-download text-indigo-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(file.name || '완료 보고서')}</span></button>`).join('')}</div>` : ''}
                         <div class="mt-4 flex flex-wrap gap-2"><button type="button" data-checklist-report-ppt="${escapeAttr(selectedTask.id)}" class="rounded-md bg-indigo-600 px-3 py-2 text-[10px] font-bold text-white hover:bg-indigo-700"><i class="fas fa-file-powerpoint mr-1.5"></i>PPT 생성</button><label class="cursor-pointer rounded-md border border-indigo-200 bg-white px-3 py-2 text-[10px] font-bold text-indigo-700 hover:bg-indigo-50"><i class="fas fa-cloud-arrow-up mr-1.5"></i>파일 업로드<input type="file" data-checklist-report-upload="${escapeAttr(selectedTask.id)}" accept=".ppt,.pptx,.pdf" class="hidden"></label></div>
@@ -1410,6 +1434,7 @@
     function syncCompletionReportFromUi(task) {
         if (!task) return;
         task.completionReport = {
+            ...(task.completionReport || {}),
             summary: String(document.getElementById('checklist-report-summary')?.value || task.completionReport?.summary || '').trim(),
             outcome: String(document.getElementById('checklist-report-outcome')?.value || task.completionReport?.outcome || '').trim(),
             followUp: String(document.getElementById('checklist-report-followup')?.value || task.completionReport?.followUp || '').trim(),
@@ -1530,6 +1555,29 @@
         window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
     }
 
+    async function saveReportLink(taskId) {
+        const task = tasks.find((item) => item.id === taskId);
+        const input = document.getElementById('checklist-report-external-url');
+        if (!task || !input) return;
+        const normalizedUrl = normalizeReportUrl(input.value);
+        if (normalizedUrl === null) {
+            toast('http 또는 https 형식의 링크를 입력해주세요.', 'warning', 2600);
+            input.focus();
+            return;
+        }
+        const now = new Date().toISOString();
+        task.completionReport = {
+            ...(task.completionReport || {}),
+            externalUrl: normalizedUrl,
+            updatedAt: now,
+        };
+        task.updatedAt = now;
+        tasks = saveStore(tasks);
+        renderReportLibrary();
+        await persistRemoteTask(task);
+        toast(normalizedUrl ? '완료보고서 PPT 링크를 저장했습니다.' : '완료보고서 링크를 삭제했습니다.', 'info');
+    }
+
     async function saveTaskDetail(id) {
         const now = new Date().toISOString();
         const task = tasks.find((item) => item.id === id);
@@ -1550,6 +1598,7 @@
         if (stepsEl) task.steps = parseStepEditorSteps(stepsEl.value || '', task.steps);
         if (task.completed && document.getElementById('checklist-report-summary')) {
             task.completionReport = {
+                ...(task.completionReport || {}),
                 summary: String(document.getElementById('checklist-report-summary')?.value || '').trim(),
                 outcome: String(document.getElementById('checklist-report-outcome')?.value || '').trim(),
                 followUp: String(document.getElementById('checklist-report-followup')?.value || '').trim(),
@@ -1744,6 +1793,17 @@
                 renderReportLibrary();
                 return;
             }
+            if (event.target.closest('[data-checklist-report-link-focus]')) {
+                const input = document.getElementById('checklist-report-external-url');
+                input?.focus();
+                input?.select();
+                return;
+            }
+            const reportLinkSaveBtn = event.target.closest('[data-checklist-report-link-save]');
+            if (reportLinkSaveBtn) {
+                saveReportLink(reportLinkSaveBtn.dataset.checklistReportLinkSave);
+                return;
+            }
             const row = event.target.closest('[data-checklist-open]');
             if (row && !event.target.closest('input, button, textarea, select, a')) {
                 activeTaskId = row.dataset.checklistOpen;
@@ -1830,6 +1890,11 @@
                 return;
             }
             if (event.key === 'Enter' && event.target?.closest?.('#checklist-title-input')) addTaskFromForm();
+            if (event.key === 'Enter' && event.target?.closest?.('#checklist-report-external-url')) {
+                event.preventDefault();
+                saveReportLink(activeReportTaskId);
+                return;
+            }
             if (event.key === 'Escape' && isAddFormOpen) {
                 isAddFormOpen = false;
                 render({ skipRemoteLoad: true });
