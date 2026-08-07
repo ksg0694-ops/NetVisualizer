@@ -73,6 +73,53 @@ final result: passed
 
 ---
 
+# Update 1.04.02 Single-surface Todo Editor Design QA
+
+## Evidence
+
+- Source visual truth: `C:\Users\ksg06\AppData\Local\Temp\codex-clipboard-a45dd53a-540e-4d31-960f-63f6091cd6bd.png` (2370×1288 px), plus the user's correction that editing and rendered output must share one surface.
+- Desktop implementation: `docs/audits/update-10402-wysiwyg-editor/desktop.png` (1280×720 px).
+- Mobile implementation: `docs/audits/update-10402-wysiwyg-editor/mobile.png` (390×844 px).
+- Combined full-view comparison: `docs/audits/update-10402-wysiwyg-editor/comparison.png` (2560×720 px).
+- CSS viewports: 1280×720 and 390×844, device scale factor 1. The source was proportionally fitted into a 1280×720 comparison frame without stretching; the implementation remained at native capture size.
+- State: selected Career Todo with its center detail editor open, realistic note text, inline checkbox, and the Report Library rail visible on desktop.
+
+## Full-view and focused comparison
+
+- The source's left Todo list, expanded center writing area, compact header controls, and right Report Library hierarchy are retained.
+- The center note area now has exactly one visible editing surface. There is no preview label, preview panel, or visible source textarea.
+- The focused editor region shows 12×12 px checkboxes, formatted content, and indentation in the same surface where the caret and selection operate.
+- A separate focused crop was unnecessary because the editor occupies the dominant center region and its controls, checkbox alignment, and single-surface structure are legible in the full 1280×720 capture.
+
+## Required fidelity surfaces
+
+- Fonts and typography: existing Pretendard hierarchy, compact toolbar labels, body size, line height, and title weight are unchanged.
+- Spacing and layout rhythm: the source's three-column desktop composition is preserved; the mobile detail grid now uses content-start alignment so the save button no longer stretches vertically.
+- Colors and visual tokens: existing indigo focus, neutral borders, gray checked state, and white editor surface are reused.
+- Image quality and assets: the existing Font Awesome icon set remains intact; no raster placeholder, custom SVG, or CSS-drawn icon was introduced.
+- Copy and content: `상세내역`, toolbar meanings, `수정 저장`, and Report Library wording are preserved; the redundant `적용 미리보기` wording is removed.
+
+## Interaction and runtime checks
+
+- Typed directly into the rendered editor and observed the hidden persistence value update: passed.
+- Added and checked an inline checkbox; source changed from `- [ ]` to `- [x]`: passed.
+- Tab added exactly three leading spaces and Shift+Tab removed them: passed.
+- Selected text and applied bold formatting; rendered `<strong>/<b>` and persisted `**text**`: passed.
+- Enter created a new editable line and Backspace merge handling is wired.
+- Visible editor count: 1; visible textarea count: 0; preview panel count: 0.
+- Browser console application errors: 0.
+- `npm.cmd run check`: passed.
+
+## Comparison history
+
+1. P1: the prior patch displayed a preview and source textarea simultaneously, contradicting the intended direct-edit model. Both visible regions were replaced by one rendered editing surface backed by a hidden legacy value.
+2. P2: the mobile save button stretched to fill the remaining grid height. The detail grid was changed to `content-start`, producing a compact action directly below the editor.
+3. Post-fix desktop and mobile captures show no remaining actionable P0, P1, or P2 issue.
+
+final result: passed
+
+---
+
 # Update 1.04.02 OneNote Editor Tools Design QA
 
 Implementation:
