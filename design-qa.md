@@ -1,448 +1,54 @@
-# Phase 1 CFO Structure Design QA
+# Version 1.04.03 Design QA
 
 ## Evidence
 
-- Source visual truth:
-  - User Phase 1 CFO structure specification dated 2026-07-26.
-  - Monthly Report reference: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-0726-deck-review\slide-02.png`.
-  - Personal CFO reference: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-0726-deck-review\slide-03.png`.
-  - Cash-flow reference: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-0726-deck-review\slide-04.png`.
-- Implementation:
-  - Monthly Report: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-1876\monthly-report-1366x768-final-fixed.png`.
-  - Monthly Report compact notebook: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-1876\monthly-report-1280x720-final.png`.
-  - Personal CFO desktop: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-1876\personal-cfo-1366x768-pass1.png`.
-  - Personal CFO mobile: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-1876\personal-cfo-390x844-final.png`.
-  - Cash flow: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-1876\cashflow-1366x768-pass1.png`.
-  - Long-term Goal: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-1876\long-goal-1366x768-final.png`.
-  - Long-term asset prediction hover: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-1876\after-asset-prediction-hover-1440x900.png`.
-- Combined comparison:
-  - Monthly Report: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-1876\compare-monthly-report-final.png`.
-  - Personal CFO: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-1876\compare-personal-cfo-pass1.png`.
-  - Cash flow: `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-1876\compare-cashflow-pass1.png`.
-- Viewports: 1366 × 768, 1280 × 720, and 390 × 844 CSS px, device scale factor 1.
-- Source and implementation captures use equal pixel dimensions at each compared viewport; no density normalization was required.
-- State: 2026년 7월 마감, actual ledger and asset data loaded.
-
-## Full-view comparison
-
-- The finance-tool navigation follows the requested order: Monthly Report, 개인 CFO, 현금흐름, 포트폴리오, 장기 목표. There is no standalone real-estate navigation item.
-- Monthly Report matches the reference structure with one cash close/allocation block using a bar chart plus two donuts, one consolidated long-term goal chart, and the Phase 2 portfolio reservation.
-- Personal CFO uses a single source → monthly allocation → asset-state flow. Variable income, consumption, and residual values are intentionally hidden.
-- Cash flow begins with a compact monthly allocation block above the income and expense cards; the month-close panel is absent.
-- Long-term Goal combines the income-trend asset path with available equity, mortgage capacity, total funds, and DSR.
-
-## Focused-region comparison
-
-- Personal CFO: income, spending, and residual use `월별 변동`; the former fixed `400만원` and residual amount are not displayed. Known repayment and savings rules remain visible.
-- Monthly Report: every major report block is visible without clipping at 1366 × 768 and 1280 × 720, and the monthly cash-flow trend is absent.
-- Long-term Goal: the actual asset line, income-trend forecast, and target line remain visible after switching away and back to the tab.
-- Housing capacity: assumption settings open and close from Long-term Goal; no standalone schedule or map is rendered.
-
-## Required fidelity surfaces
-
-- Fonts and typography: the existing Pretendard hierarchy, weights, and compact financial labels are preserved.
-- Spacing and layout rhythm: sidebar, 12-column report grid, card radii, shadows, and gaps use the existing product system. Grid items explicitly allow shrinking at notebook widths.
-- Colors and visual tokens: existing indigo, blue, rose, emerald, lime, amber, violet, and slate semantics are reused.
-- Image quality and assets: existing Font Awesome icons are retained; Chart.js 4.4.7 is vendored locally for deterministic chart rendering.
-- Copy and content: unclear monthly values use `금액 미표시`; stable allocation rules and actual balance-sheet values retain amounts.
-
-## Interaction and runtime checks
-
-- Monthly Report month navigation: 2026년 7월 → 2026년 6월 → 2026년 7월 passed.
-- Finance primary navigation and mobile Personal CFO tab passed.
-- Long-term Goal assumption modal open and close passed.
-- Hidden-tab chart resize: Monthly Report canvas restored to 408 × 278 CSS px; Long-term Goal canvas restored to 660 × 380 CSS px.
-- Browser console: zero application errors. The known Tailwind CDN production warning remains a separate infrastructure follow-up.
-- `npm.cmd run check` passed, including forecast math and UI contracts.
-
-## Comparison history
-
-1. The first implementation pass aligned Monthly Report and Personal CFO with the reference slides.
-2. After forecast logic extraction, the asset chart was blank because Chart.js retained a 0×0 canvas initialized in a hidden tab.
-3. Chart.js 4.4.7 was vendored locally and chart updates now call `resize()` after the target tab becomes visible.
-4. The final 1366 × 768 comparison shows the requested bar/donut cash block and visible long-term forecast with no clipping.
-5. A 1280 × 720 GitHub Pages check exposed a minimum-width collision between the cash bar and donut column. The inner grid now shrinks to the available width and passes with `scrollWidth === clientWidth`.
-
-## Findings
-
-No actionable P0, P1, or P2 design differences remain.
-
-P3 follow-up: replace the Tailwind CDN runtime with a compiled production stylesheet during a separate infrastructure pass.
-
-final result: passed
-
----
-
-# Update 1.04.02 Single-surface Todo Editor Design QA
-
-## Evidence
-
-- Source visual truth: `C:\Users\ksg06\AppData\Local\Temp\codex-clipboard-a45dd53a-540e-4d31-960f-63f6091cd6bd.png` (2370×1288 px), plus the user's correction that editing and rendered output must share one surface.
-- Desktop implementation: `docs/audits/update-10402-wysiwyg-editor/desktop.png` (1280×720 px).
-- Mobile implementation: `docs/audits/update-10402-wysiwyg-editor/mobile.png` (390×844 px).
-- Combined full-view comparison: `docs/audits/update-10402-wysiwyg-editor/comparison.png` (2560×720 px).
-- CSS viewports: 1280×720 and 390×844, device scale factor 1. The source was proportionally fitted into a 1280×720 comparison frame without stretching; the implementation remained at native capture size.
-- State: selected Career Todo with its center detail editor open, realistic note text, inline checkbox, and the Report Library rail visible on desktop.
-
-## Full-view and focused comparison
-
-- The source's left Todo list, expanded center writing area, compact header controls, and right Report Library hierarchy are retained.
-- The center note area now has exactly one visible editing surface. There is no preview label, preview panel, or visible source textarea.
-- The focused editor region shows 12×12 px checkboxes, formatted content, and indentation in the same surface where the caret and selection operate.
-- A separate focused crop was unnecessary because the editor occupies the dominant center region and its controls, checkbox alignment, and single-surface structure are legible in the full 1280×720 capture.
-
-## Required fidelity surfaces
-
-- Fonts and typography: existing Pretendard hierarchy, compact toolbar labels, body size, line height, and title weight are unchanged.
-- Spacing and layout rhythm: the source's three-column desktop composition is preserved; the mobile detail grid now uses content-start alignment so the save button no longer stretches vertically.
-- Colors and visual tokens: existing indigo focus, neutral borders, gray checked state, and white editor surface are reused.
-- Image quality and assets: the existing Font Awesome icon set remains intact; no raster placeholder, custom SVG, or CSS-drawn icon was introduced.
-- Copy and content: `상세내역`, toolbar meanings, `수정 저장`, and Report Library wording are preserved; the redundant `적용 미리보기` wording is removed.
-
-## Interaction and runtime checks
-
-- Typed directly into the rendered editor and observed the hidden persistence value update: passed.
-- Added and checked an inline checkbox; source changed from `- [ ]` to `- [x]`: passed.
-- Tab added exactly three leading spaces and Shift+Tab removed them: passed.
-- Selected text and applied bold formatting; rendered `<strong>/<b>` and persisted `**text**`: passed.
-- Enter created a new editable line and Backspace merge handling is wired.
-- Visible editor count: 1; visible textarea count: 0; preview panel count: 0.
-- Browser console application errors: 0.
-- `npm.cmd run check`: passed.
-
-## Comparison history
-
-1. P1: the prior patch displayed a preview and source textarea simultaneously, contradicting the intended direct-edit model. Both visible regions were replaced by one rendered editing surface backed by a hidden legacy value.
-2. P2: the mobile save button stretched to fill the remaining grid height. The detail grid was changed to `content-start`, producing a compact action directly below the editor.
-3. Post-fix desktop and mobile captures show no remaining actionable P0, P1, or P2 issue.
-
-final result: passed
-
----
-
-# Update 1.04.02 OneNote Editor Tools Design QA
-
-Implementation:
-
-- `docs/audits/update-10402-editor-tools/desktop.png`
-- `docs/audits/update-10402-editor-tools/mobile.png`
-
-## Findings and checks
-
-- 기존 B/U/S 도구와 들여쓰기, 체크박스, 아이콘 도구가 한 줄에서 같은 크기와 간격을 사용한다.
-- 좁은 화면에서는 도구 모음이 줄바꿈되어 편집 영역을 밀어내거나 가로 스크롤을 만들지 않는다.
-- Report Library는 링크 등록에 집중하며 업로드 버튼과 저장 상태 배지를 제거해 시각적 잡음을 줄였다.
-- PowerPoint는 주황색, Excel은 초록색, 일반 링크는 인디고 아이콘으로 구분한다.
-- PC와 모바일에서 열린 P0, P1, P2 디자인 문제가 없다.
-
-final result: passed
-
----
-
-# Update 1.04.02 Per-Todo Report Library QA — 2026-08-05
-
-## Evidence
-
-- Prior completion-report interpretation at 1280×720: `docs/audits/update-10402-report-links/desktop.png`
-- Corrected per-Todo Library at 1280×720: `docs/audits/update-10402-task-report-library/desktop.png`
-- Corrected mobile Library in a 390×844 CSS-pixel frame: `docs/audits/update-10402-task-report-library/mobile.png`
-- State: an in-progress Career task selected with two temporary Report links; both links were deleted and the task completion state restored after capture.
-
-## Findings and checks
-
-- The right rail is titled `Report Library` and follows the selected Todo instead of filtering completed Todos.
-- The screenshot demonstrates two Report links attached while the Todo completion control is unchecked.
-- Report title, URL, open, delete, search, sort, and file upload controls fit without widening the three-column workbench.
-- Multiple Report links use the existing task `report_files` JSON and do not change Todo completion fields.
-- Mobile closing the full-screen detail retains task selection and scrolls to its Report Library.
-- Legacy single PPT links remain available as `이전 PPT 링크`.
-- Desktop and 390px mobile frames have no horizontal overflow.
-- No open P0, P1, or P2 findings remain.
-
-final result: passed
-
----
-
-# Update 1.04.02 Completion Report Link Design QA — 2026-08-05
-
-## Evidence
-
-- Existing Todo Workbench reference at 1280×720: `docs/audits/update-10402-todo-workbench/desktop.png`
-- External PPT link implementation at 1280×720: `docs/audits/update-10402-report-links/desktop.png`
-- Mobile completion-report library in a 390×844 CSS-pixel frame: `docs/audits/update-10402-report-links/mobile.png`
-- State: completed Career task selected with a temporary Google Slides-format link; the test link was removed after capture.
-
-## Findings and checks
-
-- The right library preserves the existing hierarchy and adds one restrained `PPT 링크 추가` action.
-- URL input, save action, and saved-link open action fit inside the report preview card without widening the three-column layout.
-- The completed report list identifies linked items without adding another card or KPI.
-- Desktop 1280×720 has no horizontal overflow.
-- Mobile 390×844 exposes the same link field and save action after closing the full-screen task detail.
-- Link registration, opening target, Enter-to-save, and empty-value deletion are connected.
-- PPT generation and upload helpers preserve `externalUrl` in the existing completion report JSON.
-- No open P0, P1, or P2 findings remain.
-
-final result: passed
-
----
-
-# Update 1.04.02 Todo Workbench Design QA — 2026-08-05
-
-## Evidence
-
-- Annotated reference normalized to 1280×720: `docs/audits/update-10402-todo-workbench/reference.png`
-- Desktop implementation at 1280×720: `docs/audits/update-10402-todo-workbench/desktop.png`
-- Mobile implementation in a 390×844 CSS-pixel frame: `docs/audits/update-10402-todo-workbench/mobile.png`
-- State: completed Career task selected, status set to All, completion-report preview selected.
-
-## Interaction and visual checks
-
-- Left rail shows Career, Finance, and Life together in fixed order and omits the redundant list title and per-card domain labels.
-- Selected-task header uses compact status and domain selects; wide filter buttons and top domain tabs are absent.
-- The center Step panel and duplicate completion-report form are absent; the note editor uses the full center width and height.
-- Completion-report library is persistent on desktop and includes search, sorting, report selection, PPT generation, upload, and file-open controls.
-- At 1280×720 the three columns fit without horizontal overflow; below the desktop breakpoint the columns stack.
-- At 390×844 the full-screen detail header splits into title and controls, avoiding clipped controls.
-- Existing Step data is preserved when the detail editor saves without a Step field.
-- Status filtering, report searching, report selection, and detail saving were exercised in the local preview.
-- No open P0, P1, or P2 findings remain.
-
-final result: passed
-
----
-
-# Update 1.04.02 Career / Finance / Life Group Correction QA
-
-Reference: `C:/Users/ksg06/.codex/generated_images/019f9d05-5144-78a0-ae59-b967f9a0f24b/exec-cb4bbd37-00e1-4ccd-b110-1905bbd14b47.png`
-
-Desktop implementation: `docs/audits/update-10402-group-correction/desktop-life-group.png`
-
-Mobile implementation: `docs/audits/update-10402-group-correction/mobile-life-group.png`
-
-## Comparison pass
-
-- Information architecture: the top-level navigation has one `할 일` entry; Career, Finance, and Life are the three fixed groups inside it.
-- Life integration: the selected Pocket Notebook pattern and the Life Todo list render in the same Life group screen.
-- Removed concepts: no separate Life Notes navigation or user-entered Todo group field remains.
-- Visual match: the existing NetVisualizer shell is preserved while the reference's violet notebook accent, quick-capture block, card/list column, and spacious editor are retained.
-- Responsiveness: desktop 1487×1058 and mobile 390×844 show the group controls, Life notes, and Life Todo without horizontal overflow.
-- Interaction: group switching, mobile Todo form, default Life group selection, note controls, filters, and completion-report entry points are wired.
-- Console: zero application errors during the tested flow.
-
-No open P0, P1, or P2 findings.
-
-final result: passed
-
-## Portfolio Phase 2 compact list — 2026-07-26
-
-### Evidence
-
-- Source visual truth:
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-compact-1876\source-portfolio-1280x720.png`
-- Rendered implementation:
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-compact-1876\final-portfolio-1280x720.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-compact-1876\final-safe-expanded-1280x720.png`
-- Equal-size comparison:
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-compact-1876\compare-portfolio-source-final.png`
-- Viewports: 1280 x 720 and 390 x 844 CSS px at device scale factor 1.
-- State: latest portfolio, CFO groups collapsed plus safe-assets expanded state.
-
-### Full-view comparison
-
-- The CFO group list uses less vertical space while preserving the existing five-group order, card language, icons, colors, and totals.
-- Housing now carries the 65,000,000 KRW repayment badge; operating assets no longer show a repayment amount.
-- The right column retains sufficient whitespace and no content is clipped at 1280 x 720.
-
-### Focused-region comparison
-
-- Expanded safe assets fit five sorted rows inside one compact card without truncated amounts.
-- Operating assets contain only 생활비통장 and 월급통장 in that order.
-- Housing items are ordered by amount magnitude: 전세금, housing loan, then 청약통장.
-- Investment accounts and holdings are sorted by descending evaluated amount.
-
-### Required fidelity surfaces
-
-- Typography: existing Pretendard hierarchy is preserved; list metadata and secondary values are reduced without losing legibility.
-- Spacing: accordion gaps, header padding, icon size, account headers, and item rows are compacted consistently.
-- Colors: the existing indigo, violet, teal, slate, and rose semantic tokens are unchanged.
-- Assets: existing Font Awesome icons and Chart.js chart rendering are retained; no new raster assets are required.
-- Copy: operating and housing purposes now match the revised debt classification.
-
-### Findings and checks
-
-- No actionable P0, P1, or P2 differences remain.
-- Portfolio has no horizontal overflow at 390 x 844.
-- Total assets 300,628,856 KRW, liabilities 65,000,000 KRW, and net worth 235,628,856 KRW remain reconciled.
-
-final result: passed
-
-## Phase 1 alignment and Portfolio Phase 2 grouping — 2026-07-26
-
-### Evidence
-
-- Source captures:
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\phase2-portfolio-groups\source-long-goal-1280x720.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\phase2-portfolio-groups\source-personal-cfo-1280x720.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\phase2-portfolio-groups\source-portfolio-1280x720.png`
-- Final captures:
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-final-1876\final-long-goal-1280x720.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-final-1876\final-personal-cfo-1280x720.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-final-1876\final-portfolio-1280x720.png`
-- Equal-size source/final comparisons:
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-final-1876\compare-long-goal-source-final.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-final-1876\compare-personal-cfo-source-final.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-final-1876\compare-portfolio-source-final.png`
-- Viewports: 1280 x 720 and 390 x 844 CSS px at device scale factor 1.
-
-### Findings and checks
-
-- Long-term Goal no longer renders the baseline-salary KPI.
-- Personal CFO source, allocation, and asset columns share the same desktop height; allocation rows and asset-step rows align vertically.
-- Portfolio uses the five requested CFO-purpose groups in order: operating, safe, investment, housing, and pension.
-- Product attributes override source folders: 한국투자 IMA S1 is included in safe assets.
-- Grouped totals reconcile to 300,628,856 KRW of assets, 65,000,000 KRW of liabilities, and 235,628,856 KRW of net worth.
-- Operating assets show 1,000,000 KRW of consumption cash and 65,000,000 KRW of repayment obligations without netting them together.
-- Safe-group accordion expansion and investment-detail navigation passed.
-- Portfolio and Personal CFO both satisfy `scrollWidth === clientWidth` at 390 x 844.
-- No actionable P0, P1, or P2 design differences remain.
-
-final result: passed
-
-## Salary-rule and two-step CFO iteration — 2026-07-26
-
-### Evidence
-
-- Source captures:
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\source-monthly-report-1280x720.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\source-long-goal-1280x720.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\source-personal-cfo-1280x720.png`
-- Final implementation captures:
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\final-monthly-report-1280x720-v1.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\final-long-goal-1280x720-v1.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\final-personal-cfo-1280x720-v1.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\final-personal-cfo-390x844-v1.png`
-- Equal-size comparisons:
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\compare-monthly-report-v1.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\compare-long-goal-v1.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\salary-rule-iteration\compare-personal-cfo-v1.png`
-- Viewports: 1280 x 720 and 390 x 844 CSS px at device scale factor 1.
-
-### Findings and checks
-
-- The allocation chart and donut column use the same stretched grid height; the `저축+잔여` bar displays `+215만원` above the bar.
-- The forecast uses the lowest observed salary, currently 3,538,000 KRW, as the regular monthly salary.
-- Twelve regular salary payments represent 18/20 of annual salary; February and September each add a 1/20 holiday bonus.
-- The displayed year-end asset forecast changed from 245,705,807 KRW to 243,867,318 KRW under the conservative salary calendar.
-- Personal CFO has no route tags such as `월 운영` or `부채 감소`.
-- Assets are grouped into step 1 safe assets and step 2 pension, housing, and investment assets.
-- Mobile Personal CFO has no horizontal overflow at 390 x 844.
-- Full runtime, forecast, UI, TypeScript, repository, domain, Supabase, and static asset checks passed.
-- No actionable P0, P1, or P2 design differences remain.
-
-final result: passed
-
-## Compact Phase 1 CFO iteration — 2026-07-26
-
-### Evidence
-
-- Deployed source captures:
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\source-monthly-report-1280x720.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\source-cashflow-1280x720.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\source-long-goal-1280x720.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\source-personal-cfo-1280x720.png`
-- Final implementation captures:
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\monthly-report-1280x720-final.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\cashflow-1280x720-final.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\long-goal-1280x720-final.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\personal-cfo-1280x720-final.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\personal-cfo-390x844-final.png`
-- Equal-size before/after comparisons:
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\compare-monthly-report-final.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\compare-cashflow-final.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\compare-long-goal-final.png`
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase1-cfo-compact-1876\compare-personal-cfo-final.png`
-- Viewports: 1280 x 720 and 390 x 844 CSS px at device scale factor 1.
-
-### Findings and checks
-
-- Desktop and mobile finance navigation now follows Monthly Report, Cash Flow, Portfolio, Long-term Goal, Personal CFO.
-- Monthly Report uses the single `현금흐름` heading and keeps all primary content visible at 1280 x 720.
-- Cash-flow consumption is 886,272 KRW and excludes the separate 1,273,267 KRW repayment allocation.
-- The long-goal chart legend is `자산 예상`; the mortgage assumption input is fixed and disabled at Stress DSR 40%.
-- The lending sufficiency judgment badge and redundant explanatory copy are absent.
-- Personal CFO uses a restrained indigo/slate palette and stacks without horizontal overflow at 390 x 844.
-- Settings modal open/close, tab switching, chart resize, and selected-month rendering passed.
-- Browser console: zero application errors.
-- No actionable P0, P1, or P2 design differences remain.
-
-final result: passed
-
-## Portfolio duplicate key-card removal — 2026-07-28
-
-### Evidence
-
-- Source with duplicate cards:
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-phase2-portfolio-compact-1876\final-portfolio-1280x720.png`
-- Implementation without duplicate cards:
-  - `C:\Users\ksg06\AppData\Local\Temp\netvisualizer-portfolio-no-keycards-1876\portfolio-no-keycards-1280x720.png`
-- Viewports: 1280 x 720 and 390 x 844 CSS px at device scale factor 1.
-
-### Findings and checks
-
-- The five top key cards duplicated the CFO holdings list and were removed.
-- Net-worth summary, CFO composition chart, group order, amounts, liability badge, and accordion interactions remain unchanged.
-- The portfolio hierarchy is clearer because the title now leads directly into the primary summary and holdings list.
-- Mobile satisfies `scrollWidth === clientWidth` at 390 x 844.
-- No actionable P0, P1, or P2 differences remain.
-
-final result: passed
-
----
-
-# Update 1.04.02 Life Pocket Notebook Design QA
-
-Reference: `C:/Users/ksg06/.codex/generated_images/019f9d05-5144-78a0-ae59-b967f9a0f24b/exec-cb4bbd37-00e1-4ccd-b110-1905bbd14b47.png`
-
-Implementation: `docs/audits/update-10402-implementation/desktop-life-notes.png`
-
-Combined comparison: `docs/audits/update-10402-implementation/desktop-reference-comparison.png`
-
-## Comparison passes
-
-- Layout: existing NetVisualizer sidebar is preserved; the selected two-pane quick-capture/list/editor hierarchy is implemented.
-- Typography: existing Pretendard system and current app heading scale are preserved for product consistency.
-- Color: violet notebook accent, low-saturation cards, and translucent Monitor state match the selected direction.
-- Icons: existing Font Awesome family is used consistently; no custom SVG or placeholder art was introduced.
-- Responsiveness: desktop 1487×1058 and mobile 390×844 were verified without clipping or overlap.
-- Interaction: tabs, quick capture, note selection, formatting controls, checklist edits, pause/resume, save, and delete are wired.
-- Accessibility: semantic buttons, labels, focusable inputs, explicit titles, and practical mobile controls are present.
-
-## Findings resolved
-
-- P2: mobile note cards initially used one column instead of the selected pocket-card grid; changed to two columns below the desktop breakpoint.
-- P2: desktop editor left excessive unused page height; increased editor and writing-area height to use the PC workspace.
-
-No open P0, P1, or P2 findings.
-
-final result: passed
-
----
-
-# Update 1.04.02 Tab Checkbox Cleanup Design QA
-
-Implementation:
-
-- `docs/audits/update-10402-tab-checkbox-cleanup/desktop.png`
-- `docs/audits/update-10402-tab-checkbox-cleanup/mobile.png`
-
-## Findings and checks
-
-- 체크박스 미리보기가 상세 편집창 위에 배치되어 별도 스크롤 없이 즉시 보인다.
-- 12×12 CSS px 체크박스가 라벨 텍스트와 수직 중앙 정렬된다.
-- 일반 문장과 체크박스 행은 각각의 줄을 유지한다.
-- PC 1280×720 및 모바일 390×844에서 가로 오버플로가 없다.
-- 생활노트 UI는 제거되고 Career/Finance/Life 할 일 그룹은 그대로 유지된다.
-- 열린 P0, P1, P2 디자인 문제가 없다.
+- Todo source visual truth: `C:/Users/ksg06/.codex/generated_images/019f9d05-5144-78a0-ae59-b967f9a0f24b/exec-1d67b7c9-87a3-415c-963b-4a2ab96a0bd1.png`
+- Learning Archive source visual truth: `C:/Users/ksg06/.codex/generated_images/019f9d05-5144-78a0-ae59-b967f9a0f24b/exec-53e08557-b7c0-460b-ba56-a9a161f16e6f.png`
+- Todo implementation: `docs/audits/update-10403-note-workspace/todo-desktop.png`
+- Learning Archive implementation: `docs/audits/update-10403-note-workspace/learning-desktop.png`
+- Full-view comparisons: `docs/audits/update-10403-note-workspace/todo-comparison.png`, `docs/audits/update-10403-note-workspace/learning-comparison.png`
+- Mobile evidence: `docs/audits/update-10403-note-workspace/todo-mobile.png`, `docs/audits/update-10403-note-workspace/learning-mobile.png`
+- Source/implementation desktop pixels: 1488×1058 each, CSS viewport 1488×1058, device scale factor 1.
+- Mobile implementation pixels and CSS viewport: 390×844, device scale factor 1.
+- State: one Career Todo with block menu open; one selected Learning Archive note with a related Todo in the Connection dock.
+
+## Comparison History
+
+### Iteration 1
+
+- [P1] Converting an existing Todo/Learning line to heading or callout replaced its text with template copy.
+  - Fix: block conversion now preserves the selected/current line for heading, checkbox, and callout blocks.
+  - Post-fix evidence: Todo comparison shows the selected note content retained while the block menu is open.
+- [P2] Todo header controls reduced the visible task-title width at the 1488px target.
+  - Fix: the long autosave label is shown only at the 2XL breakpoint while its state remains available through the icon/status element.
+  - Post-fix evidence: the selected Todo title is visible in the final desktop capture without overlapping controls.
+- [P2] The first Learning Archive pass hid the existing field/item/Chapter/tag/link editing controls.
+  - Fix: added a compact `분류 및 태그 편집` panel without changing the selected clean editor composition.
+  - Post-fix evidence: the final header includes the settings control and retained metadata inputs.
+
+### Iteration 2
+
+- No remaining actionable P0/P1/P2 differences.
+- Source/implementation content density differs because the source visual contains illustrative mock data while the browser capture uses locally created QA data. The column hierarchy, editor priority, toolbar placement, dock structure, palette, borders, and spacing rhythm match the selected direction.
+
+## Required Fidelity Surfaces
+
+- Fonts and typography: existing NetVisualizer system font stack and weight hierarchy are retained; Todo title, Learning title, small labels, and dock copy follow the source hierarchy.
+- Spacing and layout rhythm: Todo preserves the 3-column workbench; Learning uses 280px hierarchy / flexible editor / 280px Context Dock. Desktop and mobile have no horizontal overflow.
+- Colors and visual tokens: existing indigo, slate, white, border, active-row, and amber callout tokens match the selected visuals.
+- Image quality and assets: the screens require no new raster imagery. Existing brand and Font Awesome icon assets remain sharp and consistent; no placeholder or handcrafted SVG assets were introduced.
+- Copy and content: `Report Library`, `학습 아카이브`, `컨텍스트 독`, `연결 / 버전 / 목차`, autosave, block, and conversion labels are present and functional.
+
+## Primary Interactions Tested
+
+- Todo block menu insertion, Tab indentation, checkbox, autosave, version list, version restoration, sentence-to-Step conversion, and manual save.
+- Learning note creation, title/content editing, Enter line split, autosave, version tab, sentence-to-Todo conversion, and related Todo navigation.
+- Desktop 1488×1058 and mobile 390×844 responsive rendering.
+- Browser console errors: 0. Existing Tailwind CDN production warning remains unchanged.
+
+## Follow-up Polish
+
+- [P3] A future data-rich screenshot can demonstrate the hierarchy counts and backlinks at the same density as the illustrative source.
+- [P3] The existing Tailwind CDN runtime can be migrated to a compiled stylesheet in a separate infrastructure patch.
 
 final result: passed
