@@ -128,6 +128,7 @@
     });
 
     const NOTE_BLOCKS = Object.freeze({
+        paragraph: { label: '일반 문단', hint: '현재 블록 해제', icon: 'fa-align-left', lines: [''] },
         heading: { label: '제목', hint: 'H1, H2, H3', icon: 'fa-heading', lines: ['## 제목'] },
         checkbox: { label: '체크박스', hint: '할 일 체크리스트', icon: 'fa-square-check', lines: ['- [ ] 체크 항목'] },
         callout: { label: '강조', hint: '강조 상자', icon: 'fa-lightbulb', lines: ['> [!NOTE] 강조 내용'] },
@@ -534,13 +535,21 @@
         if (!surface || !block) return;
         syncNoteSourceFromSurface(surface);
         const source = document.getElementById(targetId);
-        const activeLine = getSelectedNoteLines(surface)[0];
+        const selectedLines = getSelectedNoteLines(surface);
+        const activeLine = selectedLines[0];
         const lineIndex = Math.max(0, Array.from(surface.children).indexOf(activeLine));
         const currentText = serializeNoteInline(activeLine?.querySelector('[data-note-line-content]')).trim();
         const reusableText = currentText && currentText !== '/' ? currentText : '';
-        const blockLines = reusableText && ['heading', 'checkbox', 'callout'].includes(blockKey)
-            ? [blockKey === 'heading' ? `## ${reusableText}` : blockKey === 'checkbox' ? `- [ ] ${reusableText}` : `> [!NOTE] ${reusableText}`]
-            : block.lines;
+        const currentBlock = String(activeLine?.dataset.noteBlock || 'paragraph').replace(/^heading-\d$/, 'heading');
+        const resolvedBlockKey = blockKey !== 'paragraph' && currentBlock === blockKey ? 'paragraph' : blockKey;
+        const paragraphText = currentBlock === 'table'
+            ? reusableText.replace(/^\|\s*/, '').replace(/\s*\|$/, '')
+            : reusableText;
+        const blockLines = resolvedBlockKey === 'paragraph'
+            ? [paragraphText]
+            : reusableText && ['heading', 'checkbox', 'callout'].includes(resolvedBlockKey)
+                ? [resolvedBlockKey === 'heading' ? `## ${reusableText}` : resolvedBlockKey === 'checkbox' ? `- [ ] ${reusableText}` : `> [!NOTE] ${reusableText}`]
+                : NOTE_BLOCKS[resolvedBlockKey].lines;
         const lines = String(source?.value || '').split('\n');
         lines.splice(lineIndex, 1, ...blockLines);
         source.value = lines.join('\n');
@@ -550,6 +559,7 @@
         placeNoteCaret(focusLine, true);
         syncNoteSourceFromSurface(surface);
         document.querySelector(`[data-checklist-block-menu-for="${CSS.escape(targetId)}"]`)?.classList.add('hidden');
+        toast(resolvedBlockKey === 'paragraph' ? '블록을 일반 문단으로 변경했습니다.' : `${NOTE_BLOCKS[resolvedBlockKey].label} 블록을 적용했습니다.`, 'info');
     }
 
     async function convertNoteSelection(targetId, kind) {
