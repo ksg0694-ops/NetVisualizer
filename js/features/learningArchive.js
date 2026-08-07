@@ -1,16 +1,40 @@
 (function (window) {
     const STORAGE_KEY = 'netvisualizer.learning.archive.v1';
+    const VERSION_KEY = 'netvisualizer.learning.archive.versions.v1';
+    const UI_KEY = 'netvisualizer.learning.archive.ui.v1';
     const TABLE_NAME = 'learning_archive_notes';
+    const BLOCKS = Object.freeze({
+        heading: { label: '제목', hint: 'H1, H2, H3', icon: 'fa-heading', lines: ['## 제목'] },
+        checkbox: { label: '체크박스', hint: '학습 체크리스트', icon: 'fa-square-check', lines: ['- [ ] 체크 항목'] },
+        callout: { label: '강조', hint: '핵심 포인트', icon: 'fa-lightbulb', lines: ['> [!NOTE] 핵심 내용'] },
+        divider: { label: '구분선', hint: '내용 구분', icon: 'fa-minus', lines: ['---'] },
+        table: { label: '표', hint: '비교표 삽입', icon: 'fa-table-cells', lines: ['| 항목 | 내용 |', '| --- | --- |', '|  |  |'] },
+    });
+
     let entries = [];
     let activeId = null;
     let searchText = '';
+    let dockTab = 'links';
     let bound = false;
     let loaded = false;
+    let autosaveTimer = null;
 
     const escapeHtml = (value) => window.AppUtils.escapeHtml(value);
     const escapeAttr = (value) => window.AppUtils.escapeAttr(value);
     const createId = () => (window.crypto?.randomUUID?.() || `learning-${Date.now()}-${Math.random().toString(16).slice(2)}`);
     const now = () => new Date().toISOString();
+
+    function readUiState() {
+        try {
+            const value = JSON.parse(localStorage.getItem(UI_KEY) || '{}');
+            activeId = typeof value.activeId === 'string' ? value.activeId : null;
+            dockTab = ['links', 'versions', 'toc'].includes(value.dockTab) ? value.dockTab : 'links';
+        } catch (_error) { /* use defaults */ }
+    }
+
+    function saveUiState() {
+        localStorage.setItem(UI_KEY, JSON.stringify({ activeId, dockTab, savedAt: now() }));
+    }
 
     function normalize(raw = {}) {
         const field = String(raw.field || raw.fieldName || raw.field_name || '').trim();
@@ -19,7 +43,11 @@
         const title = String(raw.title || '').trim();
         if (!field || !item || !chapter || !title) return null;
         return {
-            id: String(raw.id || createId()), field, item, chapter, title,
+            id: String(raw.id || createId()),
+            field,
+            item,
+            chapter,
+            title,
             content: String(raw.content || ''),
             sourceLinks: Array.isArray(raw.sourceLinks || raw.source_links) ? (raw.sourceLinks || raw.source_links).map(String) : [],
             tags: Array.isArray(raw.tags) ? raw.tags.map(String) : [],
@@ -39,6 +67,38 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
     }
 
+    function readVersions() {
+        try {
+            const value = JSON.parse(localStorage.getItem(VERSION_KEY) || '{}');
+            return value && typeof value === 'object' ? value : {};
+        } catch (_error) { return {}; }
+    }
+
+    function getVersions(entryId) {
+        const store = readVersions();
+        return Array.isArray(store[entryId]) ? store[entryId] : [];
+    }
+
+    function captureVersion(entry, reason = '자동 저장 전') {
+        if (!entry) return;
+        const store = readVersions();
+        const versions = Array.isArray(store[entry.id]) ? store[entry.id] : [];
+        if (versions[0]?.content === entry.content && versions[0]?.title === entry.title) return;
+        store[entry.id] = [{
+            id: createId(),
+            title: entry.title,
+            content: entry.content,
+            field: entry.field,
+            item: entry.item,
+            chapter: entry.chapter,
+            tags: entry.tags,
+            sourceLinks: entry.sourceLinks,
+            reason,
+            createdAt: now(),
+        }, ...versions].slice(0, 24);
+        localStorage.setItem(VERSION_KEY, JSON.stringify(store));
+    }
+
     function getClient() {
         try { return typeof getAuthenticatedSupabaseClient === 'function' ? getAuthenticatedSupabaseClient() : null; }
         catch (_error) { return null; }
@@ -46,9 +106,17 @@
 
     function toRow(entry) {
         const row = {
-            id: entry.id, field_name: entry.field, item_name: entry.item, chapter_name: entry.chapter,
-            title: entry.title, content: entry.content || null, source_links: entry.sourceLinks,
-            tags: entry.tags, is_pinned: entry.pinned, created_at: entry.createdAt, updated_at: entry.updatedAt,
+            id: entry.id,
+            field_name: entry.field,
+            item_name: entry.item,
+            chapter_name: entry.chapter,
+            title: entry.title,
+            content: entry.content || null,
+            source_links: entry.sourceLinks,
+            tags: entry.tags,
+            is_pinned: entry.pinned,
+            created_at: entry.createdAt,
+            updated_at: entry.updatedAt,
         };
         const userId = typeof getCurrentUserId === 'function' ? getCurrentUserId() : null;
         if (userId) row.user_id = userId;
@@ -56,13 +124,15 @@
     }
 
     async function persist(entry) {
-        const client = getClient(); if (!client) return;
+        const client = getClient();
+        if (!client) return;
         const { error } = await client.from(TABLE_NAME).upsert(toRow(entry), { onConflict: 'id' });
         if (error && !['42P01', 'PGRST204', 'PGRST205'].includes(String(error.code || ''))) console.warn('Learning archive sync failed.', error);
     }
 
     async function removeRemote(id) {
-        const client = getClient(); if (!client) return;
+        const client = getClient();
+        if (!client) return;
         const { error } = await client.from(TABLE_NAME).delete().eq('id', id);
         if (error && !['42P01', 'PGRST204', 'PGRST205'].includes(String(error.code || ''))) console.warn('Learning archive delete failed.', error);
     }
@@ -70,16 +140,26 @@
     async function loadRemote() {
         if (loaded) return;
         loaded = true;
-        const client = getClient(); if (!client) return;
+        const client = getClient();
+        if (!client) return;
         const { data, error } = await client.from(TABLE_NAME).select('id,field_name,item_name,chapter_name,title,content,source_links,tags,is_pinned,created_at,updated_at').order('updated_at', { ascending: false });
         if (error) return;
         const remote = (data || []).map(normalize).filter(Boolean);
-        if (remote.length || entries.length === 0) { entries = remote; saveStore(); render({ skipRemote: true }); }
+        if (remote.length || entries.length === 0) {
+            entries = remote;
+            if (activeId && !entries.some((entry) => entry.id === activeId)) activeId = null;
+            saveStore();
+            render({ skipRemote: true });
+        }
     }
 
-    function unique(values) { return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko')); }
+    function unique(values) {
+        return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'));
+    }
 
-    function current() { return entries.find((entry) => entry.id === activeId) || null; }
+    function current() {
+        return entries.find((entry) => entry.id === activeId) || null;
+    }
 
     function filtered() {
         const query = searchText.trim().toLowerCase();
@@ -87,93 +167,524 @@
         return entries.filter((entry) => [entry.field, entry.item, entry.chapter, entry.title, entry.content, ...entry.tags].join(' ').toLowerCase().includes(query));
     }
 
-    function datalist(id, values) {
-        return `<datalist id="${id}">${unique(values).map((value) => `<option value="${escapeAttr(value)}"></option>`).join('')}</datalist>`;
-    }
-
     function renderTree(source) {
         const fields = unique(source.map((entry) => entry.field));
-        if (!fields.length) return '<div class="rounded-xl border border-dashed border-gray-200 px-4 py-10 text-center text-xs text-gray-400">첫 학습 노트를 만들어보세요.</div>';
+        if (!fields.length) return '<div class="rounded-lg border border-dashed border-gray-200 px-4 py-10 text-center text-xs text-gray-400">첫 학습 노트를 만들어보세요.</div>';
         return fields.map((field) => {
             const fieldEntries = source.filter((entry) => entry.field === field);
             const items = unique(fieldEntries.map((entry) => entry.item));
-            return `<section class="space-y-1.5">
-                <div class="flex items-center justify-between px-1"><h3 class="text-xs font-black text-gray-800"><i class="fas fa-layer-group mr-1.5 text-indigo-500"></i>${escapeHtml(field)}</h3><span class="text-[10px] text-gray-400">${fieldEntries.length}</span></div>
-                ${items.map((item) => {
+            return `<details open class="group/field">
+                <summary class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-2 text-xs font-black text-gray-800 hover:bg-gray-50"><i class="fas fa-chevron-right w-2 text-[8px] text-gray-300 transition group-open/field:rotate-90"></i><i class="far fa-folder text-indigo-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(field)}</span><span class="text-[9px] font-medium text-gray-400">${fieldEntries.length}</span></summary>
+                <div class="ml-3 border-l border-gray-100 pl-2">${items.map((item) => {
                     const itemEntries = fieldEntries.filter((entry) => entry.item === item);
-                    return `<details open class="group rounded-xl border border-gray-200 bg-white">
-                        <summary class="cursor-pointer list-none px-3 py-2 text-xs font-bold text-gray-700"><i class="fas fa-chevron-right mr-2 text-[9px] text-gray-300 transition group-open:rotate-90"></i>${escapeHtml(item)}</summary>
-                        <div class="border-t border-gray-100 p-1.5">${itemEntries.map((entry) => `<button type="button" data-learning-open="${escapeAttr(entry.id)}" class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs ${activeId === entry.id ? 'bg-indigo-50 font-bold text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}"><i class="far fa-file-lines text-[10px]"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(entry.chapter)} · ${escapeHtml(entry.title)}</span>${entry.pinned ? '<i class="fas fa-thumbtack text-[9px] text-indigo-400"></i>' : ''}</button>`).join('')}</div>
+                    const chapters = unique(itemEntries.map((entry) => entry.chapter));
+                    return `<details open class="group/item">
+                        <summary class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-bold text-gray-700 hover:bg-gray-50"><i class="fas fa-chevron-right w-2 text-[8px] text-gray-300 transition group-open/item:rotate-90"></i><i class="far fa-folder-open text-sky-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(item)}</span><span class="text-[9px] font-medium text-gray-400">${itemEntries.length}</span></summary>
+                        <div class="ml-3 border-l border-gray-100 pl-2">${chapters.map((chapter) => {
+                            const chapterEntries = itemEntries.filter((entry) => entry.chapter === chapter);
+                            return `<details open class="group/chapter">
+                                <summary class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-[10px] font-bold text-gray-600 hover:bg-gray-50"><i class="fas fa-chevron-right w-2 text-[7px] text-gray-300 transition group-open/chapter:rotate-90"></i><i class="far fa-file-lines text-gray-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(chapter)}</span><span class="text-[9px] font-medium text-gray-400">${chapterEntries.length}</span></summary>
+                                <div class="ml-3 space-y-0.5 border-l border-gray-100 pl-2">${chapterEntries.map((entry) => `<button type="button" data-learning-open="${escapeAttr(entry.id)}" class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[10px] ${activeId === entry.id ? 'bg-indigo-50 font-bold text-indigo-700 ring-1 ring-indigo-100' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'}"><i class="far fa-note-sticky text-[9px]"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(entry.title)}</span>${entry.pinned ? '<i class="fas fa-thumbtack text-[8px] text-indigo-400"></i>' : ''}</button>`).join('')}</div>
+                            </details>`;
+                        }).join('')}</div>
                     </details>`;
-                }).join('')}
-            </section>`;
+                }).join('')}</div>
+            </details>`;
         }).join('');
     }
 
+    function formatInline(value) {
+        return escapeHtml(String(value || ''))
+            .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/\+\+([^+\n]+)\+\+/g, '<u>$1</u>')
+            .replace(/~~([^~\n]+)~~/g, '<s>$1</s>')
+            .replace(/\[\[([^\]\n]+)\]\]/g, '<span data-learning-note-link="$1" contenteditable="false" class="rounded bg-indigo-50 px-1 py-0.5 font-semibold text-indigo-700">$1</span>');
+    }
+
+    function renderEditorLine(line, index) {
+        const checkbox = String(line || '').match(/^( *)- \[([ xX])\]\s?(.*)$/);
+        const indent = checkbox ? checkbox[1].length : (String(line || '').match(/^ */)?.[0]?.length || 0);
+        const checked = checkbox?.[2]?.toLowerCase() === 'x';
+        let content = checkbox ? checkbox[3] : String(line || '').slice(indent);
+        let prefix = '';
+        let block = checkbox ? 'checkbox' : 'paragraph';
+        const heading = !checkbox && content.match(/^(#{1,3})\s+(.*)$/);
+        const callout = !checkbox && content.match(/^> \[!NOTE\]\s?(.*)$/i);
+        if (heading) { prefix = `${heading[1]} `; content = heading[2]; block = `heading-${heading[1].length}`; }
+        else if (callout) { prefix = '> [!NOTE] '; content = callout[1]; block = 'callout'; }
+        else if (!checkbox && content.trim() === '---') { prefix = '---'; content = ''; block = 'divider'; }
+        else if (!checkbox && /^\|.*\|$/.test(content.trim())) block = 'table';
+        const shellClass = block === 'callout' ? 'my-1 rounded-md border border-amber-200 bg-amber-50 px-3 py-2' : block === 'divider' ? 'my-3 min-h-5 border-t border-gray-200' : block === 'table' ? 'min-h-8 border-x border-b border-gray-200 bg-gray-50 px-2 font-mono' : '';
+        const contentClass = block.startsWith('heading-') ? `${block === 'heading-1' ? 'text-2xl' : block === 'heading-2' ? 'text-xl' : 'text-lg'} font-black text-gray-900` : block === 'callout' ? 'font-medium text-amber-900' : block === 'divider' ? 'text-transparent' : block === 'table' ? 'text-xs text-gray-600' : checked ? 'text-gray-400 line-through' : 'text-gray-700';
+        return `<div data-learning-line data-learning-indent="${indent}" data-learning-prefix="${escapeAttr(prefix)}" data-learning-block="${escapeAttr(block)}" data-learning-line-index="${index}" class="flex min-h-8 items-center gap-2 ${shellClass}" style="padding-left:${Math.floor(indent / 3) * 20}px">
+            ${checkbox ? `<input type="checkbox" data-learning-checkbox class="m-0 h-3 w-3 shrink-0 rounded-sm border-gray-300 accent-indigo-600" ${checked ? 'checked' : ''}>` : ''}
+            ${block === 'callout' ? '<i class="fas fa-lightbulb self-start pt-1.5 text-xs text-amber-500" contenteditable="false"></i>' : ''}
+            <span data-learning-line-content contenteditable="true" spellcheck="true" data-placeholder="${index === 0 ? '개념, 핵심 요약, 질문을 적어보세요.' : ''}" class="min-w-0 flex-1 break-words py-1 leading-7 outline-none ${contentClass}">${formatInline(content)}</span>
+        </div>`;
+    }
+
+    function renderEditorSurface(content) {
+        return String(content || '').split('\n').map(renderEditorLine).join('');
+    }
+
+    function serializeInline(node) {
+        if (!node) return '';
+        if (node.nodeType === Node.TEXT_NODE) return String(node.nodeValue || '').replace(/\u00a0/g, ' ');
+        if (node.nodeType !== Node.ELEMENT_NODE) return '';
+        if (node.dataset?.learningNoteLink) return `[[${node.dataset.learningNoteLink}]]`;
+        if (node.tagName === 'BR') return '';
+        const value = Array.from(node.childNodes).map(serializeInline).join('');
+        if (['B', 'STRONG'].includes(node.tagName)) return `**${value}**`;
+        if (node.tagName === 'U') return `++${value}++`;
+        if (['S', 'STRIKE'].includes(node.tagName)) return `~~${value}~~`;
+        return value;
+    }
+
+    function syncEditorSource() {
+        const surface = document.getElementById('learning-editor-surface');
+        const source = document.getElementById('learning-content');
+        if (!surface || !source) return '';
+        source.value = Array.from(surface.children).filter((node) => node.matches?.('[data-learning-line]')).map((line) => {
+            const indent = Math.max(0, Number(line.dataset.learningIndent) || 0);
+            const checkbox = line.querySelector(':scope > [data-learning-checkbox]');
+            const prefix = line.dataset.learningPrefix || '';
+            const content = serializeInline(line.querySelector(':scope > [data-learning-line-content]'));
+            return `${' '.repeat(indent)}${checkbox ? `- [${checkbox.checked ? 'x' : ' '}] ` : prefix}${content}`;
+        }).join('\n');
+        return source.value;
+    }
+
+    function placeCaret(content, atEnd = false) {
+        if (!content) return;
+        content.focus();
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(content);
+        range.collapse(!atEnd);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+    }
+
+    function createLineAfter(line) {
+        const next = document.createElement('div');
+        next.dataset.learningLine = '';
+        next.dataset.learningIndent = line.dataset.learningIndent || '0';
+        next.dataset.learningPrefix = '';
+        next.dataset.learningBlock = 'paragraph';
+        next.className = 'flex min-h-8 items-center gap-2';
+        next.style.paddingLeft = line.style.paddingLeft || '0px';
+        const content = document.createElement('span');
+        content.dataset.learningLineContent = '';
+        content.contentEditable = 'true';
+        content.spellcheck = true;
+        content.className = 'min-w-0 flex-1 break-words py-1 leading-7 outline-none text-gray-700';
+        next.appendChild(content);
+        line.after(next);
+        return content;
+    }
+
+    function splitEditorLine(content) {
+        const line = content.closest('[data-learning-line]');
+        const selection = window.getSelection();
+        if (!line || !selection?.rangeCount) return;
+        const range = selection.getRangeAt(0);
+        if (!content.contains(range.startContainer)) return;
+        if (!range.collapsed && content.contains(range.endContainer)) range.deleteContents();
+        const tail = document.createRange();
+        tail.setStart(range.startContainer, range.startOffset);
+        tail.setEnd(content, content.childNodes.length);
+        const fragment = tail.extractContents();
+        const nextContent = createLineAfter(line);
+        nextContent.appendChild(fragment);
+        placeCaret(nextContent);
+        syncEditorSource();
+        queueAutosave();
+    }
+
+    function mergeEditorLineBackward(content) {
+        const line = content.closest('[data-learning-line]');
+        const previous = line?.previousElementSibling?.querySelector('[data-learning-line-content]');
+        const selection = window.getSelection();
+        if (!line || !previous || !selection?.rangeCount || !selection.isCollapsed) return false;
+        const before = document.createRange();
+        before.selectNodeContents(content);
+        before.setEnd(selection.anchorNode, selection.anchorOffset);
+        if (before.toString().length) return false;
+        const boundary = previous.childNodes.length;
+        while (content.firstChild) previous.appendChild(content.firstChild);
+        line.remove();
+        const range = document.createRange();
+        range.setStart(previous, boundary);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        previous.focus();
+        syncEditorSource();
+        queueAutosave();
+        return true;
+    }
+
+    function splitList(value) {
+        return String(value || '').split(',').map((item) => item.trim()).filter(Boolean).slice(0, 30);
+    }
+
+    function readEditor(entry) {
+        return {
+            field: String(document.getElementById('learning-field')?.value || entry.field).trim(),
+            item: String(document.getElementById('learning-item')?.value || entry.item).trim(),
+            chapter: String(document.getElementById('learning-chapter')?.value || entry.chapter).trim(),
+            title: String(document.getElementById('learning-title')?.value || entry.title).trim(),
+            content: syncEditorSource(),
+            tags: splitList(document.getElementById('learning-tags')?.value),
+            sourceLinks: splitList(document.getElementById('learning-links')?.value),
+        };
+    }
+
+    function setAutosaveStatus(state, label) {
+        const el = document.getElementById('learning-autosave-status');
+        if (!el) return;
+        const icon = state === 'saving' ? 'fa-rotate animate-spin text-indigo-400' : 'fa-circle-check text-emerald-500';
+        el.innerHTML = `<i class="fas ${icon} mr-1"></i>${escapeHtml(label)}`;
+    }
+
+    function queueAutosave() {
+        const entry = current();
+        if (!entry) return;
+        clearTimeout(autosaveTimer);
+        setAutosaveStatus('saving', '저장 중');
+        autosaveTimer = window.setTimeout(async () => {
+            const active = current();
+            if (!active) return;
+            const next = readEditor(active);
+            if (!next.field || !next.item || !next.chapter || !next.title) {
+                setAutosaveStatus('saved', '필수 항목 확인');
+                return;
+            }
+            const changed = Object.entries(next).some(([key, value]) => JSON.stringify(active[key]) !== JSON.stringify(value));
+            if (changed) {
+                captureVersion(active);
+                Object.assign(active, next, { updatedAt: now() });
+                saveStore();
+                await persist(active);
+            }
+            const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+            setAutosaveStatus('saved', `자동 저장됨 ${time}`);
+        }, 800);
+    }
+
+    function getSelectedText() {
+        const surface = document.getElementById('learning-editor-surface');
+        const selection = window.getSelection();
+        if (!surface) return '';
+        if (selection?.rangeCount && surface.contains(selection.anchorNode) && surface.contains(selection.focusNode)) {
+            const selected = selection.toString().trim();
+            if (selected) return selected;
+        }
+        const line = selection?.anchorNode?.parentElement?.closest?.('[data-learning-line]') || surface.querySelector('[data-learning-line]');
+        return serializeInline(line?.querySelector('[data-learning-line-content]')).trim();
+    }
+
+    function applyFormat(kind) {
+        const command = kind === 'bold' ? 'bold' : kind === 'underline' ? 'underline' : 'strikeThrough';
+        document.getElementById('learning-editor-surface')?.focus();
+        document.execCommand(command, false);
+        syncEditorSource();
+        queueAutosave();
+    }
+
+    function applyBlock(kind) {
+        const block = BLOCKS[kind];
+        const surface = document.getElementById('learning-editor-surface');
+        const source = document.getElementById('learning-content');
+        if (!block || !surface || !source) return;
+        syncEditorSource();
+        const selectedLine = window.getSelection()?.anchorNode?.parentElement?.closest?.('[data-learning-line]');
+        const index = Math.max(0, Array.from(surface.children).indexOf(selectedLine));
+        const currentText = serializeInline(selectedLine?.querySelector('[data-learning-line-content]')).trim();
+        const reusableText = currentText && currentText !== '/' ? currentText : '';
+        const blockLines = reusableText && ['heading', 'checkbox', 'callout'].includes(kind)
+            ? [kind === 'heading' ? `## ${reusableText}` : kind === 'checkbox' ? `- [ ] ${reusableText}` : `> [!NOTE] ${reusableText}`]
+            : block.lines;
+        const lines = source.value.split('\n');
+        lines.splice(index, 1, ...blockLines);
+        source.value = lines.join('\n');
+        surface.innerHTML = renderEditorSurface(source.value);
+        document.querySelector('[data-learning-block-menu]')?.classList.add('hidden');
+        queueAutosave();
+    }
+
+    function keywordSet(entry) {
+        return new Set([entry.title, entry.field, entry.item, entry.chapter, ...entry.tags]
+            .join(' ').toLowerCase().split(/[^0-9a-zA-Z가-힣]+/).filter((word) => word.length > 1));
+    }
+
+    function getTodoContext(entry) {
+        const tasks = window.ChecklistFeature?.getAllTasks?.() || [];
+        const words = keywordSet(entry);
+        return tasks.map((task) => {
+            const haystack = `${task.title} ${task.note}`.toLowerCase();
+            const score = [...words].reduce((sum, word) => sum + (haystack.includes(word) ? 1 : 0), 0);
+            return { ...task, score };
+        }).filter((task) => task.score > 0).sort((a, b) => b.score - a.score || String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0, 4);
+    }
+
+    function getNoteLinks(content) {
+        return [...String(content || '').matchAll(/\[\[([^\]\n]+)\]\]/g)].map((match) => match[1].trim()).filter(Boolean);
+    }
+
+    function renderConnectionDock(entry) {
+        const outgoing = getNoteLinks(entry.content).map((title) => entries.find((item) => item.title === title)).filter(Boolean);
+        const backlinks = entries.filter((item) => item.id !== entry.id && getNoteLinks(item.content).includes(entry.title));
+        const tasks = getTodoContext(entry);
+        const steps = tasks.flatMap((task) => task.steps.filter((step) => keywordSet(entry).has(step.title.toLowerCase()) || [...keywordSet(entry)].some((word) => step.title.toLowerCase().includes(word))).map((step) => ({ ...step, task })) ).slice(0, 3);
+        const reports = tasks.flatMap((task) => task.reportFiles.filter((file) => /^https?:\/\//i.test(String(file.url || ''))).map((file) => ({ ...file, task }))).slice(0, 3);
+        const noteCards = [...outgoing, ...backlinks.filter((item) => !outgoing.some((out) => out.id === item.id))];
+        return `<div class="space-y-4">
+            <section><p class="mb-2 text-[10px] font-bold text-gray-400">백링크 · 연결 노트 (${noteCards.length})</p><div class="space-y-1.5">${noteCards.length ? noteCards.map((note) => `<button type="button" data-learning-open="${escapeAttr(note.id)}" class="flex w-full items-start gap-2 rounded-md border border-gray-200 bg-white p-2.5 text-left hover:border-indigo-200"><i class="far fa-note-sticky mt-0.5 text-xs text-indigo-400"></i><span class="min-w-0"><strong class="block truncate text-[10px] text-gray-700">${escapeHtml(note.title)}</strong><small class="block truncate text-[9px] text-gray-400">${escapeHtml(note.chapter)} · ${escapeHtml(note.item)}</small></span></button>`).join('') : '<p class="rounded-md border border-dashed border-gray-200 px-3 py-4 text-center text-[9px] text-gray-400">연결된 노트가 없습니다.</p>'}</div></section>
+            <section><p class="mb-2 text-[10px] font-bold text-gray-400">관련 할 일 (${tasks.length})</p><div class="space-y-1.5">${tasks.length ? tasks.map((task) => `<button type="button" data-learning-open-task="${escapeAttr(task.id)}" class="flex w-full items-center gap-2 rounded-md border border-gray-200 bg-white p-2.5 text-left hover:border-indigo-200"><span class="h-3 w-3 rounded border ${task.completed ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-gray-300'}"></span><span class="min-w-0 flex-1"><strong class="block truncate text-[10px] text-gray-700">${escapeHtml(task.title)}</strong><small class="block text-[9px] text-gray-400">${escapeHtml(task.domainLabel)} · ${task.steps.filter((step) => step.done).length}/${task.steps.length} Step</small></span></button>`).join('') : '<p class="rounded-md border border-dashed border-gray-200 px-3 py-4 text-center text-[9px] text-gray-400">키워드가 겹치는 할 일이 없습니다.</p>'}</div></section>
+            ${steps.length ? `<section><p class="mb-2 text-[10px] font-bold text-gray-400">관련 Step (${steps.length})</p><div class="space-y-1.5">${steps.map((step) => `<button type="button" data-learning-open-task="${escapeAttr(step.task.id)}" class="flex w-full items-center gap-2 rounded-md border border-gray-200 bg-white p-2.5 text-left hover:border-indigo-200"><i class="fas fa-list-ol text-[10px] text-indigo-400"></i><span class="min-w-0"><strong class="block truncate text-[10px] text-gray-700">${escapeHtml(step.title)}</strong><small class="block truncate text-[9px] text-gray-400">${escapeHtml(step.task.title)}</small></span></button>`).join('')}</div></section>` : ''}
+            ${reports.length ? `<section><p class="mb-2 text-[10px] font-bold text-gray-400">연결된 Report (${reports.length})</p><div class="space-y-1.5">${reports.map((report) => `<a href="${escapeAttr(report.url)}" target="_blank" rel="noopener noreferrer" class="flex w-full items-center gap-2 rounded-md border border-gray-200 bg-white p-2.5 hover:border-indigo-200"><i class="fas fa-file-powerpoint text-xs text-orange-500"></i><span class="min-w-0"><strong class="block truncate text-[10px] text-gray-700">${escapeHtml(report.name || 'Report 링크')}</strong><small class="block truncate text-[9px] text-gray-400">${escapeHtml(report.task.title)}</small></span></a>`).join('')}</div></section>` : ''}
+            <button type="button" data-learning-add-link class="w-full rounded-md border border-dashed border-indigo-200 px-3 py-2 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50"><i class="fas fa-plus mr-1"></i>노트 연결 추가</button>
+        </div>`;
+    }
+
+    function renderVersionsDock(entry) {
+        const versions = getVersions(entry.id);
+        return `<div class="space-y-1.5">${versions.length ? versions.map((version) => `<button type="button" data-learning-version-restore="${escapeAttr(version.id)}" class="flex w-full items-start gap-2 rounded-md border border-gray-200 bg-white p-2.5 text-left hover:border-indigo-200"><i class="fas fa-clock-rotate-left mt-0.5 text-[10px] text-indigo-400"></i><span class="min-w-0"><strong class="block truncate text-[10px] text-gray-700">${escapeHtml(version.title || '이전 버전')}</strong><small class="block text-[9px] leading-4 text-gray-400">${new Date(version.createdAt).toLocaleString('ko-KR')}<br>${escapeHtml(version.reason)}</small></span></button>`).join('') : '<p class="rounded-md border border-dashed border-gray-200 px-3 py-8 text-center text-[9px] text-gray-400">아직 저장된 이전 버전이 없습니다.</p>'}</div>`;
+    }
+
+    function renderTocDock(entry) {
+        const headings = String(entry.content || '').split('\n').map((line, index) => {
+            const match = line.match(/^(#{1,3})\s+(.+)$/);
+            return match ? { level: match[1].length, title: match[2], index } : null;
+        }).filter(Boolean);
+        return `<div class="space-y-1">${headings.length ? headings.map((heading) => `<button type="button" data-learning-toc-line="${heading.index}" class="block w-full truncate rounded-md px-2 py-2 text-left text-[10px] text-gray-600 hover:bg-indigo-50 hover:text-indigo-700" style="padding-left:${8 + (heading.level - 1) * 14}px">${escapeHtml(heading.title)}</button>`).join('') : '<p class="rounded-md border border-dashed border-gray-200 px-3 py-8 text-center text-[9px] text-gray-400">제목 블록을 추가하면 목차가 생성됩니다.</p>'}</div>`;
+    }
+
+    function renderContextDock(entry) {
+        return `<aside class="min-w-0 border-t border-gray-200 bg-white xl:border-l xl:border-t-0">
+            <div class="flex h-12 items-center justify-between border-b border-gray-100 px-4"><h3 class="text-xs font-black text-gray-800">컨텍스트 독</h3><i class="fas fa-link text-[10px] text-indigo-400"></i></div>
+            <div class="grid grid-cols-3 border-b border-gray-100 px-3 pt-2">${[['links', '연결'], ['versions', '버전'], ['toc', '목차']].map(([key, label]) => `<button type="button" data-learning-dock-tab="${key}" class="border-b-2 px-2 py-2 text-[10px] font-bold ${dockTab === key ? 'border-indigo-500 text-indigo-700' : 'border-transparent text-gray-400 hover:text-gray-700'}">${label}</button>`).join('')}</div>
+            <div class="max-h-[calc(100dvh-230px)] overflow-y-auto p-3">${dockTab === 'links' ? renderConnectionDock(entry) : dockTab === 'versions' ? renderVersionsDock(entry) : renderTocDock(entry)}</div>
+        </aside>`;
+    }
+
     function renderEditor(entry) {
-        if (!entry) return `<div class="flex min-h-[500px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white text-center"><span class="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-500"><i class="fas fa-book-open-reader"></i></span><h3 class="mt-3 text-sm font-bold text-gray-700">학습 노트를 선택하세요</h3><p class="mt-1 text-xs text-gray-400">분야 → 항목 → Chapter 순서로 지식을 쌓습니다.</p></div>`;
-        return `<section class="rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3"><span class="text-[10px] font-bold tracking-wider text-indigo-500">LEARNING NOTE</span><div class="flex gap-1"><button type="button" data-learning-pin class="h-8 w-8 rounded-lg text-gray-400 hover:bg-indigo-50 hover:text-indigo-600" title="고정"><i class="fas fa-thumbtack"></i></button><button type="button" data-learning-delete class="h-8 w-8 rounded-lg text-gray-400 hover:bg-rose-50 hover:text-rose-600" title="삭제"><i class="fas fa-trash-can"></i></button></div></div>
-            <div class="space-y-4 p-4 md:p-5">
-                <div class="grid gap-2 md:grid-cols-3">
-                    <label class="text-[10px] font-bold text-gray-500">공부 분야<input id="learning-field" list="learning-fields" value="${escapeAttr(entry.field)}" class="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-800 outline-none focus:border-indigo-400"></label>
-                    <label class="text-[10px] font-bold text-gray-500">공부 항목<input id="learning-item" list="learning-items" value="${escapeAttr(entry.item)}" class="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-800 outline-none focus:border-indigo-400"></label>
-                    <label class="text-[10px] font-bold text-gray-500">Chapter<input id="learning-chapter" list="learning-chapters" value="${escapeAttr(entry.chapter)}" class="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-800 outline-none focus:border-indigo-400"></label>
+        if (!entry) return `<div class="col-span-full flex min-h-[560px] flex-col items-center justify-center border border-dashed border-gray-200 bg-white text-center"><span class="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-500"><i class="fas fa-book-open-reader"></i></span><h3 class="mt-3 text-sm font-bold text-gray-700">학습 노트를 선택하세요</h3><p class="mt-1 text-xs text-gray-400">분야 → 항목 → Chapter → 노트 순서로 지식을 쌓습니다.</p></div>`;
+        return `<main class="min-w-0 bg-white">
+            <div class="border-b border-gray-100 px-4 py-3">
+                <div class="flex flex-wrap items-center justify-between gap-2"><p class="min-w-0 truncate text-[10px] text-gray-400">${escapeHtml(entry.field)} <i class="fas fa-chevron-right mx-1 text-[7px]"></i> ${escapeHtml(entry.item)} <i class="fas fa-chevron-right mx-1 text-[7px]"></i> ${escapeHtml(entry.chapter)}</p><div class="flex items-center gap-2"><span id="learning-autosave-status" class="text-[9px] text-gray-400"><i class="fas fa-circle-check mr-1 text-emerald-500"></i>자동 저장됨</span><button type="button" data-learning-meta-toggle class="h-7 w-7 rounded-md text-gray-400 hover:bg-indigo-50 hover:text-indigo-600" title="분류 및 태그 편집" aria-expanded="false"><i class="fas fa-sliders text-[10px]"></i></button><button type="button" data-learning-pin class="h-7 w-7 rounded-md text-gray-400 hover:bg-indigo-50 hover:text-indigo-600" title="고정"><i class="fas fa-thumbtack text-[10px]"></i></button><button type="button" data-learning-delete class="h-7 w-7 rounded-md text-gray-400 hover:bg-rose-50 hover:text-rose-600" title="삭제"><i class="fas fa-trash-can text-[10px]"></i></button></div></div>
+                <input id="learning-title" value="${escapeAttr(entry.title)}" class="mt-3 w-full border-0 p-0 text-2xl font-black text-gray-900 outline-none focus:ring-0" placeholder="노트 제목">
+                <div class="mt-2 flex flex-wrap gap-1.5">${entry.tags.map((tag) => `<span class="rounded-full bg-indigo-50 px-2 py-1 text-[9px] font-bold text-indigo-600">${escapeHtml(tag)}</span>`).join('')}<span class="rounded-full bg-gray-50 px-2 py-1 text-[9px] text-gray-400">${escapeHtml(entry.chapter)}</span></div>
+                <div data-learning-meta-panel class="mt-3 hidden grid gap-2 rounded-lg border border-indigo-100 bg-indigo-50/40 p-3 sm:grid-cols-3">
+                    <label class="text-[9px] font-bold text-gray-500">공부 분야<input id="learning-field" value="${escapeAttr(entry.field)}" class="mt-1 h-8 w-full rounded-md border border-gray-200 bg-white px-2 text-[10px] outline-none focus:border-indigo-300"></label>
+                    <label class="text-[9px] font-bold text-gray-500">공부 항목<input id="learning-item" value="${escapeAttr(entry.item)}" class="mt-1 h-8 w-full rounded-md border border-gray-200 bg-white px-2 text-[10px] outline-none focus:border-indigo-300"></label>
+                    <label class="text-[9px] font-bold text-gray-500">Chapter<input id="learning-chapter" value="${escapeAttr(entry.chapter)}" class="mt-1 h-8 w-full rounded-md border border-gray-200 bg-white px-2 text-[10px] outline-none focus:border-indigo-300"></label>
+                    <label class="text-[9px] font-bold text-gray-500 sm:col-span-2">태그<input id="learning-tags" value="${escapeAttr(entry.tags.join(', '))}" class="mt-1 h-8 w-full rounded-md border border-gray-200 bg-white px-2 text-[10px] outline-none focus:border-indigo-300" placeholder="반도체, 투자"></label>
+                    <label class="text-[9px] font-bold text-gray-500">참고 링크<input id="learning-links" value="${escapeAttr(entry.sourceLinks.join(', '))}" class="mt-1 h-8 w-full rounded-md border border-gray-200 bg-white px-2 text-[10px] outline-none focus:border-indigo-300" placeholder="https://..."></label>
                 </div>
-                ${datalist('learning-fields', entries.map((item) => item.field))}${datalist('learning-items', entries.map((item) => item.item))}${datalist('learning-chapters', entries.map((item) => item.chapter))}
-                <input id="learning-title" value="${escapeAttr(entry.title)}" class="w-full border-0 border-b border-gray-100 px-0 pb-3 text-xl font-black text-gray-900 outline-none focus:border-indigo-300 focus:ring-0" placeholder="노트 제목">
-                <div class="flex items-center gap-1"><button type="button" data-learning-format="bold" class="h-8 w-8 rounded-md border border-gray-200 text-xs font-black">B</button><button type="button" data-learning-format="underline" class="h-8 w-8 rounded-md border border-gray-200 text-xs font-bold underline">U</button><button type="button" data-learning-format="strike" class="h-8 w-8 rounded-md border border-gray-200 text-xs font-bold line-through">S</button><span class="ml-auto text-[10px] text-gray-400">최근 수정 ${new Date(entry.updatedAt).toLocaleString('ko-KR')}</span></div>
-                <textarea id="learning-content" class="min-h-[280px] w-full resize-y rounded-xl border border-gray-200 p-4 text-sm leading-7 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="개념, 핵심 요약, 질문, 다음 학습 내용을 적어보세요.">${escapeHtml(entry.content)}</textarea>
-                <div class="grid gap-3 md:grid-cols-2"><label class="text-[10px] font-bold text-gray-500">태그<input id="learning-tags" value="${escapeAttr(entry.tags.join(', '))}" class="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none" placeholder="반도체, 투자"></label><label class="text-[10px] font-bold text-gray-500">참고 링크<input id="learning-links" value="${escapeAttr(entry.sourceLinks.join(', '))}" class="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none" placeholder="https://..."></label></div>
-                <button type="button" data-learning-save class="w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-700"><i class="fas fa-check mr-2"></i>학습 노트 저장</button>
             </div>
-        </section>`;
+            <div class="relative border-b border-gray-100">
+                <div class="flex flex-wrap items-center gap-1 px-4 py-2">
+                    <button type="button" data-learning-format="bold" class="h-7 w-7 rounded border border-gray-200 text-xs font-black text-gray-700">B</button><button type="button" data-learning-format="underline" class="h-7 w-7 rounded border border-gray-200 text-xs font-bold text-gray-700 underline">U</button><button type="button" data-learning-format="strike" class="h-7 w-7 rounded border border-gray-200 text-xs font-bold text-gray-700 line-through">S</button>
+                    <span class="mx-1 h-5 w-px bg-gray-200"></span><button type="button" data-learning-block-toggle class="inline-flex h-7 items-center gap-1 rounded border border-gray-200 px-2 text-[10px] font-bold text-gray-600"><span class="text-sm">/</span> 블록</button><button type="button" data-learning-convert="task" class="inline-flex h-7 items-center gap-1 rounded border border-gray-200 px-2 text-[10px] font-bold text-gray-600"><i class="fas fa-arrow-up-right-dots text-[9px]"></i>할 일로 전환</button><button type="button" data-learning-convert="step" class="inline-flex h-7 items-center gap-1 rounded border border-gray-200 px-2 text-[10px] font-bold text-gray-600"><i class="fas fa-list-ol text-[9px]"></i>Step으로 전환</button>
+                </div>
+                <div data-learning-block-menu class="absolute left-4 top-11 z-30 hidden w-56 rounded-lg border border-gray-200 bg-white p-1.5 shadow-xl">${Object.entries(BLOCKS).map(([key, block]) => `<button type="button" data-learning-block="${key}" class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left hover:bg-indigo-50"><span class="flex h-7 w-7 items-center justify-center rounded bg-gray-50 text-gray-500"><i class="fas ${block.icon} text-[10px]"></i></span><span><strong class="block text-[10px] text-gray-800">${block.label}</strong><small class="block text-[9px] text-gray-400">${block.hint}</small></span></button>`).join('')}</div>
+            </div>
+            <textarea id="learning-content" class="hidden">${escapeHtml(entry.content)}</textarea>
+            <div id="learning-editor-surface" role="textbox" aria-multiline="true" class="min-h-[calc(100dvh-270px)] cursor-text overflow-y-auto px-5 py-4 text-sm outline-none">${renderEditorSurface(entry.content)}</div>
+            <div class="flex items-center justify-between border-t border-gray-100 px-4 py-2 text-[9px] text-gray-400"><span>문자 ${entry.content.length.toLocaleString('ko-KR')}</span><span>Markdown 토큰 지원 · Tab 들여쓰기</span></div>
+        </main>${renderContextDock(entry)}`;
     }
 
     function render(options = {}) {
-        const root = document.getElementById('learning-archive-view'); if (!root) return;
-        const source = filtered(); const selected = current();
-        root.innerHTML = `<div class="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between"><div><p class="text-[10px] font-bold tracking-wider text-indigo-500">LIFE TOOL</p><h2 class="mt-1 text-xl font-black text-gray-900 md:text-2xl">학습 아카이브</h2></div><div class="flex gap-2"><label class="relative min-w-0 flex-1 md:w-72"><i class="fas fa-magnifying-glass absolute left-3 top-3 text-xs text-gray-300"></i><input id="learning-search" value="${escapeAttr(searchText)}" class="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-indigo-400" placeholder="노트 검색"></label><button type="button" data-learning-new class="shrink-0 rounded-xl bg-indigo-600 px-3.5 py-2.5 text-xs font-bold text-white shadow-sm"><i class="fas fa-plus mr-1.5"></i>새 노트</button></div></div>
-            <div class="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]"><aside class="max-h-[calc(100dvh-190px)] space-y-4 overflow-y-auto pr-1 scrollbar-hide">${renderTree(source)}</aside><div class="${selected ? 'block' : 'hidden lg:block'}">${renderEditor(selected)}</div></div>`;
+        const root = document.getElementById('learning-archive-view');
+        if (!root) return;
+        const source = filtered();
+        const selected = current();
+        root.innerHTML = `<div class="overflow-hidden border-y border-gray-200 bg-white xl:grid xl:min-h-[calc(100dvh-128px)] xl:grid-cols-[280px_minmax(520px,1fr)_280px]">
+            <aside class="min-w-0 border-b border-gray-200 bg-white p-3 xl:border-b-0 xl:border-r">
+                <div class="mb-3 flex items-start justify-between gap-2"><div><p class="text-[9px] font-bold tracking-wider text-indigo-500">LIFE TOOL</p><h2 class="mt-1 text-lg font-black text-gray-900">학습 아카이브</h2></div><button type="button" data-learning-new class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-indigo-600 text-white shadow-sm" title="새 학습 노트"><i class="fas fa-plus text-[10px]"></i></button></div>
+                <label class="relative block"><i class="fas fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-[9px] text-gray-300"></i><input id="learning-search" value="${escapeAttr(searchText)}" class="h-8 w-full rounded-md border border-gray-200 bg-white pl-7 pr-2 text-[10px] outline-none focus:border-indigo-400" placeholder="분야, Chapter, 노트 검색"></label>
+                <div class="mt-3 max-h-[calc(100dvh-235px)] space-y-1 overflow-y-auto pr-1">${renderTree(source)}</div>
+                <button type="button" data-learning-new class="mt-3 w-full rounded-md border border-dashed border-indigo-200 px-3 py-2 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50"><i class="fas fa-plus mr-1"></i>새 노트</button>
+            </aside>
+            ${renderEditor(selected)}
+        </div>`;
+        saveUiState();
         if (!options.skipRemote) loadRemote();
     }
 
-    function splitList(value) { return String(value || '').split(',').map((item) => item.trim()).filter(Boolean).slice(0, 20); }
-
     async function saveActive() {
-        const entry = current(); if (!entry) return;
-        const field = String(document.getElementById('learning-field')?.value || '').trim();
-        const item = String(document.getElementById('learning-item')?.value || '').trim();
-        const chapter = String(document.getElementById('learning-chapter')?.value || '').trim();
-        const title = String(document.getElementById('learning-title')?.value || '').trim();
-        if (!field || !item || !chapter || !title) { window.showToast?.('분야, 항목, Chapter, 제목을 입력해 주세요.', 'warning'); return; }
-        Object.assign(entry, { field, item, chapter, title, content: String(document.getElementById('learning-content')?.value || ''), tags: splitList(document.getElementById('learning-tags')?.value), sourceLinks: splitList(document.getElementById('learning-links')?.value), updatedAt: now() });
-        saveStore(); render({ skipRemote: true }); await persist(entry); window.showToast?.('학습 노트를 저장했습니다.', 'info');
+        const entry = current();
+        if (!entry) return;
+        const next = readEditor(entry);
+        if (!next.field || !next.item || !next.chapter || !next.title) {
+            window.showToast?.('분야, 항목, Chapter, 제목을 입력해 주세요.', 'warning');
+            return;
+        }
+        captureVersion(entry, '수동 저장 전');
+        Object.assign(entry, next, { updatedAt: now() });
+        saveStore();
+        await persist(entry);
+        setAutosaveStatus('saved', '자동 저장됨');
     }
 
-    function wrapSelection(kind) {
-        const textarea = document.getElementById('learning-content'); if (!textarea) return;
-        const token = kind === 'bold' ? '**' : kind === 'underline' ? '++' : '~~';
-        textarea.setRangeText(`${token}${textarea.value.slice(textarea.selectionStart, textarea.selectionEnd) || '텍스트'}${token}`, textarea.selectionStart, textarea.selectionEnd, 'select'); textarea.focus();
+    async function restoreVersion(versionId) {
+        const entry = current();
+        const version = entry ? getVersions(entry.id).find((item) => item.id === versionId) : null;
+        if (!entry || !version) return;
+        captureVersion(entry, '버전 복원 전');
+        Object.assign(entry, {
+            title: version.title,
+            content: version.content,
+            field: version.field || entry.field,
+            item: version.item || entry.item,
+            chapter: version.chapter || entry.chapter,
+            tags: version.tags || entry.tags,
+            sourceLinks: version.sourceLinks || entry.sourceLinks,
+            updatedAt: now(),
+        });
+        saveStore();
+        await persist(entry);
+        dockTab = 'links';
+        render({ skipRemote: true });
+        window.showToast?.('선택한 학습 노트 버전을 복원했습니다.', 'info');
+    }
+
+    async function convertSelection(kind) {
+        const entry = current();
+        const text = getSelectedText().replace(/\s+/g, ' ').trim().slice(0, 180);
+        if (!entry || !text) {
+            window.showToast?.('전환할 문장이나 줄을 먼저 선택해주세요.', 'warning');
+            return;
+        }
+        const related = getTodoContext(entry);
+        if (kind === 'task') await window.ChecklistFeature?.createTaskFromText?.(text, 'career', `${entry.title}에서 전환`);
+        else await window.ChecklistFeature?.addStepFromText?.(text, related[0]?.id || '', entry.title, related[0]?.domain || 'career');
+        window.showToast?.(kind === 'task' ? '선택 문장을 새 할 일로 전환했습니다.' : '선택 문장을 관련 할 일의 Step으로 전환했습니다.', 'info');
+        render({ skipRemote: true });
     }
 
     function bindControls() {
-        if (bound) return; bound = true;
+        if (bound) return;
+        bound = true;
         const root = document.getElementById('learning-archive-view');
-        root?.addEventListener('input', (event) => { if (event.target.id === 'learning-search') { searchText = event.target.value; render({ skipRemote: true }); document.getElementById('learning-search')?.focus(); } });
-        root?.addEventListener('click', async (event) => {
-            const open = event.target.closest('[data-learning-open]'); if (open) { activeId = open.dataset.learningOpen; render({ skipRemote: true }); return; }
-            if (event.target.closest('[data-learning-new]')) {
-                const entry = normalize({ field: '새 분야', item: '새 항목', chapter: 'Chapter 1', title: '새 학습 노트' }); entries.unshift(entry); activeId = entry.id; saveStore(); render({ skipRemote: true }); document.getElementById('learning-title')?.select(); await persist(entry); return;
+        root?.addEventListener('pointerdown', (event) => {
+            if (event.target.closest('[data-learning-format], [data-learning-block-toggle], [data-learning-block], [data-learning-convert]')) event.preventDefault();
+        });
+        root?.addEventListener('input', (event) => {
+            if (event.target.id === 'learning-search') {
+                searchText = event.target.value;
+                render({ skipRemote: true });
+                requestAnimationFrame(() => { const input = document.getElementById('learning-search'); input?.focus(); input?.setSelectionRange(searchText.length, searchText.length); });
+                return;
             }
-            const entry = current(); if (!entry) return;
-            if (event.target.closest('[data-learning-save]')) { await saveActive(); return; }
+            if (event.target.closest('[data-learning-line-content]')) {
+                const value = syncEditorSource();
+                const menu = document.querySelector('[data-learning-block-menu]');
+                menu?.classList.toggle('hidden', event.target.textContent.trim() !== '/');
+                if (value !== undefined) queueAutosave();
+                return;
+            }
+            if (['learning-title', 'learning-field', 'learning-item', 'learning-chapter', 'learning-tags', 'learning-links'].includes(event.target.id)) queueAutosave();
+        });
+        root?.addEventListener('change', (event) => {
+            if (event.target.matches('[data-learning-checkbox]')) {
+                const content = event.target.closest('[data-learning-line]')?.querySelector('[data-learning-line-content]');
+                content?.classList.toggle('line-through', event.target.checked);
+                content?.classList.toggle('text-gray-400', event.target.checked);
+                syncEditorSource();
+                queueAutosave();
+            }
+        });
+        root?.addEventListener('click', async (event) => {
+            const open = event.target.closest('[data-learning-open]');
+            if (open) {
+                if (current() && open.dataset.learningOpen !== activeId && document.getElementById('learning-editor-surface')) await saveActive();
+                activeId = open.dataset.learningOpen;
+                render({ skipRemote: true });
+                return;
+            }
+            if (event.target.closest('[data-learning-new]')) {
+                const field = current()?.field || '새 분야';
+                const item = current()?.item || '새 항목';
+                const chapter = current()?.chapter || 'Chapter 1';
+                const entry = normalize({ field, item, chapter, title: '새 학습 노트' });
+                entries.unshift(entry); activeId = entry.id; saveStore(); render({ skipRemote: true }); document.getElementById('learning-title')?.select(); await persist(entry); return;
+            }
+            const entry = current();
+            if (!entry) return;
+            const format = event.target.closest('[data-learning-format]');
+            if (format) { applyFormat(format.dataset.learningFormat); return; }
+            if (event.target.closest('[data-learning-block-toggle]')) { document.querySelector('[data-learning-block-menu]')?.classList.toggle('hidden'); return; }
+            const block = event.target.closest('[data-learning-block]');
+            if (block) { applyBlock(block.dataset.learningBlock); return; }
+            const convert = event.target.closest('[data-learning-convert]');
+            if (convert) { await convertSelection(convert.dataset.learningConvert); return; }
+            const dock = event.target.closest('[data-learning-dock-tab]');
+            if (dock) { dockTab = dock.dataset.learningDockTab; render({ skipRemote: true }); return; }
+            if (event.target.closest('[data-learning-meta-toggle]')) {
+                const panel = document.querySelector('[data-learning-meta-panel]');
+                const button = event.target.closest('[data-learning-meta-toggle]');
+                const willOpen = panel?.classList.contains('hidden');
+                panel?.classList.toggle('hidden', !willOpen);
+                button?.setAttribute('aria-expanded', String(Boolean(willOpen)));
+                return;
+            }
+            const task = event.target.closest('[data-learning-open-task]');
+            if (task) { window.switchView?.('routine-checklist-view'); window.ChecklistFeature?.selectTask?.(task.dataset.learningOpenTask); return; }
+            const restore = event.target.closest('[data-learning-version-restore]');
+            if (restore) { await restoreVersion(restore.dataset.learningVersionRestore); return; }
+            const toc = event.target.closest('[data-learning-toc-line]');
+            if (toc) { document.querySelector(`[data-learning-line-index="${CSS.escape(toc.dataset.learningTocLine)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+            if (event.target.closest('[data-learning-add-link]')) {
+                const title = window.prompt('연결할 학습 노트 제목을 입력하세요.');
+                const target = entries.find((item) => item.title === String(title || '').trim());
+                if (!target) { window.showToast?.('일치하는 학습 노트를 찾지 못했습니다.', 'warning'); return; }
+                const source = document.getElementById('learning-content');
+                source.value = `${syncEditorSource()}${source.value ? '\n' : ''}[[${target.title}]]`;
+                document.getElementById('learning-editor-surface').innerHTML = renderEditorSurface(source.value);
+                queueAutosave();
+                return;
+            }
             if (event.target.closest('[data-learning-pin]')) { entry.pinned = !entry.pinned; entry.updatedAt = now(); saveStore(); render({ skipRemote: true }); await persist(entry); return; }
-            if (event.target.closest('[data-learning-delete]')) { entries = entries.filter((item) => item.id !== entry.id); activeId = null; saveStore(); render({ skipRemote: true }); await removeRemote(entry.id); return; }
-            const format = event.target.closest('[data-learning-format]'); if (format) wrapSelection(format.dataset.learningFormat);
+            if (event.target.closest('[data-learning-delete]')) {
+                if (!window.confirm('이 학습 노트를 삭제할까요?')) return;
+                entries = entries.filter((item) => item.id !== entry.id); activeId = entries[0]?.id || null; saveStore(); render({ skipRemote: true }); await removeRemote(entry.id); return;
+            }
+        });
+        root?.addEventListener('keydown', (event) => {
+            const content = event.target.closest?.('[data-learning-line-content]');
+            if (!content) return;
+            const line = content.closest('[data-learning-line]');
+            if (event.key === 'Tab') {
+                event.preventDefault();
+                const currentIndent = Math.max(0, Number(line.dataset.learningIndent) || 0);
+                const next = event.shiftKey ? Math.max(0, currentIndent - 3) : Math.min(30, currentIndent + 3);
+                line.dataset.learningIndent = String(next);
+                line.style.paddingLeft = `${Math.floor(next / 3) * 20}px`;
+                syncEditorSource(); queueAutosave();
+            }
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                splitEditorLine(content);
+                return;
+            }
+            if (event.key === 'Backspace' && mergeEditorLineBackward(content)) {
+                event.preventDefault();
+                return;
+            }
+            if (event.key === 'Escape') document.querySelector('[data-learning-block-menu]')?.classList.add('hidden');
+        });
+        window.addEventListener('pagehide', () => {
+            clearTimeout(autosaveTimer);
+            if (current() && document.getElementById('learning-editor-surface')) saveActive();
         });
     }
 
+    readUiState();
     entries = readStore();
+    if (activeId && !entries.some((entry) => entry.id === activeId)) activeId = null;
     window.LearningArchiveFeature = { render, bindControls, refresh: () => { loaded = false; return loadRemote(); } };
 })(window);
