@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Update 1.04.03 Note Workspace",
+  "feature": "Update 1.04.03 Drag Ordering and Block Reset",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-08-08T19:30:00+09:00",
+  "updatedAt": "2026-08-08T20:15:00+09:00",
   "status": "complete",
-  "currentFocus": "Version 1.04.03 Note Workspace is implemented and verified for user review.",
+  "currentFocus": "Learning Archive ordering and Todo block reset are implemented, server-synced, and verified.",
   "completed": [
     "Documented Plan, Design, Check, Report, and design QA phases.",
     "Replaced arbitrary Todo groups with Career, Finance, and Life.",
@@ -36,8 +36,14 @@
     "Replaced the duplicate note preview and textarea with one rendered editing surface.",
     "Synchronized inline checkboxes, formatting, icons, and exact three-space indentation to the existing note string.",
     "Compacted the mobile detail grid and passed desktop/mobile browser QA.",
-    "Bumped the correction cache to v160."
+    "Bumped the correction cache to v160.",
+    "Added drag ordering for Learning Archive fields, items, Chapters, and notes.",
+    "Added keyboard reorder fallback with Alt+Arrow keys.",
+    "Added Todo block reset and same-block toggle-off behavior.",
+    "Applied Learning Archive ordering columns to the linked Supabase project.",
+    "Passed full automated checks and desktop/mobile interaction QA.",
+    "Bumped the correction cache to v162."
   ],
   "remaining": [],
-  "nextStep": "Collect user feedback from the local Version 1.04.03 preview and prepare the next patch."
+  "nextStep": "Publish the verified patch and collect user feedback from the deployed Version 1.04.03 page."
 }

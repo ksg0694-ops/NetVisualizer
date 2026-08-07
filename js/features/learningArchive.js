@@ -18,6 +18,8 @@
     let bound = false;
     let loaded = false;
     let autosaveTimer = null;
+    let draggedTreeNode = null;
+    let remoteSupportsOrdering = true;
 
     const escapeHtml = (value) => window.AppUtils.escapeHtml(value);
     const escapeAttr = (value) => window.AppUtils.escapeAttr(value);
@@ -52,6 +54,10 @@
             sourceLinks: Array.isArray(raw.sourceLinks || raw.source_links) ? (raw.sourceLinks || raw.source_links).map(String) : [],
             tags: Array.isArray(raw.tags) ? raw.tags.map(String) : [],
             pinned: Boolean(raw.pinned ?? raw.is_pinned),
+            fieldOrder: Number(raw.fieldOrder ?? raw.field_order) || 0,
+            itemOrder: Number(raw.itemOrder ?? raw.item_order) || 0,
+            chapterOrder: Number(raw.chapterOrder ?? raw.chapter_order) || 0,
+            displayOrder: Number(raw.displayOrder ?? raw.display_order ?? raw.sortOrder ?? raw.sort_order) || 0,
             createdAt: raw.createdAt || raw.created_at || now(),
             updatedAt: raw.updatedAt || raw.updated_at || now(),
         };
@@ -62,8 +68,60 @@
         catch (error) { console.warn('Learning archive storage parse failed.', error); return []; }
     }
 
+    function orderNumber(value) {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : Number.MAX_SAFE_INTEGER;
+    }
+
+    function orderedNames(source, key, orderKey) {
+        const firstIndex = new Map();
+        source.forEach((entry, index) => {
+            if (!firstIndex.has(entry[key])) firstIndex.set(entry[key], index);
+        });
+        return [...new Set(source.map((entry) => entry[key]).filter(Boolean))].sort((a, b) => {
+            const aOrder = Math.min(...source.filter((entry) => entry[key] === a).map((entry) => orderNumber(entry[orderKey])));
+            const bOrder = Math.min(...source.filter((entry) => entry[key] === b).map((entry) => orderNumber(entry[orderKey])));
+            return aOrder - bOrder || firstIndex.get(a) - firstIndex.get(b) || a.localeCompare(b, 'ko');
+        });
+    }
+
+    function ensureOrdering(source = entries) {
+        const fields = orderedNames(source, 'field', 'fieldOrder');
+        fields.forEach((field, fieldIndex) => {
+            const fieldEntries = source.filter((entry) => entry.field === field);
+            fieldEntries.forEach((entry) => { entry.fieldOrder = (fieldIndex + 1) * 1000; });
+            const items = orderedNames(fieldEntries, 'item', 'itemOrder');
+            items.forEach((item, itemIndex) => {
+                const itemEntries = fieldEntries.filter((entry) => entry.item === item);
+                itemEntries.forEach((entry) => { entry.itemOrder = (itemIndex + 1) * 1000; });
+                const chapters = orderedNames(itemEntries, 'chapter', 'chapterOrder');
+                chapters.forEach((chapter, chapterIndex) => {
+                    const chapterEntries = itemEntries
+                        .filter((entry) => entry.chapter === chapter)
+                        .sort((a, b) => orderNumber(a.displayOrder) - orderNumber(b.displayOrder)
+                            || Number(b.pinned) - Number(a.pinned)
+                            || String(b.updatedAt).localeCompare(String(a.updatedAt)));
+                    chapterEntries.forEach((entry, entryIndex) => {
+                        entry.chapterOrder = (chapterIndex + 1) * 1000;
+                        entry.displayOrder = (entryIndex + 1) * 1000;
+                    });
+                });
+            });
+        });
+        return source;
+    }
+
+    function compareEntries(a, b) {
+        return orderNumber(a.fieldOrder) - orderNumber(b.fieldOrder)
+            || orderNumber(a.itemOrder) - orderNumber(b.itemOrder)
+            || orderNumber(a.chapterOrder) - orderNumber(b.chapterOrder)
+            || orderNumber(a.displayOrder) - orderNumber(b.displayOrder)
+            || a.title.localeCompare(b.title, 'ko');
+    }
+
     function saveStore() {
-        entries.sort((a, b) => Number(b.pinned) - Number(a.pinned) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
+        ensureOrdering(entries);
+        entries.sort(compareEntries);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
     }
 
@@ -104,7 +162,7 @@
         catch (_error) { return null; }
     }
 
-    function toRow(entry) {
+    function toRow(entry, includeOrdering = remoteSupportsOrdering) {
         const row = {
             id: entry.id,
             field_name: entry.field,
@@ -118,6 +176,12 @@
             created_at: entry.createdAt,
             updated_at: entry.updatedAt,
         };
+        if (includeOrdering) {
+            row.field_order = entry.fieldOrder;
+            row.item_order = entry.itemOrder;
+            row.chapter_order = entry.chapterOrder;
+            row.display_order = entry.displayOrder;
+        }
         const userId = typeof getCurrentUserId === 'function' ? getCurrentUserId() : null;
         if (userId) row.user_id = userId;
         return row;
@@ -126,8 +190,16 @@
     async function persist(entry) {
         const client = getClient();
         if (!client) return;
-        const { error } = await client.from(TABLE_NAME).upsert(toRow(entry), { onConflict: 'id' });
+        let { error } = await client.from(TABLE_NAME).upsert(toRow(entry), { onConflict: 'id' });
+        if (error && remoteSupportsOrdering && (String(error.code || '') === 'PGRST204' || /(?:field|item|chapter|display)_order/i.test(String(error.message || '')))) {
+            remoteSupportsOrdering = false;
+            ({ error } = await client.from(TABLE_NAME).upsert(toRow(entry, false), { onConflict: 'id' }));
+        }
         if (error && !['42P01', 'PGRST204', 'PGRST205'].includes(String(error.code || ''))) console.warn('Learning archive sync failed.', error);
+    }
+
+    async function persistMany(source) {
+        await Promise.all(source.map((entry) => persist(entry)));
     }
 
     async function removeRemote(id) {
@@ -142,7 +214,13 @@
         loaded = true;
         const client = getClient();
         if (!client) return;
-        const { data, error } = await client.from(TABLE_NAME).select('id,field_name,item_name,chapter_name,title,content,source_links,tags,is_pinned,created_at,updated_at').order('updated_at', { ascending: false });
+        const orderedColumns = 'id,field_name,item_name,chapter_name,title,content,source_links,tags,is_pinned,field_order,item_order,chapter_order,display_order,created_at,updated_at';
+        const legacyColumns = 'id,field_name,item_name,chapter_name,title,content,source_links,tags,is_pinned,created_at,updated_at';
+        let { data, error } = await client.from(TABLE_NAME).select(orderedColumns);
+        if (error && (String(error.code || '') === 'PGRST204' || /(?:field|item|chapter|display)_order/i.test(String(error.message || '')))) {
+            remoteSupportsOrdering = false;
+            ({ data, error } = await client.from(TABLE_NAME).select(legacyColumns).order('updated_at', { ascending: false }));
+        }
         if (error) return;
         const remote = (data || []).map(normalize).filter(Boolean);
         if (remote.length || entries.length === 0) {
@@ -151,10 +229,6 @@
             saveStore();
             render({ skipRemote: true });
         }
-    }
-
-    function unique(values) {
-        return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'));
     }
 
     function current() {
@@ -168,29 +242,132 @@
     }
 
     function renderTree(source) {
-        const fields = unique(source.map((entry) => entry.field));
+        const fields = orderedNames(source, 'field', 'fieldOrder');
         if (!fields.length) return '<div class="rounded-lg border border-dashed border-gray-200 px-4 py-10 text-center text-xs text-gray-400">첫 학습 노트를 만들어보세요.</div>';
         return fields.map((field) => {
             const fieldEntries = source.filter((entry) => entry.field === field);
-            const items = unique(fieldEntries.map((entry) => entry.item));
-            return `<details open class="group/field">
-                <summary class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-2 text-xs font-black text-gray-800 hover:bg-gray-50"><i class="fas fa-chevron-right w-2 text-[8px] text-gray-300 transition group-open/field:rotate-90"></i><i class="far fa-folder text-indigo-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(field)}</span><span class="text-[9px] font-medium text-gray-400">${fieldEntries.length}</span></summary>
+            const items = orderedNames(fieldEntries, 'item', 'itemOrder');
+            return `<details open data-learning-tree-node data-learning-level="field" data-learning-field="${escapeAttr(field)}" class="group/field rounded-md">
+                <summary class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-2 text-xs font-black text-gray-800 hover:bg-gray-50"><span draggable="true" role="button" tabindex="0" data-learning-drag-handle class="cursor-grab text-gray-300 hover:text-indigo-500 active:cursor-grabbing" title="드래그 또는 Alt+방향키로 분야 순서 변경" aria-label="${escapeAttr(field)} 분야 순서 변경"><i class="fas fa-grip-vertical text-[9px]"></i></span><i class="fas fa-chevron-right w-2 text-[8px] text-gray-300 transition group-open/field:rotate-90"></i><i class="far fa-folder text-indigo-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(field)}</span><span class="text-[9px] font-medium text-gray-400">${fieldEntries.length}</span></summary>
                 <div class="ml-3 border-l border-gray-100 pl-2">${items.map((item) => {
                     const itemEntries = fieldEntries.filter((entry) => entry.item === item);
-                    const chapters = unique(itemEntries.map((entry) => entry.chapter));
-                    return `<details open class="group/item">
-                        <summary class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-bold text-gray-700 hover:bg-gray-50"><i class="fas fa-chevron-right w-2 text-[8px] text-gray-300 transition group-open/item:rotate-90"></i><i class="far fa-folder-open text-sky-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(item)}</span><span class="text-[9px] font-medium text-gray-400">${itemEntries.length}</span></summary>
+                    const chapters = orderedNames(itemEntries, 'chapter', 'chapterOrder');
+                    return `<details open data-learning-tree-node data-learning-level="item" data-learning-field="${escapeAttr(field)}" data-learning-item="${escapeAttr(item)}" class="group/item rounded-md">
+                        <summary class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-bold text-gray-700 hover:bg-gray-50"><span draggable="true" role="button" tabindex="0" data-learning-drag-handle class="cursor-grab text-gray-300 hover:text-indigo-500 active:cursor-grabbing" title="드래그 또는 Alt+방향키로 항목 순서 변경" aria-label="${escapeAttr(item)} 항목 순서 변경"><i class="fas fa-grip-vertical text-[8px]"></i></span><i class="fas fa-chevron-right w-2 text-[8px] text-gray-300 transition group-open/item:rotate-90"></i><i class="far fa-folder-open text-sky-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(item)}</span><span class="text-[9px] font-medium text-gray-400">${itemEntries.length}</span></summary>
                         <div class="ml-3 border-l border-gray-100 pl-2">${chapters.map((chapter) => {
-                            const chapterEntries = itemEntries.filter((entry) => entry.chapter === chapter);
-                            return `<details open class="group/chapter">
-                                <summary class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-[10px] font-bold text-gray-600 hover:bg-gray-50"><i class="fas fa-chevron-right w-2 text-[7px] text-gray-300 transition group-open/chapter:rotate-90"></i><i class="far fa-file-lines text-gray-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(chapter)}</span><span class="text-[9px] font-medium text-gray-400">${chapterEntries.length}</span></summary>
-                                <div class="ml-3 space-y-0.5 border-l border-gray-100 pl-2">${chapterEntries.map((entry) => `<button type="button" data-learning-open="${escapeAttr(entry.id)}" class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[10px] ${activeId === entry.id ? 'bg-indigo-50 font-bold text-indigo-700 ring-1 ring-indigo-100' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'}"><i class="far fa-note-sticky text-[9px]"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(entry.title)}</span>${entry.pinned ? '<i class="fas fa-thumbtack text-[8px] text-indigo-400"></i>' : ''}</button>`).join('')}</div>
+                            const chapterEntries = itemEntries.filter((entry) => entry.chapter === chapter).sort(compareEntries);
+                            return `<details open data-learning-tree-node data-learning-level="chapter" data-learning-field="${escapeAttr(field)}" data-learning-item="${escapeAttr(item)}" data-learning-chapter="${escapeAttr(chapter)}" class="group/chapter rounded-md">
+                                <summary class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-[10px] font-bold text-gray-600 hover:bg-gray-50"><span draggable="true" role="button" tabindex="0" data-learning-drag-handle class="cursor-grab text-gray-300 hover:text-indigo-500 active:cursor-grabbing" title="드래그 또는 Alt+방향키로 Chapter 순서 변경" aria-label="${escapeAttr(chapter)} Chapter 순서 변경"><i class="fas fa-grip-vertical text-[8px]"></i></span><i class="fas fa-chevron-right w-2 text-[7px] text-gray-300 transition group-open/chapter:rotate-90"></i><i class="far fa-file-lines text-gray-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(chapter)}</span><span class="text-[9px] font-medium text-gray-400">${chapterEntries.length}</span></summary>
+                                <div class="ml-3 space-y-0.5 border-l border-gray-100 pl-2">${chapterEntries.map((entry) => `<div data-learning-tree-node data-learning-level="note" data-learning-id="${escapeAttr(entry.id)}" data-learning-field="${escapeAttr(field)}" data-learning-item="${escapeAttr(item)}" data-learning-chapter="${escapeAttr(chapter)}" class="flex items-center rounded-md ${activeId === entry.id ? 'bg-indigo-50 ring-1 ring-indigo-100' : 'hover:bg-gray-50'}"><span draggable="true" role="button" tabindex="0" data-learning-drag-handle class="ml-1 cursor-grab px-1 text-gray-300 hover:text-indigo-500 active:cursor-grabbing" title="드래그 또는 Alt+방향키로 노트 순서 변경" aria-label="${escapeAttr(entry.title)} 노트 순서 변경"><i class="fas fa-grip-vertical text-[8px]"></i></span><button type="button" data-learning-open="${escapeAttr(entry.id)}" class="flex min-w-0 flex-1 items-center gap-2 px-1.5 py-1.5 text-left text-[10px] ${activeId === entry.id ? 'font-bold text-indigo-700' : 'text-gray-500 hover:text-gray-800'}"><i class="far fa-note-sticky text-[9px]"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(entry.title)}</span>${entry.pinned ? '<i class="fas fa-thumbtack text-[8px] text-indigo-400"></i>' : ''}</button></div>`).join('')}</div>
                             </details>`;
                         }).join('')}</div>
                     </details>`;
                 }).join('')}</div>
             </details>`;
         }).join('');
+    }
+
+    function describeTreeNode(node) {
+        if (!node) return null;
+        return {
+            level: node.dataset.learningLevel || '',
+            id: node.dataset.learningId || '',
+            field: node.dataset.learningField || '',
+            item: node.dataset.learningItem || '',
+            chapter: node.dataset.learningChapter || '',
+        };
+    }
+
+    function sameTreeParent(a, b) {
+        if (!a || !b || a.level !== b.level) return false;
+        if (a.level === 'field') return true;
+        if (a.level === 'item') return a.field === b.field;
+        if (a.level === 'chapter') return a.field === b.field && a.item === b.item;
+        return a.field === b.field && a.item === b.item && a.chapter === b.chapter;
+    }
+
+    function siblingKeys(descriptor) {
+        if (descriptor.level === 'field') return orderedNames(entries, 'field', 'fieldOrder');
+        const fieldEntries = entries.filter((entry) => entry.field === descriptor.field);
+        if (descriptor.level === 'item') return orderedNames(fieldEntries, 'item', 'itemOrder');
+        const itemEntries = fieldEntries.filter((entry) => entry.item === descriptor.item);
+        if (descriptor.level === 'chapter') return orderedNames(itemEntries, 'chapter', 'chapterOrder');
+        return itemEntries.filter((entry) => entry.chapter === descriptor.chapter).sort(compareEntries).map((entry) => entry.id);
+    }
+
+    function descriptorKey(descriptor) {
+        if (descriptor.level === 'field') return descriptor.field;
+        if (descriptor.level === 'item') return descriptor.item;
+        if (descriptor.level === 'chapter') return descriptor.chapter;
+        return descriptor.id;
+    }
+
+    function applySiblingOrder(descriptor, orderedKeys) {
+        const changed = [];
+        orderedKeys.forEach((key, index) => {
+            const order = (index + 1) * 1000;
+            entries.forEach((entry) => {
+                let matches = false;
+                if (descriptor.level === 'field') matches = entry.field === key;
+                else if (descriptor.level === 'item') matches = entry.field === descriptor.field && entry.item === key;
+                else if (descriptor.level === 'chapter') matches = entry.field === descriptor.field && entry.item === descriptor.item && entry.chapter === key;
+                else matches = entry.id === key;
+                if (!matches) return;
+                const property = descriptor.level === 'field' ? 'fieldOrder'
+                    : descriptor.level === 'item' ? 'itemOrder'
+                        : descriptor.level === 'chapter' ? 'chapterOrder' : 'displayOrder';
+                if (entry[property] !== order) {
+                    entry[property] = order;
+                    entry.updatedAt = now();
+                    changed.push(entry);
+                }
+            });
+        });
+        return [...new Map(changed.map((entry) => [entry.id, entry])).values()];
+    }
+
+    function clearTreeDragState(root) {
+        root?.querySelectorAll('[data-learning-tree-node]').forEach((node) => {
+            node.removeAttribute('data-learning-drop-position');
+            node.removeAttribute('data-learning-dragging');
+            node.classList.remove('ring-2', 'ring-indigo-300', 'ring-offset-1', 'opacity-50');
+        });
+    }
+
+    async function reorderTreeNode(sourceNode, targetNode, position) {
+        const source = describeTreeNode(sourceNode);
+        const target = describeTreeNode(targetNode);
+        if (!source || !target || descriptorKey(source) === descriptorKey(target)) return;
+        if (!sameTreeParent(source, target)) {
+            window.showToast?.('같은 분야·항목·Chapter 안에서 순서를 변경해주세요.', 'warning');
+            return;
+        }
+        const keys = siblingKeys(source);
+        const sourceKey = descriptorKey(source);
+        const targetKey = descriptorKey(target);
+        const fromIndex = keys.indexOf(sourceKey);
+        if (fromIndex < 0) return;
+        keys.splice(fromIndex, 1);
+        const targetIndex = keys.indexOf(targetKey);
+        keys.splice(targetIndex + (position === 'after' ? 1 : 0), 0, sourceKey);
+        const changed = applySiblingOrder(source, keys);
+        saveStore();
+        render({ skipRemote: true });
+        await persistMany(changed);
+        window.showToast?.('학습 아카이브 순서를 저장했습니다.', 'info');
+    }
+
+    async function moveTreeNodeWithKeyboard(root, node, direction) {
+        const descriptor = describeTreeNode(node);
+        const siblings = Array.from(root.querySelectorAll(`[data-learning-tree-node][data-learning-level="${CSS.escape(descriptor.level)}"]`))
+            .filter((candidate) => sameTreeParent(descriptor, describeTreeNode(candidate)));
+        const currentIndex = siblings.indexOf(node);
+        const targetIndex = currentIndex + direction;
+        if (currentIndex < 0 || targetIndex < 0 || targetIndex >= siblings.length) {
+            window.showToast?.('더 이상 이동할 수 없습니다.', 'warning');
+            return;
+        }
+        await reorderTreeNode(node, siblings[targetIndex], direction < 0 ? 'before' : 'after');
     }
 
     function formatInline(value) {
@@ -599,6 +776,10 @@
             }
         });
         root?.addEventListener('click', async (event) => {
+            if (event.target.closest('[data-learning-drag-handle]')) {
+                event.preventDefault();
+                return;
+            }
             const open = event.target.closest('[data-learning-open]');
             if (open) {
                 if (current() && open.dataset.learningOpen !== activeId && document.getElementById('learning-editor-surface')) await saveActive();
@@ -654,7 +835,59 @@
                 entries = entries.filter((item) => item.id !== entry.id); activeId = entries[0]?.id || null; saveStore(); render({ skipRemote: true }); await removeRemote(entry.id); return;
             }
         });
+        root?.addEventListener('dragstart', (event) => {
+            const handle = event.target.closest('[data-learning-drag-handle]');
+            const node = handle?.closest('[data-learning-tree-node]');
+            if (!handle || !node) {
+                event.preventDefault();
+                return;
+            }
+            draggedTreeNode = node;
+            node.dataset.learningDragging = 'true';
+            node.classList.add('opacity-50');
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', descriptorKey(describeTreeNode(node)));
+        });
+        root?.addEventListener('dragover', (event) => {
+            const targetNode = event.target.closest('[data-learning-tree-node]');
+            if (!draggedTreeNode || !targetNode || targetNode === draggedTreeNode) return;
+            const source = describeTreeNode(draggedTreeNode);
+            const target = describeTreeNode(targetNode);
+            if (!sameTreeParent(source, target)) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            root.querySelectorAll('[data-learning-tree-node]').forEach((node) => {
+                if (node !== draggedTreeNode) {
+                    node.removeAttribute('data-learning-drop-position');
+                    node.classList.remove('ring-2', 'ring-indigo-300', 'ring-offset-1');
+                }
+            });
+            const rect = targetNode.getBoundingClientRect();
+            const position = event.clientY > rect.top + rect.height / 2 ? 'after' : 'before';
+            targetNode.dataset.learningDropPosition = position;
+            targetNode.classList.add('ring-2', 'ring-indigo-300', 'ring-offset-1');
+        });
+        root?.addEventListener('drop', async (event) => {
+            const targetNode = event.target.closest('[data-learning-tree-node]');
+            if (!draggedTreeNode || !targetNode || targetNode === draggedTreeNode) return;
+            event.preventDefault();
+            const sourceNode = draggedTreeNode;
+            const position = targetNode.dataset.learningDropPosition || 'before';
+            draggedTreeNode = null;
+            clearTreeDragState(root);
+            await reorderTreeNode(sourceNode, targetNode, position);
+        });
+        root?.addEventListener('dragend', () => {
+            draggedTreeNode = null;
+            clearTreeDragState(root);
+        });
         root?.addEventListener('keydown', (event) => {
+            const dragHandle = event.target.closest?.('[data-learning-drag-handle]');
+            if (dragHandle && event.altKey && ['ArrowUp', 'ArrowDown'].includes(event.key)) {
+                event.preventDefault();
+                moveTreeNodeWithKeyboard(root, dragHandle.closest('[data-learning-tree-node]'), event.key === 'ArrowUp' ? -1 : 1);
+                return;
+            }
             const content = event.target.closest?.('[data-learning-line-content]');
             if (!content) return;
             const line = content.closest('[data-learning-line]');

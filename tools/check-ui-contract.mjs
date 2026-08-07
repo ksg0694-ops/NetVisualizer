@@ -191,6 +191,8 @@ assert.ok(!checklist.includes('Report 파일 업로드'), 'Report Library must r
 assert.ok(!checklist.includes('id="checklist-sync-badge"'), 'Todo must not show a server-saved status badge');
 assert.ok(checklist.includes('function renderNoteSurface'));
 assert.ok(checklist.includes('data-checklist-note-block'), 'Todo notes must expose slash-inserted block types');
+assert.ok(checklist.includes("paragraph: { label: '일반 문단'"), 'Todo notes must allow block reset to a paragraph');
+assert.ok(checklist.includes("currentBlock === blockKey ? 'paragraph'"), 'Selecting the active Todo block again must reset it');
 assert.ok(checklist.includes('data-checklist-note-convert="task"'), 'Todo notes must convert selected text to a Todo');
 assert.ok(checklist.includes('data-checklist-note-convert="step"'), 'Todo notes must convert selected text to a Step');
 assert.ok(checklist.includes('function queueTodoNoteAutosave'), 'Todo note editing must autosave');
@@ -201,6 +203,10 @@ assert.ok(learningArchive.includes('function renderConnectionDock'), 'Learning A
 assert.ok(learningArchive.includes('function queueAutosave'), 'Learning Archive editing must autosave');
 assert.ok(learningArchive.includes('data-learning-convert="task"'), 'Learning notes must convert selected text to a Todo');
 assert.ok(learningArchive.includes('data-learning-convert="step"'), 'Learning notes must convert selected text to a Step');
+assert.ok(learningArchive.includes('data-learning-drag-handle'), 'Learning Archive hierarchy must expose drag handles');
+assert.ok(learningArchive.includes('function reorderTreeNode'), 'Learning Archive hierarchy order must be persisted');
+assert.ok(learningArchive.includes("event.altKey && ['ArrowUp', 'ArrowDown'].includes(event.key)"), 'Learning Archive drag handles must support keyboard reorder');
+assert.ok(learningArchive.includes('field_order,item_order,chapter_order,display_order'), 'Learning Archive server reads must include hierarchy order');
 assert.ok(checklist.includes('data-checklist-title-display'));
 assert.ok(checklist.includes("root?.addEventListener('dblclick'"));
 assert.ok(!checklist.includes('<span class="text-[11px] font-bold text-gray-500">제목</span>'), 'detail title must not use a separate field row');
