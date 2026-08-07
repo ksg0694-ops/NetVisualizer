@@ -111,9 +111,9 @@
     }
 
     const NOTE_FORMATS = Object.freeze({
-        bold: { open: '**', close: '**', placeholder: '굵게' },
-        underline: { open: '++', close: '++', placeholder: '밑줄' },
-        strike: { open: '~~', close: '~~', placeholder: '취소선' },
+        bold: 'bold',
+        underline: 'underline',
+        strike: 'strikeThrough',
     });
 
     const NOTE_ICONS = Object.freeze({
@@ -131,26 +131,28 @@
             .replace(/~~([^~\n]+)~~/g, '<s>$1</s>')
             .replace(/\{\{icon:(star|lightbulb|calendar|paperclip|warning)\}\}/g, (match, key) => {
                 const meta = NOTE_ICONS[key];
-                return `<i class="fas ${meta.icon} ${meta.tone} mr-1" title="${meta.label}" aria-label="${meta.label}"></i>`;
+                return `<i data-note-icon="${key}" contenteditable="false" class="fas ${meta.icon} ${meta.tone} mx-0.5" title="${meta.label}" aria-label="${meta.label}"></i>`;
             });
     }
 
-    function renderNoteIndent(spaceCount) {
-        const groups = Math.floor(spaceCount / 3);
-        const remainder = spaceCount % 3;
-        return `${'<span class="inline-block w-5" aria-hidden="true"></span>'.repeat(groups)}${'&nbsp;'.repeat(remainder)}`;
+    function renderNoteLine(line, targetId, lineIndex, placeholder = '') {
+        const checkbox = String(line || '').match(/^( *)- \[([ xX])\]\s?(.*)$/);
+        const leadingSpaces = checkbox ? checkbox[1].length : (String(line || '').match(/^ */)?.[0]?.length || 0);
+        const checked = checkbox?.[2]?.toLowerCase() === 'x';
+        const content = checkbox ? checkbox[3] : String(line || '').slice(leadingSpaces);
+        const indentPx = Math.floor(leadingSpaces / 3) * 20;
+        return `
+            <div data-note-line data-note-indent="${leadingSpaces}" data-note-line-index="${lineIndex}" class="flex min-h-7 items-center gap-1.5" style="padding-left:${indentPx}px">
+                ${checkbox ? `<input type="checkbox" data-note-surface-checkbox data-note-target="${escapeAttr(targetId)}" contenteditable="false" class="m-0 h-3 w-3 shrink-0 self-center rounded-sm border-gray-300 text-indigo-600" ${checked ? 'checked' : ''}>` : ''}
+                <span data-note-line-content contenteditable="true" spellcheck="true" data-placeholder="${lineIndex === 0 ? escapeAttr(placeholder) : ''}" class="min-w-0 flex-1 break-words py-0.5 text-sm leading-relaxed outline-none ${checked ? 'text-gray-400 line-through' : 'text-gray-700'}">${formatNoteInline(content)}</span>
+            </div>
+        `;
     }
 
-    function formatNotePreview(value, targetId) {
-        return String(value || '').split('\n').map((line, lineIndex) => {
-            const checkbox = line.match(/^(\s*)- \[([ xX])\]\s?(.*)$/);
-            if (checkbox) {
-                const checked = checkbox[2].toLowerCase() === 'x';
-                return `${renderNoteIndent(checkbox[1].length)}<label class="inline-flex items-center gap-1.5 align-middle"><input type="checkbox" data-note-preview-checkbox data-note-target="${escapeAttr(targetId)}" data-note-line="${lineIndex}" class="m-0 h-3 w-3 shrink-0 self-center rounded-sm border-gray-300 text-indigo-600" ${checked ? 'checked' : ''}><span class="leading-relaxed ${checked ? 'text-gray-400 line-through' : ''}">${formatNoteInline(checkbox[3])}</span></label>`;
-            }
-            const leadingSpaces = line.match(/^\s*/)?.[0]?.length || 0;
-            return `${renderNoteIndent(leadingSpaces)}${formatNoteInline(line.slice(leadingSpaces))}`;
-        }).join('<br>');
+    function renderNoteSurface(value, targetId, placeholder = '') {
+        return String(value || '').split('\n').map((line, lineIndex) => (
+            renderNoteLine(line, targetId, lineIndex, placeholder)
+        )).join('');
     }
 
     function renderNoteEditor({ id, value = '', minHeightClass = 'min-h-[180px]', placeholder = '' }) {
@@ -168,107 +170,223 @@
                         ${Object.entries(NOTE_ICONS).map(([key, meta]) => `<button type="button" data-checklist-note-icon="${key}" data-note-target="${escapeAttr(id)}" class="flex h-7 w-7 items-center justify-center rounded hover:bg-gray-50 ${meta.tone}" title="${meta.label}" aria-label="${meta.label} 아이콘 추가"><i class="fas ${meta.icon} text-[11px]"></i></button>`).join('')}
                     </div>
                 </div>
-                <div data-note-preview-for="${escapeAttr(id)}" class="hidden border-t border-gray-100 bg-gray-50/70 px-3 py-2">
-                    <span class="text-[9px] font-bold tracking-wide text-gray-400">적용 미리보기</span>
-                    <div data-note-preview-content class="mt-1 min-h-5 break-words text-sm leading-relaxed text-gray-700"></div>
+                <textarea id="${escapeAttr(id)}" data-checklist-note-source class="hidden" tabindex="-1" aria-hidden="true">${escapeHtml(value)}</textarea>
+                <div data-checklist-note-surface data-note-target="${escapeAttr(id)}" role="textbox" aria-multiline="true" aria-label="상세내역" class="${minHeightClass} cursor-text overflow-y-auto bg-white px-3 py-2.5 outline-none">
+                    ${renderNoteSurface(value, id, placeholder)}
                 </div>
-                <textarea id="${escapeAttr(id)}" data-checklist-note-editor class="block w-full ${minHeightClass} resize-y border-0 px-3 py-2.5 text-sm leading-relaxed outline-none bg-white focus:ring-0" placeholder="${escapeAttr(placeholder)}">${escapeHtml(value)}</textarea>
             </div>
         `;
     }
 
-    function updateNotePreview(targetId) {
-        const textarea = document.getElementById(targetId);
-        const preview = document.querySelector(`[data-note-preview-for="${CSS.escape(targetId)}"]`);
-        const content = preview?.querySelector('[data-note-preview-content]');
-        if (!textarea || !preview || !content) return;
-        const value = textarea.value || '';
-        const hasFormatting = /\*\*[^*\n]+\*\*|\+\+[^+\n]+\+\+|~~[^~\n]+~~|^\s{3}|^\s*- \[[ xX]\]|\{\{icon:(?:star|lightbulb|calendar|paperclip|warning)\}\}/m.test(value);
-        preview.classList.toggle('hidden', !hasFormatting);
-        content.innerHTML = hasFormatting ? formatNotePreview(value, targetId) : '';
+    function getNoteSurface(targetId) {
+        return document.querySelector(`[data-checklist-note-surface][data-note-target="${CSS.escape(targetId)}"]`);
+    }
+
+    function serializeNoteInline(node) {
+        if (!node) return '';
+        if (node.nodeType === Node.TEXT_NODE) return String(node.nodeValue || '').replace(/\u00a0/g, ' ');
+        if (node.nodeType !== Node.ELEMENT_NODE) return '';
+        const iconKey = node.dataset?.noteIcon;
+        if (iconKey && NOTE_ICONS[iconKey]) return `{{icon:${iconKey}}}`;
+        if (node.tagName === 'BR') return '';
+        const content = Array.from(node.childNodes).map(serializeNoteInline).join('');
+        if (['B', 'STRONG'].includes(node.tagName)) return `**${content}**`;
+        if (node.tagName === 'U') return `++${content}++`;
+        if (['S', 'STRIKE'].includes(node.tagName)) return `~~${content}~~`;
+        return content;
+    }
+
+    function syncNoteSourceFromSurface(surface) {
+        if (!surface) return;
+        const source = document.getElementById(surface.dataset.noteTarget);
+        if (!source) return;
+        const lines = Array.from(surface.children).filter((node) => node.matches?.('[data-note-line]'));
+        source.value = lines.map((line) => {
+            const indent = Math.max(0, Number(line.dataset.noteIndent) || 0);
+            const checkbox = line.querySelector(':scope > [data-note-surface-checkbox]');
+            const content = serializeNoteInline(line.querySelector(':scope > [data-note-line-content]'));
+            return `${' '.repeat(indent)}${checkbox ? `- [${checkbox.checked ? 'x' : ' '}] ` : ''}${content}`;
+        }).join('\n');
+    }
+
+    function rememberActiveNoteLine(node) {
+        const surface = node?.closest?.('[data-checklist-note-surface]');
+        const line = node?.closest?.('[data-note-line]');
+        if (!surface || !line) return;
+        surface.dataset.activeLineIndex = String(Array.from(surface.children).indexOf(line));
+    }
+
+    function getSelectedNoteLines(surface) {
+        const lines = Array.from(surface?.children || []).filter((node) => node.matches?.('[data-note-line]'));
+        if (!lines.length) return [];
+        const selection = window.getSelection();
+        const anchorLine = selection?.anchorNode?.nodeType === Node.ELEMENT_NODE
+            ? selection.anchorNode.closest?.('[data-note-line]')
+            : selection?.anchorNode?.parentElement?.closest?.('[data-note-line]');
+        const focusLine = selection?.focusNode?.nodeType === Node.ELEMENT_NODE
+            ? selection.focusNode.closest?.('[data-note-line]')
+            : selection?.focusNode?.parentElement?.closest?.('[data-note-line]');
+        if (anchorLine && focusLine && surface.contains(anchorLine) && surface.contains(focusLine)) {
+            const start = lines.indexOf(anchorLine);
+            const end = lines.indexOf(focusLine);
+            return lines.slice(Math.min(start, end), Math.max(start, end) + 1);
+        }
+        const activeIndex = Math.min(lines.length - 1, Math.max(0, Number(surface.dataset.activeLineIndex) || 0));
+        return [lines[activeIndex]];
+    }
+
+    function updateNoteLineIndent(line, outdent = false) {
+        const current = Math.max(0, Number(line.dataset.noteIndent) || 0);
+        const next = outdent ? Math.max(0, current - 3) : Math.min(30, current + 3);
+        line.dataset.noteIndent = String(next);
+        line.style.paddingLeft = `${Math.floor(next / 3) * 20}px`;
+    }
+
+    function setNoteLineCheckbox(line, enabled) {
+        const content = line.querySelector(':scope > [data-note-line-content]');
+        const existing = line.querySelector(':scope > [data-note-surface-checkbox]');
+        if (!enabled) {
+            existing?.remove();
+            content?.classList.remove('text-gray-400', 'line-through');
+            content?.classList.add('text-gray-700');
+            return;
+        }
+        if (existing || !content) return;
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.dataset.noteSurfaceCheckbox = '';
+        checkbox.dataset.noteTarget = line.closest('[data-checklist-note-surface]')?.dataset.noteTarget || '';
+        checkbox.contentEditable = 'false';
+        checkbox.className = 'm-0 h-3 w-3 shrink-0 self-center rounded-sm border-gray-300 text-indigo-600';
+        line.insertBefore(checkbox, content);
+    }
+
+    function ensureNoteSelection(surface) {
+        if (!surface) return null;
+        const selection = window.getSelection();
+        if (selection?.anchorNode && surface.contains(selection.anchorNode)) return selection;
+        const content = getSelectedNoteLines(surface)[0]?.querySelector('[data-note-line-content]');
+        if (!content) return null;
+        content.focus();
+        const range = document.createRange();
+        range.selectNodeContents(content);
+        range.collapse(false);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        return selection;
+    }
+
+    function createNoteLineAfter(line) {
+        const newLine = line.cloneNode(false);
+        newLine.removeAttribute('data-note-line-index');
+        const currentCheckbox = line.querySelector(':scope > [data-note-surface-checkbox]');
+        if (currentCheckbox) {
+            const checkbox = currentCheckbox.cloneNode(false);
+            checkbox.checked = false;
+            newLine.appendChild(checkbox);
+        }
+        const content = document.createElement('span');
+        content.dataset.noteLineContent = '';
+        content.contentEditable = 'true';
+        content.spellcheck = true;
+        content.className = 'min-w-0 flex-1 break-words py-0.5 text-sm leading-relaxed outline-none text-gray-700';
+        newLine.appendChild(content);
+        line.after(newLine);
+        return content;
+    }
+
+    function placeNoteCaret(content, atEnd = false) {
+        content?.focus();
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(content);
+        range.collapse(!atEnd);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+    }
+
+    function removeEmptyNoteFormatting(root) {
+        root?.querySelectorAll('b:empty, strong:empty, u:empty, s:empty, strike:empty').forEach((node) => node.remove());
+    }
+
+    function splitNoteLine(content) {
+        const line = content.closest('[data-note-line]');
+        const surface = content.closest('[data-checklist-note-surface]');
+        const selection = window.getSelection();
+        if (!line || !surface || !selection?.rangeCount) return;
+        const range = selection.getRangeAt(0);
+        if (!content.contains(range.startContainer)) return;
+        if (!range.collapsed && content.contains(range.endContainer)) range.deleteContents();
+        const tail = document.createRange();
+        tail.setStart(range.startContainer, range.startOffset);
+        tail.setEnd(content, content.childNodes.length);
+        const fragment = tail.extractContents();
+        const nextContent = createNoteLineAfter(line);
+        nextContent.appendChild(fragment);
+        removeEmptyNoteFormatting(content);
+        removeEmptyNoteFormatting(nextContent);
+        placeNoteCaret(nextContent);
+        syncNoteSourceFromSurface(surface);
+    }
+
+    function mergeNoteLineBackward(content) {
+        const line = content.closest('[data-note-line]');
+        const surface = content.closest('[data-checklist-note-surface]');
+        const previousContent = line?.previousElementSibling?.querySelector(':scope > [data-note-line-content]');
+        if (!line || !surface || !previousContent) return false;
+        const selection = window.getSelection();
+        if (!selection?.rangeCount || !selection.isCollapsed) return false;
+        const beforeCaret = document.createRange();
+        beforeCaret.selectNodeContents(content);
+        beforeCaret.setEnd(selection.anchorNode, selection.anchorOffset);
+        if (beforeCaret.toString().length > 0) return false;
+        const boundary = previousContent.childNodes.length;
+        while (content.firstChild) previousContent.appendChild(content.firstChild);
+        line.remove();
+        const range = document.createRange();
+        range.setStart(previousContent, boundary);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        previousContent.focus();
+        syncNoteSourceFromSurface(surface);
+        return true;
     }
 
     function applyNoteFormat(targetId, formatKey) {
-        const textarea = document.getElementById(targetId);
-        const format = NOTE_FORMATS[formatKey];
-        if (!textarea || !format) return;
-        const start = Number.isFinite(textarea.selectionStart) ? textarea.selectionStart : textarea.value.length;
-        const end = Number.isFinite(textarea.selectionEnd) ? textarea.selectionEnd : start;
-        const selected = textarea.value.slice(start, end) || format.placeholder;
-        const replacement = `${format.open}${selected}${format.close}`;
-        textarea.setRangeText(replacement, start, end, 'end');
-        const contentStart = start + format.open.length;
-        textarea.setSelectionRange(contentStart, contentStart + selected.length);
-        textarea.focus();
-        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        const surface = getNoteSurface(targetId);
+        const command = NOTE_FORMATS[formatKey];
+        if (!surface || !command || !ensureNoteSelection(surface)) return;
+        document.execCommand(command, false);
+        syncNoteSourceFromSurface(surface);
     }
 
-    function applyNoteIndentation(textarea, outdent = false) {
-        if (!textarea) return;
-        const start = Number.isFinite(textarea.selectionStart) ? textarea.selectionStart : textarea.value.length;
-        const end = Number.isFinite(textarea.selectionEnd) ? textarea.selectionEnd : start;
-        const lineStart = start > 0 ? textarea.value.lastIndexOf('\n', start - 1) + 1 : 0;
-        const effectiveEnd = end > start && textarea.value[end - 1] === '\n' ? end - 1 : end;
-        const nextLineBreak = textarea.value.indexOf('\n', effectiveEnd);
-        const lineEnd = nextLineBreak === -1 ? textarea.value.length : nextLineBreak;
-        const block = textarea.value.slice(lineStart, lineEnd);
-        const replacement = block.split('\n').map((line) => (
-            outdent ? line.replace(/^ {1,3}/, '') : `   ${line}`
-        )).join('\n');
-        const wasCollapsed = start === end;
-        const firstLineDelta = replacement.split('\n')[0].length - block.split('\n')[0].length;
-        textarea.setRangeText(replacement, lineStart, lineEnd, 'end');
-        if (wasCollapsed) {
-            const nextCursor = Math.max(lineStart, start + firstLineDelta);
-            textarea.setSelectionRange(nextCursor, nextCursor);
-        } else {
-            textarea.setSelectionRange(lineStart, lineStart + replacement.length);
-        }
-        textarea.focus();
-        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    function applyNoteIndentation(targetId, outdent = false) {
+        const surface = getNoteSurface(targetId);
+        if (!surface) return;
+        getSelectedNoteLines(surface).forEach((line) => updateNoteLineIndent(line, outdent));
+        syncNoteSourceFromSurface(surface);
     }
 
     function applyNoteCommand(targetId, command) {
-        const textarea = document.getElementById(targetId);
-        if (!textarea || !['indent', 'checkbox'].includes(command)) return;
+        const surface = getNoteSurface(targetId);
+        if (!surface || !['indent', 'checkbox'].includes(command)) return;
         if (command === 'indent') {
-            applyNoteIndentation(textarea);
+            applyNoteIndentation(targetId);
             return;
         }
-        const start = Number.isFinite(textarea.selectionStart) ? textarea.selectionStart : textarea.value.length;
-        const end = Number.isFinite(textarea.selectionEnd) ? textarea.selectionEnd : start;
-        const lineStart = textarea.value.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
-        const nextLineBreak = textarea.value.indexOf('\n', end);
-        const lineEnd = nextLineBreak === -1 ? textarea.value.length : nextLineBreak;
-        const block = textarea.value.slice(lineStart, lineEnd);
-        const replacement = block.split('\n').map((line) => {
-            if (/^\s*- \[[ xX]\]/.test(line)) return line;
-            const leading = line.match(/^\s*/)?.[0] || '';
-            return `${leading}- [ ] ${line.slice(leading.length)}`;
-        }).join('\n');
-        textarea.setRangeText(replacement, lineStart, lineEnd, 'end');
-        textarea.focus();
-        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        const lines = getSelectedNoteLines(surface);
+        const removeCheckboxes = lines.length > 0 && lines.every((line) => line.querySelector(':scope > [data-note-surface-checkbox]'));
+        lines.forEach((line) => setNoteLineCheckbox(line, !removeCheckboxes));
+        syncNoteSourceFromSurface(surface);
     }
 
     function insertNoteIcon(targetId, iconKey) {
-        const textarea = document.getElementById(targetId);
-        if (!textarea || !NOTE_ICONS[iconKey]) return;
-        const start = Number.isFinite(textarea.selectionStart) ? textarea.selectionStart : textarea.value.length;
-        const end = Number.isFinite(textarea.selectionEnd) ? textarea.selectionEnd : start;
-        textarea.setRangeText(`{{icon:${iconKey}}} `, start, end, 'end');
-        textarea.focus();
-        textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-
-    function toggleNotePreviewCheckbox(targetId, lineIndex, checked) {
-        const textarea = document.getElementById(targetId);
-        if (!textarea) return;
-        const lines = textarea.value.split('\n');
-        if (!lines[lineIndex] || !/^\s*- \[[ xX]\]/.test(lines[lineIndex])) return;
-        lines[lineIndex] = lines[lineIndex].replace(/^(\s*)- \[[ xX]\]/, `$1- [${checked ? 'x' : ' '}]`);
-        textarea.value = lines.join('\n');
-        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        const surface = getNoteSurface(targetId);
+        const meta = NOTE_ICONS[iconKey];
+        if (!surface || !meta || !ensureNoteSelection(surface)) return;
+        document.execCommand('insertHTML', false, `<i data-note-icon="${iconKey}" contenteditable="false" class="fas ${meta.icon} ${meta.tone} mx-0.5" title="${meta.label}" aria-label="${meta.label}"></i>&nbsp;`);
+        syncNoteSourceFromSurface(surface);
     }
 
     function toast(message, type = 'info', duration = 1600) {
@@ -307,6 +425,11 @@
                 opacity: 0.24 !important;
                 pointer-events: none;
                 transform: scale(0.985);
+            }
+            [data-note-line-content]:empty::before {
+                color: #9ca3af;
+                content: attr(data-placeholder);
+                pointer-events: none;
             }
             .checklist-dragging * {
                 user-select: none;
@@ -1335,7 +1458,7 @@
                     </div>
                 </div>
 
-                <div class="grid flex-1 grid-cols-1 gap-3 overflow-y-auto px-4 py-4 xl:mt-3 xl:overflow-visible xl:p-0">
+                <div class="grid flex-1 content-start grid-cols-1 gap-3 overflow-y-auto px-4 py-4 xl:mt-3 xl:overflow-visible xl:p-0">
                     <div class="block">
                         <span class="text-[11px] font-bold text-gray-500">상세내역</span>
                         ${renderNoteEditor({
@@ -1431,7 +1554,6 @@
         renderDetailPanel();
         renderReportLibrary();
         hydrateStepEditors();
-        document.querySelectorAll('[data-checklist-note-editor]').forEach((textarea) => updateNotePreview(textarea.id));
         persistChecklistUiState();
         if (editingTitleTaskId) {
             const titleInput = document.getElementById('checklist-detail-title-edit');
@@ -1788,6 +1910,11 @@
         if (isBound) return;
         isBound = true;
         const root = document.getElementById('routine-checklist-view');
+        root?.addEventListener('pointerdown', (event) => {
+            if (event.target.closest('[data-checklist-note-format], [data-checklist-note-command], [data-checklist-note-icon], [data-checklist-icon-picker-toggle]')) {
+                event.preventDefault();
+            }
+        });
         root?.addEventListener('click', (event) => {
             const noteFormatButton = event.target.closest('[data-checklist-note-format]');
             if (noteFormatButton) {
@@ -1951,7 +2078,7 @@
                 return;
             }
             const row = event.target.closest('[data-checklist-open]');
-            if (row && !event.target.closest('input, button, textarea, select, a')) {
+            if (row && !event.target.closest('input, button, textarea, select, a, [contenteditable="true"]')) {
                 if (activeTaskId !== row.dataset.checklistOpen) {
                     isReportLinkFormOpen = false;
                     reportSearch = '';
@@ -1969,9 +2096,13 @@
             startTitleEditing(title.dataset.checklistTitleDisplay);
         });
         root?.addEventListener('change', (event) => {
-            const noteCheckbox = event.target.closest('[data-note-preview-checkbox]');
+            const noteCheckbox = event.target.closest('[data-note-surface-checkbox]');
             if (noteCheckbox) {
-                toggleNotePreviewCheckbox(noteCheckbox.dataset.noteTarget, Number(noteCheckbox.dataset.noteLine), noteCheckbox.checked);
+                const content = noteCheckbox.closest('[data-note-line]')?.querySelector('[data-note-line-content]');
+                content?.classList.toggle('text-gray-400', noteCheckbox.checked);
+                content?.classList.toggle('line-through', noteCheckbox.checked);
+                content?.classList.toggle('text-gray-700', !noteCheckbox.checked);
+                syncNoteSourceFromSurface(noteCheckbox.closest('[data-checklist-note-surface]'));
                 return;
             }
             if (event.target.matches('#checklist-status-filter')) {
@@ -2014,18 +2145,32 @@
                 });
                 return;
             }
-            const noteEditor = event.target.closest('[data-checklist-note-editor]');
-            if (noteEditor) updateNotePreview(noteEditor.id);
+            const noteContent = event.target.closest('[data-note-line-content]');
+            if (noteContent) {
+                rememberActiveNoteLine(noteContent);
+                syncNoteSourceFromSurface(noteContent.closest('[data-checklist-note-surface]'));
+            }
             const groupInput = event.target.closest('[data-step-editor-group]');
             if (groupInput) updateStepMetadata(groupInput.closest('[data-step-editor]'), groupInput.dataset.stepEditorGroup, 'groupName', groupInput.value);
             const detailInput = event.target.closest('[data-step-editor-detail]');
             if (detailInput) updateStepMetadata(detailInput.closest('[data-step-editor]'), detailInput.dataset.stepEditorDetail, 'detail', detailInput.value);
         });
         root?.addEventListener('keydown', (event) => {
-            const noteEditor = event.target?.closest?.('[data-checklist-note-editor]');
-            if (noteEditor && event.key === 'Tab') {
+            const noteContent = event.target?.closest?.('[data-note-line-content]');
+            if (noteContent && event.key === 'Tab') {
                 event.preventDefault();
-                applyNoteIndentation(noteEditor, event.shiftKey);
+                const surface = noteContent.closest('[data-checklist-note-surface]');
+                rememberActiveNoteLine(noteContent);
+                applyNoteIndentation(surface.dataset.noteTarget, event.shiftKey);
+                return;
+            }
+            if (noteContent && event.key === 'Enter') {
+                event.preventDefault();
+                splitNoteLine(noteContent);
+                return;
+            }
+            if (noteContent && event.key === 'Backspace' && mergeNoteLineBackward(noteContent)) {
+                event.preventDefault();
                 return;
             }
             const titleDisplay = event.target?.closest?.('[data-checklist-title-display]');

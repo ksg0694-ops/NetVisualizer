@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Update 1.04.02 Tab Checkbox Cleanup Patch",
+  "feature": "Update 1.04.02 Single-surface Todo Editor",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-08-08T12:00:00+09:00",
+  "updatedAt": "2026-08-08T15:30:00+09:00",
   "status": "complete",
-  "currentFocus": "Add Tab indentation, surface live checkboxes, and remove Life Notes.",
+  "currentFocus": "Edit rendered Todo notes directly without a duplicate preview surface.",
   "completed": [
     "Documented Plan, Design, Check, Report, and design QA phases.",
     "Replaced arbitrary Todo groups with Career, Finance, and Life.",
@@ -32,7 +32,11 @@
     "Added exact three-space indentation, interactive checkboxes, and a safe icon picker.",
     "Mapped Tab and Shift+Tab to three-space indentation and outdent.",
     "Moved the live checklist preview above the editor and centered 12px checkboxes.",
-    "Removed Life Notes UI, script loading, and PWA cache references while preserving stored data."
+    "Removed Life Notes UI, script loading, and PWA cache references while preserving stored data.",
+    "Replaced the duplicate note preview and textarea with one rendered editing surface.",
+    "Synchronized inline checkboxes, formatting, icons, and exact three-space indentation to the existing note string.",
+    "Compacted the mobile detail grid and passed desktop/mobile browser QA.",
+    "Bumped the correction cache to v160."
   ],
   "remaining": [],
   "nextStep": "Commit, publish, merge, and verify the GitHub Pages build."
