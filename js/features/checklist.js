@@ -146,7 +146,7 @@
             const checkbox = line.match(/^(\s*)- \[([ xX])\]\s?(.*)$/);
             if (checkbox) {
                 const checked = checkbox[2].toLowerCase() === 'x';
-                return `${renderNoteIndent(checkbox[1].length)}<label class="inline-flex items-start gap-1.5"><input type="checkbox" data-note-preview-checkbox data-note-target="${escapeAttr(targetId)}" data-note-line="${lineIndex}" class="mt-0.5 h-3.5 w-3.5 rounded border-gray-300 text-indigo-600" ${checked ? 'checked' : ''}><span class="${checked ? 'text-gray-400 line-through' : ''}">${formatNoteInline(checkbox[3])}</span></label>`;
+                return `${renderNoteIndent(checkbox[1].length)}<label class="inline-flex items-center gap-1.5 align-middle"><input type="checkbox" data-note-preview-checkbox data-note-target="${escapeAttr(targetId)}" data-note-line="${lineIndex}" class="m-0 h-3 w-3 shrink-0 self-center rounded-sm border-gray-300 text-indigo-600" ${checked ? 'checked' : ''}><span class="leading-relaxed ${checked ? 'text-gray-400 line-through' : ''}">${formatNoteInline(checkbox[3])}</span></label>`;
             }
             const leadingSpaces = line.match(/^\s*/)?.[0]?.length || 0;
             return `${renderNoteIndent(leadingSpaces)}${formatNoteInline(line.slice(leadingSpaces))}`;
@@ -161,18 +161,18 @@
                     <button type="button" data-checklist-note-format="underline" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-bold text-gray-700 underline hover:border-indigo-300 hover:text-indigo-700" title="밑줄 (++텍스트++)" aria-label="선택한 글자 밑줄"><span aria-hidden="true">U</span></button>
                     <button type="button" data-checklist-note-format="strike" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-bold text-gray-700 line-through hover:border-indigo-300 hover:text-indigo-700" title="취소선 (~~텍스트~~)" aria-label="선택한 글자 취소선"><span aria-hidden="true">S</span></button>
                     <span class="mx-0.5 h-5 w-px bg-gray-200" aria-hidden="true"></span>
-                    <button type="button" data-checklist-note-command="indent" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-700" title="3칸 들여쓰기" aria-label="선택한 줄 3칸 들여쓰기"><i class="fas fa-indent text-[11px]"></i></button>
+                    <button type="button" data-checklist-note-command="indent" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-700" title="들여쓰기 (Tab)" aria-label="선택한 줄 들여쓰기"><i class="fas fa-indent text-[11px]"></i></button>
                     <button type="button" data-checklist-note-command="checkbox" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-700" title="체크박스 추가" aria-label="선택한 줄에 체크박스 추가"><i class="fas fa-square-check text-[11px]"></i></button>
                     <button type="button" data-checklist-icon-picker-toggle data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-700" title="아이콘 추가" aria-label="아이콘 선택 열기" aria-expanded="false"><i class="fas fa-icons text-[11px]"></i></button>
                     <div data-checklist-icon-picker-for="${escapeAttr(id)}" class="hidden flex flex-wrap items-center gap-1 rounded-md border border-indigo-100 bg-white p-1 shadow-sm">
                         ${Object.entries(NOTE_ICONS).map(([key, meta]) => `<button type="button" data-checklist-note-icon="${key}" data-note-target="${escapeAttr(id)}" class="flex h-7 w-7 items-center justify-center rounded hover:bg-gray-50 ${meta.tone}" title="${meta.label}" aria-label="${meta.label} 아이콘 추가"><i class="fas ${meta.icon} text-[11px]"></i></button>`).join('')}
                     </div>
                 </div>
-                <textarea id="${escapeAttr(id)}" data-checklist-note-editor class="block w-full ${minHeightClass} resize-y border-0 px-3 py-2.5 text-sm leading-relaxed outline-none bg-white focus:ring-0" placeholder="${escapeAttr(placeholder)}">${escapeHtml(value)}</textarea>
                 <div data-note-preview-for="${escapeAttr(id)}" class="hidden border-t border-gray-100 bg-gray-50/70 px-3 py-2">
-                    <span class="text-[9px] font-bold uppercase tracking-wide text-gray-400">미리보기</span>
-                    <div data-note-preview-content class="mt-1 break-words text-sm leading-relaxed text-gray-700"></div>
+                    <span class="text-[9px] font-bold tracking-wide text-gray-400">적용 미리보기</span>
+                    <div data-note-preview-content class="mt-1 min-h-5 break-words text-sm leading-relaxed text-gray-700"></div>
                 </div>
+                <textarea id="${escapeAttr(id)}" data-checklist-note-editor class="block w-full ${minHeightClass} resize-y border-0 px-3 py-2.5 text-sm leading-relaxed outline-none bg-white focus:ring-0" placeholder="${escapeAttr(placeholder)}">${escapeHtml(value)}</textarea>
             </div>
         `;
     }
@@ -203,9 +203,38 @@
         textarea.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
+    function applyNoteIndentation(textarea, outdent = false) {
+        if (!textarea) return;
+        const start = Number.isFinite(textarea.selectionStart) ? textarea.selectionStart : textarea.value.length;
+        const end = Number.isFinite(textarea.selectionEnd) ? textarea.selectionEnd : start;
+        const lineStart = start > 0 ? textarea.value.lastIndexOf('\n', start - 1) + 1 : 0;
+        const effectiveEnd = end > start && textarea.value[end - 1] === '\n' ? end - 1 : end;
+        const nextLineBreak = textarea.value.indexOf('\n', effectiveEnd);
+        const lineEnd = nextLineBreak === -1 ? textarea.value.length : nextLineBreak;
+        const block = textarea.value.slice(lineStart, lineEnd);
+        const replacement = block.split('\n').map((line) => (
+            outdent ? line.replace(/^ {1,3}/, '') : `   ${line}`
+        )).join('\n');
+        const wasCollapsed = start === end;
+        const firstLineDelta = replacement.split('\n')[0].length - block.split('\n')[0].length;
+        textarea.setRangeText(replacement, lineStart, lineEnd, 'end');
+        if (wasCollapsed) {
+            const nextCursor = Math.max(lineStart, start + firstLineDelta);
+            textarea.setSelectionRange(nextCursor, nextCursor);
+        } else {
+            textarea.setSelectionRange(lineStart, lineStart + replacement.length);
+        }
+        textarea.focus();
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
     function applyNoteCommand(targetId, command) {
         const textarea = document.getElementById(targetId);
         if (!textarea || !['indent', 'checkbox'].includes(command)) return;
+        if (command === 'indent') {
+            applyNoteIndentation(textarea);
+            return;
+        }
         const start = Number.isFinite(textarea.selectionStart) ? textarea.selectionStart : textarea.value.length;
         const end = Number.isFinite(textarea.selectionEnd) ? textarea.selectionEnd : start;
         const lineStart = textarea.value.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
@@ -213,7 +242,6 @@
         const lineEnd = nextLineBreak === -1 ? textarea.value.length : nextLineBreak;
         const block = textarea.value.slice(lineStart, lineEnd);
         const replacement = block.split('\n').map((line) => {
-            if (command === 'indent') return `   ${line}`;
             if (/^\s*- \[[ xX]\]/.test(line)) return line;
             const leading = line.match(/^\s*/)?.[0] || '';
             return `${leading}- [ ] ${line.slice(leading.length)}`;
@@ -1341,7 +1369,6 @@
                 <aside id="checklist-detail-panel" class="min-w-0"></aside>
                 <aside id="checklist-report-library" class="min-w-0"></aside>
             </div>
-            <section id="checklist-life-notes-wrap" class="hidden mt-3 min-w-0"><div id="checklist-life-notes-panel"></div></section>
         `;
         isBound = false;
         bindControls();
@@ -1403,12 +1430,6 @@
         renderTasks();
         renderDetailPanel();
         renderReportLibrary();
-        const lifeNotesWrap = document.getElementById('checklist-life-notes-wrap');
-        if (lifeNotesWrap) lifeNotesWrap.classList.toggle('hidden', activeDomain !== 'life');
-        if (activeDomain === 'life') {
-            window.LifeNotesFeature?.bindControls?.();
-            window.LifeNotesFeature?.render?.();
-        }
         hydrateStepEditors();
         document.querySelectorAll('[data-checklist-note-editor]').forEach((textarea) => updateNotePreview(textarea.id));
         persistChecklistUiState();
@@ -2001,6 +2022,12 @@
             if (detailInput) updateStepMetadata(detailInput.closest('[data-step-editor]'), detailInput.dataset.stepEditorDetail, 'detail', detailInput.value);
         });
         root?.addEventListener('keydown', (event) => {
+            const noteEditor = event.target?.closest?.('[data-checklist-note-editor]');
+            if (noteEditor && event.key === 'Tab') {
+                event.preventDefault();
+                applyNoteIndentation(noteEditor, event.shiftKey);
+                return;
+            }
             const titleDisplay = event.target?.closest?.('[data-checklist-title-display]');
             if (titleDisplay && (event.key === 'Enter' || event.key === ' ')) {
                 event.preventDefault();
