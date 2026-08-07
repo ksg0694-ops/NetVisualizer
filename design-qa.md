@@ -379,3 +379,23 @@ Combined comparison: `docs/audits/update-10402-implementation/desktop-reference-
 No open P0, P1, or P2 findings.
 
 final result: passed
+
+---
+
+# Update 1.04.02 Tab Checkbox Cleanup Design QA
+
+Implementation:
+
+- `docs/audits/update-10402-tab-checkbox-cleanup/desktop.png`
+- `docs/audits/update-10402-tab-checkbox-cleanup/mobile.png`
+
+## Findings and checks
+
+- 체크박스 미리보기가 상세 편집창 위에 배치되어 별도 스크롤 없이 즉시 보인다.
+- 12×12 CSS px 체크박스가 라벨 텍스트와 수직 중앙 정렬된다.
+- 일반 문장과 체크박스 행은 각각의 줄을 유지한다.
+- PC 1280×720 및 모바일 390×844에서 가로 오버플로가 없다.
+- 생활노트 UI는 제거되고 Career/Finance/Life 할 일 그룹은 그대로 유지된다.
+- 열린 P0, P1, P2 디자인 문제가 없다.
+
+final result: passed
