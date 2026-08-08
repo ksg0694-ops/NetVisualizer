@@ -119,23 +119,6 @@
         strike: 'strikeThrough',
     });
 
-    const NOTE_ICONS = Object.freeze({
-        star: { label: '중요', icon: 'fa-star', tone: 'text-amber-500' },
-        lightbulb: { label: '아이디어', icon: 'fa-lightbulb', tone: 'text-amber-500' },
-        calendar: { label: '일정', icon: 'fa-calendar-days', tone: 'text-sky-500' },
-        paperclip: { label: '첨부', icon: 'fa-paperclip', tone: 'text-indigo-500' },
-        warning: { label: '주의', icon: 'fa-triangle-exclamation', tone: 'text-rose-500' },
-    });
-
-    const NOTE_BLOCKS = Object.freeze({
-        paragraph: { label: '일반 문단', hint: '현재 블록 해제', icon: 'fa-align-left', lines: [''] },
-        heading: { label: '제목', hint: 'H1, H2, H3', icon: 'fa-heading', lines: ['## 제목'] },
-        checkbox: { label: '체크박스', hint: '할 일 체크리스트', icon: 'fa-square-check', lines: ['- [ ] 체크 항목'] },
-        callout: { label: '강조', hint: '강조 상자', icon: 'fa-lightbulb', lines: ['> [!NOTE] 강조 내용'] },
-        divider: { label: '구분선', hint: '수평 구분선', icon: 'fa-minus', lines: ['---'] },
-        table: { label: '표', hint: '표 삽입', icon: 'fa-table-cells', lines: ['| 항목 | 내용 |', '| --- | --- |', '|  |  |'] },
-    });
-
     function readNoteVersions() {
         try {
             const value = JSON.parse(localStorage.getItem(NOTE_VERSION_KEY) || '{}');
@@ -176,59 +159,17 @@
         return escapeHtml(String(value || ''))
             .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
             .replace(/\+\+([^+\n]+)\+\+/g, '<u>$1</u>')
-            .replace(/~~([^~\n]+)~~/g, '<s>$1</s>')
-            .replace(/\{\{icon:(star|lightbulb|calendar|paperclip|warning)\}\}/g, (match, key) => {
-                const meta = NOTE_ICONS[key];
-                return `<i data-note-icon="${key}" contenteditable="false" class="fas ${meta.icon} ${meta.tone} mx-0.5" title="${meta.label}" aria-label="${meta.label}"></i>`;
-            });
+            .replace(/~~([^~\n]+)~~/g, '<s>$1</s>');
     }
 
     function renderNoteLine(line, targetId, lineIndex, placeholder = '') {
-        const checkbox = String(line || '').match(/^( *)- \[([ xX])\]\s?(.*)$/);
-        const leadingSpaces = checkbox ? checkbox[1].length : (String(line || '').match(/^ */)?.[0]?.length || 0);
-        const checked = checkbox?.[2]?.toLowerCase() === 'x';
-        let content = checkbox ? checkbox[3] : String(line || '').slice(leadingSpaces);
-        let prefix = '';
-        let block = checkbox ? 'checkbox' : 'paragraph';
-        const heading = !checkbox && content.match(/^(#{1,3})\s+(.*)$/);
-        const callout = !checkbox && content.match(/^> \[!NOTE\]\s?(.*)$/i);
-        if (heading) {
-            prefix = `${heading[1]} `;
-            content = heading[2];
-            block = `heading-${heading[1].length}`;
-        } else if (callout) {
-            prefix = '> [!NOTE] ';
-            content = callout[1];
-            block = 'callout';
-        } else if (!checkbox && content.trim() === '---') {
-            prefix = '---';
-            content = '';
-            block = 'divider';
-        } else if (!checkbox && /^\|.*\|$/.test(content.trim())) {
-            block = 'table';
-        }
+        const rawLine = String(line || '');
+        const leadingSpaces = rawLine.match(/^ */)?.[0]?.length || 0;
+        const content = rawLine.slice(leadingSpaces);
         const indentPx = Math.floor(leadingSpaces / 3) * 20;
-        const lineClass = block === 'callout'
-            ? 'my-1 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2'
-            : block === 'divider'
-                ? 'my-2 min-h-5 border-t border-gray-200'
-                : block === 'table'
-                    ? 'min-h-8 border-x border-b border-gray-200 bg-gray-50 px-2 font-mono first:border-t'
-                    : '';
-        const contentClass = block.startsWith('heading-')
-            ? `${block === 'heading-1' ? 'text-xl' : block === 'heading-2' ? 'text-lg' : 'text-base'} font-black text-gray-900`
-            : block === 'callout'
-                ? 'font-medium text-amber-900'
-                : block === 'divider'
-                    ? 'text-transparent'
-                    : block === 'table'
-                        ? 'text-xs text-gray-600'
-                        : checked ? 'text-gray-400 line-through' : 'text-gray-700';
         return `
-            <div data-note-line data-note-indent="${leadingSpaces}" data-note-prefix="${escapeAttr(prefix)}" data-note-block="${escapeAttr(block)}" data-note-line-index="${lineIndex}" class="flex min-h-7 items-center gap-1.5 ${lineClass}" style="padding-left:${indentPx}px">
-                ${checkbox ? `<input type="checkbox" data-note-surface-checkbox data-note-target="${escapeAttr(targetId)}" contenteditable="false" class="m-0 h-3 w-3 shrink-0 self-center rounded-sm border-gray-300 text-indigo-600" ${checked ? 'checked' : ''}>` : ''}
-                ${block === 'callout' ? '<i class="fas fa-lightbulb shrink-0 self-start pt-1 text-xs text-amber-500" contenteditable="false"></i>' : ''}
-                <span data-note-line-content contenteditable="true" spellcheck="true" data-placeholder="${lineIndex === 0 ? escapeAttr(placeholder) : ''}" class="min-w-0 flex-1 break-words py-0.5 leading-relaxed outline-none ${contentClass}">${formatNoteInline(content)}</span>
+            <div data-note-line data-note-indent="${leadingSpaces}" data-note-line-index="${lineIndex}" class="flex min-h-7 items-center" style="padding-left:${indentPx}px">
+                <span data-note-line-content contenteditable="true" spellcheck="true" data-placeholder="${lineIndex === 0 ? escapeAttr(placeholder) : ''}" class="min-w-0 flex-1 whitespace-pre-wrap break-words py-0.5 leading-relaxed text-gray-700 outline-none">${formatNoteInline(content)}</span>
             </div>
         `;
     }
@@ -246,20 +187,6 @@
                     <button type="button" data-checklist-note-format="bold" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-black text-gray-700 hover:border-indigo-300 hover:text-indigo-700" title="굵게 (**텍스트**)" aria-label="선택한 글자 굵게"><span aria-hidden="true">B</span></button>
                     <button type="button" data-checklist-note-format="underline" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-bold text-gray-700 underline hover:border-indigo-300 hover:text-indigo-700" title="밑줄 (++텍스트++)" aria-label="선택한 글자 밑줄"><span aria-hidden="true">U</span></button>
                     <button type="button" data-checklist-note-format="strike" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-bold text-gray-700 line-through hover:border-indigo-300 hover:text-indigo-700" title="취소선 (~~텍스트~~)" aria-label="선택한 글자 취소선"><span aria-hidden="true">S</span></button>
-                    <span class="mx-0.5 h-5 w-px bg-gray-200" aria-hidden="true"></span>
-                    <button type="button" data-checklist-note-command="indent" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-700" title="들여쓰기 (Tab)" aria-label="선택한 줄 들여쓰기"><i class="fas fa-indent text-[11px]"></i></button>
-                    <button type="button" data-checklist-note-command="checkbox" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-700" title="체크박스 추가" aria-label="선택한 줄에 체크박스 추가"><i class="fas fa-square-check text-[11px]"></i></button>
-                    <button type="button" data-checklist-icon-picker-toggle data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-700" title="아이콘 추가" aria-label="아이콘 선택 열기" aria-expanded="false"><i class="fas fa-icons text-[11px]"></i></button>
-                    <div data-checklist-icon-picker-for="${escapeAttr(id)}" class="hidden flex flex-wrap items-center gap-1 rounded-md border border-indigo-100 bg-white p-1 shadow-sm">
-                        ${Object.entries(NOTE_ICONS).map(([key, meta]) => `<button type="button" data-checklist-note-icon="${key}" data-note-target="${escapeAttr(id)}" class="flex h-7 w-7 items-center justify-center rounded hover:bg-gray-50 ${meta.tone}" title="${meta.label}" aria-label="${meta.label} 아이콘 추가"><i class="fas ${meta.icon} text-[11px]"></i></button>`).join('')}
-                    </div>
-                    <span class="mx-0.5 h-5 w-px bg-gray-200" aria-hidden="true"></span>
-                    <button type="button" data-checklist-block-menu-toggle data-note-target="${escapeAttr(id)}" class="inline-flex h-7 items-center justify-center gap-1 rounded border border-gray-200 bg-white px-2 text-[10px] font-bold text-gray-600 hover:border-indigo-300 hover:text-indigo-700" title="블록 메뉴 열기"><span class="text-sm">/</span> 블록</button>
-                    <button type="button" data-checklist-note-convert="task" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 items-center justify-center gap-1 rounded border border-gray-200 bg-white px-2 text-[10px] font-bold text-gray-600 hover:border-indigo-300 hover:text-indigo-700" title="선택 문장을 새 할 일로 전환"><i class="fas fa-arrow-up-right-dots text-[10px]"></i>할 일</button>
-                    <button type="button" data-checklist-note-convert="step" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 items-center justify-center gap-1 rounded border border-gray-200 bg-white px-2 text-[10px] font-bold text-gray-600 hover:border-indigo-300 hover:text-indigo-700" title="선택 문장을 Step으로 전환"><i class="fas fa-list-ol text-[10px]"></i>Step</button>
-                </div>
-                <div data-checklist-block-menu-for="${escapeAttr(id)}" class="absolute left-2 top-10 z-30 hidden w-56 rounded-lg border border-gray-200 bg-white p-1.5 shadow-xl">
-                    ${Object.entries(NOTE_BLOCKS).map(([key, block]) => `<button type="button" data-checklist-note-block="${key}" data-note-target="${escapeAttr(id)}" class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left hover:bg-indigo-50"><span class="flex h-7 w-7 items-center justify-center rounded-md bg-gray-50 text-gray-500"><i class="fas ${block.icon} text-[11px]"></i></span><span class="min-w-0"><strong class="block text-[11px] text-gray-800">${block.label}</strong><small class="block text-[9px] text-gray-400">${block.hint}</small></span></button>`).join('')}
                 </div>
                 <textarea id="${escapeAttr(id)}" data-checklist-note-source class="hidden" tabindex="-1" aria-hidden="true">${escapeHtml(value)}</textarea>
                 <div data-checklist-note-surface data-note-target="${escapeAttr(id)}" role="textbox" aria-multiline="true" aria-label="상세내역" class="${minHeightClass} cursor-text overflow-y-auto rounded-b-md bg-white px-3 py-2.5 outline-none">
@@ -277,8 +204,6 @@
         if (!node) return '';
         if (node.nodeType === Node.TEXT_NODE) return String(node.nodeValue || '').replace(/\u00a0/g, ' ');
         if (node.nodeType !== Node.ELEMENT_NODE) return '';
-        const iconKey = node.dataset?.noteIcon;
-        if (iconKey && NOTE_ICONS[iconKey]) return `{{icon:${iconKey}}}`;
         if (node.tagName === 'BR') return '';
         const content = Array.from(node.childNodes).map(serializeNoteInline).join('');
         if (['B', 'STRONG'].includes(node.tagName)) return `**${content}**`;
@@ -294,10 +219,8 @@
         const lines = Array.from(surface.children).filter((node) => node.matches?.('[data-note-line]'));
         source.value = lines.map((line) => {
             const indent = Math.max(0, Number(line.dataset.noteIndent) || 0);
-            const checkbox = line.querySelector(':scope > [data-note-surface-checkbox]');
             const content = serializeNoteInline(line.querySelector(':scope > [data-note-line-content]'));
-            const prefix = line.dataset.notePrefix || '';
-            return `${' '.repeat(indent)}${checkbox ? `- [${checkbox.checked ? 'x' : ' '}] ` : prefix}${content}`;
+            return `${' '.repeat(indent)}${content}`;
         }).join('\n');
         if (source.id === 'checklist-detail-note-edit') queueTodoNoteAutosave(source.value);
     }
@@ -335,25 +258,6 @@
         line.style.paddingLeft = `${Math.floor(next / 3) * 20}px`;
     }
 
-    function setNoteLineCheckbox(line, enabled) {
-        const content = line.querySelector(':scope > [data-note-line-content]');
-        const existing = line.querySelector(':scope > [data-note-surface-checkbox]');
-        if (!enabled) {
-            existing?.remove();
-            content?.classList.remove('text-gray-400', 'line-through');
-            content?.classList.add('text-gray-700');
-            return;
-        }
-        if (existing || !content) return;
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.dataset.noteSurfaceCheckbox = '';
-        checkbox.dataset.noteTarget = line.closest('[data-checklist-note-surface]')?.dataset.noteTarget || '';
-        checkbox.contentEditable = 'false';
-        checkbox.className = 'm-0 h-3 w-3 shrink-0 self-center rounded-sm border-gray-300 text-indigo-600';
-        line.insertBefore(checkbox, content);
-    }
-
     function ensureNoteSelection(surface) {
         if (!surface) return null;
         const selection = window.getSelection();
@@ -372,20 +276,12 @@
     function createNoteLineAfter(line) {
         const newLine = line.cloneNode(false);
         newLine.removeAttribute('data-note-line-index');
-        newLine.dataset.notePrefix = '';
-        newLine.dataset.noteBlock = 'paragraph';
-        newLine.className = 'flex min-h-7 items-center gap-1.5';
-        const currentCheckbox = line.querySelector(':scope > [data-note-surface-checkbox]');
-        if (currentCheckbox) {
-            const checkbox = currentCheckbox.cloneNode(false);
-            checkbox.checked = false;
-            newLine.appendChild(checkbox);
-        }
+        newLine.className = 'flex min-h-7 items-center';
         const content = document.createElement('span');
         content.dataset.noteLineContent = '';
         content.contentEditable = 'true';
         content.spellcheck = true;
-        content.className = 'min-w-0 flex-1 break-words py-0.5 text-sm leading-relaxed outline-none text-gray-700';
+        content.className = 'min-w-0 flex-1 whitespace-pre-wrap break-words py-0.5 text-sm leading-relaxed text-gray-700 outline-none';
         newLine.appendChild(content);
         line.after(newLine);
         return content;
@@ -464,27 +360,6 @@
         syncNoteSourceFromSurface(surface);
     }
 
-    function applyNoteCommand(targetId, command) {
-        const surface = getNoteSurface(targetId);
-        if (!surface || !['indent', 'checkbox'].includes(command)) return;
-        if (command === 'indent') {
-            applyNoteIndentation(targetId);
-            return;
-        }
-        const lines = getSelectedNoteLines(surface);
-        const removeCheckboxes = lines.length > 0 && lines.every((line) => line.querySelector(':scope > [data-note-surface-checkbox]'));
-        lines.forEach((line) => setNoteLineCheckbox(line, !removeCheckboxes));
-        syncNoteSourceFromSurface(surface);
-    }
-
-    function insertNoteIcon(targetId, iconKey) {
-        const surface = getNoteSurface(targetId);
-        const meta = NOTE_ICONS[iconKey];
-        if (!surface || !meta || !ensureNoteSelection(surface)) return;
-        document.execCommand('insertHTML', false, `<i data-note-icon="${iconKey}" contenteditable="false" class="fas ${meta.icon} ${meta.tone} mx-0.5" title="${meta.label}" aria-label="${meta.label}"></i>&nbsp;`);
-        syncNoteSourceFromSurface(surface);
-    }
-
     function setTodoAutosaveVisual(state, label) {
         const status = document.getElementById('checklist-note-autosave-status');
         if (!status) return;
@@ -512,83 +387,6 @@
             const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
             setTodoAutosaveVisual('saved', `자동 저장됨 ${time}`);
         }, 700);
-    }
-
-    function getNoteActionText(targetId) {
-        const surface = getNoteSurface(targetId);
-        if (!surface) return '';
-        const selection = window.getSelection();
-        if (selection?.rangeCount && surface.contains(selection.anchorNode) && surface.contains(selection.focusNode)) {
-            const selected = selection.toString().trim();
-            if (selected) return selected;
-        }
-        return getSelectedNoteLines(surface)
-            .map((line) => serializeNoteInline(line.querySelector('[data-note-line-content]')))
-            .join(' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-    }
-
-    function applyNoteBlock(targetId, blockKey) {
-        const surface = getNoteSurface(targetId);
-        const block = NOTE_BLOCKS[blockKey];
-        if (!surface || !block) return;
-        syncNoteSourceFromSurface(surface);
-        const source = document.getElementById(targetId);
-        const selectedLines = getSelectedNoteLines(surface);
-        const activeLine = selectedLines[0];
-        const lineIndex = Math.max(0, Array.from(surface.children).indexOf(activeLine));
-        const currentText = serializeNoteInline(activeLine?.querySelector('[data-note-line-content]')).trim();
-        const reusableText = currentText && currentText !== '/' ? currentText : '';
-        const currentBlock = String(activeLine?.dataset.noteBlock || 'paragraph').replace(/^heading-\d$/, 'heading');
-        const resolvedBlockKey = blockKey !== 'paragraph' && currentBlock === blockKey ? 'paragraph' : blockKey;
-        const paragraphText = currentBlock === 'table'
-            ? reusableText.replace(/^\|\s*/, '').replace(/\s*\|$/, '')
-            : reusableText;
-        const blockLines = resolvedBlockKey === 'paragraph'
-            ? [paragraphText]
-            : reusableText && ['heading', 'checkbox', 'callout'].includes(resolvedBlockKey)
-                ? [resolvedBlockKey === 'heading' ? `## ${reusableText}` : resolvedBlockKey === 'checkbox' ? `- [ ] ${reusableText}` : `> [!NOTE] ${reusableText}`]
-                : NOTE_BLOCKS[resolvedBlockKey].lines;
-        const lines = String(source?.value || '').split('\n');
-        lines.splice(lineIndex, 1, ...blockLines);
-        source.value = lines.join('\n');
-        surface.innerHTML = renderNoteSurface(source.value, targetId);
-        surface.dataset.activeLineIndex = String(lineIndex + blockLines.length - 1);
-        const focusLine = surface.children[lineIndex + blockLines.length - 1]?.querySelector('[data-note-line-content]');
-        placeNoteCaret(focusLine, true);
-        syncNoteSourceFromSurface(surface);
-        document.querySelector(`[data-checklist-block-menu-for="${CSS.escape(targetId)}"]`)?.classList.add('hidden');
-        toast(resolvedBlockKey === 'paragraph' ? '블록을 일반 문단으로 변경했습니다.' : `${NOTE_BLOCKS[resolvedBlockKey].label} 블록을 적용했습니다.`, 'info');
-    }
-
-    async function convertNoteSelection(targetId, kind) {
-        const text = getNoteActionText(targetId).slice(0, 180);
-        const parentTask = tasks.find((item) => item.id === activeTaskId);
-        if (!text || !parentTask) {
-            toast('전환할 문장이나 줄을 먼저 선택해주세요.', 'warning');
-            return;
-        }
-        if (kind === 'task') {
-            const task = normalizeTask({
-                title: text,
-                note: `${parentTask.title}에서 전환`,
-                domain: parentTask.domain,
-                category: parentTask.category,
-                displayOrder: getTopDisplayOrder(),
-            });
-            tasks = saveStore([task, ...tasks]);
-            await persistRemoteTask(task);
-            render({ skipRemoteLoad: true });
-            toast('선택 문장을 새 할 일로 전환했습니다.', 'info');
-            return;
-        }
-        parentTask.steps = [...parentTask.steps, normalizeStep({ title: text, groupName: '노트에서 전환' })];
-        parentTask.updatedAt = new Date().toISOString();
-        tasks = saveStore(tasks);
-        await persistRemoteTask(parentTask);
-        render({ skipRemoteLoad: true });
-        toast('선택 문장을 Step으로 전환했습니다.', 'info');
     }
 
     function renderNoteVersionPanel(task) {
@@ -2143,7 +1941,7 @@
         isBound = true;
         const root = document.getElementById('routine-checklist-view');
         root?.addEventListener('pointerdown', (event) => {
-            if (event.target.closest('[data-checklist-note-format], [data-checklist-note-command], [data-checklist-note-icon], [data-checklist-icon-picker-toggle], [data-checklist-block-menu-toggle], [data-checklist-note-block], [data-checklist-note-convert]')) {
+            if (event.target.closest('[data-checklist-note-format]')) {
                 event.preventDefault();
             }
         });
@@ -2151,47 +1949,6 @@
             const noteFormatButton = event.target.closest('[data-checklist-note-format]');
             if (noteFormatButton) {
                 applyNoteFormat(noteFormatButton.dataset.noteTarget, noteFormatButton.dataset.checklistNoteFormat);
-                return;
-            }
-            const noteCommandButton = event.target.closest('[data-checklist-note-command]');
-            if (noteCommandButton) {
-                applyNoteCommand(noteCommandButton.dataset.noteTarget, noteCommandButton.dataset.checklistNoteCommand);
-                return;
-            }
-            const iconPickerToggle = event.target.closest('[data-checklist-icon-picker-toggle]');
-            if (iconPickerToggle) {
-                const targetId = iconPickerToggle.dataset.noteTarget;
-                const picker = document.querySelector(`[data-checklist-icon-picker-for="${CSS.escape(targetId)}"]`);
-                const willOpen = picker?.classList.contains('hidden');
-                picker?.classList.toggle('hidden', !willOpen);
-                iconPickerToggle.setAttribute('aria-expanded', String(Boolean(willOpen)));
-                return;
-            }
-            const noteIconButton = event.target.closest('[data-checklist-note-icon]');
-            if (noteIconButton) {
-                insertNoteIcon(noteIconButton.dataset.noteTarget, noteIconButton.dataset.checklistNoteIcon);
-                const picker = document.querySelector(`[data-checklist-icon-picker-for="${CSS.escape(noteIconButton.dataset.noteTarget)}"]`);
-                picker?.classList.add('hidden');
-                return;
-            }
-            const blockMenuToggle = event.target.closest('[data-checklist-block-menu-toggle]');
-            if (blockMenuToggle) {
-                const targetId = blockMenuToggle.dataset.noteTarget;
-                const menu = document.querySelector(`[data-checklist-block-menu-for="${CSS.escape(targetId)}"]`);
-                document.querySelectorAll('[data-checklist-block-menu-for]').forEach((item) => {
-                    if (item !== menu) item.classList.add('hidden');
-                });
-                menu?.classList.toggle('hidden');
-                return;
-            }
-            const noteBlockButton = event.target.closest('[data-checklist-note-block]');
-            if (noteBlockButton) {
-                applyNoteBlock(noteBlockButton.dataset.noteTarget, noteBlockButton.dataset.checklistNoteBlock);
-                return;
-            }
-            const noteConvertButton = event.target.closest('[data-checklist-note-convert]');
-            if (noteConvertButton) {
-                convertNoteSelection(noteConvertButton.dataset.noteTarget, noteConvertButton.dataset.checklistNoteConvert);
                 return;
             }
             if (event.target.closest('[data-checklist-version-toggle]')) {
@@ -2358,15 +2115,6 @@
             startTitleEditing(title.dataset.checklistTitleDisplay);
         });
         root?.addEventListener('change', (event) => {
-            const noteCheckbox = event.target.closest('[data-note-surface-checkbox]');
-            if (noteCheckbox) {
-                const content = noteCheckbox.closest('[data-note-line]')?.querySelector('[data-note-line-content]');
-                content?.classList.toggle('text-gray-400', noteCheckbox.checked);
-                content?.classList.toggle('line-through', noteCheckbox.checked);
-                content?.classList.toggle('text-gray-700', !noteCheckbox.checked);
-                syncNoteSourceFromSurface(noteCheckbox.closest('[data-checklist-note-surface]'));
-                return;
-            }
             if (event.target.matches('#checklist-status-filter')) {
                 activeFilter = event.target.value || 'open';
                 render({ skipRemoteLoad: true });
@@ -2412,9 +2160,6 @@
                 rememberActiveNoteLine(noteContent);
                 const surface = noteContent.closest('[data-checklist-note-surface]');
                 syncNoteSourceFromSurface(surface);
-                const targetId = surface?.dataset.noteTarget;
-                const menu = targetId ? document.querySelector(`[data-checklist-block-menu-for="${CSS.escape(targetId)}"]`) : null;
-                menu?.classList.toggle('hidden', noteContent.textContent.trim() !== '/');
             }
             const groupInput = event.target.closest('[data-step-editor-group]');
             if (groupInput) updateStepMetadata(groupInput.closest('[data-step-editor]'), groupInput.dataset.stepEditorGroup, 'groupName', groupInput.value);
@@ -2438,10 +2183,6 @@
             if (noteContent && event.key === 'Backspace' && mergeNoteLineBackward(noteContent)) {
                 event.preventDefault();
                 return;
-            }
-            if (noteContent && event.key === 'Escape') {
-                const targetId = noteContent.closest('[data-checklist-note-surface]')?.dataset.noteTarget;
-                if (targetId) document.querySelector(`[data-checklist-block-menu-for="${CSS.escape(targetId)}"]`)?.classList.add('hidden');
             }
             const titleDisplay = event.target?.closest?.('[data-checklist-title-display]');
             if (titleDisplay && (event.key === 'Enter' || event.key === ' ')) {
