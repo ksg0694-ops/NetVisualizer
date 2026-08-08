@@ -3,14 +3,6 @@
     const VERSION_KEY = 'netvisualizer.learning.archive.versions.v1';
     const UI_KEY = 'netvisualizer.learning.archive.ui.v1';
     const TABLE_NAME = 'learning_archive_notes';
-    const BLOCKS = Object.freeze({
-        heading: { label: '제목', hint: 'H1, H2, H3', icon: 'fa-heading', lines: ['## 제목'] },
-        checkbox: { label: '체크박스', hint: '학습 체크리스트', icon: 'fa-square-check', lines: ['- [ ] 체크 항목'] },
-        callout: { label: '강조', hint: '핵심 포인트', icon: 'fa-lightbulb', lines: ['> [!NOTE] 핵심 내용'] },
-        divider: { label: '구분선', hint: '내용 구분', icon: 'fa-minus', lines: ['---'] },
-        table: { label: '표', hint: '비교표 삽입', icon: 'fa-table-cells', lines: ['| 항목 | 내용 |', '| --- | --- |', '|  |  |'] },
-    });
-
     let entries = [];
     let activeId = null;
     let searchText = '';
@@ -608,24 +600,11 @@
     }
 
     function renderEditorLine(line, index) {
-        const checkbox = String(line || '').match(/^( *)- \[([ xX])\]\s?(.*)$/);
-        const indent = checkbox ? checkbox[1].length : (String(line || '').match(/^ */)?.[0]?.length || 0);
-        const checked = checkbox?.[2]?.toLowerCase() === 'x';
-        let content = checkbox ? checkbox[3] : String(line || '').slice(indent);
-        let prefix = '';
-        let block = checkbox ? 'checkbox' : 'paragraph';
-        const heading = !checkbox && content.match(/^(#{1,3})\s+(.*)$/);
-        const callout = !checkbox && content.match(/^> \[!NOTE\]\s?(.*)$/i);
-        if (heading) { prefix = `${heading[1]} `; content = heading[2]; block = `heading-${heading[1].length}`; }
-        else if (callout) { prefix = '> [!NOTE] '; content = callout[1]; block = 'callout'; }
-        else if (!checkbox && content.trim() === '---') { prefix = '---'; content = ''; block = 'divider'; }
-        else if (!checkbox && /^\|.*\|$/.test(content.trim())) block = 'table';
-        const shellClass = block === 'callout' ? 'my-1 rounded-md border border-amber-200 bg-amber-50 px-3 py-2' : block === 'divider' ? 'my-3 min-h-5 border-t border-gray-200' : block === 'table' ? 'min-h-8 border-x border-b border-gray-200 bg-gray-50 px-2 font-mono' : '';
-        const contentClass = block.startsWith('heading-') ? `${block === 'heading-1' ? 'text-2xl' : block === 'heading-2' ? 'text-xl' : 'text-lg'} font-black text-gray-900` : block === 'callout' ? 'font-medium text-amber-900' : block === 'divider' ? 'text-transparent' : block === 'table' ? 'text-xs text-gray-600' : checked ? 'text-gray-400 line-through' : 'text-gray-700';
-        return `<div data-learning-line data-learning-indent="${indent}" data-learning-prefix="${escapeAttr(prefix)}" data-learning-block="${escapeAttr(block)}" data-learning-line-index="${index}" class="flex min-h-8 items-center gap-2 ${shellClass}" style="padding-left:${Math.floor(indent / 3) * 20}px">
-            ${checkbox ? `<button type="button" role="checkbox" aria-checked="${checked}" aria-label="학습 체크 항목 완료" data-learning-checkbox data-learning-checked="${checked}" contenteditable="false" class="m-0 flex h-3 w-3 shrink-0 items-center justify-center rounded-sm border ${checked ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-300 bg-white text-transparent'}"><i class="fas fa-check text-[7px]"></i></button>` : ''}
-            ${block === 'callout' ? '<i class="fas fa-lightbulb self-start pt-1.5 text-xs text-amber-500" contenteditable="false"></i>' : ''}
-            <span data-learning-line-content data-placeholder="${index === 0 ? '개념, 핵심 요약, 질문을 적어보세요.' : ''}" class="min-w-0 flex-1 break-words py-1 leading-7 outline-none ${contentClass}">${formatInline(content)}</span>
+        const raw = String(line || '');
+        const indent = raw.match(/^ */)?.[0]?.length || 0;
+        const content = raw.slice(indent);
+        return `<div data-learning-line data-learning-indent="${indent}" data-learning-line-index="${index}" class="flex min-h-8 items-center" style="padding-left:${Math.floor(indent / 3) * 20}px">
+            <span data-learning-line-content data-placeholder="${index === 0 ? '내용을 입력하세요.' : ''}" class="min-w-0 flex-1 whitespace-pre-wrap break-words py-1 leading-7 text-gray-700 outline-none">${formatInline(content)}</span>
         </div>`;
     }
 
@@ -652,10 +631,8 @@
         if (!surface || !source) return '';
         source.value = Array.from(surface.children).filter((node) => node.matches?.('[data-learning-line]')).map((line) => {
             const indent = Math.max(0, Number(line.dataset.learningIndent) || 0);
-            const checkbox = line.querySelector(':scope > [data-learning-checkbox]');
-            const prefix = line.dataset.learningPrefix || '';
             const content = serializeInline(line.querySelector(':scope > [data-learning-line-content]'));
-            return `${' '.repeat(indent)}${checkbox ? `- [${checkbox.dataset.learningChecked === 'true' ? 'x' : ' '}] ` : prefix}${content}`;
+            return `${' '.repeat(indent)}${content}`;
         }).join('\n');
         updateEditorCharacterCount(source.value);
         return source.value;
@@ -664,22 +641,6 @@
     function updateEditorCharacterCount(value) {
         const count = document.getElementById('learning-character-count');
         if (count) count.textContent = String(value || '').length.toLocaleString('ko-KR');
-    }
-
-    function setLearningCheckboxState(checkbox, checked) {
-        if (!checkbox) return;
-        checkbox.dataset.learningChecked = String(Boolean(checked));
-        checkbox.setAttribute('aria-checked', String(Boolean(checked)));
-        checkbox.classList.toggle('border-indigo-600', checked);
-        checkbox.classList.toggle('bg-indigo-600', checked);
-        checkbox.classList.toggle('text-white', checked);
-        checkbox.classList.toggle('border-gray-300', !checked);
-        checkbox.classList.toggle('bg-white', !checked);
-        checkbox.classList.toggle('text-transparent', !checked);
-        const content = checkbox.closest('[data-learning-line]')?.querySelector('[data-learning-line-content]');
-        content?.classList.toggle('line-through', checked);
-        content?.classList.toggle('text-gray-400', checked);
-        content?.classList.toggle('text-gray-700', !checked);
     }
 
     function placeCaret(content, atEnd = false) {
@@ -982,61 +943,12 @@
         }, 800);
     }
 
-    function getSelectedText() {
-        const surface = document.getElementById('learning-editor-surface');
-        const selection = window.getSelection();
-        if (!surface) return '';
-        if (selection?.rangeCount && surface.contains(selection.anchorNode) && surface.contains(selection.focusNode)) {
-            const selected = selection.toString().trim();
-            if (selected) return selected;
-        }
-        const line = getEditorContentFromSelection(surface)?.closest('[data-learning-line]') || surface.querySelector('[data-learning-line]');
-        return serializeInline(line?.querySelector('[data-learning-line-content]')).trim();
-    }
-
     function applyFormat(kind) {
         const command = kind === 'bold' ? 'bold' : kind === 'underline' ? 'underline' : 'strikeThrough';
         document.getElementById('learning-editor-surface')?.focus();
         document.execCommand(command, false);
         syncEditorSource();
         queueAutosave();
-    }
-
-    function applyBlock(kind) {
-        const block = BLOCKS[kind];
-        const surface = document.getElementById('learning-editor-surface');
-        const source = document.getElementById('learning-content');
-        if (!block || !surface || !source) return;
-        syncEditorSource();
-        const selectedLine = getEditorContentFromSelection(surface)?.closest('[data-learning-line]');
-        const index = Math.max(0, Array.from(surface.children).indexOf(selectedLine));
-        const currentText = serializeInline(selectedLine?.querySelector('[data-learning-line-content]')).trim();
-        const reusableText = currentText && currentText !== '/' ? currentText : '';
-        const blockLines = reusableText && ['heading', 'checkbox', 'callout'].includes(kind)
-            ? [kind === 'heading' ? `## ${reusableText}` : kind === 'checkbox' ? `- [ ] ${reusableText}` : `> [!NOTE] ${reusableText}`]
-            : block.lines;
-        const lines = source.value.split('\n');
-        lines.splice(index, 1, ...blockLines);
-        source.value = lines.join('\n');
-        surface.innerHTML = renderEditorSurface(source.value);
-        updateEditorCharacterCount(source.value);
-        document.querySelector('[data-learning-block-menu]')?.classList.add('hidden');
-        queueAutosave();
-    }
-
-    function keywordSet(entry) {
-        return new Set([entry.title, entry.field, entry.item, entry.chapter, ...entry.tags]
-            .join(' ').toLowerCase().split(/[^0-9a-zA-Z가-힣]+/).filter((word) => word.length > 1));
-    }
-
-    function getTodoContext(entry) {
-        const tasks = window.ChecklistFeature?.getAllTasks?.() || [];
-        const words = keywordSet(entry);
-        return tasks.map((task) => {
-            const haystack = `${task.title} ${task.note}`.toLowerCase();
-            const score = [...words].reduce((sum, word) => sum + (haystack.includes(word) ? 1 : 0), 0);
-            return { ...task, score };
-        }).filter((task) => task.score > 0).sort((a, b) => b.score - a.score || String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0, 4);
     }
 
     function getNoteLinks(content) {
@@ -1046,15 +958,9 @@
     function renderConnectionDock(entry) {
         const outgoing = getNoteLinks(entry.content).map((title) => entries.find((item) => item.title === title)).filter(Boolean);
         const backlinks = entries.filter((item) => item.id !== entry.id && getNoteLinks(item.content).includes(entry.title));
-        const tasks = getTodoContext(entry);
-        const steps = tasks.flatMap((task) => task.steps.filter((step) => keywordSet(entry).has(step.title.toLowerCase()) || [...keywordSet(entry)].some((word) => step.title.toLowerCase().includes(word))).map((step) => ({ ...step, task })) ).slice(0, 3);
-        const reports = tasks.flatMap((task) => task.reportFiles.filter((file) => /^https?:\/\//i.test(String(file.url || ''))).map((file) => ({ ...file, task }))).slice(0, 3);
         const noteCards = [...outgoing, ...backlinks.filter((item) => !outgoing.some((out) => out.id === item.id))];
         return `<div class="space-y-4">
             <section><p class="mb-2 text-[10px] font-bold text-gray-400">백링크 · 연결 노트 (${noteCards.length})</p><div class="space-y-1.5">${noteCards.length ? noteCards.map((note) => `<button type="button" data-learning-open="${escapeAttr(note.id)}" class="flex w-full items-start gap-2 rounded-md border border-gray-200 bg-white p-2.5 text-left hover:border-indigo-200"><i class="far fa-note-sticky mt-0.5 text-xs text-indigo-400"></i><span class="min-w-0"><strong class="block truncate text-[10px] text-gray-700">${escapeHtml(note.title)}</strong><small class="block truncate text-[9px] text-gray-400">${escapeHtml(note.chapter)} · ${escapeHtml(note.item)}</small></span></button>`).join('') : '<p class="rounded-md border border-dashed border-gray-200 px-3 py-4 text-center text-[9px] text-gray-400">연결된 노트가 없습니다.</p>'}</div></section>
-            <section><p class="mb-2 text-[10px] font-bold text-gray-400">관련 할 일 (${tasks.length})</p><div class="space-y-1.5">${tasks.length ? tasks.map((task) => `<button type="button" data-learning-open-task="${escapeAttr(task.id)}" class="flex w-full items-center gap-2 rounded-md border border-gray-200 bg-white p-2.5 text-left hover:border-indigo-200"><span class="h-3 w-3 rounded border ${task.completed ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-gray-300'}"></span><span class="min-w-0 flex-1"><strong class="block truncate text-[10px] text-gray-700">${escapeHtml(task.title)}</strong><small class="block text-[9px] text-gray-400">${escapeHtml(task.domainLabel)} · ${task.steps.filter((step) => step.done).length}/${task.steps.length} Step</small></span></button>`).join('') : '<p class="rounded-md border border-dashed border-gray-200 px-3 py-4 text-center text-[9px] text-gray-400">키워드가 겹치는 할 일이 없습니다.</p>'}</div></section>
-            ${steps.length ? `<section><p class="mb-2 text-[10px] font-bold text-gray-400">관련 Step (${steps.length})</p><div class="space-y-1.5">${steps.map((step) => `<button type="button" data-learning-open-task="${escapeAttr(step.task.id)}" class="flex w-full items-center gap-2 rounded-md border border-gray-200 bg-white p-2.5 text-left hover:border-indigo-200"><i class="fas fa-list-ol text-[10px] text-indigo-400"></i><span class="min-w-0"><strong class="block truncate text-[10px] text-gray-700">${escapeHtml(step.title)}</strong><small class="block truncate text-[9px] text-gray-400">${escapeHtml(step.task.title)}</small></span></button>`).join('')}</div></section>` : ''}
-            ${reports.length ? `<section><p class="mb-2 text-[10px] font-bold text-gray-400">연결된 Report (${reports.length})</p><div class="space-y-1.5">${reports.map((report) => `<a href="${escapeAttr(report.url)}" target="_blank" rel="noopener noreferrer" class="flex w-full items-center gap-2 rounded-md border border-gray-200 bg-white p-2.5 hover:border-indigo-200"><i class="fas fa-file-powerpoint text-xs text-orange-500"></i><span class="min-w-0"><strong class="block truncate text-[10px] text-gray-700">${escapeHtml(report.name || 'Report 링크')}</strong><small class="block truncate text-[9px] text-gray-400">${escapeHtml(report.task.title)}</small></span></a>`).join('')}</div></section>` : ''}
             <button type="button" data-learning-add-link class="w-full rounded-md border border-dashed border-indigo-200 px-3 py-2 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50"><i class="fas fa-plus mr-1"></i>노트 연결 추가</button>
         </div>`;
     }
@@ -1069,7 +975,7 @@
             const match = line.match(/^(#{1,3})\s+(.+)$/);
             return match ? { level: match[1].length, title: match[2], index } : null;
         }).filter(Boolean);
-        return `<div class="space-y-1">${headings.length ? headings.map((heading) => `<button type="button" data-learning-toc-line="${heading.index}" class="block w-full truncate rounded-md px-2 py-2 text-left text-[10px] text-gray-600 hover:bg-indigo-50 hover:text-indigo-700" style="padding-left:${8 + (heading.level - 1) * 14}px">${escapeHtml(heading.title)}</button>`).join('') : '<p class="rounded-md border border-dashed border-gray-200 px-3 py-8 text-center text-[9px] text-gray-400">제목 블록을 추가하면 목차가 생성됩니다.</p>'}</div>`;
+        return `<div class="space-y-1">${headings.length ? headings.map((heading) => `<button type="button" data-learning-toc-line="${heading.index}" class="block w-full truncate rounded-md px-2 py-2 text-left text-[10px] text-gray-600 hover:bg-indigo-50 hover:text-indigo-700" style="padding-left:${8 + (heading.level - 1) * 14}px">${escapeHtml(heading.title)}</button>`).join('') : '<p class="rounded-md border border-dashed border-gray-200 px-3 py-8 text-center text-[9px] text-gray-400">목차로 표시할 줄이 없습니다.</p>'}</div>`;
     }
 
     function renderContextDock(entry) {
@@ -1099,9 +1005,7 @@
             <div class="relative border-b border-gray-100">
                 <div class="flex flex-wrap items-center gap-1 px-4 py-2">
                     <button type="button" data-learning-format="bold" class="h-7 w-7 rounded border border-gray-200 text-xs font-black text-gray-700">B</button><button type="button" data-learning-format="underline" class="h-7 w-7 rounded border border-gray-200 text-xs font-bold text-gray-700 underline">U</button><button type="button" data-learning-format="strike" class="h-7 w-7 rounded border border-gray-200 text-xs font-bold text-gray-700 line-through">S</button>
-                    <span class="mx-1 h-5 w-px bg-gray-200"></span><button type="button" data-learning-block-toggle class="inline-flex h-7 items-center gap-1 rounded border border-gray-200 px-2 text-[10px] font-bold text-gray-600"><span class="text-sm">/</span> 블록</button><button type="button" data-learning-convert="task" class="inline-flex h-7 items-center gap-1 rounded border border-gray-200 px-2 text-[10px] font-bold text-gray-600"><i class="fas fa-arrow-up-right-dots text-[9px]"></i>할 일로 전환</button><button type="button" data-learning-convert="step" class="inline-flex h-7 items-center gap-1 rounded border border-gray-200 px-2 text-[10px] font-bold text-gray-600"><i class="fas fa-list-ol text-[9px]"></i>Step으로 전환</button>
                 </div>
-                <div data-learning-block-menu class="absolute left-4 top-11 z-30 hidden w-56 rounded-lg border border-gray-200 bg-white p-1.5 shadow-xl">${Object.entries(BLOCKS).map(([key, block]) => `<button type="button" data-learning-block="${key}" class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left hover:bg-indigo-50"><span class="flex h-7 w-7 items-center justify-center rounded bg-gray-50 text-gray-500"><i class="fas ${block.icon} text-[10px]"></i></span><span><strong class="block text-[10px] text-gray-800">${block.label}</strong><small class="block text-[9px] text-gray-400">${block.hint}</small></span></button>`).join('')}</div>
             </div>
             <section class="bg-white">
                 <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-50 px-5 py-2.5">
@@ -1111,7 +1015,7 @@
                 <textarea id="learning-content" class="hidden">${escapeHtml(entry.content)}</textarea>
                 <div id="learning-editor-surface" data-learning-detail-editor role="textbox" aria-label="노트 상세내역" aria-multiline="true" contenteditable="true" spellcheck="true" class="min-h-[calc(100dvh-325px)] cursor-text overflow-y-auto border border-transparent px-5 py-4 text-sm outline-none transition focus:border-indigo-200 focus:bg-indigo-50/20">${renderEditorSurface(entry.content)}</div>
             </section>
-            <div class="flex items-center justify-between border-t border-gray-100 px-4 py-2 text-[9px] text-gray-400"><span>문자 <span id="learning-character-count">${entry.content.length.toLocaleString('ko-KR')}</span></span><span>Markdown 토큰 지원 · Tab 들여쓰기</span></div>
+            <div class="flex items-center justify-between border-t border-gray-100 px-4 py-2 text-[9px] text-gray-400"><span>문자 <span id="learning-character-count">${entry.content.length.toLocaleString('ko-KR')}</span></span><span>자동 저장 · Tab 들여쓰기</span></div>
         </main>${renderContextDock(entry)}`;
     }
 
@@ -1147,8 +1051,6 @@
         editorInputFrame = requestAnimationFrame(() => {
             editorInputFrame = null;
             const value = syncEditorSource();
-            const menu = document.querySelector('[data-learning-block-menu]');
-            menu?.classList.toggle('hidden', getEditorContentFromSelection()?.textContent.trim() !== '/');
             if (value !== undefined) queueAutosave();
         });
     }
@@ -1194,20 +1096,6 @@
         window.showToast?.('선택한 학습 노트 버전을 복원했습니다.', 'info');
     }
 
-    async function convertSelection(kind) {
-        const entry = current();
-        const text = getSelectedText().replace(/\s+/g, ' ').trim().slice(0, 180);
-        if (!entry || !text) {
-            window.showToast?.('전환할 문장이나 줄을 먼저 선택해주세요.', 'warning');
-            return;
-        }
-        const related = getTodoContext(entry);
-        if (kind === 'task') await window.ChecklistFeature?.createTaskFromText?.(text, 'career', `${entry.title}에서 전환`);
-        else await window.ChecklistFeature?.addStepFromText?.(text, related[0]?.id || '', entry.title, related[0]?.domain || 'career');
-        window.showToast?.(kind === 'task' ? '선택 문장을 새 할 일로 전환했습니다.' : '선택 문장을 관련 할 일의 Step으로 전환했습니다.', 'info');
-        render({ skipRemote: true });
-    }
-
     function bindControls() {
         if (bound) return;
         bound = true;
@@ -1215,7 +1103,7 @@
         ensureTreeDragStyles();
         root?.addEventListener('pointerdown', (event) => {
             beginEditorSelectionGesture(event);
-            if (event.target.closest('[data-learning-format], [data-learning-block-toggle], [data-learning-block], [data-learning-convert]')) {
+            if (event.target.closest('[data-learning-format]')) {
                 event.preventDefault();
                 return;
             }
@@ -1255,26 +1143,13 @@
             }
             const entry = current();
             if (!entry) return;
-            const checkbox = event.target.closest('[data-learning-checkbox]');
-            if (checkbox) {
-                event.preventDefault();
-                setLearningCheckboxState(checkbox, checkbox.dataset.learningChecked !== 'true');
-                syncEditorSource();
-                queueAutosave();
-                return;
-            }
             const detailSurface = event.target.closest('#learning-editor-surface');
-            if (detailSurface && !event.target.closest('[data-learning-checkbox], [data-learning-note-link]')) {
+            if (detailSurface && !event.target.closest('[data-learning-note-link]')) {
                 focusLearningDetailEditorAtPoint(event);
                 return;
             }
             const format = event.target.closest('[data-learning-format]');
             if (format) { applyFormat(format.dataset.learningFormat); return; }
-            if (event.target.closest('[data-learning-block-toggle]')) { document.querySelector('[data-learning-block-menu]')?.classList.toggle('hidden'); return; }
-            const block = event.target.closest('[data-learning-block]');
-            if (block) { applyBlock(block.dataset.learningBlock); return; }
-            const convert = event.target.closest('[data-learning-convert]');
-            if (convert) { await convertSelection(convert.dataset.learningConvert); return; }
             const dock = event.target.closest('[data-learning-dock-tab]');
             if (dock) { dockTab = dock.dataset.learningDockTab; render({ skipRemote: true }); return; }
             if (event.target.closest('[data-learning-meta-toggle]')) {
@@ -1300,8 +1175,6 @@
                 }
                 return;
             }
-            const task = event.target.closest('[data-learning-open-task]');
-            if (task) { window.switchView?.('routine-checklist-view'); window.ChecklistFeature?.selectTask?.(task.dataset.learningOpenTask); return; }
             const restore = event.target.closest('[data-learning-version-restore]');
             if (restore) { await restoreVersion(restore.dataset.learningVersionRestore); return; }
             const toc = event.target.closest('[data-learning-toc-line]');
@@ -1386,7 +1259,6 @@
                 event.preventDefault();
                 return;
             }
-            if (event.key === 'Escape') document.querySelector('[data-learning-block-menu]')?.classList.add('hidden');
         });
         window.addEventListener('pagehide', () => {
             clearTimeout(autosaveTimer);
