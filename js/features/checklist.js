@@ -169,7 +169,7 @@
         const indentPx = Math.floor(leadingSpaces / 3) * 20;
         return `
             <div data-note-line data-note-indent="${leadingSpaces}" data-note-line-index="${lineIndex}" class="flex min-h-7 items-center" style="padding-left:${indentPx}px">
-                <span data-note-line-content contenteditable="true" spellcheck="true" data-placeholder="${lineIndex === 0 ? escapeAttr(placeholder) : ''}" class="min-w-0 flex-1 whitespace-pre-wrap break-words py-0.5 leading-relaxed text-gray-700 outline-none">${formatNoteInline(content)}</span>
+                <span data-note-line-content data-placeholder="${lineIndex === 0 ? escapeAttr(placeholder) : ''}" class="min-w-0 flex-1 whitespace-pre-wrap break-words py-0.5 leading-relaxed text-gray-700 outline-none">${formatNoteInline(content)}</span>
             </div>
         `;
     }
@@ -189,7 +189,7 @@
                     <button type="button" data-checklist-note-format="strike" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-bold text-gray-700 line-through hover:border-indigo-300 hover:text-indigo-700" title="취소선 (~~텍스트~~)" aria-label="선택한 글자 취소선"><span aria-hidden="true">S</span></button>
                 </div>
                 <textarea id="${escapeAttr(id)}" data-checklist-note-source class="hidden" tabindex="-1" aria-hidden="true">${escapeHtml(value)}</textarea>
-                <div data-checklist-note-surface data-note-target="${escapeAttr(id)}" role="textbox" aria-multiline="true" aria-label="상세내역" class="${minHeightClass} cursor-text overflow-y-auto rounded-b-md bg-white px-3 py-2.5 outline-none">
+                <div data-checklist-note-surface data-note-target="${escapeAttr(id)}" role="textbox" aria-multiline="true" aria-label="상세내역" contenteditable="true" spellcheck="true" class="${minHeightClass} cursor-text overflow-y-auto rounded-b-md bg-white px-3 py-2.5 outline-none">
                     ${renderNoteSurface(value, id, placeholder)}
                 </div>
             </div>
@@ -264,7 +264,7 @@
         if (selection?.anchorNode && surface.contains(selection.anchorNode)) return selection;
         const content = getSelectedNoteLines(surface)[0]?.querySelector('[data-note-line-content]');
         if (!content) return null;
-        content.focus();
+        surface.focus({ preventScroll: true });
         const range = document.createRange();
         range.selectNodeContents(content);
         range.collapse(false);
@@ -279,8 +279,6 @@
         newLine.className = 'flex min-h-7 items-center';
         const content = document.createElement('span');
         content.dataset.noteLineContent = '';
-        content.contentEditable = 'true';
-        content.spellcheck = true;
         content.className = 'min-w-0 flex-1 whitespace-pre-wrap break-words py-0.5 text-sm leading-relaxed text-gray-700 outline-none';
         newLine.appendChild(content);
         line.after(newLine);
@@ -288,13 +286,89 @@
     }
 
     function placeNoteCaret(content, atEnd = false) {
-        content?.focus();
+        if (!content) return;
+        content.closest('[data-checklist-note-surface]')?.focus({ preventScroll: true });
         const selection = window.getSelection();
         const range = document.createRange();
         range.selectNodeContents(content);
         range.collapse(!atEnd);
         selection?.removeAllRanges();
         selection?.addRange(range);
+    }
+
+    function getNoteContentFromSelection(surface) {
+        const selection = window.getSelection();
+        if (!surface || !selection?.rangeCount) return null;
+        let anchor = selection.anchorNode;
+        if (anchor?.nodeType === Node.TEXT_NODE) anchor = anchor.parentElement;
+        const content = anchor?.closest?.('[data-note-line-content]');
+        return content && surface.contains(content) ? content : null;
+    }
+
+    function getNoteCaretTextOffset(content) {
+        const selection = window.getSelection();
+        if (!content || !selection?.rangeCount || !content.contains(selection.anchorNode)) return 0;
+        const before = document.createRange();
+        before.selectNodeContents(content);
+        before.setEnd(selection.anchorNode, selection.anchorOffset);
+        return before.toString().length;
+    }
+
+    function placeNoteCaretAtTextOffset(content, requestedOffset, extend = false) {
+        if (!content) return;
+        content.closest('[data-checklist-note-surface]')?.focus({ preventScroll: true });
+        const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+        let remaining = Math.max(0, requestedOffset);
+        let node = walker.nextNode();
+        while (node && remaining > node.nodeValue.length) {
+            remaining -= node.nodeValue.length;
+            node = walker.nextNode();
+        }
+        if (!node) {
+            placeNoteCaret(content, true);
+            return;
+        }
+        const selection = window.getSelection();
+        const offset = Math.min(remaining, node.nodeValue.length);
+        if (extend && selection?.rangeCount && selection.extend) {
+            selection.extend(node, offset);
+            return;
+        }
+        const range = document.createRange();
+        range.setStart(node, offset);
+        range.collapse(true);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+    }
+
+    function moveNoteLineVertically(content, direction, extend = false) {
+        const line = content?.closest('[data-note-line]');
+        const targetLine = direction < 0 ? line?.previousElementSibling : line?.nextElementSibling;
+        const targetContent = targetLine?.querySelector('[data-note-line-content]');
+        if (!targetContent) return false;
+        placeNoteCaretAtTextOffset(targetContent, getNoteCaretTextOffset(content), extend);
+        return true;
+    }
+
+    function moveNoteLineHorizontally(content, direction, extend = false) {
+        const line = content?.closest('[data-note-line]');
+        const offset = getNoteCaretTextOffset(content);
+        const length = content?.textContent?.length || 0;
+        if (direction < 0 && offset === 0) {
+            const previous = line?.previousElementSibling?.querySelector('[data-note-line-content]');
+            if (previous) {
+                placeNoteCaretAtTextOffset(previous, previous.textContent.length, extend);
+                return true;
+            }
+        }
+        if (direction > 0 && offset === length) {
+            const next = line?.nextElementSibling?.querySelector('[data-note-line-content]');
+            if (next) {
+                placeNoteCaretAtTextOffset(next, 0, extend);
+                return true;
+            }
+        }
+        return false;
     }
 
     function removeEmptyNoteFormatting(root) {
@@ -332,15 +406,26 @@
         beforeCaret.selectNodeContents(content);
         beforeCaret.setEnd(selection.anchorNode, selection.anchorOffset);
         if (beforeCaret.toString().length > 0) return false;
-        const boundary = previousContent.childNodes.length;
+        const boundary = previousContent.textContent.length;
         while (content.firstChild) previousContent.appendChild(content.firstChild);
         line.remove();
-        const range = document.createRange();
-        range.setStart(previousContent, boundary);
-        range.collapse(true);
-        selection.removeAllRanges();
-        selection.addRange(range);
-        previousContent.focus();
+        placeNoteCaretAtTextOffset(previousContent, boundary);
+        syncNoteSourceFromSurface(surface);
+        return true;
+    }
+
+    function mergeNoteLineForward(content) {
+        const line = content?.closest('[data-note-line]');
+        const surface = content?.closest('[data-checklist-note-surface]');
+        const nextLine = line?.nextElementSibling;
+        const nextContent = nextLine?.querySelector('[data-note-line-content]');
+        const selection = window.getSelection();
+        if (!line || !surface || !nextContent || !selection?.rangeCount || !selection.isCollapsed) return false;
+        if (getNoteCaretTextOffset(content) !== content.textContent.length) return false;
+        const boundary = content.textContent.length;
+        while (nextContent.firstChild) content.appendChild(nextContent.firstChild);
+        nextLine.remove();
+        placeNoteCaretAtTextOffset(content, boundary);
         syncNoteSourceFromSurface(surface);
         return true;
     }
@@ -1951,6 +2036,16 @@
                 applyNoteFormat(noteFormatButton.dataset.noteTarget, noteFormatButton.dataset.checklistNoteFormat);
                 return;
             }
+            const emptyNoteSurface = event.target.matches?.('[data-checklist-note-surface]') ? event.target : null;
+            if (emptyNoteSurface) {
+                let content = emptyNoteSurface.querySelector('[data-note-line]:last-child [data-note-line-content]');
+                if (!content) {
+                    emptyNoteSurface.innerHTML = renderNoteSurface('', emptyNoteSurface.dataset.noteTarget);
+                    content = emptyNoteSurface.querySelector('[data-note-line-content]');
+                }
+                placeNoteCaret(content, true);
+                return;
+            }
             if (event.target.closest('[data-checklist-version-toggle]')) {
                 isNoteVersionPanelOpen = !isNoteVersionPanelOpen;
                 render({ skipRemoteLoad: true });
@@ -2155,11 +2250,11 @@
                 });
                 return;
             }
-            const noteContent = event.target.closest('[data-note-line-content]');
-            if (noteContent) {
-                rememberActiveNoteLine(noteContent);
-                const surface = noteContent.closest('[data-checklist-note-surface]');
-                syncNoteSourceFromSurface(surface);
+            const noteSurface = event.target.closest('[data-checklist-note-surface]');
+            if (noteSurface) {
+                const noteContent = getNoteContentFromSelection(noteSurface);
+                if (noteContent) rememberActiveNoteLine(noteContent);
+                syncNoteSourceFromSurface(noteSurface);
             }
             const groupInput = event.target.closest('[data-step-editor-group]');
             if (groupInput) updateStepMetadata(groupInput.closest('[data-step-editor]'), groupInput.dataset.stepEditorGroup, 'groupName', groupInput.value);
@@ -2167,12 +2262,25 @@
             if (detailInput) updateStepMetadata(detailInput.closest('[data-step-editor]'), detailInput.dataset.stepEditorDetail, 'detail', detailInput.value);
         });
         root?.addEventListener('keydown', (event) => {
-            const noteContent = event.target?.closest?.('[data-note-line-content]');
+            const noteSurface = event.target?.closest?.('[data-checklist-note-surface]');
+            const noteContent = getNoteContentFromSelection(noteSurface) || event.target?.closest?.('[data-note-line-content]');
+            if (noteContent && ['ArrowUp', 'ArrowDown'].includes(event.key)) {
+                if (moveNoteLineVertically(noteContent, event.key === 'ArrowUp' ? -1 : 1, event.shiftKey)) event.preventDefault();
+                return;
+            }
+            if (noteContent && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+                if (moveNoteLineHorizontally(noteContent, event.key === 'ArrowLeft' ? -1 : 1, event.shiftKey)) event.preventDefault();
+                return;
+            }
+            if (noteContent && ['Home', 'End'].includes(event.key) && !event.ctrlKey && !event.metaKey) {
+                event.preventDefault();
+                placeNoteCaretAtTextOffset(noteContent, event.key === 'Home' ? 0 : noteContent.textContent.length, event.shiftKey);
+                return;
+            }
             if (noteContent && event.key === 'Tab') {
                 event.preventDefault();
-                const surface = noteContent.closest('[data-checklist-note-surface]');
                 rememberActiveNoteLine(noteContent);
-                applyNoteIndentation(surface.dataset.noteTarget, event.shiftKey);
+                applyNoteIndentation(noteSurface.dataset.noteTarget, event.shiftKey);
                 return;
             }
             if (noteContent && event.key === 'Enter') {
@@ -2181,6 +2289,10 @@
                 return;
             }
             if (noteContent && event.key === 'Backspace' && mergeNoteLineBackward(noteContent)) {
+                event.preventDefault();
+                return;
+            }
+            if (noteContent && event.key === 'Delete' && mergeNoteLineForward(noteContent)) {
                 event.preventDefault();
                 return;
             }

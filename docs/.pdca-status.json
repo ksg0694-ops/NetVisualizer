@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Update 1.04.03 Todo Simple Note",
+  "feature": "Update 1.04.03 Todo Unified Editor",
   "phase": "report",
   "progress": 100,
   "updatedAt": "2026-08-08T19:29:27+09:00",
   "status": "complete",
-  "currentFocus": "Todo detail notes are reduced to a stable memo-first editor while core Todo, Step, and Report Library behavior remains intact.",
+  "currentFocus": "Todo detail notes now use one continuous editing host with natural cross-line selection and caret navigation.",
   "completed": [
     "Documented Plan, Design, Check, Report, and design QA phases.",
     "Replaced arbitrary Todo groups with Career, Finance, and Life.",
@@ -90,8 +90,14 @@
     "Preserved stored note syntax as ordinary editable text.",
     "Retained B, U, S, Tab indentation, autosave, manual save, versions, existing Step management, and Report Library.",
     "Passed the full automated suite and desktop browser regression check.",
-    "Bumped the correction cache to v169."
+    "Bumped the correction cache to v169.",
+    "Moved Todo note editing ownership from individual lines to one parent editing surface.",
+    "Added selection-derived active-line and caret-offset handling.",
+    "Added deterministic vertical, horizontal, Home, End, Enter, Backspace, Delete, and Tab behavior across Todo note lines.",
+    "Preserved note serialization, autosave, versions, B, U, S, Step management, and Report Library.",
+    "Passed the full automated suite and live browser caret regression check.",
+    "Bumped the correction cache to v170."
   ],
   "remaining": [],
-  "nextStep": "Publish the Todo simple memo patch and verify the public GitHub Pages build."
+  "nextStep": "Publish the unified Todo editor patch and verify the public GitHub Pages build."
 }
