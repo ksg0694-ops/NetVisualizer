@@ -19,6 +19,8 @@
     let loaded = false;
     let autosaveTimer = null;
     let editorInputFrame = null;
+    let editorSelectionGesture = null;
+    let preservedEditorSelection = null;
     let pendingTreePress = null;
     let longPressDrag = null;
     let treeDragFrame = null;
@@ -699,9 +701,64 @@
         selection?.addRange(range);
     }
 
+    function selectionBelongsToSurface(selection, surface) {
+        return Boolean(selection?.rangeCount
+            && !selection.isCollapsed
+            && surface?.contains(selection.anchorNode)
+            && surface.contains(selection.focusNode));
+    }
+
+    function beginEditorSelectionGesture(event) {
+        const surface = event.target.closest?.('#learning-editor-surface');
+        if (!surface || (event.button !== undefined && event.button !== 0)) return;
+        preservedEditorSelection = null;
+        editorSelectionGesture = {
+            surface,
+            pointerId: event.pointerId ?? 'mouse',
+            startX: event.clientX,
+            startY: event.clientY,
+            moved: false,
+        };
+    }
+
+    function updateEditorSelectionGesture(event) {
+        if (!editorSelectionGesture || (event.pointerId ?? 'mouse') !== editorSelectionGesture.pointerId) return;
+        const distance = Math.hypot(event.clientX - editorSelectionGesture.startX, event.clientY - editorSelectionGesture.startY);
+        if (distance > 3) editorSelectionGesture.moved = true;
+    }
+
+    function finishEditorSelectionGesture(event) {
+        const gesture = editorSelectionGesture;
+        if (!gesture || (event.pointerId ?? 'mouse') !== gesture.pointerId) return;
+        editorSelectionGesture = null;
+        const selection = window.getSelection();
+        if (!gesture.moved || !selectionBelongsToSurface(selection, gesture.surface)) return;
+        preservedEditorSelection = {
+            surface: gesture.surface,
+            range: selection.getRangeAt(0).cloneRange(),
+            expiresAt: performance.now() + 500,
+        };
+    }
+
+    function preserveEditorTextSelection(surface) {
+        const selection = window.getSelection();
+        if (selectionBelongsToSurface(selection, surface)) {
+            preservedEditorSelection = null;
+            return true;
+        }
+        const preserved = preservedEditorSelection;
+        preservedEditorSelection = null;
+        if (!preserved || preserved.surface !== surface || performance.now() > preserved.expiresAt) return false;
+        surface.focus({ preventScroll: true });
+        selection?.removeAllRanges();
+        selection?.addRange(preserved.range);
+        return true;
+    }
+
     function focusLearningDetailEditorAtPoint(event) {
         const surface = event.target.closest?.('#learning-editor-surface');
         if (!surface) return false;
+        if (preserveEditorTextSelection(surface)) return true;
         surface.focus({ preventScroll: true });
         let range = null;
         if (document.caretPositionFromPoint) {
@@ -1157,6 +1214,7 @@
         const root = document.getElementById('learning-archive-view');
         ensureTreeDragStyles();
         root?.addEventListener('pointerdown', (event) => {
+            beginEditorSelectionGesture(event);
             if (event.target.closest('[data-learning-format], [data-learning-block-toggle], [data-learning-block], [data-learning-convert]')) {
                 event.preventDefault();
                 return;
@@ -1265,9 +1323,19 @@
                 entries = entries.filter((item) => item.id !== entry.id); activeId = entries[0]?.id || null; saveStore(); render({ skipRemote: true }); await removeRemote(entry.id); return;
             }
         });
-        document.addEventListener('pointermove', (event) => updateTreeLongPress(event, root));
-        document.addEventListener('pointerup', (event) => finishTreeLongPress(event, root));
-        document.addEventListener('pointercancel', (event) => finishTreeLongPress(event, root, true));
+        document.addEventListener('pointermove', (event) => {
+            updateEditorSelectionGesture(event);
+            updateTreeLongPress(event, root);
+        });
+        document.addEventListener('pointerup', (event) => {
+            finishEditorSelectionGesture(event);
+            finishTreeLongPress(event, root);
+        });
+        document.addEventListener('pointercancel', (event) => {
+            editorSelectionGesture = null;
+            preservedEditorSelection = null;
+            finishTreeLongPress(event, root, true);
+        });
         document.addEventListener('mousemove', (event) => updateTreeLongPress(event, root));
         document.addEventListener('mouseup', (event) => finishTreeLongPress(event, root));
         root?.addEventListener('contextmenu', (event) => {
