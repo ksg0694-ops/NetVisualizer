@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Update 1.04.03 Learning Archive Simple Memo",
+  "feature": "Update 1.04.03 Todo Simple Note",
   "phase": "report",
   "progress": 100,
   "updatedAt": "2026-08-08T19:29:27+09:00",
   "status": "complete",
-  "currentFocus": "Learning Archive is reduced to a stable memo-first editor with advanced checklist, icon, block, Todo, and Step features removed.",
+  "currentFocus": "Todo detail notes are reduced to a stable memo-first editor while core Todo, Step, and Report Library behavior remains intact.",
   "completed": [
     "Documented Plan, Design, Check, Report, and design QA phases.",
     "Replaced arbitrary Todo groups with Career, Finance, and Life.",
@@ -83,8 +83,15 @@
     "Preserved existing stored content as ordinary editable memo text.",
     "Retained B, U, S, autosave, manual save, versions, links, search, indentation, and hierarchy ordering.",
     "Passed the full automated suite and desktop browser regression check.",
-    "Bumped the correction cache to v168."
+    "Bumped the correction cache to v168.",
+    "Removed Todo note checkbox controls and interactive checkbox rendering.",
+    "Removed Todo note inline icons, block menus, and block transformations.",
+    "Removed memo-to-Todo and memo-to-Step conversion controls.",
+    "Preserved stored note syntax as ordinary editable text.",
+    "Retained B, U, S, Tab indentation, autosave, manual save, versions, existing Step management, and Report Library.",
+    "Passed the full automated suite and desktop browser regression check.",
+    "Bumped the correction cache to v169."
   ],
   "remaining": [],
-  "nextStep": "Publish the simple memo patch and verify the public GitHub Pages build."
+  "nextStep": "Publish the Todo simple memo patch and verify the public GitHub Pages build."
 }
