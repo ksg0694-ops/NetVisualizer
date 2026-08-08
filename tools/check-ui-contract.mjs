@@ -222,6 +222,8 @@ assert.ok(learningArchive.includes('data-learning-detail-editor role="textbox"')
 assert.ok(!learningArchive.includes('data-learning-line-content contenteditable="true"'), 'Learning Archive lines must not become isolated editing hosts');
 assert.ok(learningArchive.includes('function getEditorContentFromSelection'), 'Learning Archive keyboard commands must resolve the active line from the shared selection');
 assert.ok(learningArchive.includes('function focusLearningDetailEditorAtPoint') && learningArchive.includes('caretPositionFromPoint'), 'Learning Archive clicks must place the caret at the pointer location');
+assert.ok(learningArchive.includes('function preserveEditorTextSelection') && learningArchive.includes('selectionBelongsToSurface'), 'Learning Archive click correction must preserve multi-character text selections');
+assert.ok(learningArchive.includes('finishEditorSelectionGesture') && learningArchive.includes('cloneRange()'), 'Learning Archive pointer selection must survive the trailing click event');
 assert.ok(learningArchive.includes('function moveEditorLineVertically') && learningArchive.includes("['ArrowUp', 'ArrowDown'].includes(event.key)"), 'Learning Archive must support vertical caret movement across logical lines');
 assert.ok(learningArchive.includes('function moveEditorLineHorizontally') && learningArchive.includes("['Home', 'End'].includes(event.key)"), 'Learning Archive must support logical line boundaries and horizontal crossing');
 assert.ok(learningArchive.includes('function mergeEditorLineForward') && learningArchive.includes("event.key === 'Delete'"), 'Learning Archive must merge adjacent lines from either boundary');
