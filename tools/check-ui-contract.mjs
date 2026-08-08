@@ -203,10 +203,14 @@ assert.ok(learningArchive.includes('function renderConnectionDock'), 'Learning A
 assert.ok(learningArchive.includes('function queueAutosave'), 'Learning Archive editing must autosave');
 assert.ok(learningArchive.includes('data-learning-convert="task"'), 'Learning notes must convert selected text to a Todo');
 assert.ok(learningArchive.includes('data-learning-convert="step"'), 'Learning notes must convert selected text to a Step');
-assert.ok(learningArchive.includes('data-learning-drag-handle'), 'Learning Archive hierarchy must expose drag handles');
+assert.ok(!learningArchive.includes('data-learning-drag-handle'), 'Learning Archive must not show dedicated drag handles');
+assert.ok(learningArchive.includes('LONG_PRESS_DELAY_MS = 480'), 'Learning Archive hierarchy must activate reorder on long press');
+assert.ok(learningArchive.includes('function beginTreeLongPress'), 'Learning Archive must bind long-press ordering');
 assert.ok(learningArchive.includes('function reorderTreeNode'), 'Learning Archive hierarchy order must be persisted');
-assert.ok(learningArchive.includes("event.altKey && ['ArrowUp', 'ArrowDown'].includes(event.key)"), 'Learning Archive drag handles must support keyboard reorder');
+assert.ok(learningArchive.includes("event.altKey && ['ArrowUp', 'ArrowDown'].includes(event.key)"), 'Learning Archive rows must support keyboard reorder');
 assert.ok(learningArchive.includes('field_order,item_order,chapter_order,display_order'), 'Learning Archive server reads must include hierarchy order');
+assert.ok(learningArchive.includes('data-learning-meta-toggle') && learningArchive.includes('노트 수정'), 'Learning Archive must expose a visible note edit action');
+assert.ok(learningArchive.includes('data-learning-save') && learningArchive.includes('수정 저장'), 'Learning Archive must expose explicit note save');
 assert.ok(checklist.includes('data-checklist-title-display'));
 assert.ok(checklist.includes("root?.addEventListener('dblclick'"));
 assert.ok(!checklist.includes('<span class="text-[11px] font-bold text-gray-500">제목</span>'), 'detail title must not use a separate field row');

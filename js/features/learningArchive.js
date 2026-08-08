@@ -18,8 +18,12 @@
     let bound = false;
     let loaded = false;
     let autosaveTimer = null;
-    let draggedTreeNode = null;
+    let pendingTreePress = null;
+    let longPressDrag = null;
+    let suppressTreeClickUntil = 0;
     let remoteSupportsOrdering = true;
+    const LONG_PRESS_DELAY_MS = 480;
+    const LONG_PRESS_CANCEL_DISTANCE = 8;
 
     const escapeHtml = (value) => window.AppUtils.escapeHtml(value);
     const escapeAttr = (value) => window.AppUtils.escapeAttr(value);
@@ -248,17 +252,17 @@
             const fieldEntries = source.filter((entry) => entry.field === field);
             const items = orderedNames(fieldEntries, 'item', 'itemOrder');
             return `<details open data-learning-tree-node data-learning-level="field" data-learning-field="${escapeAttr(field)}" class="group/field rounded-md">
-                <summary class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-2 text-xs font-black text-gray-800 hover:bg-gray-50"><span draggable="true" role="button" tabindex="0" data-learning-drag-handle class="cursor-grab text-gray-300 hover:text-indigo-500 active:cursor-grabbing" title="드래그 또는 Alt+방향키로 분야 순서 변경" aria-label="${escapeAttr(field)} 분야 순서 변경"><i class="fas fa-grip-vertical text-[9px]"></i></span><i class="fas fa-chevron-right w-2 text-[8px] text-gray-300 transition group-open/field:rotate-90"></i><i class="far fa-folder text-indigo-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(field)}</span><span class="text-[9px] font-medium text-gray-400">${fieldEntries.length}</span></summary>
+                <summary data-learning-reorder-target title="길게 눌러 분야 순서 변경" class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-2 text-xs font-black text-gray-800 transition hover:bg-gray-50"><i class="fas fa-chevron-right w-2 text-[8px] text-gray-300 transition group-open/field:rotate-90"></i><i class="far fa-folder text-indigo-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(field)}</span><span class="text-[9px] font-medium text-gray-400">${fieldEntries.length}</span></summary>
                 <div class="ml-3 border-l border-gray-100 pl-2">${items.map((item) => {
                     const itemEntries = fieldEntries.filter((entry) => entry.item === item);
                     const chapters = orderedNames(itemEntries, 'chapter', 'chapterOrder');
                     return `<details open data-learning-tree-node data-learning-level="item" data-learning-field="${escapeAttr(field)}" data-learning-item="${escapeAttr(item)}" class="group/item rounded-md">
-                        <summary class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-bold text-gray-700 hover:bg-gray-50"><span draggable="true" role="button" tabindex="0" data-learning-drag-handle class="cursor-grab text-gray-300 hover:text-indigo-500 active:cursor-grabbing" title="드래그 또는 Alt+방향키로 항목 순서 변경" aria-label="${escapeAttr(item)} 항목 순서 변경"><i class="fas fa-grip-vertical text-[8px]"></i></span><i class="fas fa-chevron-right w-2 text-[8px] text-gray-300 transition group-open/item:rotate-90"></i><i class="far fa-folder-open text-sky-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(item)}</span><span class="text-[9px] font-medium text-gray-400">${itemEntries.length}</span></summary>
+                        <summary data-learning-reorder-target title="길게 눌러 항목 순서 변경" class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-bold text-gray-700 transition hover:bg-gray-50"><i class="fas fa-chevron-right w-2 text-[8px] text-gray-300 transition group-open/item:rotate-90"></i><i class="far fa-folder-open text-sky-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(item)}</span><span class="text-[9px] font-medium text-gray-400">${itemEntries.length}</span></summary>
                         <div class="ml-3 border-l border-gray-100 pl-2">${chapters.map((chapter) => {
                             const chapterEntries = itemEntries.filter((entry) => entry.chapter === chapter).sort(compareEntries);
                             return `<details open data-learning-tree-node data-learning-level="chapter" data-learning-field="${escapeAttr(field)}" data-learning-item="${escapeAttr(item)}" data-learning-chapter="${escapeAttr(chapter)}" class="group/chapter rounded-md">
-                                <summary class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-[10px] font-bold text-gray-600 hover:bg-gray-50"><span draggable="true" role="button" tabindex="0" data-learning-drag-handle class="cursor-grab text-gray-300 hover:text-indigo-500 active:cursor-grabbing" title="드래그 또는 Alt+방향키로 Chapter 순서 변경" aria-label="${escapeAttr(chapter)} Chapter 순서 변경"><i class="fas fa-grip-vertical text-[8px]"></i></span><i class="fas fa-chevron-right w-2 text-[7px] text-gray-300 transition group-open/chapter:rotate-90"></i><i class="far fa-file-lines text-gray-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(chapter)}</span><span class="text-[9px] font-medium text-gray-400">${chapterEntries.length}</span></summary>
-                                <div class="ml-3 space-y-0.5 border-l border-gray-100 pl-2">${chapterEntries.map((entry) => `<div data-learning-tree-node data-learning-level="note" data-learning-id="${escapeAttr(entry.id)}" data-learning-field="${escapeAttr(field)}" data-learning-item="${escapeAttr(item)}" data-learning-chapter="${escapeAttr(chapter)}" class="flex items-center rounded-md ${activeId === entry.id ? 'bg-indigo-50 ring-1 ring-indigo-100' : 'hover:bg-gray-50'}"><span draggable="true" role="button" tabindex="0" data-learning-drag-handle class="ml-1 cursor-grab px-1 text-gray-300 hover:text-indigo-500 active:cursor-grabbing" title="드래그 또는 Alt+방향키로 노트 순서 변경" aria-label="${escapeAttr(entry.title)} 노트 순서 변경"><i class="fas fa-grip-vertical text-[8px]"></i></span><button type="button" data-learning-open="${escapeAttr(entry.id)}" class="flex min-w-0 flex-1 items-center gap-2 px-1.5 py-1.5 text-left text-[10px] ${activeId === entry.id ? 'font-bold text-indigo-700' : 'text-gray-500 hover:text-gray-800'}"><i class="far fa-note-sticky text-[9px]"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(entry.title)}</span>${entry.pinned ? '<i class="fas fa-thumbtack text-[8px] text-indigo-400"></i>' : ''}</button></div>`).join('')}</div>
+                                <summary data-learning-reorder-target title="길게 눌러 Chapter 순서 변경" class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-[10px] font-bold text-gray-600 transition hover:bg-gray-50"><i class="fas fa-chevron-right w-2 text-[7px] text-gray-300 transition group-open/chapter:rotate-90"></i><i class="far fa-file-lines text-gray-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(chapter)}</span><span class="text-[9px] font-medium text-gray-400">${chapterEntries.length}</span></summary>
+                                <div class="ml-3 space-y-0.5 border-l border-gray-100 pl-2">${chapterEntries.map((entry) => `<div data-learning-tree-node data-learning-level="note" data-learning-id="${escapeAttr(entry.id)}" data-learning-field="${escapeAttr(field)}" data-learning-item="${escapeAttr(item)}" data-learning-chapter="${escapeAttr(chapter)}" class="flex items-center rounded-md ${activeId === entry.id ? 'bg-indigo-50 ring-1 ring-indigo-100' : 'hover:bg-gray-50'}"><button type="button" data-learning-reorder-target data-learning-open="${escapeAttr(entry.id)}" title="길게 눌러 노트 순서 변경" class="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-[10px] transition ${activeId === entry.id ? 'font-bold text-indigo-700' : 'text-gray-500 hover:text-gray-800'}"><i class="far fa-note-sticky text-[9px]"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(entry.title)}</span>${entry.pinned ? '<i class="fas fa-thumbtack text-[8px] text-indigo-400"></i>' : ''}</button></div>`).join('')}</div>
                             </details>`;
                         }).join('')}</div>
                     </details>`;
@@ -327,11 +331,87 @@
     }
 
     function clearTreeDragState(root) {
+        document.body.classList.remove('select-none');
         root?.querySelectorAll('[data-learning-tree-node]').forEach((node) => {
             node.removeAttribute('data-learning-drop-position');
             node.removeAttribute('data-learning-dragging');
-            node.classList.remove('ring-2', 'ring-indigo-300', 'ring-offset-1', 'opacity-50');
+            const surface = node.querySelector(':scope > [data-learning-reorder-target]');
+            surface?.classList.remove('ring-2', 'ring-indigo-300', 'ring-indigo-400', 'ring-offset-1', 'bg-indigo-50', 'opacity-70', 'cursor-grabbing');
         });
+    }
+
+    function cancelPendingTreePress() {
+        if (!pendingTreePress) return;
+        clearTimeout(pendingTreePress.timer);
+        pendingTreePress = null;
+    }
+
+    function beginTreeLongPress(event, root) {
+        if (event.button !== undefined && event.button !== 0) return;
+        if (pendingTreePress || longPressDrag) return;
+        const surface = event.target.closest?.('[data-learning-reorder-target]');
+        const node = surface?.closest?.('[data-learning-tree-node]');
+        if (!surface || !node) return;
+        cancelPendingTreePress();
+        const pending = {
+            node,
+            surface,
+            pointerId: event.pointerId ?? 'mouse',
+            startX: event.clientX,
+            startY: event.clientY,
+            timer: null,
+        };
+        pending.timer = window.setTimeout(() => {
+            if (pendingTreePress !== pending) return;
+            pendingTreePress = null;
+            longPressDrag = { ...pending, targetNode: null, position: 'before' };
+            node.dataset.learningDragging = 'true';
+            surface.classList.add('ring-2', 'ring-indigo-400', 'bg-indigo-50', 'opacity-70', 'cursor-grabbing');
+            document.body.classList.add('select-none');
+        }, LONG_PRESS_DELAY_MS);
+        pendingTreePress = pending;
+    }
+
+    function updateTreeLongPress(event, root) {
+        if (pendingTreePress) {
+            const distance = Math.hypot(event.clientX - pendingTreePress.startX, event.clientY - pendingTreePress.startY);
+            if (distance > LONG_PRESS_CANCEL_DISTANCE) cancelPendingTreePress();
+        }
+        if (!longPressDrag || (event.pointerId ?? 'mouse') !== longPressDrag.pointerId) return;
+        event.preventDefault();
+        root.querySelectorAll('[data-learning-drop-position]').forEach((node) => {
+            node.removeAttribute('data-learning-drop-position');
+            node.querySelector(':scope > [data-learning-reorder-target]')?.classList.remove('ring-2', 'ring-indigo-300', 'ring-offset-1');
+        });
+        const targetNode = document.elementFromPoint(event.clientX, event.clientY)?.closest?.('[data-learning-tree-node]');
+        const sourceDescriptor = describeTreeNode(longPressDrag.node);
+        const targetDescriptor = describeTreeNode(targetNode);
+        if (!targetNode || targetNode === longPressDrag.node || !sameTreeParent(sourceDescriptor, targetDescriptor)) {
+            longPressDrag.targetNode = null;
+            return;
+        }
+        const targetSurface = targetNode.querySelector(':scope > [data-learning-reorder-target]');
+        const rect = targetSurface?.getBoundingClientRect();
+        if (!rect) return;
+        const position = event.clientY > rect.top + rect.height / 2 ? 'after' : 'before';
+        targetNode.dataset.learningDropPosition = position;
+        targetSurface.classList.add('ring-2', 'ring-indigo-300', 'ring-offset-1');
+        longPressDrag.targetNode = targetNode;
+        longPressDrag.position = position;
+    }
+
+    async function finishTreeLongPress(event, root, cancelled = false) {
+        if (pendingTreePress) {
+            cancelPendingTreePress();
+            return;
+        }
+        if (!longPressDrag || (event.pointerId ?? 'mouse') !== longPressDrag.pointerId) return;
+        event.preventDefault();
+        const completed = longPressDrag;
+        longPressDrag = null;
+        suppressTreeClickUntil = Date.now() + 600;
+        clearTreeDragState(root);
+        if (!cancelled && completed.targetNode) await reorderTreeNode(completed.node, completed.targetNode, completed.position);
     }
 
     async function reorderTreeNode(sourceNode, targetNode, position) {
@@ -650,7 +730,7 @@
         if (!entry) return `<div class="col-span-full flex min-h-[560px] flex-col items-center justify-center border border-dashed border-gray-200 bg-white text-center"><span class="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-500"><i class="fas fa-book-open-reader"></i></span><h3 class="mt-3 text-sm font-bold text-gray-700">학습 노트를 선택하세요</h3><p class="mt-1 text-xs text-gray-400">분야 → 항목 → Chapter → 노트 순서로 지식을 쌓습니다.</p></div>`;
         return `<main class="min-w-0 bg-white">
             <div class="border-b border-gray-100 px-4 py-3">
-                <div class="flex flex-wrap items-center justify-between gap-2"><p class="min-w-0 truncate text-[10px] text-gray-400">${escapeHtml(entry.field)} <i class="fas fa-chevron-right mx-1 text-[7px]"></i> ${escapeHtml(entry.item)} <i class="fas fa-chevron-right mx-1 text-[7px]"></i> ${escapeHtml(entry.chapter)}</p><div class="flex items-center gap-2"><span id="learning-autosave-status" class="text-[9px] text-gray-400"><i class="fas fa-circle-check mr-1 text-emerald-500"></i>자동 저장됨</span><button type="button" data-learning-meta-toggle class="h-7 w-7 rounded-md text-gray-400 hover:bg-indigo-50 hover:text-indigo-600" title="분류 및 태그 편집" aria-expanded="false"><i class="fas fa-sliders text-[10px]"></i></button><button type="button" data-learning-pin class="h-7 w-7 rounded-md text-gray-400 hover:bg-indigo-50 hover:text-indigo-600" title="고정"><i class="fas fa-thumbtack text-[10px]"></i></button><button type="button" data-learning-delete class="h-7 w-7 rounded-md text-gray-400 hover:bg-rose-50 hover:text-rose-600" title="삭제"><i class="fas fa-trash-can text-[10px]"></i></button></div></div>
+                <div class="flex flex-wrap items-center justify-between gap-2"><p class="min-w-0 truncate text-[10px] text-gray-400">${escapeHtml(entry.field)} <i class="fas fa-chevron-right mx-1 text-[7px]"></i> ${escapeHtml(entry.item)} <i class="fas fa-chevron-right mx-1 text-[7px]"></i> ${escapeHtml(entry.chapter)}</p><div class="flex items-center gap-2"><span id="learning-autosave-status" class="text-[9px] text-gray-400"><i class="fas fa-circle-check mr-1 text-emerald-500"></i>자동 저장됨</span><button type="button" data-learning-meta-toggle class="inline-flex h-7 items-center gap-1 rounded-md border border-indigo-100 bg-indigo-50 px-2 text-[10px] font-bold text-indigo-600 hover:bg-indigo-100" title="노트 분류와 정보를 수정" aria-expanded="false"><i class="fas fa-pen text-[9px]"></i><span>노트 수정</span></button><button type="button" data-learning-pin class="h-7 w-7 rounded-md text-gray-400 hover:bg-indigo-50 hover:text-indigo-600" title="고정"><i class="fas fa-thumbtack text-[10px]"></i></button><button type="button" data-learning-delete class="h-7 w-7 rounded-md text-gray-400 hover:bg-rose-50 hover:text-rose-600" title="삭제"><i class="fas fa-trash-can text-[10px]"></i></button></div></div>
                 <input id="learning-title" value="${escapeAttr(entry.title)}" class="mt-3 w-full border-0 p-0 text-2xl font-black text-gray-900 outline-none focus:ring-0" placeholder="노트 제목">
                 <div class="mt-2 flex flex-wrap gap-1.5">${entry.tags.map((tag) => `<span class="rounded-full bg-indigo-50 px-2 py-1 text-[9px] font-bold text-indigo-600">${escapeHtml(tag)}</span>`).join('')}<span class="rounded-full bg-gray-50 px-2 py-1 text-[9px] text-gray-400">${escapeHtml(entry.chapter)}</span></div>
                 <div data-learning-meta-panel class="mt-3 hidden grid gap-2 rounded-lg border border-indigo-100 bg-indigo-50/40 p-3 sm:grid-cols-3">
@@ -659,6 +739,7 @@
                     <label class="text-[9px] font-bold text-gray-500">Chapter<input id="learning-chapter" value="${escapeAttr(entry.chapter)}" class="mt-1 h-8 w-full rounded-md border border-gray-200 bg-white px-2 text-[10px] outline-none focus:border-indigo-300"></label>
                     <label class="text-[9px] font-bold text-gray-500 sm:col-span-2">태그<input id="learning-tags" value="${escapeAttr(entry.tags.join(', '))}" class="mt-1 h-8 w-full rounded-md border border-gray-200 bg-white px-2 text-[10px] outline-none focus:border-indigo-300" placeholder="반도체, 투자"></label>
                     <label class="text-[9px] font-bold text-gray-500">참고 링크<input id="learning-links" value="${escapeAttr(entry.sourceLinks.join(', '))}" class="mt-1 h-8 w-full rounded-md border border-gray-200 bg-white px-2 text-[10px] outline-none focus:border-indigo-300" placeholder="https://..."></label>
+                    <button type="button" data-learning-save class="h-8 rounded-md bg-indigo-600 px-3 text-[10px] font-bold text-white hover:bg-indigo-700 sm:col-span-3"><i class="fas fa-check mr-1"></i>수정 저장</button>
                 </div>
             </div>
             <div class="relative border-b border-gray-100">
@@ -694,17 +775,19 @@
 
     async function saveActive() {
         const entry = current();
-        if (!entry) return;
+        if (!entry) return false;
+        clearTimeout(autosaveTimer);
         const next = readEditor(entry);
         if (!next.field || !next.item || !next.chapter || !next.title) {
             window.showToast?.('분야, 항목, Chapter, 제목을 입력해 주세요.', 'warning');
-            return;
+            return false;
         }
         captureVersion(entry, '수동 저장 전');
         Object.assign(entry, next, { updatedAt: now() });
         saveStore();
         await persist(entry);
         setAutosaveStatus('saved', '자동 저장됨');
+        return true;
     }
 
     async function restoreVersion(versionId) {
@@ -748,8 +831,13 @@
         bound = true;
         const root = document.getElementById('learning-archive-view');
         root?.addEventListener('pointerdown', (event) => {
-            if (event.target.closest('[data-learning-format], [data-learning-block-toggle], [data-learning-block], [data-learning-convert]')) event.preventDefault();
+            if (event.target.closest('[data-learning-format], [data-learning-block-toggle], [data-learning-block], [data-learning-convert]')) {
+                event.preventDefault();
+                return;
+            }
+            beginTreeLongPress(event, root);
         });
+        root?.addEventListener('mousedown', (event) => beginTreeLongPress(event, root));
         root?.addEventListener('input', (event) => {
             if (event.target.id === 'learning-search') {
                 searchText = event.target.value;
@@ -776,7 +864,7 @@
             }
         });
         root?.addEventListener('click', async (event) => {
-            if (event.target.closest('[data-learning-drag-handle]')) {
+            if (Date.now() < suppressTreeClickUntil && event.target.closest('[data-learning-tree-node]')) {
                 event.preventDefault();
                 return;
             }
@@ -811,6 +899,14 @@
                 const willOpen = panel?.classList.contains('hidden');
                 panel?.classList.toggle('hidden', !willOpen);
                 button?.setAttribute('aria-expanded', String(Boolean(willOpen)));
+                if (willOpen) requestAnimationFrame(() => document.getElementById('learning-title')?.focus());
+                return;
+            }
+            if (event.target.closest('[data-learning-save]')) {
+                if (await saveActive()) {
+                    render({ skipRemote: true });
+                    window.showToast?.('학습 노트 수정 사항을 저장했습니다.', 'info');
+                }
                 return;
             }
             const task = event.target.closest('[data-learning-open-task]');
@@ -835,57 +931,19 @@
                 entries = entries.filter((item) => item.id !== entry.id); activeId = entries[0]?.id || null; saveStore(); render({ skipRemote: true }); await removeRemote(entry.id); return;
             }
         });
-        root?.addEventListener('dragstart', (event) => {
-            const handle = event.target.closest('[data-learning-drag-handle]');
-            const node = handle?.closest('[data-learning-tree-node]');
-            if (!handle || !node) {
-                event.preventDefault();
-                return;
-            }
-            draggedTreeNode = node;
-            node.dataset.learningDragging = 'true';
-            node.classList.add('opacity-50');
-            event.dataTransfer.effectAllowed = 'move';
-            event.dataTransfer.setData('text/plain', descriptorKey(describeTreeNode(node)));
-        });
-        root?.addEventListener('dragover', (event) => {
-            const targetNode = event.target.closest('[data-learning-tree-node]');
-            if (!draggedTreeNode || !targetNode || targetNode === draggedTreeNode) return;
-            const source = describeTreeNode(draggedTreeNode);
-            const target = describeTreeNode(targetNode);
-            if (!sameTreeParent(source, target)) return;
-            event.preventDefault();
-            event.dataTransfer.dropEffect = 'move';
-            root.querySelectorAll('[data-learning-tree-node]').forEach((node) => {
-                if (node !== draggedTreeNode) {
-                    node.removeAttribute('data-learning-drop-position');
-                    node.classList.remove('ring-2', 'ring-indigo-300', 'ring-offset-1');
-                }
-            });
-            const rect = targetNode.getBoundingClientRect();
-            const position = event.clientY > rect.top + rect.height / 2 ? 'after' : 'before';
-            targetNode.dataset.learningDropPosition = position;
-            targetNode.classList.add('ring-2', 'ring-indigo-300', 'ring-offset-1');
-        });
-        root?.addEventListener('drop', async (event) => {
-            const targetNode = event.target.closest('[data-learning-tree-node]');
-            if (!draggedTreeNode || !targetNode || targetNode === draggedTreeNode) return;
-            event.preventDefault();
-            const sourceNode = draggedTreeNode;
-            const position = targetNode.dataset.learningDropPosition || 'before';
-            draggedTreeNode = null;
-            clearTreeDragState(root);
-            await reorderTreeNode(sourceNode, targetNode, position);
-        });
-        root?.addEventListener('dragend', () => {
-            draggedTreeNode = null;
-            clearTreeDragState(root);
+        document.addEventListener('pointermove', (event) => updateTreeLongPress(event, root));
+        document.addEventListener('pointerup', (event) => finishTreeLongPress(event, root));
+        document.addEventListener('pointercancel', (event) => finishTreeLongPress(event, root, true));
+        document.addEventListener('mousemove', (event) => updateTreeLongPress(event, root));
+        document.addEventListener('mouseup', (event) => finishTreeLongPress(event, root));
+        root?.addEventListener('contextmenu', (event) => {
+            if ((pendingTreePress || longPressDrag) && event.target.closest('[data-learning-tree-node]')) event.preventDefault();
         });
         root?.addEventListener('keydown', (event) => {
-            const dragHandle = event.target.closest?.('[data-learning-drag-handle]');
-            if (dragHandle && event.altKey && ['ArrowUp', 'ArrowDown'].includes(event.key)) {
+            const reorderTarget = event.target.closest?.('[data-learning-reorder-target]');
+            if (reorderTarget && event.altKey && ['ArrowUp', 'ArrowDown'].includes(event.key)) {
                 event.preventDefault();
-                moveTreeNodeWithKeyboard(root, dragHandle.closest('[data-learning-tree-node]'), event.key === 'ArrowUp' ? -1 : 1);
+                moveTreeNodeWithKeyboard(root, reorderTarget.closest('[data-learning-tree-node]'), event.key === 'ArrowUp' ? -1 : 1);
                 return;
             }
             const content = event.target.closest?.('[data-learning-line-content]');
