@@ -204,9 +204,14 @@ assert.ok(learningArchive.includes('function queueAutosave'), 'Learning Archive 
 assert.ok(learningArchive.includes('data-learning-convert="task"'), 'Learning notes must convert selected text to a Todo');
 assert.ok(learningArchive.includes('data-learning-convert="step"'), 'Learning notes must convert selected text to a Step');
 assert.ok(!learningArchive.includes('data-learning-drag-handle'), 'Learning Archive must not show dedicated drag handles');
-assert.ok(learningArchive.includes('LONG_PRESS_DELAY_MS = 480'), 'Learning Archive hierarchy must activate reorder on long press');
+assert.ok(learningArchive.includes('LONG_PRESS_DELAY_MS = 180'), 'Learning Archive desktop reorder must activate quickly after a short hold');
+assert.ok(learningArchive.includes('TOUCH_LONG_PRESS_DELAY_MS = 260'), 'Learning Archive touch reorder must preserve scroll-safe long press');
 assert.ok(learningArchive.includes('function beginTreeLongPress'), 'Learning Archive must bind long-press ordering');
+assert.ok(learningArchive.includes('learning-tree-drag-ghost') && learningArchive.includes('learning-tree-drag-placeholder'), 'Learning Archive drag must show a moving preview and insertion placeholder');
+assert.ok(learningArchive.includes('requestAnimationFrame(() => paintTreeDragFrame(root))'), 'Learning Archive drag painting must be frame-throttled');
 assert.ok(learningArchive.includes('function reorderTreeNode'), 'Learning Archive hierarchy order must be persisted');
+assert.ok(learningArchive.includes('function renderTreeOnly'), 'Learning Archive search and reorder must avoid full workbench rerenders');
+assert.ok(learningArchive.includes("upsert(unique.map((entry) => toRow(entry))"), 'Learning Archive reordered rows must be saved in one batch');
 assert.ok(learningArchive.includes("event.altKey && ['ArrowUp', 'ArrowDown'].includes(event.key)"), 'Learning Archive rows must support keyboard reorder');
 assert.ok(learningArchive.includes('field_order,item_order,chapter_order,display_order'), 'Learning Archive server reads must include hierarchy order');
 assert.ok(learningArchive.includes('data-learning-meta-toggle') && learningArchive.includes('분류 수정'), 'Learning Archive must label metadata editing separately from note-body editing');

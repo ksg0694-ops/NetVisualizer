@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Update 1.04.03 Editor Stability Patch",
+  "feature": "Update 1.04.03 Learning Archive Drag Performance",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-08-08T18:51:00+09:00",
+  "updatedAt": "2026-08-08T19:07:50+09:00",
   "status": "complete",
-  "currentFocus": "Learning Archive note editing now uses one stable multiline host with deterministic mouse, keyboard, checklist, and save behavior.",
+  "currentFocus": "Learning Archive hierarchy drag now previews movement immediately while tree rendering and server persistence are minimized.",
   "completed": [
     "Documented Plan, Design, Check, Report, and design QA phases.",
     "Replaced arbitrary Todo groups with Career, Finance, and Life.",
@@ -61,8 +61,16 @@
     "Stabilized Enter, Backspace, Delete, Tab, selection, formatting, and live character counting.",
     "Rebuilt checklist toggles as semantic controls that work inside the editor.",
     "Passed the full automated suite and browser interaction matrix.",
-    "Bumped the correction cache to v165."
+    "Bumped the correction cache to v165.",
+    "Reduced Learning Archive desktop long-press activation to 180 ms while keeping a scroll-safe 260 ms touch delay.",
+    "Added a floating drag ghost, dashed insertion placeholder, and hierarchy edge auto-scroll.",
+    "Throttled pointer painting and editor input synchronization with requestAnimationFrame.",
+    "Replaced full Learning Archive rerenders during search and reorder with tree-only rendering.",
+    "Changed hierarchy order persistence from per-note requests to one batch upsert.",
+    "Made note switching optimistic instead of waiting for the remote save response.",
+    "Passed the full automated suite and desktop browser regression checks.",
+    "Bumped the correction cache to v166."
   ],
   "remaining": [],
-  "nextStep": "Publish the editor stability patch and verify the public GitHub Pages build."
+  "nextStep": "Publish the drag performance patch and verify the public GitHub Pages build."
 }
