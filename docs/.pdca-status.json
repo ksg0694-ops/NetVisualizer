@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Update 1.04.03 Note Edit and Long-Press Ordering",
+  "feature": "Update 1.04.03 Learning Detail Editing",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-08-08T20:45:00+09:00",
+  "updatedAt": "2026-08-08T22:30:00+09:00",
   "status": "complete",
-  "currentFocus": "Learning Archive note editing is visible again and ordering now uses a handle-free long press.",
+  "currentFocus": "Learning Archive detail-body editing now works from the full editor surface and is distinct from metadata editing.",
   "completed": [
     "Documented Plan, Design, Check, Report, and design QA phases.",
     "Replaced arbitrary Todo groups with Career, Finance, and Life.",
@@ -47,8 +47,14 @@
     "Removed hierarchy drag handles and added 480 ms long-press ordering.",
     "Preserved keyboard ordering and cross-device order persistence.",
     "Passed full automated checks and desktop/mobile interaction QA.",
-    "Bumped the correction cache to v163."
+    "Bumped the correction cache to v163.",
+    "Reproduced the Learning Archive blank-surface focus failure.",
+    "Restored direct editing for the note detail body across the full editor surface.",
+    "Added explicit detail-body save while preserving autosave.",
+    "Separated metadata labels from detail-body editing labels.",
+    "Passed full automated checks and browser interaction QA.",
+    "Bumped the correction cache to v164."
   ],
   "remaining": [],
-  "nextStep": "Publish the note-edit and long-press patch, then collect feedback from the deployed page."
+  "nextStep": "Publish the Learning Archive detail-edit patch and collect feedback from the deployed page."
 }

@@ -522,6 +522,20 @@
         selection?.addRange(range);
     }
 
+    function focusLearningDetailEditor(target) {
+        const surface = document.getElementById('learning-editor-surface');
+        if (!surface) return false;
+        const selectedLine = target?.closest?.('[data-learning-line]');
+        let content = selectedLine?.querySelector('[data-learning-line-content]')
+            || surface.querySelector('[data-learning-line]:last-child [data-learning-line-content]');
+        if (!content) {
+            surface.innerHTML = renderEditorSurface('');
+            content = surface.querySelector('[data-learning-line-content]');
+        }
+        placeCaret(content, true);
+        return true;
+    }
+
     function createLineAfter(line) {
         const next = document.createElement('div');
         next.dataset.learningLine = '';
@@ -730,7 +744,7 @@
         if (!entry) return `<div class="col-span-full flex min-h-[560px] flex-col items-center justify-center border border-dashed border-gray-200 bg-white text-center"><span class="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-500"><i class="fas fa-book-open-reader"></i></span><h3 class="mt-3 text-sm font-bold text-gray-700">학습 노트를 선택하세요</h3><p class="mt-1 text-xs text-gray-400">분야 → 항목 → Chapter → 노트 순서로 지식을 쌓습니다.</p></div>`;
         return `<main class="min-w-0 bg-white">
             <div class="border-b border-gray-100 px-4 py-3">
-                <div class="flex flex-wrap items-center justify-between gap-2"><p class="min-w-0 truncate text-[10px] text-gray-400">${escapeHtml(entry.field)} <i class="fas fa-chevron-right mx-1 text-[7px]"></i> ${escapeHtml(entry.item)} <i class="fas fa-chevron-right mx-1 text-[7px]"></i> ${escapeHtml(entry.chapter)}</p><div class="flex items-center gap-2"><span id="learning-autosave-status" class="text-[9px] text-gray-400"><i class="fas fa-circle-check mr-1 text-emerald-500"></i>자동 저장됨</span><button type="button" data-learning-meta-toggle class="inline-flex h-7 items-center gap-1 rounded-md border border-indigo-100 bg-indigo-50 px-2 text-[10px] font-bold text-indigo-600 hover:bg-indigo-100" title="노트 분류와 정보를 수정" aria-expanded="false"><i class="fas fa-pen text-[9px]"></i><span>노트 수정</span></button><button type="button" data-learning-pin class="h-7 w-7 rounded-md text-gray-400 hover:bg-indigo-50 hover:text-indigo-600" title="고정"><i class="fas fa-thumbtack text-[10px]"></i></button><button type="button" data-learning-delete class="h-7 w-7 rounded-md text-gray-400 hover:bg-rose-50 hover:text-rose-600" title="삭제"><i class="fas fa-trash-can text-[10px]"></i></button></div></div>
+                <div class="flex flex-wrap items-center justify-between gap-2"><p class="min-w-0 truncate text-[10px] text-gray-400">${escapeHtml(entry.field)} <i class="fas fa-chevron-right mx-1 text-[7px]"></i> ${escapeHtml(entry.item)} <i class="fas fa-chevron-right mx-1 text-[7px]"></i> ${escapeHtml(entry.chapter)}</p><div class="flex items-center gap-2"><span id="learning-autosave-status" class="text-[9px] text-gray-400"><i class="fas fa-circle-check mr-1 text-emerald-500"></i>자동 저장됨</span><button type="button" data-learning-meta-toggle class="inline-flex h-7 items-center gap-1 rounded-md border border-indigo-100 bg-indigo-50 px-2 text-[10px] font-bold text-indigo-600 hover:bg-indigo-100" title="분야·항목·Chapter·태그 수정" aria-expanded="false"><i class="fas fa-sliders text-[9px]"></i><span>분류 수정</span></button><button type="button" data-learning-pin class="h-7 w-7 rounded-md text-gray-400 hover:bg-indigo-50 hover:text-indigo-600" title="고정"><i class="fas fa-thumbtack text-[10px]"></i></button><button type="button" data-learning-delete class="h-7 w-7 rounded-md text-gray-400 hover:bg-rose-50 hover:text-rose-600" title="삭제"><i class="fas fa-trash-can text-[10px]"></i></button></div></div>
                 <input id="learning-title" value="${escapeAttr(entry.title)}" class="mt-3 w-full border-0 p-0 text-2xl font-black text-gray-900 outline-none focus:ring-0" placeholder="노트 제목">
                 <div class="mt-2 flex flex-wrap gap-1.5">${entry.tags.map((tag) => `<span class="rounded-full bg-indigo-50 px-2 py-1 text-[9px] font-bold text-indigo-600">${escapeHtml(tag)}</span>`).join('')}<span class="rounded-full bg-gray-50 px-2 py-1 text-[9px] text-gray-400">${escapeHtml(entry.chapter)}</span></div>
                 <div data-learning-meta-panel class="mt-3 hidden grid gap-2 rounded-lg border border-indigo-100 bg-indigo-50/40 p-3 sm:grid-cols-3">
@@ -739,7 +753,7 @@
                     <label class="text-[9px] font-bold text-gray-500">Chapter<input id="learning-chapter" value="${escapeAttr(entry.chapter)}" class="mt-1 h-8 w-full rounded-md border border-gray-200 bg-white px-2 text-[10px] outline-none focus:border-indigo-300"></label>
                     <label class="text-[9px] font-bold text-gray-500 sm:col-span-2">태그<input id="learning-tags" value="${escapeAttr(entry.tags.join(', '))}" class="mt-1 h-8 w-full rounded-md border border-gray-200 bg-white px-2 text-[10px] outline-none focus:border-indigo-300" placeholder="반도체, 투자"></label>
                     <label class="text-[9px] font-bold text-gray-500">참고 링크<input id="learning-links" value="${escapeAttr(entry.sourceLinks.join(', '))}" class="mt-1 h-8 w-full rounded-md border border-gray-200 bg-white px-2 text-[10px] outline-none focus:border-indigo-300" placeholder="https://..."></label>
-                    <button type="button" data-learning-save class="h-8 rounded-md bg-indigo-600 px-3 text-[10px] font-bold text-white hover:bg-indigo-700 sm:col-span-3"><i class="fas fa-check mr-1"></i>수정 저장</button>
+                    <button type="button" data-learning-save class="h-8 rounded-md bg-indigo-600 px-3 text-[10px] font-bold text-white hover:bg-indigo-700 sm:col-span-3"><i class="fas fa-check mr-1"></i>분류 저장</button>
                 </div>
             </div>
             <div class="relative border-b border-gray-100">
@@ -749,8 +763,14 @@
                 </div>
                 <div data-learning-block-menu class="absolute left-4 top-11 z-30 hidden w-56 rounded-lg border border-gray-200 bg-white p-1.5 shadow-xl">${Object.entries(BLOCKS).map(([key, block]) => `<button type="button" data-learning-block="${key}" class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left hover:bg-indigo-50"><span class="flex h-7 w-7 items-center justify-center rounded bg-gray-50 text-gray-500"><i class="fas ${block.icon} text-[10px]"></i></span><span><strong class="block text-[10px] text-gray-800">${block.label}</strong><small class="block text-[9px] text-gray-400">${block.hint}</small></span></button>`).join('')}</div>
             </div>
-            <textarea id="learning-content" class="hidden">${escapeHtml(entry.content)}</textarea>
-            <div id="learning-editor-surface" role="textbox" aria-multiline="true" class="min-h-[calc(100dvh-270px)] cursor-text overflow-y-auto px-5 py-4 text-sm outline-none">${renderEditorSurface(entry.content)}</div>
+            <section class="bg-white">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-50 px-5 py-2.5">
+                    <div><p class="text-[10px] font-black text-gray-700">상세내역</p><p class="mt-0.5 text-[9px] text-gray-400">본문을 클릭해 바로 수정할 수 있습니다.</p></div>
+                    <button type="button" data-learning-detail-save class="inline-flex h-7 items-center gap-1 rounded-md border border-indigo-100 bg-white px-2.5 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50"><i class="fas fa-floppy-disk text-[9px]"></i>본문 저장</button>
+                </div>
+                <textarea id="learning-content" class="hidden">${escapeHtml(entry.content)}</textarea>
+                <div id="learning-editor-surface" data-learning-detail-editor role="textbox" aria-label="노트 상세내역" aria-multiline="true" tabindex="0" class="min-h-[calc(100dvh-325px)] cursor-text overflow-y-auto border border-transparent px-5 py-4 text-sm outline-none transition focus-within:border-indigo-200 focus-within:bg-indigo-50/20">${renderEditorSurface(entry.content)}</div>
+            </section>
             <div class="flex items-center justify-between border-t border-gray-100 px-4 py-2 text-[9px] text-gray-400"><span>문자 ${entry.content.length.toLocaleString('ko-KR')}</span><span>Markdown 토큰 지원 · Tab 들여쓰기</span></div>
         </main>${renderContextDock(entry)}`;
     }
@@ -863,6 +883,9 @@
                 queueAutosave();
             }
         });
+        root?.addEventListener('focusin', (event) => {
+            if (event.target.id === 'learning-editor-surface') focusLearningDetailEditor(event.target);
+        });
         root?.addEventListener('click', async (event) => {
             if (Date.now() < suppressTreeClickUntil && event.target.closest('[data-learning-tree-node]')) {
                 event.preventDefault();
@@ -884,6 +907,11 @@
             }
             const entry = current();
             if (!entry) return;
+            const detailSurface = event.target.closest('#learning-editor-surface');
+            if (detailSurface && !event.target.closest('[data-learning-line-content], [data-learning-checkbox]')) {
+                focusLearningDetailEditor(event.target);
+                return;
+            }
             const format = event.target.closest('[data-learning-format]');
             if (format) { applyFormat(format.dataset.learningFormat); return; }
             if (event.target.closest('[data-learning-block-toggle]')) { document.querySelector('[data-learning-block-menu]')?.classList.toggle('hidden'); return; }
@@ -905,7 +933,14 @@
             if (event.target.closest('[data-learning-save]')) {
                 if (await saveActive()) {
                     render({ skipRemote: true });
-                    window.showToast?.('학습 노트 수정 사항을 저장했습니다.', 'info');
+                    window.showToast?.('학습 노트 분류 정보를 저장했습니다.', 'info');
+                }
+                return;
+            }
+            if (event.target.closest('[data-learning-detail-save]')) {
+                if (await saveActive()) {
+                    render({ skipRemote: true });
+                    window.showToast?.('학습 노트 상세내역을 저장했습니다.', 'info');
                 }
                 return;
             }

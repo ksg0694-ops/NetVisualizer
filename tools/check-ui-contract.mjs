@@ -209,8 +209,10 @@ assert.ok(learningArchive.includes('function beginTreeLongPress'), 'Learning Arc
 assert.ok(learningArchive.includes('function reorderTreeNode'), 'Learning Archive hierarchy order must be persisted');
 assert.ok(learningArchive.includes("event.altKey && ['ArrowUp', 'ArrowDown'].includes(event.key)"), 'Learning Archive rows must support keyboard reorder');
 assert.ok(learningArchive.includes('field_order,item_order,chapter_order,display_order'), 'Learning Archive server reads must include hierarchy order');
-assert.ok(learningArchive.includes('data-learning-meta-toggle') && learningArchive.includes('노트 수정'), 'Learning Archive must expose a visible note edit action');
-assert.ok(learningArchive.includes('data-learning-save') && learningArchive.includes('수정 저장'), 'Learning Archive must expose explicit note save');
+assert.ok(learningArchive.includes('data-learning-meta-toggle') && learningArchive.includes('분류 수정'), 'Learning Archive must label metadata editing separately from note-body editing');
+assert.ok(learningArchive.includes('data-learning-save') && learningArchive.includes('분류 저장'), 'Learning Archive must expose explicit metadata save');
+assert.ok(learningArchive.includes('data-learning-detail-save') && learningArchive.includes('본문 저장'), 'Learning Archive must expose explicit detail-body save');
+assert.ok(learningArchive.includes('function focusLearningDetailEditor') && learningArchive.includes('aria-label="노트 상세내역"'), 'Learning Archive must focus the editable detail body from its full surface');
 assert.ok(checklist.includes('data-checklist-title-display'));
 assert.ok(checklist.includes("root?.addEventListener('dblclick'"));
 assert.ok(!checklist.includes('<span class="text-[11px] font-bold text-gray-500">제목</span>'), 'detail title must not use a separate field row');
