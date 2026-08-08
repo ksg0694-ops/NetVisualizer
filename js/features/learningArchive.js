@@ -474,9 +474,9 @@
         const shellClass = block === 'callout' ? 'my-1 rounded-md border border-amber-200 bg-amber-50 px-3 py-2' : block === 'divider' ? 'my-3 min-h-5 border-t border-gray-200' : block === 'table' ? 'min-h-8 border-x border-b border-gray-200 bg-gray-50 px-2 font-mono' : '';
         const contentClass = block.startsWith('heading-') ? `${block === 'heading-1' ? 'text-2xl' : block === 'heading-2' ? 'text-xl' : 'text-lg'} font-black text-gray-900` : block === 'callout' ? 'font-medium text-amber-900' : block === 'divider' ? 'text-transparent' : block === 'table' ? 'text-xs text-gray-600' : checked ? 'text-gray-400 line-through' : 'text-gray-700';
         return `<div data-learning-line data-learning-indent="${indent}" data-learning-prefix="${escapeAttr(prefix)}" data-learning-block="${escapeAttr(block)}" data-learning-line-index="${index}" class="flex min-h-8 items-center gap-2 ${shellClass}" style="padding-left:${Math.floor(indent / 3) * 20}px">
-            ${checkbox ? `<input type="checkbox" data-learning-checkbox class="m-0 h-3 w-3 shrink-0 rounded-sm border-gray-300 accent-indigo-600" ${checked ? 'checked' : ''}>` : ''}
+            ${checkbox ? `<button type="button" role="checkbox" aria-checked="${checked}" aria-label="학습 체크 항목 완료" data-learning-checkbox data-learning-checked="${checked}" contenteditable="false" class="m-0 flex h-3 w-3 shrink-0 items-center justify-center rounded-sm border ${checked ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-300 bg-white text-transparent'}"><i class="fas fa-check text-[7px]"></i></button>` : ''}
             ${block === 'callout' ? '<i class="fas fa-lightbulb self-start pt-1.5 text-xs text-amber-500" contenteditable="false"></i>' : ''}
-            <span data-learning-line-content contenteditable="true" spellcheck="true" data-placeholder="${index === 0 ? '개념, 핵심 요약, 질문을 적어보세요.' : ''}" class="min-w-0 flex-1 break-words py-1 leading-7 outline-none ${contentClass}">${formatInline(content)}</span>
+            <span data-learning-line-content data-placeholder="${index === 0 ? '개념, 핵심 요약, 질문을 적어보세요.' : ''}" class="min-w-0 flex-1 break-words py-1 leading-7 outline-none ${contentClass}">${formatInline(content)}</span>
         </div>`;
     }
 
@@ -506,20 +506,145 @@
             const checkbox = line.querySelector(':scope > [data-learning-checkbox]');
             const prefix = line.dataset.learningPrefix || '';
             const content = serializeInline(line.querySelector(':scope > [data-learning-line-content]'));
-            return `${' '.repeat(indent)}${checkbox ? `- [${checkbox.checked ? 'x' : ' '}] ` : prefix}${content}`;
+            return `${' '.repeat(indent)}${checkbox ? `- [${checkbox.dataset.learningChecked === 'true' ? 'x' : ' '}] ` : prefix}${content}`;
         }).join('\n');
+        updateEditorCharacterCount(source.value);
         return source.value;
+    }
+
+    function updateEditorCharacterCount(value) {
+        const count = document.getElementById('learning-character-count');
+        if (count) count.textContent = String(value || '').length.toLocaleString('ko-KR');
+    }
+
+    function setLearningCheckboxState(checkbox, checked) {
+        if (!checkbox) return;
+        checkbox.dataset.learningChecked = String(Boolean(checked));
+        checkbox.setAttribute('aria-checked', String(Boolean(checked)));
+        checkbox.classList.toggle('border-indigo-600', checked);
+        checkbox.classList.toggle('bg-indigo-600', checked);
+        checkbox.classList.toggle('text-white', checked);
+        checkbox.classList.toggle('border-gray-300', !checked);
+        checkbox.classList.toggle('bg-white', !checked);
+        checkbox.classList.toggle('text-transparent', !checked);
+        const content = checkbox.closest('[data-learning-line]')?.querySelector('[data-learning-line-content]');
+        content?.classList.toggle('line-through', checked);
+        content?.classList.toggle('text-gray-400', checked);
+        content?.classList.toggle('text-gray-700', !checked);
     }
 
     function placeCaret(content, atEnd = false) {
         if (!content) return;
-        content.focus();
+        const surface = content.closest('#learning-editor-surface');
+        (surface || content).focus({ preventScroll: true });
         const selection = window.getSelection();
         const range = document.createRange();
-        range.selectNodeContents(content);
-        range.collapse(!atEnd);
+        const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+        let textNode = walker.nextNode();
+        if (atEnd) {
+            let next = textNode;
+            while (next) { textNode = next; next = walker.nextNode(); }
+        }
+        if (textNode) range.setStart(textNode, atEnd ? textNode.nodeValue.length : 0);
+        else range.setStart(content, atEnd ? content.childNodes.length : 0);
+        range.collapse(true);
         selection?.removeAllRanges();
         selection?.addRange(range);
+    }
+
+    function focusLearningDetailEditorAtPoint(event) {
+        const surface = event.target.closest?.('#learning-editor-surface');
+        if (!surface) return false;
+        surface.focus({ preventScroll: true });
+        let range = null;
+        if (document.caretPositionFromPoint) {
+            const position = document.caretPositionFromPoint(event.clientX, event.clientY);
+            if (position?.offsetNode && surface.contains(position.offsetNode)) {
+                range = document.createRange();
+                range.setStart(position.offsetNode, position.offset);
+                range.collapse(true);
+            }
+        } else if (document.caretRangeFromPoint) {
+            const candidate = document.caretRangeFromPoint(event.clientX, event.clientY);
+            if (candidate?.startContainer && surface.contains(candidate.startContainer)) range = candidate;
+        }
+        const pointedNode = range?.startContainer?.nodeType === Node.TEXT_NODE
+            ? range.startContainer.parentElement
+            : range?.startContainer;
+        if (!range || !pointedNode?.closest?.('[data-learning-line-content]')) {
+            return focusLearningDetailEditor(event.target);
+        }
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        return true;
+    }
+
+    function getEditorContentFromSelection(surface = document.getElementById('learning-editor-surface')) {
+        const selection = window.getSelection();
+        if (!surface || !selection?.rangeCount) return null;
+        let anchor = selection.anchorNode;
+        if (anchor?.nodeType === Node.TEXT_NODE) anchor = anchor.parentElement;
+        const content = anchor?.closest?.('[data-learning-line-content]');
+        return content && surface.contains(content) ? content : null;
+    }
+
+    function getCaretTextOffset(content) {
+        const selection = window.getSelection();
+        if (!content || !selection?.rangeCount || !content.contains(selection.anchorNode)) return 0;
+        const before = document.createRange();
+        before.selectNodeContents(content);
+        before.setEnd(selection.anchorNode, selection.anchorOffset);
+        return before.toString().length;
+    }
+
+    function placeCaretAtTextOffset(content, requestedOffset, extend = false) {
+        if (!content) return;
+        const surface = content.closest('#learning-editor-surface');
+        surface?.focus({ preventScroll: true });
+        const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+        let remaining = Math.max(0, requestedOffset);
+        let node = walker.nextNode();
+        while (node && remaining > node.nodeValue.length) {
+            remaining -= node.nodeValue.length;
+            node = walker.nextNode();
+        }
+        if (!node) { placeCaret(content, true); return; }
+        const selection = window.getSelection();
+        const offset = Math.min(remaining, node.nodeValue.length);
+        if (extend && selection?.rangeCount && selection.extend) {
+            selection.extend(node, offset);
+            return;
+        }
+        const range = document.createRange();
+        range.setStart(node, offset);
+        range.collapse(true);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+    }
+
+    function moveEditorLineVertically(content, direction, extend = false) {
+        const line = content?.closest('[data-learning-line]');
+        const targetLine = direction < 0 ? line?.previousElementSibling : line?.nextElementSibling;
+        const targetContent = targetLine?.querySelector('[data-learning-line-content]');
+        if (!targetContent) return false;
+        placeCaretAtTextOffset(targetContent, getCaretTextOffset(content), extend);
+        return true;
+    }
+
+    function moveEditorLineHorizontally(content, direction, extend = false) {
+        const line = content?.closest('[data-learning-line]');
+        const offset = getCaretTextOffset(content);
+        const length = content?.textContent?.length || 0;
+        if (direction < 0 && offset === 0) {
+            const previous = line?.previousElementSibling?.querySelector('[data-learning-line-content]');
+            if (previous) { placeCaretAtTextOffset(previous, previous.textContent.length, extend); return true; }
+        }
+        if (direction > 0 && offset === length) {
+            const next = line?.nextElementSibling?.querySelector('[data-learning-line-content]');
+            if (next) { placeCaretAtTextOffset(next, 0, extend); return true; }
+        }
+        return false;
     }
 
     function focusLearningDetailEditor(target) {
@@ -546,8 +671,6 @@
         next.style.paddingLeft = line.style.paddingLeft || '0px';
         const content = document.createElement('span');
         content.dataset.learningLineContent = '';
-        content.contentEditable = 'true';
-        content.spellcheck = true;
         content.className = 'min-w-0 flex-1 break-words py-1 leading-7 outline-none text-gray-700';
         next.appendChild(content);
         line.after(next);
@@ -581,15 +704,26 @@
         before.selectNodeContents(content);
         before.setEnd(selection.anchorNode, selection.anchorOffset);
         if (before.toString().length) return false;
-        const boundary = previous.childNodes.length;
+        const boundary = previous.textContent.length;
         while (content.firstChild) previous.appendChild(content.firstChild);
         line.remove();
-        const range = document.createRange();
-        range.setStart(previous, boundary);
-        range.collapse(true);
-        selection.removeAllRanges();
-        selection.addRange(range);
-        previous.focus();
+        placeCaretAtTextOffset(previous, boundary);
+        syncEditorSource();
+        queueAutosave();
+        return true;
+    }
+
+    function mergeEditorLineForward(content) {
+        const line = content?.closest('[data-learning-line]');
+        const nextLine = line?.nextElementSibling;
+        const next = nextLine?.querySelector('[data-learning-line-content]');
+        const selection = window.getSelection();
+        if (!line || !next || !selection?.rangeCount || !selection.isCollapsed) return false;
+        if (getCaretTextOffset(content) !== content.textContent.length) return false;
+        const boundary = content.textContent.length;
+        while (next.firstChild) content.appendChild(next.firstChild);
+        nextLine.remove();
+        placeCaretAtTextOffset(content, boundary);
         syncEditorSource();
         queueAutosave();
         return true;
@@ -651,7 +785,7 @@
             const selected = selection.toString().trim();
             if (selected) return selected;
         }
-        const line = selection?.anchorNode?.parentElement?.closest?.('[data-learning-line]') || surface.querySelector('[data-learning-line]');
+        const line = getEditorContentFromSelection(surface)?.closest('[data-learning-line]') || surface.querySelector('[data-learning-line]');
         return serializeInline(line?.querySelector('[data-learning-line-content]')).trim();
     }
 
@@ -669,7 +803,7 @@
         const source = document.getElementById('learning-content');
         if (!block || !surface || !source) return;
         syncEditorSource();
-        const selectedLine = window.getSelection()?.anchorNode?.parentElement?.closest?.('[data-learning-line]');
+        const selectedLine = getEditorContentFromSelection(surface)?.closest('[data-learning-line]');
         const index = Math.max(0, Array.from(surface.children).indexOf(selectedLine));
         const currentText = serializeInline(selectedLine?.querySelector('[data-learning-line-content]')).trim();
         const reusableText = currentText && currentText !== '/' ? currentText : '';
@@ -680,6 +814,7 @@
         lines.splice(index, 1, ...blockLines);
         source.value = lines.join('\n');
         surface.innerHTML = renderEditorSurface(source.value);
+        updateEditorCharacterCount(source.value);
         document.querySelector('[data-learning-block-menu]')?.classList.add('hidden');
         queueAutosave();
     }
@@ -769,9 +904,9 @@
                     <button type="button" data-learning-detail-save class="inline-flex h-7 items-center gap-1 rounded-md border border-indigo-100 bg-white px-2.5 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50"><i class="fas fa-floppy-disk text-[9px]"></i>본문 저장</button>
                 </div>
                 <textarea id="learning-content" class="hidden">${escapeHtml(entry.content)}</textarea>
-                <div id="learning-editor-surface" data-learning-detail-editor role="textbox" aria-label="노트 상세내역" aria-multiline="true" tabindex="0" class="min-h-[calc(100dvh-325px)] cursor-text overflow-y-auto border border-transparent px-5 py-4 text-sm outline-none transition focus-within:border-indigo-200 focus-within:bg-indigo-50/20">${renderEditorSurface(entry.content)}</div>
+                <div id="learning-editor-surface" data-learning-detail-editor role="textbox" aria-label="노트 상세내역" aria-multiline="true" contenteditable="true" spellcheck="true" class="min-h-[calc(100dvh-325px)] cursor-text overflow-y-auto border border-transparent px-5 py-4 text-sm outline-none transition focus:border-indigo-200 focus:bg-indigo-50/20">${renderEditorSurface(entry.content)}</div>
             </section>
-            <div class="flex items-center justify-between border-t border-gray-100 px-4 py-2 text-[9px] text-gray-400"><span>문자 ${entry.content.length.toLocaleString('ko-KR')}</span><span>Markdown 토큰 지원 · Tab 들여쓰기</span></div>
+            <div class="flex items-center justify-between border-t border-gray-100 px-4 py-2 text-[9px] text-gray-400"><span>문자 <span id="learning-character-count">${entry.content.length.toLocaleString('ko-KR')}</span></span><span>Markdown 토큰 지원 · Tab 들여쓰기</span></div>
         </main>${renderContextDock(entry)}`;
     }
 
@@ -865,26 +1000,14 @@
                 requestAnimationFrame(() => { const input = document.getElementById('learning-search'); input?.focus(); input?.setSelectionRange(searchText.length, searchText.length); });
                 return;
             }
-            if (event.target.closest('[data-learning-line-content]')) {
+            if (event.target.closest('#learning-editor-surface')) {
                 const value = syncEditorSource();
                 const menu = document.querySelector('[data-learning-block-menu]');
-                menu?.classList.toggle('hidden', event.target.textContent.trim() !== '/');
+                menu?.classList.toggle('hidden', getEditorContentFromSelection()?.textContent.trim() !== '/');
                 if (value !== undefined) queueAutosave();
                 return;
             }
             if (['learning-title', 'learning-field', 'learning-item', 'learning-chapter', 'learning-tags', 'learning-links'].includes(event.target.id)) queueAutosave();
-        });
-        root?.addEventListener('change', (event) => {
-            if (event.target.matches('[data-learning-checkbox]')) {
-                const content = event.target.closest('[data-learning-line]')?.querySelector('[data-learning-line-content]');
-                content?.classList.toggle('line-through', event.target.checked);
-                content?.classList.toggle('text-gray-400', event.target.checked);
-                syncEditorSource();
-                queueAutosave();
-            }
-        });
-        root?.addEventListener('focusin', (event) => {
-            if (event.target.id === 'learning-editor-surface') focusLearningDetailEditor(event.target);
         });
         root?.addEventListener('click', async (event) => {
             if (Date.now() < suppressTreeClickUntil && event.target.closest('[data-learning-tree-node]')) {
@@ -907,9 +1030,17 @@
             }
             const entry = current();
             if (!entry) return;
+            const checkbox = event.target.closest('[data-learning-checkbox]');
+            if (checkbox) {
+                event.preventDefault();
+                setLearningCheckboxState(checkbox, checkbox.dataset.learningChecked !== 'true');
+                syncEditorSource();
+                queueAutosave();
+                return;
+            }
             const detailSurface = event.target.closest('#learning-editor-surface');
-            if (detailSurface && !event.target.closest('[data-learning-line-content], [data-learning-checkbox]')) {
-                focusLearningDetailEditor(event.target);
+            if (detailSurface && !event.target.closest('[data-learning-checkbox], [data-learning-note-link]')) {
+                focusLearningDetailEditorAtPoint(event);
                 return;
             }
             const format = event.target.closest('[data-learning-format]');
@@ -957,6 +1088,7 @@
                 const source = document.getElementById('learning-content');
                 source.value = `${syncEditorSource()}${source.value ? '\n' : ''}[[${target.title}]]`;
                 document.getElementById('learning-editor-surface').innerHTML = renderEditorSurface(source.value);
+                updateEditorCharacterCount(source.value);
                 queueAutosave();
                 return;
             }
@@ -981,9 +1113,23 @@
                 moveTreeNodeWithKeyboard(root, reorderTarget.closest('[data-learning-tree-node]'), event.key === 'ArrowUp' ? -1 : 1);
                 return;
             }
-            const content = event.target.closest?.('[data-learning-line-content]');
+            const surface = event.target.closest?.('#learning-editor-surface');
+            const content = getEditorContentFromSelection(surface) || event.target.closest?.('[data-learning-line-content]');
             if (!content) return;
             const line = content.closest('[data-learning-line]');
+            if (['ArrowUp', 'ArrowDown'].includes(event.key)) {
+                if (moveEditorLineVertically(content, event.key === 'ArrowUp' ? -1 : 1, event.shiftKey)) event.preventDefault();
+                return;
+            }
+            if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+                if (moveEditorLineHorizontally(content, event.key === 'ArrowLeft' ? -1 : 1, event.shiftKey)) event.preventDefault();
+                return;
+            }
+            if (['Home', 'End'].includes(event.key) && !event.ctrlKey && !event.metaKey) {
+                event.preventDefault();
+                placeCaretAtTextOffset(content, event.key === 'Home' ? 0 : content.textContent.length, event.shiftKey);
+                return;
+            }
             if (event.key === 'Tab') {
                 event.preventDefault();
                 const currentIndent = Math.max(0, Number(line.dataset.learningIndent) || 0);
@@ -998,6 +1144,10 @@
                 return;
             }
             if (event.key === 'Backspace' && mergeEditorLineBackward(content)) {
+                event.preventDefault();
+                return;
+            }
+            if (event.key === 'Delete' && mergeEditorLineForward(content)) {
                 event.preventDefault();
                 return;
             }

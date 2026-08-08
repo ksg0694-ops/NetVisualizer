@@ -213,6 +213,15 @@ assert.ok(learningArchive.includes('data-learning-meta-toggle') && learningArchi
 assert.ok(learningArchive.includes('data-learning-save') && learningArchive.includes('분류 저장'), 'Learning Archive must expose explicit metadata save');
 assert.ok(learningArchive.includes('data-learning-detail-save') && learningArchive.includes('본문 저장'), 'Learning Archive must expose explicit detail-body save');
 assert.ok(learningArchive.includes('function focusLearningDetailEditor') && learningArchive.includes('aria-label="노트 상세내역"'), 'Learning Archive must focus the editable detail body from its full surface');
+assert.ok(learningArchive.includes('data-learning-detail-editor role="textbox"') && learningArchive.includes('contenteditable="true" spellcheck="true"'), 'Learning Archive must use one multiline editing host');
+assert.ok(!learningArchive.includes('data-learning-line-content contenteditable="true"'), 'Learning Archive lines must not become isolated editing hosts');
+assert.ok(learningArchive.includes('function getEditorContentFromSelection'), 'Learning Archive keyboard commands must resolve the active line from the shared selection');
+assert.ok(learningArchive.includes('function focusLearningDetailEditorAtPoint') && learningArchive.includes('caretPositionFromPoint'), 'Learning Archive clicks must place the caret at the pointer location');
+assert.ok(learningArchive.includes('function moveEditorLineVertically') && learningArchive.includes("['ArrowUp', 'ArrowDown'].includes(event.key)"), 'Learning Archive must support vertical caret movement across logical lines');
+assert.ok(learningArchive.includes('function moveEditorLineHorizontally') && learningArchive.includes("['Home', 'End'].includes(event.key)"), 'Learning Archive must support logical line boundaries and horizontal crossing');
+assert.ok(learningArchive.includes('function mergeEditorLineForward') && learningArchive.includes("event.key === 'Delete'"), 'Learning Archive must merge adjacent lines from either boundary');
+assert.ok(learningArchive.includes('learning-character-count') && learningArchive.includes('function updateEditorCharacterCount'), 'Learning Archive character count must update during editing');
+assert.ok(learningArchive.includes('role="checkbox"') && learningArchive.includes('function setLearningCheckboxState'), 'Learning Archive checkboxes must be reliable controls inside the shared editor');
 assert.ok(checklist.includes('data-checklist-title-display'));
 assert.ok(checklist.includes("root?.addEventListener('dblclick'"));
 assert.ok(!checklist.includes('<span class="text-[11px] font-bold text-gray-500">제목</span>'), 'detail title must not use a separate field row');
