@@ -18,12 +18,17 @@
     let bound = false;
     let loaded = false;
     let autosaveTimer = null;
+    let editorInputFrame = null;
     let pendingTreePress = null;
     let longPressDrag = null;
+    let treeDragFrame = null;
     let suppressTreeClickUntil = 0;
     let remoteSupportsOrdering = true;
-    const LONG_PRESS_DELAY_MS = 480;
-    const LONG_PRESS_CANCEL_DISTANCE = 8;
+    const LONG_PRESS_DELAY_MS = 180;
+    const TOUCH_LONG_PRESS_DELAY_MS = 260;
+    const LONG_PRESS_CANCEL_DISTANCE = 10;
+    const TREE_DRAG_SCROLL_MARGIN = 48;
+    const TREE_DRAG_SCROLL_STEP = 12;
 
     const escapeHtml = (value) => window.AppUtils.escapeHtml(value);
     const escapeAttr = (value) => window.AppUtils.escapeAttr(value);
@@ -78,15 +83,18 @@
     }
 
     function orderedNames(source, key, orderKey) {
-        const firstIndex = new Map();
+        const metadata = new Map();
         source.forEach((entry, index) => {
-            if (!firstIndex.has(entry[key])) firstIndex.set(entry[key], index);
+            const name = entry[key];
+            if (!name) return;
+            const order = orderNumber(entry[orderKey]);
+            const current = metadata.get(name);
+            if (!current) metadata.set(name, { firstIndex: index, order });
+            else if (order < current.order) current.order = order;
         });
-        return [...new Set(source.map((entry) => entry[key]).filter(Boolean))].sort((a, b) => {
-            const aOrder = Math.min(...source.filter((entry) => entry[key] === a).map((entry) => orderNumber(entry[orderKey])));
-            const bOrder = Math.min(...source.filter((entry) => entry[key] === b).map((entry) => orderNumber(entry[orderKey])));
-            return aOrder - bOrder || firstIndex.get(a) - firstIndex.get(b) || a.localeCompare(b, 'ko');
-        });
+        return [...metadata.keys()].sort((a, b) => metadata.get(a).order - metadata.get(b).order
+            || metadata.get(a).firstIndex - metadata.get(b).firstIndex
+            || a.localeCompare(b, 'ko'));
     }
 
     function ensureOrdering(source = entries) {
@@ -123,8 +131,8 @@
             || a.title.localeCompare(b.title, 'ko');
     }
 
-    function saveStore() {
-        ensureOrdering(entries);
+    function saveStore(options = {}) {
+        if (!options.skipOrdering) ensureOrdering(entries);
         entries.sort(compareEntries);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
     }
@@ -203,7 +211,15 @@
     }
 
     async function persistMany(source) {
-        await Promise.all(source.map((entry) => persist(entry)));
+        const client = getClient();
+        const unique = [...new Map(source.map((entry) => [entry.id, entry])).values()];
+        if (!client || unique.length === 0) return;
+        let { error } = await client.from(TABLE_NAME).upsert(unique.map((entry) => toRow(entry)), { onConflict: 'id' });
+        if (error && remoteSupportsOrdering && (String(error.code || '') === 'PGRST204' || /(?:field|item|chapter|display)_order/i.test(String(error.message || '')))) {
+            remoteSupportsOrdering = false;
+            ({ error } = await client.from(TABLE_NAME).upsert(unique.map((entry) => toRow(entry, false)), { onConflict: 'id' }));
+        }
+        if (error && !['42P01', 'PGRST204', 'PGRST205'].includes(String(error.code || ''))) console.warn('Learning archive batch sync failed.', error);
     }
 
     async function removeRemote(id) {
@@ -330,20 +346,119 @@
         return [...new Map(changed.map((entry) => [entry.id, entry])).values()];
     }
 
-    function clearTreeDragState(root) {
-        document.body.classList.remove('select-none');
+    function ensureTreeDragStyles() {
+        if (document.getElementById('learning-tree-drag-style')) return;
+        const style = document.createElement('style');
+        style.id = 'learning-tree-drag-style';
+        style.textContent = `
+            .learning-tree-drag-ghost {
+                border: 1px solid rgba(129, 140, 248, 0.45);
+                border-radius: 0.5rem;
+                background: rgba(255, 255, 255, 0.98);
+                box-shadow: 0 18px 38px rgba(15, 23, 42, 0.2), 0 4px 12px rgba(15, 23, 42, 0.12);
+                cursor: grabbing;
+                opacity: 0.98;
+                pointer-events: none;
+                will-change: transform;
+            }
+            .learning-tree-drag-placeholder {
+                border: 1.5px dashed rgba(99, 102, 241, 0.62);
+                border-radius: 0.5rem;
+                background: repeating-linear-gradient(135deg, rgba(99, 102, 241, 0.07), rgba(99, 102, 241, 0.07) 7px, rgba(99, 102, 241, 0.13) 7px, rgba(99, 102, 241, 0.13) 14px);
+                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+                transition: transform 90ms ease;
+            }
+            .learning-tree-drag-source > [data-learning-reorder-target] {
+                opacity: 0.22 !important;
+                transform: scale(0.985);
+            }
+            .learning-tree-pressing {
+                background: rgba(238, 242, 255, 0.72);
+                transform: scale(0.992);
+            }
+            .learning-tree-dragging, .learning-tree-dragging * {
+                cursor: grabbing !important;
+                user-select: none !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    function moveTreeDragGhost(drag, point) {
+        if (!drag?.ghost) return;
+        const x = point.clientX - drag.offsetX;
+        const y = point.clientY - drag.offsetY;
+        drag.ghost.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(-0.75deg) scale(1.012)`;
+    }
+
+    function moveTreePlaceholder(placeholder, target, position = 'before') {
+        if (!placeholder || !target?.parentNode) return;
+        const anchor = position === 'after' ? target.nextSibling : target;
+        if (anchor !== placeholder) target.parentNode.insertBefore(placeholder, anchor);
+    }
+
+    function clearTreeDragState(root, drag = longPressDrag) {
+        if (treeDragFrame) cancelAnimationFrame(treeDragFrame);
+        treeDragFrame = null;
+        drag?.surface?.classList.remove('learning-tree-pressing');
+        drag?.node?.classList.remove('learning-tree-drag-source');
+        drag?.ghost?.remove();
+        drag?.placeholder?.remove();
+        document.body.classList.remove('select-none', 'learning-tree-dragging');
         root?.querySelectorAll('[data-learning-tree-node]').forEach((node) => {
             node.removeAttribute('data-learning-drop-position');
             node.removeAttribute('data-learning-dragging');
             const surface = node.querySelector(':scope > [data-learning-reorder-target]');
-            surface?.classList.remove('ring-2', 'ring-indigo-300', 'ring-indigo-400', 'ring-offset-1', 'bg-indigo-50', 'opacity-70', 'cursor-grabbing');
+            surface?.classList.remove('ring-2', 'ring-indigo-300', 'ring-offset-1', 'learning-tree-pressing');
         });
     }
 
     function cancelPendingTreePress() {
         if (!pendingTreePress) return;
         clearTimeout(pendingTreePress.timer);
+        pendingTreePress.surface?.classList.remove('learning-tree-pressing');
         pendingTreePress = null;
+    }
+
+    function activateTreeLongPress(pending) {
+        if (pendingTreePress !== pending) return;
+        clearTimeout(pending.timer);
+        pendingTreePress = null;
+        const rect = pending.surface.getBoundingClientRect();
+        const placeholder = document.createElement('div');
+        placeholder.className = 'learning-tree-drag-placeholder';
+        placeholder.style.height = `${rect.height}px`;
+        placeholder.style.marginTop = getComputedStyle(pending.node).marginTop;
+        placeholder.style.marginBottom = getComputedStyle(pending.node).marginBottom;
+        const ghost = pending.surface.cloneNode(true);
+        ghost.classList.remove('learning-tree-pressing');
+        ghost.classList.add('learning-tree-drag-ghost');
+        ghost.removeAttribute('data-learning-reorder-target');
+        ghost.removeAttribute('data-learning-open');
+        ghost.style.position = 'fixed';
+        ghost.style.left = '0';
+        ghost.style.top = '0';
+        ghost.style.width = `${rect.width}px`;
+        ghost.style.height = `${rect.height}px`;
+        ghost.style.margin = '0';
+        ghost.style.zIndex = '9999';
+        pending.node.parentNode?.insertBefore(placeholder, pending.node.nextSibling);
+        pending.node.classList.add('learning-tree-drag-source');
+        pending.node.dataset.learningDragging = 'true';
+        document.body.appendChild(ghost);
+        document.body.classList.add('select-none', 'learning-tree-dragging');
+        longPressDrag = {
+            ...pending,
+            ghost,
+            placeholder,
+            offsetX: pending.startX - rect.left,
+            offsetY: pending.startY - rect.top,
+            latestPoint: { clientX: pending.startX, clientY: pending.startY, pointerId: pending.pointerId },
+            targetNode: null,
+            position: 'before',
+        };
+        moveTreeDragGhost(longPressDrag, longPressDrag.latestPoint);
+        window.navigator?.vibrate?.(10);
     }
 
     function beginTreeLongPress(event, root) {
@@ -357,47 +472,76 @@
             node,
             surface,
             pointerId: event.pointerId ?? 'mouse',
+            pointerType: event.pointerType || 'mouse',
             startX: event.clientX,
             startY: event.clientY,
+            startedAt: performance.now(),
             timer: null,
         };
-        pending.timer = window.setTimeout(() => {
-            if (pendingTreePress !== pending) return;
-            pendingTreePress = null;
-            longPressDrag = { ...pending, targetNode: null, position: 'before' };
-            node.dataset.learningDragging = 'true';
-            surface.classList.add('ring-2', 'ring-indigo-400', 'bg-indigo-50', 'opacity-70', 'cursor-grabbing');
-            document.body.classList.add('select-none');
-        }, LONG_PRESS_DELAY_MS);
+        surface.classList.add('learning-tree-pressing');
+        const delay = pending.pointerType === 'touch' ? TOUCH_LONG_PRESS_DELAY_MS : LONG_PRESS_DELAY_MS;
+        pending.timer = window.setTimeout(() => activateTreeLongPress(pending), delay);
         pendingTreePress = pending;
+    }
+
+    function findNearestTreeDropTarget(root, descriptor, point) {
+        const candidates = Array.from(root.querySelectorAll(`[data-learning-tree-node][data-learning-level="${CSS.escape(descriptor.level)}"]`))
+            .filter((node) => node !== longPressDrag?.node && sameTreeParent(descriptor, describeTreeNode(node)));
+        return candidates.map((node) => {
+            const surface = node.querySelector(':scope > [data-learning-reorder-target]');
+            const rect = surface?.getBoundingClientRect();
+            return rect ? { node, distance: Math.abs(point.clientY - (rect.top + rect.height / 2)) } : null;
+        }).filter(Boolean).sort((a, b) => a.distance - b.distance)[0]?.node || null;
+    }
+
+    function updateTreeAutoScroll(root, point) {
+        const scroller = root.querySelector('[data-learning-tree-list]');
+        const rect = scroller?.getBoundingClientRect();
+        if (!scroller || !rect) return;
+        if (point.clientY < rect.top + TREE_DRAG_SCROLL_MARGIN) scroller.scrollTop -= TREE_DRAG_SCROLL_STEP;
+        else if (point.clientY > rect.bottom - TREE_DRAG_SCROLL_MARGIN) scroller.scrollTop += TREE_DRAG_SCROLL_STEP;
+    }
+
+    function paintTreeDragFrame(root) {
+        treeDragFrame = null;
+        const drag = longPressDrag;
+        const point = drag?.latestPoint;
+        if (!drag || !point) return;
+        moveTreeDragGhost(drag, point);
+        updateTreeAutoScroll(root, point);
+        const sourceDescriptor = describeTreeNode(drag.node);
+        let targetNode = document.elementFromPoint(point.clientX, point.clientY)?.closest?.('[data-learning-tree-node]');
+        if (!targetNode || targetNode === drag.node || !sameTreeParent(sourceDescriptor, describeTreeNode(targetNode))) {
+            targetNode = findNearestTreeDropTarget(root, sourceDescriptor, point);
+        }
+        if (!targetNode || targetNode === drag.node) return;
+        const targetSurface = targetNode.querySelector(':scope > [data-learning-reorder-target]');
+        const rect = targetSurface?.getBoundingClientRect();
+        if (!rect) return;
+        const position = point.clientY > rect.top + rect.height / 2 ? 'after' : 'before';
+        if (drag.targetNode === targetNode && drag.position === position) return;
+        drag.targetNode?.removeAttribute('data-learning-drop-position');
+        drag.targetNode?.querySelector(':scope > [data-learning-reorder-target]')?.classList.remove('ring-2', 'ring-indigo-300', 'ring-offset-1');
+        targetNode.dataset.learningDropPosition = position;
+        targetSurface.classList.add('ring-2', 'ring-indigo-300', 'ring-offset-1');
+        moveTreePlaceholder(drag.placeholder, targetNode, position);
+        drag.targetNode = targetNode;
+        drag.position = position;
     }
 
     function updateTreeLongPress(event, root) {
         if (pendingTreePress) {
             const distance = Math.hypot(event.clientX - pendingTreePress.startX, event.clientY - pendingTreePress.startY);
-            if (distance > LONG_PRESS_CANCEL_DISTANCE) cancelPendingTreePress();
+            if (distance > LONG_PRESS_CANCEL_DISTANCE) {
+                const heldFor = performance.now() - pendingTreePress.startedAt;
+                if (pendingTreePress.pointerType !== 'touch' && heldFor >= 70) activateTreeLongPress(pendingTreePress);
+                else cancelPendingTreePress();
+            }
         }
         if (!longPressDrag || (event.pointerId ?? 'mouse') !== longPressDrag.pointerId) return;
         event.preventDefault();
-        root.querySelectorAll('[data-learning-drop-position]').forEach((node) => {
-            node.removeAttribute('data-learning-drop-position');
-            node.querySelector(':scope > [data-learning-reorder-target]')?.classList.remove('ring-2', 'ring-indigo-300', 'ring-offset-1');
-        });
-        const targetNode = document.elementFromPoint(event.clientX, event.clientY)?.closest?.('[data-learning-tree-node]');
-        const sourceDescriptor = describeTreeNode(longPressDrag.node);
-        const targetDescriptor = describeTreeNode(targetNode);
-        if (!targetNode || targetNode === longPressDrag.node || !sameTreeParent(sourceDescriptor, targetDescriptor)) {
-            longPressDrag.targetNode = null;
-            return;
-        }
-        const targetSurface = targetNode.querySelector(':scope > [data-learning-reorder-target]');
-        const rect = targetSurface?.getBoundingClientRect();
-        if (!rect) return;
-        const position = event.clientY > rect.top + rect.height / 2 ? 'after' : 'before';
-        targetNode.dataset.learningDropPosition = position;
-        targetSurface.classList.add('ring-2', 'ring-indigo-300', 'ring-offset-1');
-        longPressDrag.targetNode = targetNode;
-        longPressDrag.position = position;
+        longPressDrag.latestPoint = { clientX: event.clientX, clientY: event.clientY, pointerId: event.pointerId ?? 'mouse' };
+        if (!treeDragFrame) treeDragFrame = requestAnimationFrame(() => paintTreeDragFrame(root));
     }
 
     async function finishTreeLongPress(event, root, cancelled = false) {
@@ -410,8 +554,11 @@
         const completed = longPressDrag;
         longPressDrag = null;
         suppressTreeClickUntil = Date.now() + 600;
-        clearTreeDragState(root);
-        if (!cancelled && completed.targetNode) await reorderTreeNode(completed.node, completed.targetNode, completed.position);
+        const reorderPromise = !cancelled && completed.targetNode
+            ? reorderTreeNode(completed.node, completed.targetNode, completed.position)
+            : Promise.resolve();
+        clearTreeDragState(root, completed);
+        await reorderPromise;
     }
 
     async function reorderTreeNode(sourceNode, targetNode, position) {
@@ -431,8 +578,8 @@
         const targetIndex = keys.indexOf(targetKey);
         keys.splice(targetIndex + (position === 'after' ? 1 : 0), 0, sourceKey);
         const changed = applySiblingOrder(source, keys);
-        saveStore();
-        render({ skipRemote: true });
+        saveStore({ skipOrdering: true });
+        renderTreeOnly();
         await persistMany(changed);
         window.showToast?.('학습 아카이브 순서를 저장했습니다.', 'info');
     }
@@ -768,8 +915,9 @@
             const changed = Object.entries(next).some(([key, value]) => JSON.stringify(active[key]) !== JSON.stringify(value));
             if (changed) {
                 captureVersion(active);
+                const hierarchyChanged = ['field', 'item', 'chapter'].some((key) => active[key] !== next[key]);
                 Object.assign(active, next, { updatedAt: now() });
-                saveStore();
+                saveStore({ skipOrdering: !hierarchyChanged });
                 await persist(active);
             }
             const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
@@ -919,7 +1067,7 @@
             <aside class="min-w-0 border-b border-gray-200 bg-white p-3 xl:border-b-0 xl:border-r">
                 <div class="mb-3 flex items-start justify-between gap-2"><div><p class="text-[9px] font-bold tracking-wider text-indigo-500">LIFE TOOL</p><h2 class="mt-1 text-lg font-black text-gray-900">학습 아카이브</h2></div><button type="button" data-learning-new class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-indigo-600 text-white shadow-sm" title="새 학습 노트"><i class="fas fa-plus text-[10px]"></i></button></div>
                 <label class="relative block"><i class="fas fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-[9px] text-gray-300"></i><input id="learning-search" value="${escapeAttr(searchText)}" class="h-8 w-full rounded-md border border-gray-200 bg-white pl-7 pr-2 text-[10px] outline-none focus:border-indigo-400" placeholder="분야, Chapter, 노트 검색"></label>
-                <div class="mt-3 max-h-[calc(100dvh-235px)] space-y-1 overflow-y-auto pr-1">${renderTree(source)}</div>
+                <div data-learning-tree-list class="mt-3 max-h-[calc(100dvh-235px)] space-y-1 overflow-y-auto pr-1">${renderTree(source)}</div>
                 <button type="button" data-learning-new class="mt-3 w-full rounded-md border border-dashed border-indigo-200 px-3 py-2 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50"><i class="fas fa-plus mr-1"></i>새 노트</button>
             </aside>
             ${renderEditor(selected)}
@@ -928,7 +1076,27 @@
         if (!options.skipRemote) loadRemote();
     }
 
-    async function saveActive() {
+    function renderTreeOnly() {
+        const list = document.querySelector('#learning-archive-view [data-learning-tree-list]');
+        if (!list) return;
+        const scrollTop = list.scrollTop;
+        list.innerHTML = renderTree(filtered());
+        list.scrollTop = scrollTop;
+        saveUiState();
+    }
+
+    function scheduleEditorInputSync() {
+        if (editorInputFrame) return;
+        editorInputFrame = requestAnimationFrame(() => {
+            editorInputFrame = null;
+            const value = syncEditorSource();
+            const menu = document.querySelector('[data-learning-block-menu]');
+            menu?.classList.toggle('hidden', getEditorContentFromSelection()?.textContent.trim() !== '/');
+            if (value !== undefined) queueAutosave();
+        });
+    }
+
+    async function saveActive(options = {}) {
         const entry = current();
         if (!entry) return false;
         clearTimeout(autosaveTimer);
@@ -938,9 +1106,11 @@
             return false;
         }
         captureVersion(entry, '수동 저장 전');
+        const hierarchyChanged = ['field', 'item', 'chapter'].some((key) => entry[key] !== next[key]);
         Object.assign(entry, next, { updatedAt: now() });
-        saveStore();
-        await persist(entry);
+        saveStore({ skipOrdering: !hierarchyChanged });
+        const remoteSave = persist(entry);
+        if (options.waitForRemote !== false) await remoteSave;
         setAutosaveStatus('saved', '자동 저장됨');
         return true;
     }
@@ -985,6 +1155,7 @@
         if (bound) return;
         bound = true;
         const root = document.getElementById('learning-archive-view');
+        ensureTreeDragStyles();
         root?.addEventListener('pointerdown', (event) => {
             if (event.target.closest('[data-learning-format], [data-learning-block-toggle], [data-learning-block], [data-learning-convert]')) {
                 event.preventDefault();
@@ -996,15 +1167,11 @@
         root?.addEventListener('input', (event) => {
             if (event.target.id === 'learning-search') {
                 searchText = event.target.value;
-                render({ skipRemote: true });
-                requestAnimationFrame(() => { const input = document.getElementById('learning-search'); input?.focus(); input?.setSelectionRange(searchText.length, searchText.length); });
+                renderTreeOnly();
                 return;
             }
             if (event.target.closest('#learning-editor-surface')) {
-                const value = syncEditorSource();
-                const menu = document.querySelector('[data-learning-block-menu]');
-                menu?.classList.toggle('hidden', getEditorContentFromSelection()?.textContent.trim() !== '/');
-                if (value !== undefined) queueAutosave();
+                scheduleEditorInputSync();
                 return;
             }
             if (['learning-title', 'learning-field', 'learning-item', 'learning-chapter', 'learning-tags', 'learning-links'].includes(event.target.id)) queueAutosave();
@@ -1016,7 +1183,7 @@
             }
             const open = event.target.closest('[data-learning-open]');
             if (open) {
-                if (current() && open.dataset.learningOpen !== activeId && document.getElementById('learning-editor-surface')) await saveActive();
+                if (current() && open.dataset.learningOpen !== activeId && document.getElementById('learning-editor-surface')) void saveActive({ waitForRemote: false });
                 activeId = open.dataset.learningOpen;
                 render({ skipRemote: true });
                 return;
@@ -1092,7 +1259,7 @@
                 queueAutosave();
                 return;
             }
-            if (event.target.closest('[data-learning-pin]')) { entry.pinned = !entry.pinned; entry.updatedAt = now(); saveStore(); render({ skipRemote: true }); await persist(entry); return; }
+            if (event.target.closest('[data-learning-pin]')) { entry.pinned = !entry.pinned; entry.updatedAt = now(); saveStore({ skipOrdering: true }); render({ skipRemote: true }); await persist(entry); return; }
             if (event.target.closest('[data-learning-delete]')) {
                 if (!window.confirm('이 학습 노트를 삭제할까요?')) return;
                 entries = entries.filter((item) => item.id !== entry.id); activeId = entries[0]?.id || null; saveStore(); render({ skipRemote: true }); await removeRemote(entry.id); return;
