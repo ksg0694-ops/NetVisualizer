@@ -201,8 +201,12 @@ assert.ok(learningArchive.includes("xl:grid-cols-[280px_minmax(520px,1fr)_280px]
 assert.ok(learningArchive.includes('data-learning-dock-tab="${key}"'), 'Learning Archive must expose links, versions, and TOC tabs');
 assert.ok(learningArchive.includes('function renderConnectionDock'), 'Learning Archive must resolve note and Todo context');
 assert.ok(learningArchive.includes('function queueAutosave'), 'Learning Archive editing must autosave');
-assert.ok(learningArchive.includes('data-learning-convert="task"'), 'Learning notes must convert selected text to a Todo');
-assert.ok(learningArchive.includes('data-learning-convert="step"'), 'Learning notes must convert selected text to a Step');
+assert.ok(!learningArchive.includes('data-learning-convert'), 'Learning Archive must stay a simple memo without Todo or Step conversion');
+assert.ok(!learningArchive.includes('data-learning-block') && !learningArchive.includes('const BLOCKS'), 'Learning Archive must not expose block or block-icon features');
+assert.ok(!learningArchive.includes('data-learning-icon'), 'Learning Archive must not expose an inline icon feature');
+assert.ok(!learningArchive.includes('data-learning-checkbox') && !learningArchive.includes('setLearningCheckboxState'), 'Learning Archive must render checkbox syntax as plain memo text');
+assert.ok(!learningArchive.includes('ChecklistFeature') && !learningArchive.includes('관련 할 일') && !learningArchive.includes('관련 Step'), 'Learning Archive must not couple memo editing to Todo context');
+assert.ok(learningArchive.includes('data-learning-format="bold"') && learningArchive.includes('data-learning-format="underline"') && learningArchive.includes('data-learning-format="strike"'), 'Learning Archive must retain only basic text formatting');
 assert.ok(!learningArchive.includes('data-learning-drag-handle'), 'Learning Archive must not show dedicated drag handles');
 assert.ok(learningArchive.includes('LONG_PRESS_DELAY_MS = 180'), 'Learning Archive desktop reorder must activate quickly after a short hold');
 assert.ok(learningArchive.includes('TOUCH_LONG_PRESS_DELAY_MS = 260'), 'Learning Archive touch reorder must preserve scroll-safe long press');
@@ -228,7 +232,6 @@ assert.ok(learningArchive.includes('function moveEditorLineVertically') && learn
 assert.ok(learningArchive.includes('function moveEditorLineHorizontally') && learningArchive.includes("['Home', 'End'].includes(event.key)"), 'Learning Archive must support logical line boundaries and horizontal crossing');
 assert.ok(learningArchive.includes('function mergeEditorLineForward') && learningArchive.includes("event.key === 'Delete'"), 'Learning Archive must merge adjacent lines from either boundary');
 assert.ok(learningArchive.includes('learning-character-count') && learningArchive.includes('function updateEditorCharacterCount'), 'Learning Archive character count must update during editing');
-assert.ok(learningArchive.includes('role="checkbox"') && learningArchive.includes('function setLearningCheckboxState'), 'Learning Archive checkboxes must be reliable controls inside the shared editor');
 assert.ok(checklist.includes('data-checklist-title-display'));
 assert.ok(checklist.includes("root?.addEventListener('dblclick'"));
 assert.ok(!checklist.includes('<span class="text-[11px] font-bold text-gray-500">제목</span>'), 'detail title must not use a separate field row');

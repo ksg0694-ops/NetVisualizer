@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Update 1.04.03 Learning Archive Text Selection",
+  "feature": "Update 1.04.03 Learning Archive Simple Memo",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-08-08T19:19:19+09:00",
+  "updatedAt": "2026-08-08T19:29:27+09:00",
   "status": "complete",
-  "currentFocus": "Learning Archive preserves multi-character and multi-line pointer selections without breaking exact single-click caret placement.",
+  "currentFocus": "Learning Archive is reduced to a stable memo-first editor with advanced checklist, icon, block, Todo, and Step features removed.",
   "completed": [
     "Documented Plan, Design, Check, Report, and design QA phases.",
     "Replaced arbitrary Todo groups with Career, Finance, and Life.",
@@ -75,8 +75,16 @@
     "Preserved non-collapsed selections before exact click caret placement runs.",
     "Retained normal single-click, keyboard selection, checkbox, and note-link behavior.",
     "Passed the full automated suite and browser multi-character selection regression check.",
-    "Bumped the correction cache to v167."
+    "Bumped the correction cache to v167.",
+    "Removed Learning Archive checklist controls and interactive checkbox rendering.",
+    "Removed inline icon and block definitions, menus, transformations, and events.",
+    "Removed Todo and Step conversion controls and ChecklistFeature coupling.",
+    "Removed related Todo, Step, and task-derived Report context from Learning Archive.",
+    "Preserved existing stored content as ordinary editable memo text.",
+    "Retained B, U, S, autosave, manual save, versions, links, search, indentation, and hierarchy ordering.",
+    "Passed the full automated suite and desktop browser regression check.",
+    "Bumped the correction cache to v168."
   ],
   "remaining": [],
-  "nextStep": "Publish the text selection patch and verify the public GitHub Pages build."
+  "nextStep": "Publish the simple memo patch and verify the public GitHub Pages build."
 }
