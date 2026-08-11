@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Shared Note Editor Foundation",
+  "feature": "Advanced Independent Note Suite",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-08-11T23:16:08+09:00",
+  "updatedAt": "2026-08-11T23:45:00+09:00",
   "status": "complete",
-  "currentFocus": "Todo and Learning Archive remain independent while sharing reliable editing, history controls, and last-input preservation.",
+  "currentFocus": "Todo and Learning Archive provide advanced note workflows while keeping records, search, trash, and synchronization independent.",
   "completed": [
     "Documented Plan, Design, Check, Report, and design QA phases.",
     "Replaced arbitrary Todo groups with Career, Finance, and Life.",
@@ -111,8 +111,17 @@
     "Added separate device-local trash and restore flows for Todo and Learning Archive.",
     "Kept deleted Todo and Learning Archive records isolated instead of linking their data models.",
     "Verified delete, restore, content preservation, permanent removal, and test-data cleanup in the live app.",
-    "Bumped the correction cache to v175."
+    "Bumped the correction cache to v175.",
+    "Documented the advanced independent note suite across Plan, Design, Check, and Report phases.",
+    "Added lightweight paragraph styles and full selection format reset to both note editors.",
+    "Added independent templates, search, recent navigation, and sorting without cross-feature records.",
+    "Added sanitized Markdown, Word, and PDF-print exports.",
+    "Added line-by-line version comparison before restore.",
+    "Added independent dirty-record and pending-delete queues for offline reconciliation.",
+    "Removed local version history when an item is permanently purged.",
+    "Passed the full automated suite and live template, search, reload-persistence, diff, and cleanup checks.",
+    "Bumped the correction cache to v176."
   ],
   "remaining": [],
-  "nextStep": "Add independent search and recent-note navigation, then verify the public GitHub Pages build."
+  "nextStep": "Review the pushed branch in GitHub, then merge it when the note workflow looks right."
 }
