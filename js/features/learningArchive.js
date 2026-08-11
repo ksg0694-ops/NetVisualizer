@@ -195,13 +195,14 @@
 
     async function persist(entry) {
         const client = getClient();
-        if (!client) return;
+        if (!client) return false;
         let { error } = await client.from(TABLE_NAME).upsert(toRow(entry), { onConflict: 'id' });
         if (error && remoteSupportsOrdering && (String(error.code || '') === 'PGRST204' || /(?:field|item|chapter|display)_order/i.test(String(error.message || '')))) {
             remoteSupportsOrdering = false;
             ({ error } = await client.from(TABLE_NAME).upsert(toRow(entry, false), { onConflict: 'id' }));
         }
         if (error && !['42P01', 'PGRST204', 'PGRST205'].includes(String(error.code || ''))) console.warn('Learning archive sync failed.', error);
+        return !error;
     }
 
     async function persistMany(source) {
@@ -921,8 +922,35 @@
     function setAutosaveStatus(state, label) {
         const el = document.getElementById('learning-autosave-status');
         if (!el) return;
-        const icon = state === 'saving' ? 'fa-rotate animate-spin text-indigo-400' : 'fa-circle-check text-emerald-500';
+        const icon = state === 'saving'
+            ? 'fa-rotate animate-spin text-indigo-400'
+            : state === 'local'
+                ? 'fa-hard-drive text-amber-500'
+                : 'fa-circle-check text-emerald-500';
         el.innerHTML = `<i class="fas ${icon} mr-1"></i>${escapeHtml(label)}`;
+    }
+
+    function commitLearningDraftLocally() {
+        const active = current();
+        if (!active || !document.getElementById('learning-editor-surface')) return { valid: false, changed: false, entry: null };
+        const next = readEditor(active);
+        if (!next.field || !next.item || !next.chapter || !next.title) return { valid: false, changed: false, entry: active };
+        const changed = Object.entries(next).some(([key, value]) => JSON.stringify(active[key]) !== JSON.stringify(value));
+        if (changed) {
+            captureVersion(active);
+            const hierarchyChanged = ['field', 'item', 'chapter'].some((key) => active[key] !== next[key]);
+            Object.assign(active, next, { updatedAt: now() });
+            saveStore({ skipOrdering: !hierarchyChanged });
+        }
+        return { valid: true, changed, entry: active };
+    }
+
+    function flushLearningDraftBeforeUnload() {
+        if (editorInputFrame) cancelAnimationFrame(editorInputFrame);
+        editorInputFrame = null;
+        clearTimeout(autosaveTimer);
+        autosaveTimer = null;
+        commitLearningDraftLocally();
     }
 
     function queueAutosave() {
@@ -931,23 +959,15 @@
         clearTimeout(autosaveTimer);
         setAutosaveStatus('saving', '저장 중');
         autosaveTimer = window.setTimeout(async () => {
-            const active = current();
-            if (!active) return;
-            const next = readEditor(active);
-            if (!next.field || !next.item || !next.chapter || !next.title) {
+            autosaveTimer = null;
+            const committed = commitLearningDraftLocally();
+            if (!committed.valid) {
                 setAutosaveStatus('saved', '필수 항목 확인');
                 return;
             }
-            const changed = Object.entries(next).some(([key, value]) => JSON.stringify(active[key]) !== JSON.stringify(value));
-            if (changed) {
-                captureVersion(active);
-                const hierarchyChanged = ['field', 'item', 'chapter'].some((key) => active[key] !== next[key]);
-                Object.assign(active, next, { updatedAt: now() });
-                saveStore({ skipOrdering: !hierarchyChanged });
-                await persist(active);
-            }
+            const savedRemotely = committed.changed ? await persist(committed.entry) : true;
             const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-            setAutosaveStatus('saved', `자동 저장됨 ${time}`);
+            setAutosaveStatus(savedRemotely ? 'saved' : 'local', savedRemotely ? `자동 저장됨 ${time}` : `이 기기에 저장됨 ${time}`);
         }, 800);
     }
 
@@ -1023,6 +1043,7 @@
             </div>
             <div class="relative border-b border-gray-100">
                 <div class="flex flex-wrap items-center gap-1 px-4 py-2">
+                    ${window.NoteEditor.renderHistoryToolbar('learning')}
                     <button type="button" data-learning-format="bold" class="h-7 w-7 rounded border border-gray-200 text-xs font-black text-gray-700">B</button><button type="button" data-learning-format="underline" class="h-7 w-7 rounded border border-gray-200 text-xs font-bold text-gray-700 underline">U</button><button type="button" data-learning-format="strike" class="h-7 w-7 rounded border border-gray-200 text-xs font-bold text-gray-700 line-through">S</button>
                     ${window.NoteEditor.renderFontSizeToolbar('learning')}
                 </div>
@@ -1120,12 +1141,13 @@
         if (bound) return;
         bound = true;
         const root = document.getElementById('learning-archive-view');
+        window.addEventListener('beforeunload', flushLearningDraftBeforeUnload);
         ensureTreeDragStyles();
         root?.addEventListener('pointerdown', (event) => {
             beginEditorSelectionGesture(event);
             const fontToolbar = event.target.closest('[data-note-font-toolbar]');
             if (fontToolbar) window.NoteEditor.rememberSelection(document.getElementById('learning-editor-surface'));
-            if (event.target.closest('[data-learning-format], [data-note-font-step]')) {
+            if (event.target.closest('[data-learning-format], [data-note-font-step], [data-note-history]')) {
                 event.preventDefault();
                 return;
             }
@@ -1181,6 +1203,14 @@
             const detailSurface = event.target.closest('#learning-editor-surface');
             if (detailSurface && !event.target.closest('[data-learning-note-link]')) {
                 focusLearningDetailEditorAtPoint(event);
+                return;
+            }
+            const historyButton = event.target.closest('[data-note-history]');
+            if (historyButton) {
+                const surface = document.getElementById('learning-editor-surface');
+                window.NoteEditor.applyHistory(surface, historyButton.dataset.noteHistory);
+                syncEditorSource();
+                queueAutosave();
                 return;
             }
             const format = event.target.closest('[data-learning-format]');

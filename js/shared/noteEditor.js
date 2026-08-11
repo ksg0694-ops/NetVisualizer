@@ -68,6 +68,13 @@
         return { ok: true, size };
     }
 
+    function applyHistory(surface, direction) {
+        const command = direction === 'redo' ? 'redo' : 'undo';
+        if (!surface) return false;
+        surface.focus({ preventScroll: true });
+        return document.execCommand(command, false);
+    }
+
     function getSelectionFontSize(surface) {
         const selection = root.getSelection?.();
         if (!selectionBelongsTo(surface, selection)) return DEFAULT_FONT_SIZE;
@@ -107,6 +114,13 @@
             </div>`;
     }
 
+    function renderHistoryToolbar(prefix) {
+        return `<div data-note-history-toolbar="${prefix}" class="mr-1 inline-flex h-8 items-center rounded-md border border-gray-200 bg-white shadow-sm">
+                <button type="button" data-note-history="undo" class="h-full w-8 text-gray-500 hover:bg-gray-50 hover:text-indigo-600" title="실행 취소 (Ctrl+Z)" aria-label="실행 취소"><i class="fas fa-rotate-left text-[10px]"></i></button>
+                <button type="button" data-note-history="redo" class="h-full w-8 border-l border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-indigo-600" title="다시 실행 (Ctrl+Y)" aria-label="다시 실행"><i class="fas fa-rotate-right text-[10px]"></i></button>
+            </div>`;
+    }
+
     function updateToolbarFromSelection(toolbar, surface) {
         const input = toolbar?.querySelector('[data-note-font-input]');
         if (input) input.value = String(getSelectionFontSize(surface));
@@ -117,11 +131,13 @@
         MAX_FONT_SIZE,
         DEFAULT_FONT_SIZE,
         applyFontSize,
+        applyHistory,
         clampFontSize,
         getSelectionFontSize,
         rememberSelection,
         renderFontSizeMarkup,
         renderFontSizeToolbar,
+        renderHistoryToolbar,
         serializeFontSize,
         updateToolbarFromSelection,
     });

@@ -78,6 +78,7 @@
     let reportSort = 'recent';
     let isReportLinkFormOpen = false;
     let noteAutosaveTimer = null;
+    let pendingTodoNote = null;
     let isNoteVersionPanelOpen = false;
 
     function escapeHtml(value) {
@@ -185,6 +186,7 @@
         return `
             <div class="relative mt-1 rounded-md border border-gray-200 bg-white focus-within:ring-2 focus-within:ring-indigo-500">
                 <div class="flex flex-wrap items-center gap-1 border-b border-gray-100 bg-gray-50 px-2 py-1.5">
+                    ${window.NoteEditor.renderHistoryToolbar(id)}
                     <button type="button" data-checklist-note-format="bold" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-black text-gray-700 hover:border-indigo-300 hover:text-indigo-700" title="굵게 (**텍스트**)" aria-label="선택한 글자 굵게"><span aria-hidden="true">B</span></button>
                     <button type="button" data-checklist-note-format="underline" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-bold text-gray-700 underline hover:border-indigo-300 hover:text-indigo-700" title="밑줄 (++텍스트++)" aria-label="선택한 글자 밑줄"><span aria-hidden="true">U</span></button>
                     <button type="button" data-checklist-note-format="strike" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-bold text-gray-700 line-through hover:border-indigo-300 hover:text-indigo-700" title="취소선 (~~텍스트~~)" aria-label="선택한 글자 취소선"><span aria-hidden="true">S</span></button>
@@ -462,29 +464,54 @@
     function setTodoAutosaveVisual(state, label) {
         const status = document.getElementById('checklist-note-autosave-status');
         if (!status) return;
-        const icon = state === 'saving' ? 'fa-rotate animate-spin text-indigo-400' : 'fa-circle-check text-emerald-500';
+        const icon = state === 'saving'
+            ? 'fa-rotate animate-spin text-indigo-400'
+            : state === 'local'
+                ? 'fa-hard-drive text-amber-500'
+                : 'fa-circle-check text-emerald-500';
         status.innerHTML = `<i class="fas ${icon} mr-1"></i>${escapeHtml(label)}`;
+    }
+
+    function commitPendingTodoNoteLocally() {
+        const pending = pendingTodoNote;
+        pendingTodoNote = null;
+        if (!pending) return null;
+        const latestTask = tasks.find((item) => item.id === pending.taskId);
+        if (!latestTask) return null;
+        const nextNote = String(pending.note || '').trim();
+        if (latestTask.note === nextNote) return { task: latestTask, changed: false };
+        captureNoteVersion(latestTask, latestTask.note, '자동 저장 전');
+        latestTask.note = nextNote;
+        latestTask.updatedAt = new Date().toISOString();
+        tasks = saveStore(tasks);
+        return { task: latestTask, changed: true };
+    }
+
+    function flushPendingTodoNoteBeforeUnload() {
+        if (!pendingTodoNote) return;
+        clearTimeout(noteAutosaveTimer);
+        noteAutosaveTimer = null;
+        commitPendingTodoNoteLocally();
     }
 
     function queueTodoNoteAutosave(note) {
         const taskId = activeTaskId;
         const task = tasks.find((item) => item.id === taskId);
         if (!task || typeof note !== 'string') return;
+        if (pendingTodoNote && pendingTodoNote.taskId !== taskId) {
+            const previous = commitPendingTodoNoteLocally();
+            if (previous?.changed) void persistRemoteTask(previous.task);
+        }
         clearTimeout(noteAutosaveTimer);
+        pendingTodoNote = { taskId, note };
         setTodoAutosaveVisual('saving', '저장 중');
         noteAutosaveTimer = window.setTimeout(async () => {
-            const latestTask = tasks.find((item) => item.id === taskId);
-            if (!latestTask) return;
-            const nextNote = String(note || '').trim();
-            if (latestTask.note !== nextNote) {
-                captureNoteVersion(latestTask, latestTask.note, '자동 저장 전');
-                latestTask.note = nextNote;
-                latestTask.updatedAt = new Date().toISOString();
-                tasks = saveStore(tasks);
-                await persistRemoteTask(latestTask);
-            }
+            noteAutosaveTimer = null;
+            const committed = commitPendingTodoNoteLocally();
+            if (!committed) return;
+            const savedRemotely = committed.changed ? await persistRemoteTask(committed.task) : true;
             const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-            setTodoAutosaveVisual('saved', `자동 저장됨 ${time}`);
+            setTodoAutosaveVisual(savedRemotely ? 'saved' : 'local', savedRemotely ? `자동 저장됨 ${time}` : `이 기기에 저장됨 ${time}`);
         }, 700);
     }
 
@@ -1568,7 +1595,7 @@
                         <p class="mt-1 text-[11px] text-gray-400">${escapeHtml(domain.label)} · ${stepSummary.done}/${stepSummary.total} Step · 제목은 더블클릭으로 수정</p>
                     </div>
                     <div class="flex w-full shrink-0 flex-wrap items-center justify-end gap-1 sm:w-auto">
-                        <span id="checklist-note-autosave-status" class="mr-1 hidden whitespace-nowrap text-[9px] font-medium text-gray-400 2xl:inline"><i class="fas fa-circle-check mr-1 text-emerald-500"></i>자동 저장됨</span>
+                        <span id="checklist-note-autosave-status" class="mr-1 inline whitespace-nowrap text-[9px] font-medium text-gray-400"><i class="fas fa-circle-check mr-1 text-emerald-500"></i>자동 저장됨</span>
                         <button type="button" data-checklist-version-toggle class="inline-flex h-8 items-center justify-center gap-1 rounded-md border ${isNoteVersionPanelOpen ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white text-gray-500 hover:text-indigo-700'} px-2 text-[9px] font-bold" title="노트 버전 기록"><i class="fas fa-clock-rotate-left text-[10px]"></i><span class="hidden 2xl:inline">버전 기록</span></button>
                         <select id="checklist-status-filter" class="h-8 min-w-0 flex-1 rounded-md border border-gray-200 bg-white px-2 text-[10px] font-bold text-gray-600 outline-none focus:border-indigo-300 sm:max-w-[104px] sm:flex-none" aria-label="할 일 상태 필터">
                             <option value="open" ${activeFilter === 'open' ? 'selected' : ''}>진행 중 ${getSummary().open}</option>
@@ -2039,15 +2066,23 @@
         if (isBound) return;
         isBound = true;
         const root = document.getElementById('routine-checklist-view');
+        window.addEventListener('beforeunload', flushPendingTodoNoteBeforeUnload);
         root?.addEventListener('pointerdown', (event) => {
             const fontToolbar = event.target.closest('[data-note-font-toolbar]');
             const fontSurface = fontToolbar?.closest('.relative')?.querySelector('[data-checklist-note-surface]');
             if (fontToolbar && fontSurface) window.NoteEditor.rememberSelection(fontSurface);
-            if (event.target.closest('[data-checklist-note-format], [data-note-font-step]')) {
+            if (event.target.closest('[data-checklist-note-format], [data-note-font-step], [data-note-history]')) {
                 event.preventDefault();
             }
         });
         root?.addEventListener('click', (event) => {
+            const historyButton = event.target.closest('[data-note-history]');
+            if (historyButton) {
+                const surface = historyButton.closest('.relative')?.querySelector('[data-checklist-note-surface]');
+                window.NoteEditor.applyHistory(surface, historyButton.dataset.noteHistory);
+                syncNoteSourceFromSurface(surface);
+                return;
+            }
             const noteFormatButton = event.target.closest('[data-checklist-note-format]');
             if (noteFormatButton) {
                 applyNoteFormat(noteFormatButton.dataset.noteTarget, noteFormatButton.dataset.checklistNoteFormat);
