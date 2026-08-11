@@ -4,7 +4,7 @@
   "feature": "Shared Note Editor Foundation",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-08-11T23:08:50+09:00",
+  "updatedAt": "2026-08-11T23:16:08+09:00",
   "status": "complete",
   "currentFocus": "Todo and Learning Archive remain independent while sharing reliable editing, history controls, and last-input preservation.",
   "completed": [
@@ -107,8 +107,12 @@
     "Preserved pending local note edits synchronously when the browser unloads before autosave completes.",
     "Made autosave status visible and distinguished cloud saves from device-only saves.",
     "Passed live undo, redo, immediate reload persistence, cleanup, and full automated regression checks.",
-    "Bumped the correction cache to v174."
+    "Bumped the correction cache to v174.",
+    "Added separate device-local trash and restore flows for Todo and Learning Archive.",
+    "Kept deleted Todo and Learning Archive records isolated instead of linking their data models.",
+    "Verified delete, restore, content preservation, permanent removal, and test-data cleanup in the live app.",
+    "Bumped the correction cache to v175."
   ],
   "remaining": [],
-  "nextStep": "Add independent trash and restore flows for Todo and Learning Archive, then verify the public GitHub Pages build."
+  "nextStep": "Add independent search and recent-note navigation, then verify the public GitHub Pages build."
 }

@@ -1,5 +1,6 @@
 (function (window) {
     const STORAGE_KEY = 'netvisualizer.learning.archive.v1';
+    const TRASH_KEY = 'netvisualizer.learning.archive.trash.v1';
     const VERSION_KEY = 'netvisualizer.learning.archive.versions.v1';
     const UI_KEY = 'netvisualizer.learning.archive.ui.v1';
     const TABLE_NAME = 'learning_archive_notes';
@@ -7,6 +8,7 @@
     let activeId = null;
     let searchText = '';
     let dockTab = 'links';
+    let isTrashOpen = false;
     let bound = false;
     let loaded = false;
     let autosaveTimer = null;
@@ -129,6 +131,26 @@
         if (!options.skipOrdering) ensureOrdering(entries);
         entries.sort(compareEntries);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    }
+
+    function readTrash() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(TRASH_KEY) || '[]');
+            if (!Array.isArray(parsed)) return [];
+            return parsed.map((item) => ({
+                entry: normalize(item?.entry || item),
+                deletedAt: item?.deletedAt || item?.deleted_at || now(),
+            })).filter((item) => item.entry);
+        } catch (error) {
+            console.warn('Learning archive trash parse failed.', error);
+            return [];
+        }
+    }
+
+    function saveTrash(items) {
+        const normalized = (Array.isArray(items) ? items : []).filter((item) => item?.entry).slice(0, 100);
+        localStorage.setItem(TRASH_KEY, JSON.stringify(normalized));
+        return normalized;
     }
 
     function readVersions() {
@@ -1060,20 +1082,32 @@
         </main>${renderContextDock(entry)}`;
     }
 
+    function renderTrashDialog() {
+        if (!isTrashOpen) return '';
+        const trash = readTrash();
+        return `<div data-learning-trash-close class="fixed inset-0 z-50 flex items-stretch justify-center bg-gray-950/30 p-0 backdrop-blur-[1px] sm:items-center sm:p-4">
+            <div data-learning-trash-dialog class="flex h-full w-full max-w-lg flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[calc(100vh-2rem)] sm:rounded-lg sm:border sm:border-gray-200" role="dialog" aria-modal="true" aria-label="학습 노트 휴지통">
+                <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3"><div><p class="text-sm font-black text-gray-900">학습 노트 휴지통</p><p class="mt-0.5 text-[9px] text-gray-400">이 기기에 보관됩니다.</p></div><button type="button" data-learning-trash-close class="h-8 w-8 rounded-md text-gray-400 hover:bg-gray-100" aria-label="학습 노트 휴지통 닫기"><i class="fas fa-xmark"></i></button></div>
+                <div class="max-h-[70vh] flex-1 space-y-2 overflow-y-auto p-4">${trash.length ? trash.map(({ entry, deletedAt }) => `<article class="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2.5"><div class="min-w-0 flex-1"><p class="truncate text-[12px] font-bold text-gray-800">${escapeHtml(entry.title)}</p><p class="mt-0.5 truncate text-[9px] text-gray-400">${escapeHtml(entry.field)} · ${escapeHtml(entry.chapter)} · ${new Date(deletedAt).toLocaleString('ko-KR')}</p></div><button type="button" data-learning-trash-restore="${escapeAttr(entry.id)}" class="rounded-md border border-indigo-100 px-2 py-1.5 text-[9px] font-bold text-indigo-600 hover:bg-indigo-50">복원</button><button type="button" data-learning-trash-purge="${escapeAttr(entry.id)}" class="h-7 w-7 rounded-md text-gray-400 hover:bg-rose-50 hover:text-rose-600" aria-label="${escapeAttr(entry.title)} 영구 삭제"><i class="fas fa-trash text-[10px]"></i></button></article>`).join('') : '<div class="rounded-lg border border-dashed border-gray-200 px-4 py-12 text-center text-xs text-gray-400">휴지통이 비어 있습니다.</div>'}</div>
+            </div>
+        </div>`;
+    }
+
     function render(options = {}) {
         const root = document.getElementById('learning-archive-view');
         if (!root) return;
         const source = filtered();
         const selected = current();
+        const trashCount = readTrash().length;
         root.innerHTML = `<div class="overflow-hidden border-y border-gray-200 bg-white xl:grid xl:min-h-[calc(100dvh-128px)] xl:grid-cols-[280px_minmax(520px,1fr)_280px]">
             <aside class="min-w-0 border-b border-gray-200 bg-white p-3 xl:border-b-0 xl:border-r">
-                <div class="mb-3 flex items-start justify-between gap-2"><div><p class="text-[9px] font-bold tracking-wider text-indigo-500">LIFE TOOL</p><h2 class="mt-1 text-lg font-black text-gray-900">학습 아카이브</h2></div><button type="button" data-learning-new class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-indigo-600 text-white shadow-sm" title="새 학습 노트"><i class="fas fa-plus text-[10px]"></i></button></div>
+                <div class="mb-3 flex items-start justify-between gap-2"><div><p class="text-[9px] font-bold tracking-wider text-indigo-500">LIFE TOOL</p><h2 class="mt-1 text-lg font-black text-gray-900">학습 아카이브</h2></div><div class="flex items-center gap-1"><button type="button" data-learning-trash-toggle class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-500 hover:border-indigo-200 hover:text-indigo-600" title="이 기기의 휴지통" aria-label="학습 노트 휴지통"><i class="fas fa-trash-can text-[10px]"></i>${trashCount ? `<span class="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[8px] font-black text-white">${trashCount}</span>` : ''}</button><button type="button" data-learning-new class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-indigo-600 text-white shadow-sm" title="새 학습 노트"><i class="fas fa-plus text-[10px]"></i></button></div></div>
                 <label class="relative block"><i class="fas fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-[9px] text-gray-300"></i><input id="learning-search" value="${escapeAttr(searchText)}" class="h-8 w-full rounded-md border border-gray-200 bg-white pl-7 pr-2 text-[10px] outline-none focus:border-indigo-400" placeholder="분야, Chapter, 노트 검색"></label>
                 <div data-learning-tree-list class="mt-3 max-h-[calc(100dvh-235px)] space-y-1 overflow-y-auto pr-1">${renderTree(source)}</div>
                 <button type="button" data-learning-new class="mt-3 w-full rounded-md border border-dashed border-indigo-200 px-3 py-2 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50"><i class="fas fa-plus mr-1"></i>새 노트</button>
             </aside>
             ${renderEditor(selected)}
-        </div>`;
+        </div>${renderTrashDialog()}`;
         saveUiState();
         if (!options.skipRemote) loadRemote();
     }
@@ -1137,6 +1171,26 @@
         window.showToast?.('선택한 학습 노트 버전을 복원했습니다.', 'info');
     }
 
+    async function restoreLearningEntryFromTrash(id) {
+        const trash = readTrash();
+        const trashed = trash.find((item) => item.entry.id === id);
+        if (!trashed) return;
+        if (!entries.some((item) => item.id === id)) entries.unshift(trashed.entry);
+        saveTrash(trash.filter((item) => item.entry.id !== id));
+        activeId = id;
+        isTrashOpen = false;
+        saveStore();
+        render({ skipRemote: true });
+        await persist(trashed.entry);
+        window.showToast?.('학습 노트를 휴지통에서 복원했습니다.', 'info');
+    }
+
+    function purgeLearningEntryFromTrash(id) {
+        saveTrash(readTrash().filter((item) => item.entry.id !== id));
+        render({ skipRemote: true });
+        window.showToast?.('학습 노트를 휴지통에서 영구 삭제했습니다.', 'info');
+    }
+
     function bindControls() {
         if (bound) return;
         bound = true;
@@ -1197,6 +1251,29 @@
                 const chapter = current()?.chapter || 'Chapter 1';
                 const entry = normalize({ field, item, chapter, title: '새 학습 노트' });
                 entries.unshift(entry); activeId = entry.id; saveStore(); render({ skipRemote: true }); document.getElementById('learning-title')?.select(); await persist(entry); return;
+            }
+            if (event.target.closest('[data-learning-trash-toggle]')) {
+                isTrashOpen = true;
+                render({ skipRemote: true });
+                return;
+            }
+            const trashRestore = event.target.closest('[data-learning-trash-restore]');
+            if (trashRestore) {
+                await restoreLearningEntryFromTrash(trashRestore.dataset.learningTrashRestore);
+                return;
+            }
+            const trashPurge = event.target.closest('[data-learning-trash-purge]');
+            if (trashPurge) {
+                purgeLearningEntryFromTrash(trashPurge.dataset.learningTrashPurge);
+                return;
+            }
+            const trashCloseButton = event.target.closest('button[data-learning-trash-close]');
+            const trashCloseBackdrop = event.target.matches('[data-learning-trash-close]')
+                && !event.target.closest('[data-learning-trash-dialog]');
+            if (trashCloseButton || trashCloseBackdrop) {
+                isTrashOpen = false;
+                render({ skipRemote: true });
+                return;
             }
             const entry = current();
             if (!entry) return;
@@ -1267,7 +1344,9 @@
             if (event.target.closest('[data-learning-pin]')) { entry.pinned = !entry.pinned; entry.updatedAt = now(); saveStore({ skipOrdering: true }); render({ skipRemote: true }); await persist(entry); return; }
             if (event.target.closest('[data-learning-delete]')) {
                 if (!window.confirm('이 학습 노트를 삭제할까요?')) return;
-                entries = entries.filter((item) => item.id !== entry.id); activeId = entries[0]?.id || null; saveStore(); render({ skipRemote: true }); await removeRemote(entry.id); return;
+                const trash = readTrash();
+                saveTrash([{ entry, deletedAt: now() }, ...trash.filter((item) => item.entry.id !== entry.id)]);
+                entries = entries.filter((item) => item.id !== entry.id); activeId = entries[0]?.id || null; saveStore(); render({ skipRemote: true }); await removeRemote(entry.id); window.showToast?.('학습 노트를 휴지통으로 이동했습니다.', 'info'); return;
             }
         });
         document.addEventListener('pointermove', (event) => {

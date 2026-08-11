@@ -211,6 +211,7 @@ assert.ok(!learningArchive.includes('ChecklistFeature') && !learningArchive.incl
 assert.ok(learningArchive.includes('data-learning-format="bold"') && learningArchive.includes('data-learning-format="underline"') && learningArchive.includes('data-learning-format="strike"'), 'Learning Archive must retain only basic text formatting');
 assert.ok(learningArchive.includes('NoteEditor.renderFontSizeToolbar') && learningArchive.includes('function applySelectionFontSize'), 'Learning Archive must use the shared flexible font-size control');
 assert.ok(learningArchive.includes('NoteEditor.renderHistoryToolbar') && learningArchive.includes('flushLearningDraftBeforeUnload'), 'Learning Archive must expose note history controls and flush pending local drafts before unload');
+assert.ok(learningArchive.includes('learning.archive.trash.v1') && learningArchive.includes('restoreLearningEntryFromTrash'), 'Learning Archive must keep an independent local trash and restore flow');
 assert.ok(learningArchive.includes("${isOpen(field) ? 'open' : ''}"), 'Learning Archive must only expand the active tree path');
 assert.ok(!learningArchive.includes('<details open data-learning-tree-node'), 'Learning Archive must not force every hierarchy level open');
 assert.ok(learningArchive.includes('leading-[1.4]'), 'Learning Archive lines must use compact, stable spacing');
@@ -255,6 +256,7 @@ assert.ok(!checklist.includes('하위 할 일'));
 assert.ok(!checklist.includes('Sub tasks'));
 assert.ok(checklist.includes('NoteEditor.renderFontSizeToolbar') && checklist.includes('function applyNoteSelectionFontSize'), 'Todo must use the shared flexible font-size control');
 assert.ok(checklist.includes('NoteEditor.renderHistoryToolbar') && checklist.includes('flushPendingTodoNoteBeforeUnload'), 'Todo must expose note history controls and flush pending local drafts before unload');
+assert.ok(checklist.includes('life.checklist.trash.v1') && checklist.includes('restoreTaskFromTrash'), 'Todo must keep an independent local trash and restore flow');
 assert.ok(checklist.includes('leading-[1.4]'), 'Todo editor lines must use compact, stable spacing');
 assert.ok(noteEditor.includes('MIN_FONT_SIZE = 10') && noteEditor.includes('MAX_FONT_SIZE = 32'), 'shared note editor must support a flexible 10px-32px range');
 assert.ok(noteEditor.includes('data-note-font-input') && noteEditor.includes('data-note-font-step'), 'shared note editor must expose direct input and incremental controls');

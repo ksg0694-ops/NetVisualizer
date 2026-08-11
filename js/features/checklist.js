@@ -1,5 +1,6 @@
 (function (window) {
     const STORAGE_KEY = 'netvisualizer.life.checklist.v1';
+    const TRASH_KEY = 'netvisualizer.life.checklist.trash.v1';
     const UI_STATE_KEY = 'netvisualizer.checklist.ui-state.v1';
     const NOTE_VERSION_KEY = 'netvisualizer.todo.note-versions.v1';
     const TABLE_NAME = 'life_todos';
@@ -65,6 +66,7 @@
     let isDetailPanelOpen = Boolean(restoredChecklistUiState.activeTaskId);
     let isBound = false;
     let isAddFormOpen = false;
+    let isTrashOpen = false;
     let remoteAvailable = true;
     let remoteLoaded = false;
     let remoteLoadStarted = false;
@@ -1195,6 +1197,26 @@
         return normalized;
     }
 
+    function getTrashStore() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(TRASH_KEY) || '[]');
+            if (!Array.isArray(parsed)) return [];
+            return parsed.map((item) => ({
+                task: normalizeTask(item?.task || item),
+                deletedAt: item?.deletedAt || item?.deleted_at || new Date().toISOString(),
+            })).filter((item) => item.task);
+        } catch (error) {
+            console.warn('Todo trash storage parse failed', error);
+            return [];
+        }
+    }
+
+    function saveTrashStore(items) {
+        const normalized = (Array.isArray(items) ? items : []).filter((item) => item?.task).slice(0, 100);
+        localStorage.setItem(TRASH_KEY, JSON.stringify(normalized));
+        return normalized;
+    }
+
     function getClient() {
         if (!remoteAvailable || typeof getAuthenticatedSupabaseClient !== 'function') return null;
         try {
@@ -1654,10 +1676,22 @@
     function renderAddForm() {
         const panel = document.getElementById('checklist-add-panel');
         if (!panel) return;
+        const trash = getTrashStore();
         panel.innerHTML = `
-            <button type="button" data-checklist-toggle-add-form class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm" title="할 일 추가" aria-label="할 일 추가">
-                <i class="fas fa-plus text-[11px]"></i>
-            </button>
+            <div class="flex items-center gap-1">
+                <button type="button" data-checklist-trash-toggle class="relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-500 hover:border-indigo-200 hover:text-indigo-600" title="이 기기의 휴지통" aria-label="할 일 휴지통"><i class="fas fa-trash-can text-[10px]"></i>${trash.length ? `<span class="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[8px] font-black text-white">${trash.length}</span>` : ''}</button>
+                <button type="button" data-checklist-toggle-add-form class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm" title="할 일 추가" aria-label="할 일 추가">
+                    <i class="fas fa-plus text-[11px]"></i>
+                </button>
+            </div>
+            ${isTrashOpen ? `
+                <div data-checklist-trash-close class="fixed inset-0 z-50 flex items-stretch justify-center bg-gray-950/30 p-0 backdrop-blur-[1px] sm:items-center sm:p-4">
+                    <div class="flex h-full w-full max-w-lg flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[calc(100vh-2rem)] sm:rounded-lg sm:border sm:border-gray-200" role="dialog" aria-modal="true" aria-label="할 일 휴지통" data-checklist-trash-dialog>
+                        <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3"><div><p class="text-sm font-black text-gray-900">할 일 휴지통</p><p class="mt-0.5 text-[9px] text-gray-400">이 기기에 보관됩니다.</p></div><button type="button" data-checklist-trash-close class="h-8 w-8 rounded-md text-gray-400 hover:bg-gray-100" aria-label="할 일 휴지통 닫기"><i class="fas fa-xmark"></i></button></div>
+                        <div class="max-h-[70vh] flex-1 space-y-2 overflow-y-auto p-4">${trash.length ? trash.map(({ task, deletedAt }) => `<article class="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2.5"><div class="min-w-0 flex-1"><p class="truncate text-[12px] font-bold text-gray-800">${escapeHtml(task.title)}</p><p class="mt-0.5 text-[9px] text-gray-400">${new Date(deletedAt).toLocaleString('ko-KR')}</p></div><button type="button" data-checklist-trash-restore="${escapeAttr(task.id)}" class="rounded-md border border-indigo-100 px-2 py-1.5 text-[9px] font-bold text-indigo-600 hover:bg-indigo-50">복원</button><button type="button" data-checklist-trash-purge="${escapeAttr(task.id)}" class="h-7 w-7 rounded-md text-gray-400 hover:bg-rose-50 hover:text-rose-600" aria-label="${escapeAttr(task.title)} 영구 삭제"><i class="fas fa-trash text-[10px]"></i></button></article>`).join('') : '<div class="rounded-lg border border-dashed border-gray-200 px-4 py-12 text-center text-xs text-gray-400">휴지통이 비어 있습니다.</div>'}</div>
+                    </div>
+                </div>
+            ` : ''}
             ${isAddFormOpen ? `
                 <div data-checklist-close-add-form class="fixed inset-0 z-50 flex items-stretch justify-center bg-gray-950/30 p-0 backdrop-blur-[1px] sm:items-center sm:p-4">
                     <div id="checklist-add-form" class="flex h-full w-full max-w-xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[calc(100vh-2rem)] sm:rounded-lg sm:border sm:border-gray-200" role="dialog" aria-modal="true" aria-label="새 할 일 추가" data-checklist-dialog>
@@ -2042,21 +2076,47 @@
         toast('제목을 수정했습니다.', 'info');
     }
 
+    async function restoreTaskFromTrash(id) {
+        const trash = getTrashStore();
+        const trashed = trash.find((item) => item.task.id === id);
+        if (!trashed) return;
+        if (!tasks.some((item) => item.id === id)) tasks = saveStore([trashed.task, ...tasks]);
+        saveTrashStore(trash.filter((item) => item.task.id !== id));
+        activeTaskId = id;
+        isTrashOpen = false;
+        render({ skipRemoteLoad: true });
+        await persistRemoteTask(trashed.task);
+        toast('할 일을 휴지통에서 복원했습니다.', 'info');
+    }
+
+    function purgeTaskFromTrash(id) {
+        saveTrashStore(getTrashStore().filter((item) => item.task.id !== id));
+        renderAddForm();
+        toast('휴지통에서 영구 삭제했습니다.', 'info');
+    }
+
     async function deleteTask(id) {
         const previousTasks = tasks.slice();
+        const previousTrash = getTrashStore();
         const deletedTask = tasks.find((item) => item.id === id);
         if (!deletedTask) return;
         const hasRemoteClient = Boolean(getClient());
+        saveTrashStore([{ task: deletedTask, deletedAt: new Date().toISOString() }, ...previousTrash.filter((item) => item.task.id !== id)]);
         tasks = tasks.filter((item) => item.id !== id);
         if (activeTaskId === id) activeTaskId = null;
         tasks = saveStore(tasks);
         render({ skipRemoteLoad: true });
-        if (!hasRemoteClient) return;
+        if (!hasRemoteClient) {
+            toast('할 일을 이 기기의 휴지통으로 이동했습니다.', 'info');
+            return;
+        }
         const deletedRemotely = await deleteRemoteTask(id);
         if (deletedRemotely) {
             renderSyncStatus('서버 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
+            toast('할 일을 휴지통으로 이동했습니다.', 'info');
             return;
         }
+        saveTrashStore(previousTrash);
         tasks = saveStore(previousTasks);
         render({ skipRemoteLoad: true });
         toast('서버 삭제에 실패해 항목을 복원했습니다.', 'error', 3200);
@@ -2130,9 +2190,34 @@
                 render({ skipRemoteLoad: true });
                 return;
             }
+            if (event.target.closest('[data-checklist-trash-toggle]')) {
+                isTrashOpen = true;
+                isAddFormOpen = false;
+                render({ skipRemoteLoad: true });
+                return;
+            }
+            const trashRestore = event.target.closest('[data-checklist-trash-restore]');
+            if (trashRestore) {
+                void restoreTaskFromTrash(trashRestore.dataset.checklistTrashRestore);
+                return;
+            }
+            const trashPurge = event.target.closest('[data-checklist-trash-purge]');
+            if (trashPurge) {
+                purgeTaskFromTrash(trashPurge.dataset.checklistTrashPurge);
+                return;
+            }
+            const trashCloseButton = event.target.closest('button[data-checklist-trash-close]');
+            const trashCloseBackdrop = event.target.matches('[data-checklist-trash-close]')
+                && !event.target.closest('[data-checklist-trash-dialog]');
+            if (trashCloseButton || trashCloseBackdrop) {
+                isTrashOpen = false;
+                render({ skipRemoteLoad: true });
+                return;
+            }
             const toggleAddFormBtn = event.target.closest('[data-checklist-toggle-add-form]');
             if (toggleAddFormBtn) {
                 isAddFormOpen = true;
+                isTrashOpen = false;
                 render({ skipRemoteLoad: true });
                 return;
             }
