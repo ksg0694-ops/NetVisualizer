@@ -257,20 +257,25 @@
 
     function renderTree(source) {
         const fields = orderedNames(source, 'field', 'fieldOrder');
+        const active = current();
+        const isOpen = (field, item = '', chapter = '') => Boolean(searchText.trim()
+            || (active && active.field === field
+                && (!item || active.item === item)
+                && (!chapter || active.chapter === chapter)));
         if (!fields.length) return '<div class="rounded-lg border border-dashed border-gray-200 px-4 py-10 text-center text-xs text-gray-400">첫 학습 노트를 만들어보세요.</div>';
         return fields.map((field) => {
             const fieldEntries = source.filter((entry) => entry.field === field);
             const items = orderedNames(fieldEntries, 'item', 'itemOrder');
-            return `<details open data-learning-tree-node data-learning-level="field" data-learning-field="${escapeAttr(field)}" class="group/field rounded-md">
+            return `<details ${isOpen(field) ? 'open' : ''} data-learning-tree-node data-learning-level="field" data-learning-field="${escapeAttr(field)}" class="group/field rounded-md">
                 <summary data-learning-reorder-target title="길게 눌러 분야 순서 변경" class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-2 text-xs font-black text-gray-800 transition hover:bg-gray-50"><i class="fas fa-chevron-right w-2 text-[8px] text-gray-300 transition group-open/field:rotate-90"></i><i class="far fa-folder text-indigo-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(field)}</span><span class="text-[9px] font-medium text-gray-400">${fieldEntries.length}</span></summary>
                 <div class="ml-3 border-l border-gray-100 pl-2">${items.map((item) => {
                     const itemEntries = fieldEntries.filter((entry) => entry.item === item);
                     const chapters = orderedNames(itemEntries, 'chapter', 'chapterOrder');
-                    return `<details open data-learning-tree-node data-learning-level="item" data-learning-field="${escapeAttr(field)}" data-learning-item="${escapeAttr(item)}" class="group/item rounded-md">
+                    return `<details ${isOpen(field, item) ? 'open' : ''} data-learning-tree-node data-learning-level="item" data-learning-field="${escapeAttr(field)}" data-learning-item="${escapeAttr(item)}" class="group/item rounded-md">
                         <summary data-learning-reorder-target title="길게 눌러 항목 순서 변경" class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-bold text-gray-700 transition hover:bg-gray-50"><i class="fas fa-chevron-right w-2 text-[8px] text-gray-300 transition group-open/item:rotate-90"></i><i class="far fa-folder-open text-sky-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(item)}</span><span class="text-[9px] font-medium text-gray-400">${itemEntries.length}</span></summary>
                         <div class="ml-3 border-l border-gray-100 pl-2">${chapters.map((chapter) => {
                             const chapterEntries = itemEntries.filter((entry) => entry.chapter === chapter).sort(compareEntries);
-                            return `<details open data-learning-tree-node data-learning-level="chapter" data-learning-field="${escapeAttr(field)}" data-learning-item="${escapeAttr(item)}" data-learning-chapter="${escapeAttr(chapter)}" class="group/chapter rounded-md">
+                            return `<details ${isOpen(field, item, chapter) ? 'open' : ''} data-learning-tree-node data-learning-level="chapter" data-learning-field="${escapeAttr(field)}" data-learning-item="${escapeAttr(item)}" data-learning-chapter="${escapeAttr(chapter)}" class="group/chapter rounded-md">
                                 <summary data-learning-reorder-target title="길게 눌러 Chapter 순서 변경" class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-[10px] font-bold text-gray-600 transition hover:bg-gray-50"><i class="fas fa-chevron-right w-2 text-[7px] text-gray-300 transition group-open/chapter:rotate-90"></i><i class="far fa-file-lines text-gray-400"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(chapter)}</span><span class="text-[9px] font-medium text-gray-400">${chapterEntries.length}</span></summary>
                                 <div class="ml-3 space-y-0.5 border-l border-gray-100 pl-2">${chapterEntries.map((entry) => `<div data-learning-tree-node data-learning-level="note" data-learning-id="${escapeAttr(entry.id)}" data-learning-field="${escapeAttr(field)}" data-learning-item="${escapeAttr(item)}" data-learning-chapter="${escapeAttr(chapter)}" class="flex items-center rounded-md ${activeId === entry.id ? 'bg-indigo-50 ring-1 ring-indigo-100' : 'hover:bg-gray-50'}"><button type="button" data-learning-reorder-target data-learning-open="${escapeAttr(entry.id)}" title="길게 눌러 노트 순서 변경" class="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-[10px] transition ${activeId === entry.id ? 'font-bold text-indigo-700' : 'text-gray-500 hover:text-gray-800'}"><i class="far fa-note-sticky text-[9px]"></i><span class="min-w-0 flex-1 truncate">${escapeHtml(entry.title)}</span>${entry.pinned ? '<i class="fas fa-thumbtack text-[8px] text-indigo-400"></i>' : ''}</button></div>`).join('')}</div>
                             </details>`;
@@ -592,19 +597,20 @@
     }
 
     function formatInline(value) {
-        return escapeHtml(String(value || ''))
+        const formatted = escapeHtml(String(value || ''))
             .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
             .replace(/\+\+([^+\n]+)\+\+/g, '<u>$1</u>')
             .replace(/~~([^~\n]+)~~/g, '<s>$1</s>')
             .replace(/\[\[([^\]\n]+)\]\]/g, '<span data-learning-note-link="$1" contenteditable="false" class="rounded bg-indigo-50 px-1 py-0.5 font-semibold text-indigo-700">$1</span>');
+        return window.NoteEditor.renderFontSizeMarkup(formatted);
     }
 
     function renderEditorLine(line, index) {
         const raw = String(line || '');
         const indent = raw.match(/^ */)?.[0]?.length || 0;
         const content = raw.slice(indent);
-        return `<div data-learning-line data-learning-indent="${indent}" data-learning-line-index="${index}" class="flex min-h-8 items-center" style="padding-left:${Math.floor(indent / 3) * 20}px">
-            <span data-learning-line-content data-placeholder="${index === 0 ? '내용을 입력하세요.' : ''}" class="min-w-0 flex-1 whitespace-pre-wrap break-words py-1 leading-7 text-gray-700 outline-none">${formatInline(content)}</span>
+        return `<div data-learning-line data-learning-indent="${indent}" data-learning-line-index="${index}" class="flex min-h-6 items-center" style="padding-left:${Math.floor(indent / 3) * 20}px">
+            <span data-learning-line-content data-placeholder="${index === 0 ? '내용을 입력하세요.' : ''}" class="min-w-0 flex-1 whitespace-pre-wrap break-words py-0.5 leading-[1.4] text-gray-700 outline-none">${formatInline(content)}</span>
         </div>`;
     }
 
@@ -619,6 +625,8 @@
         if (node.dataset?.learningNoteLink) return `[[${node.dataset.learningNoteLink}]]`;
         if (node.tagName === 'BR') return '';
         const value = Array.from(node.childNodes).map(serializeInline).join('');
+        const sized = window.NoteEditor.serializeFontSize(node, value);
+        if (sized) return sized;
         if (['B', 'STRONG'].includes(node.tagName)) return `**${value}**`;
         if (node.tagName === 'U') return `++${value}++`;
         if (['S', 'STRIKE'].includes(node.tagName)) return `~~${value}~~`;
@@ -832,11 +840,11 @@
         next.dataset.learningIndent = line.dataset.learningIndent || '0';
         next.dataset.learningPrefix = '';
         next.dataset.learningBlock = 'paragraph';
-        next.className = 'flex min-h-8 items-center gap-2';
+        next.className = 'flex min-h-6 items-center gap-2';
         next.style.paddingLeft = line.style.paddingLeft || '0px';
         const content = document.createElement('span');
         content.dataset.learningLineContent = '';
-        content.className = 'min-w-0 flex-1 break-words py-1 leading-7 outline-none text-gray-700';
+        content.className = 'min-w-0 flex-1 whitespace-pre-wrap break-words py-0.5 leading-[1.4] outline-none text-gray-700';
         next.appendChild(content);
         line.after(next);
         return content;
@@ -951,6 +959,17 @@
         queueAutosave();
     }
 
+    function applySelectionFontSize(size) {
+        const surface = document.getElementById('learning-editor-surface');
+        const result = window.NoteEditor.applyFontSize(surface, size);
+        if (!result.ok) {
+            window.showToast?.('크기를 바꿀 글자를 먼저 선택해주세요.', 'warning');
+            return;
+        }
+        syncEditorSource();
+        queueAutosave();
+    }
+
     function getNoteLinks(content) {
         return [...String(content || '').matchAll(/\[\[([^\]\n]+)\]\]/g)].map((match) => match[1].trim()).filter(Boolean);
     }
@@ -1005,6 +1024,7 @@
             <div class="relative border-b border-gray-100">
                 <div class="flex flex-wrap items-center gap-1 px-4 py-2">
                     <button type="button" data-learning-format="bold" class="h-7 w-7 rounded border border-gray-200 text-xs font-black text-gray-700">B</button><button type="button" data-learning-format="underline" class="h-7 w-7 rounded border border-gray-200 text-xs font-bold text-gray-700 underline">U</button><button type="button" data-learning-format="strike" class="h-7 w-7 rounded border border-gray-200 text-xs font-bold text-gray-700 line-through">S</button>
+                    ${window.NoteEditor.renderFontSizeToolbar('learning')}
                 </div>
             </div>
             <section class="bg-white">
@@ -1013,7 +1033,7 @@
                     <button type="button" data-learning-detail-save class="inline-flex h-7 items-center gap-1 rounded-md border border-indigo-100 bg-white px-2.5 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50"><i class="fas fa-floppy-disk text-[9px]"></i>본문 저장</button>
                 </div>
                 <textarea id="learning-content" class="hidden">${escapeHtml(entry.content)}</textarea>
-                <div id="learning-editor-surface" data-learning-detail-editor role="textbox" aria-label="노트 상세내역" aria-multiline="true" contenteditable="true" spellcheck="true" class="min-h-[calc(100dvh-325px)] cursor-text overflow-y-auto border border-transparent px-5 py-4 text-sm outline-none transition focus:border-indigo-200 focus:bg-indigo-50/20">${renderEditorSurface(entry.content)}</div>
+                <div id="learning-editor-surface" data-learning-detail-editor role="textbox" aria-label="노트 상세내역" aria-multiline="true" contenteditable="true" spellcheck="true" style="font-size:14px;line-height:1.4" class="min-h-[calc(100dvh-325px)] cursor-text overflow-y-auto border border-transparent px-5 py-3 outline-none transition focus:border-indigo-200 focus:bg-indigo-50/20">${renderEditorSurface(entry.content)}</div>
             </section>
             <div class="flex items-center justify-between border-t border-gray-100 px-4 py-2 text-[9px] text-gray-400"><span>문자 <span id="learning-character-count">${entry.content.length.toLocaleString('ko-KR')}</span></span><span>자동 저장 · Tab 들여쓰기</span></div>
         </main>${renderContextDock(entry)}`;
@@ -1103,7 +1123,9 @@
         ensureTreeDragStyles();
         root?.addEventListener('pointerdown', (event) => {
             beginEditorSelectionGesture(event);
-            if (event.target.closest('[data-learning-format]')) {
+            const fontToolbar = event.target.closest('[data-note-font-toolbar]');
+            if (fontToolbar) window.NoteEditor.rememberSelection(document.getElementById('learning-editor-surface'));
+            if (event.target.closest('[data-learning-format], [data-note-font-step]')) {
                 event.preventDefault();
                 return;
             }
@@ -1121,6 +1143,19 @@
                 return;
             }
             if (['learning-title', 'learning-field', 'learning-item', 'learning-chapter', 'learning-tags', 'learning-links'].includes(event.target.id)) queueAutosave();
+        });
+        root?.addEventListener('change', (event) => {
+            const input = event.target.closest('[data-note-font-input]');
+            if (!input) return;
+            const next = window.NoteEditor.clampFontSize(input.value);
+            input.value = String(next);
+            applySelectionFontSize(next);
+        });
+        root?.addEventListener('pointerup', (event) => {
+            const surface = event.target.closest('#learning-editor-surface');
+            if (!surface) return;
+            window.NoteEditor.rememberSelection(surface);
+            window.NoteEditor.updateToolbarFromSelection(root.querySelector('[data-note-font-toolbar="learning"]'), surface);
         });
         root?.addEventListener('click', async (event) => {
             if (Date.now() < suppressTreeClickUntil && event.target.closest('[data-learning-tree-node]')) {
@@ -1150,6 +1185,15 @@
             }
             const format = event.target.closest('[data-learning-format]');
             if (format) { applyFormat(format.dataset.learningFormat); return; }
+            const fontStep = event.target.closest('[data-note-font-step]');
+            if (fontStep) {
+                const toolbar = fontStep.closest('[data-note-font-toolbar]');
+                const input = toolbar?.querySelector('[data-note-font-input]');
+                const next = window.NoteEditor.clampFontSize(Number(input?.value || 14) + Number(fontStep.dataset.noteFontStep || 0));
+                if (input) input.value = String(next);
+                applySelectionFontSize(next);
+                return;
+            }
             const dock = event.target.closest('[data-learning-dock-tab]');
             if (dock) { dockTab = dock.dataset.learningDockTab; render({ skipRemote: true }); return; }
             if (event.target.closest('[data-learning-meta-toggle]')) {
@@ -1215,6 +1259,14 @@
             if ((pendingTreePress || longPressDrag) && event.target.closest('[data-learning-tree-node]')) event.preventDefault();
         });
         root?.addEventListener('keydown', (event) => {
+            const fontInput = event.target.closest?.('[data-note-font-input]');
+            if (fontInput && event.key === 'Enter') {
+                event.preventDefault();
+                const next = window.NoteEditor.clampFontSize(fontInput.value);
+                fontInput.value = String(next);
+                applySelectionFontSize(next);
+                return;
+            }
             const reorderTarget = event.target.closest?.('[data-learning-reorder-target]');
             if (reorderTarget && event.altKey && ['ArrowUp', 'ArrowDown'].includes(event.key)) {
                 event.preventDefault();

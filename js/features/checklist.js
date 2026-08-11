@@ -156,10 +156,11 @@
     }
 
     function formatNoteInline(value) {
-        return escapeHtml(String(value || ''))
+        const formatted = escapeHtml(String(value || ''))
             .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
             .replace(/\+\+([^+\n]+)\+\+/g, '<u>$1</u>')
             .replace(/~~([^~\n]+)~~/g, '<s>$1</s>');
+        return window.NoteEditor.renderFontSizeMarkup(formatted);
     }
 
     function renderNoteLine(line, targetId, lineIndex, placeholder = '') {
@@ -168,8 +169,8 @@
         const content = rawLine.slice(leadingSpaces);
         const indentPx = Math.floor(leadingSpaces / 3) * 20;
         return `
-            <div data-note-line data-note-indent="${leadingSpaces}" data-note-line-index="${lineIndex}" class="flex min-h-7 items-center" style="padding-left:${indentPx}px">
-                <span data-note-line-content data-placeholder="${lineIndex === 0 ? escapeAttr(placeholder) : ''}" class="min-w-0 flex-1 whitespace-pre-wrap break-words py-0.5 leading-relaxed text-gray-700 outline-none">${formatNoteInline(content)}</span>
+            <div data-note-line data-note-indent="${leadingSpaces}" data-note-line-index="${lineIndex}" class="flex min-h-6 items-center" style="padding-left:${indentPx}px">
+                <span data-note-line-content data-placeholder="${lineIndex === 0 ? escapeAttr(placeholder) : ''}" class="min-w-0 flex-1 whitespace-pre-wrap break-words py-0.5 leading-[1.4] text-gray-700 outline-none">${formatNoteInline(content)}</span>
             </div>
         `;
     }
@@ -187,9 +188,10 @@
                     <button type="button" data-checklist-note-format="bold" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-black text-gray-700 hover:border-indigo-300 hover:text-indigo-700" title="굵게 (**텍스트**)" aria-label="선택한 글자 굵게"><span aria-hidden="true">B</span></button>
                     <button type="button" data-checklist-note-format="underline" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-bold text-gray-700 underline hover:border-indigo-300 hover:text-indigo-700" title="밑줄 (++텍스트++)" aria-label="선택한 글자 밑줄"><span aria-hidden="true">U</span></button>
                     <button type="button" data-checklist-note-format="strike" data-note-target="${escapeAttr(id)}" class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-xs font-bold text-gray-700 line-through hover:border-indigo-300 hover:text-indigo-700" title="취소선 (~~텍스트~~)" aria-label="선택한 글자 취소선"><span aria-hidden="true">S</span></button>
+                    ${window.NoteEditor.renderFontSizeToolbar(id)}
                 </div>
                 <textarea id="${escapeAttr(id)}" data-checklist-note-source class="hidden" tabindex="-1" aria-hidden="true">${escapeHtml(value)}</textarea>
-                <div data-checklist-note-surface data-note-target="${escapeAttr(id)}" role="textbox" aria-multiline="true" aria-label="상세내역" contenteditable="true" spellcheck="true" class="${minHeightClass} cursor-text overflow-y-auto rounded-b-md bg-white px-3 py-2.5 outline-none">
+                <div data-checklist-note-surface data-note-target="${escapeAttr(id)}" role="textbox" aria-multiline="true" aria-label="상세내역" contenteditable="true" spellcheck="true" style="font-size:14px;line-height:1.4" class="${minHeightClass} cursor-text overflow-y-auto rounded-b-md bg-white px-3 py-2 outline-none">
                     ${renderNoteSurface(value, id, placeholder)}
                 </div>
             </div>
@@ -206,6 +208,8 @@
         if (node.nodeType !== Node.ELEMENT_NODE) return '';
         if (node.tagName === 'BR') return '';
         const content = Array.from(node.childNodes).map(serializeNoteInline).join('');
+        const sized = window.NoteEditor.serializeFontSize(node, content);
+        if (sized) return sized;
         if (['B', 'STRONG'].includes(node.tagName)) return `**${content}**`;
         if (node.tagName === 'U') return `++${content}++`;
         if (['S', 'STRIKE'].includes(node.tagName)) return `~~${content}~~`;
@@ -276,10 +280,10 @@
     function createNoteLineAfter(line) {
         const newLine = line.cloneNode(false);
         newLine.removeAttribute('data-note-line-index');
-        newLine.className = 'flex min-h-7 items-center';
+        newLine.className = 'flex min-h-6 items-center';
         const content = document.createElement('span');
         content.dataset.noteLineContent = '';
-        content.className = 'min-w-0 flex-1 whitespace-pre-wrap break-words py-0.5 text-sm leading-relaxed text-gray-700 outline-none';
+        content.className = 'min-w-0 flex-1 whitespace-pre-wrap break-words py-0.5 leading-[1.4] text-gray-700 outline-none';
         newLine.appendChild(content);
         line.after(newLine);
         return content;
@@ -435,6 +439,16 @@
         const command = NOTE_FORMATS[formatKey];
         if (!surface || !command || !ensureNoteSelection(surface)) return;
         document.execCommand(command, false);
+        syncNoteSourceFromSurface(surface);
+    }
+
+    function applyNoteSelectionFontSize(targetId, size) {
+        const surface = getNoteSurface(targetId);
+        const result = window.NoteEditor.applyFontSize(surface, size);
+        if (!result.ok) {
+            toast('크기를 바꿀 글자를 먼저 선택해주세요.', 'warning');
+            return;
+        }
         syncNoteSourceFromSurface(surface);
     }
 
@@ -2026,7 +2040,10 @@
         isBound = true;
         const root = document.getElementById('routine-checklist-view');
         root?.addEventListener('pointerdown', (event) => {
-            if (event.target.closest('[data-checklist-note-format]')) {
+            const fontToolbar = event.target.closest('[data-note-font-toolbar]');
+            const fontSurface = fontToolbar?.closest('.relative')?.querySelector('[data-checklist-note-surface]');
+            if (fontToolbar && fontSurface) window.NoteEditor.rememberSelection(fontSurface);
+            if (event.target.closest('[data-checklist-note-format], [data-note-font-step]')) {
                 event.preventDefault();
             }
         });
@@ -2034,6 +2051,15 @@
             const noteFormatButton = event.target.closest('[data-checklist-note-format]');
             if (noteFormatButton) {
                 applyNoteFormat(noteFormatButton.dataset.noteTarget, noteFormatButton.dataset.checklistNoteFormat);
+                return;
+            }
+            const fontStep = event.target.closest('[data-note-font-step]');
+            if (fontStep) {
+                const toolbar = fontStep.closest('[data-note-font-toolbar]');
+                const input = toolbar?.querySelector('[data-note-font-input]');
+                const next = window.NoteEditor.clampFontSize(Number(input?.value || 14) + Number(fontStep.dataset.noteFontStep || 0));
+                if (input) input.value = String(next);
+                applyNoteSelectionFontSize(toolbar?.dataset.noteFontToolbar, next);
                 return;
             }
             const emptyNoteSurface = event.target.matches?.('[data-checklist-note-surface]') ? event.target : null;
@@ -2210,6 +2236,14 @@
             startTitleEditing(title.dataset.checklistTitleDisplay);
         });
         root?.addEventListener('change', (event) => {
+            const fontInput = event.target.closest('[data-note-font-input]');
+            if (fontInput) {
+                const toolbar = fontInput.closest('[data-note-font-toolbar]');
+                const next = window.NoteEditor.clampFontSize(fontInput.value);
+                fontInput.value = String(next);
+                applyNoteSelectionFontSize(toolbar?.dataset.noteFontToolbar, next);
+                return;
+            }
             if (event.target.matches('#checklist-status-filter')) {
                 activeFilter = event.target.value || 'open';
                 render({ skipRemoteLoad: true });
@@ -2261,7 +2295,23 @@
             const detailInput = event.target.closest('[data-step-editor-detail]');
             if (detailInput) updateStepMetadata(detailInput.closest('[data-step-editor]'), detailInput.dataset.stepEditorDetail, 'detail', detailInput.value);
         });
+        root?.addEventListener('pointerup', (event) => {
+            const surface = event.target.closest('[data-checklist-note-surface]');
+            if (!surface) return;
+            window.NoteEditor.rememberSelection(surface);
+            const toolbar = surface.closest('.relative')?.querySelector('[data-note-font-toolbar]');
+            window.NoteEditor.updateToolbarFromSelection(toolbar, surface);
+        });
         root?.addEventListener('keydown', (event) => {
+            const fontInput = event.target?.closest?.('[data-note-font-input]');
+            if (fontInput && event.key === 'Enter') {
+                event.preventDefault();
+                const toolbar = fontInput.closest('[data-note-font-toolbar]');
+                const next = window.NoteEditor.clampFontSize(fontInput.value);
+                fontInput.value = String(next);
+                applyNoteSelectionFontSize(toolbar?.dataset.noteFontToolbar, next);
+                return;
+            }
             const noteSurface = event.target?.closest?.('[data-checklist-note-surface]');
             const noteContent = getNoteContentFromSelection(noteSurface) || event.target?.closest?.('[data-note-line-content]');
             if (noteContent && ['ArrowUp', 'ArrowDown'].includes(event.key)) {

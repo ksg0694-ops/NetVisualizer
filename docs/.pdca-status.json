@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Update 1.04.03 Todo Unified Editor",
+  "feature": "Shared Note Editor Font Controls",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-08-08T19:29:27+09:00",
+  "updatedAt": "2026-08-11T21:56:08+09:00",
   "status": "complete",
-  "currentFocus": "Todo detail notes now use one continuous editing host with natural cross-line selection and caret navigation.",
+  "currentFocus": "Todo and Learning Archive now share one flexible inline font-size editor with compact note spacing.",
   "completed": [
     "Documented Plan, Design, Check, Report, and design QA phases.",
     "Replaced arbitrary Todo groups with Career, Finance, and Life.",
@@ -96,8 +96,14 @@
     "Added deterministic vertical, horizontal, Home, End, Enter, Backspace, Delete, and Tab behavior across Todo note lines.",
     "Preserved note serialization, autosave, versions, B, U, S, Step management, and Report Library.",
     "Passed the full automated suite and live browser caret regression check.",
-    "Bumped the correction cache to v170."
+    "Bumped the correction cache to v170.",
+    "Replaced fixed 12px, 14px, and 16px presets with a shared 10px to 32px font-size control.",
+    "Applied font size only to selected text and persisted the inline size across save and reload.",
+    "Unified Todo and Learning Archive font-size behavior through one shared editor runtime.",
+    "Reduced note line spacing and stopped Learning Archive from expanding every hierarchy branch.",
+    "Passed JavaScript, manifest, static-asset, diff, and live browser persistence checks.",
+    "Bumped the correction cache to v173."
   ],
   "remaining": [],
-  "nextStep": "Publish the unified Todo editor patch and verify the public GitHub Pages build."
+  "nextStep": "Commit and publish the shared note editor patch, then verify the public GitHub Pages build."
 }

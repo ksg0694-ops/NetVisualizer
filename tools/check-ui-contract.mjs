@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 const index = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const appShell = await readFile(new URL('../js/features/appShell.js', import.meta.url), 'utf8');
 const appCore = await readFile(new URL('../js/features/appCore.js', import.meta.url), 'utf8');
+const noteEditor = await readFile(new URL('../js/shared/noteEditor.js', import.meta.url), 'utf8');
 const checklist = await readFile(new URL('../js/features/checklist.js', import.meta.url), 'utf8');
 const learningArchive = await readFile(new URL('../js/features/learningArchive.js', import.meta.url), 'utf8');
 const health = await readFile(new URL('../js/features/healthTracker.js', import.meta.url), 'utf8');
@@ -24,6 +25,7 @@ const stepEditorMarkup = checklist.slice(
 
 const requiredScripts = [
     './js/shared/appUtils.js',
+    './js/shared/noteEditor.js',
     './js/features/financeRepository.js',
     './js/features/financeModel.js',
     './js/features/financeForecast.js',
@@ -207,6 +209,10 @@ assert.ok(!learningArchive.includes('data-learning-icon'), 'Learning Archive mus
 assert.ok(!learningArchive.includes('data-learning-checkbox') && !learningArchive.includes('setLearningCheckboxState'), 'Learning Archive must render checkbox syntax as plain memo text');
 assert.ok(!learningArchive.includes('ChecklistFeature') && !learningArchive.includes('관련 할 일') && !learningArchive.includes('관련 Step'), 'Learning Archive must not couple memo editing to Todo context');
 assert.ok(learningArchive.includes('data-learning-format="bold"') && learningArchive.includes('data-learning-format="underline"') && learningArchive.includes('data-learning-format="strike"'), 'Learning Archive must retain only basic text formatting');
+assert.ok(learningArchive.includes('NoteEditor.renderFontSizeToolbar') && learningArchive.includes('function applySelectionFontSize'), 'Learning Archive must use the shared flexible font-size control');
+assert.ok(learningArchive.includes("${isOpen(field) ? 'open' : ''}"), 'Learning Archive must only expand the active tree path');
+assert.ok(!learningArchive.includes('<details open data-learning-tree-node'), 'Learning Archive must not force every hierarchy level open');
+assert.ok(learningArchive.includes('leading-[1.4]'), 'Learning Archive lines must use compact, stable spacing');
 assert.ok(!learningArchive.includes('data-learning-drag-handle'), 'Learning Archive must not show dedicated drag handles');
 assert.ok(learningArchive.includes('LONG_PRESS_DELAY_MS = 180'), 'Learning Archive desktop reorder must activate quickly after a short hold');
 assert.ok(learningArchive.includes('TOUCH_LONG_PRESS_DELAY_MS = 260'), 'Learning Archive touch reorder must preserve scroll-safe long press');
@@ -246,6 +252,11 @@ assert.ok(!checklist.includes('스텝'));
 assert.ok(!checklist.includes('스탭'));
 assert.ok(!checklist.includes('하위 할 일'));
 assert.ok(!checklist.includes('Sub tasks'));
+assert.ok(checklist.includes('NoteEditor.renderFontSizeToolbar') && checklist.includes('function applyNoteSelectionFontSize'), 'Todo must use the shared flexible font-size control');
+assert.ok(checklist.includes('leading-[1.4]'), 'Todo editor lines must use compact, stable spacing');
+assert.ok(noteEditor.includes('MIN_FONT_SIZE = 10') && noteEditor.includes('MAX_FONT_SIZE = 32'), 'shared note editor must support a flexible 10px-32px range');
+assert.ok(noteEditor.includes('data-note-font-input') && noteEditor.includes('data-note-font-step'), 'shared note editor must expose direct input and incremental controls');
+assert.ok(noteEditor.includes('renderFontSizeMarkup') && noteEditor.includes('serializeFontSize'), 'shared note editor must persist and restore inline font sizes');
 assert.ok(!checklist.includes('<div data-checklist-step-item='), 'detail view must not render a second saved Step list');
 assert.ok(!checklist.includes('id="checklist-due-input"'));
 assert.ok(!checklist.includes('id="checklist-detail-due-edit"'));
@@ -367,7 +378,7 @@ assert.ok(quantEngine.includes('async function savePortfolioStrategyName'));
 assert.ok(quantEngine.includes('const returnPct = investedCost > 0'));
 assert.ok(quantEngine.includes("draggable=\"true\""));
 assert.ok(!quantEngine.includes('tabindex="0"'), 'strategy holdings must not force keyboard tab navigation');
-assert.ok(quantEngine.includes(".update({\n                    strategy_tag: nextStrategy"));
+assert.match(quantEngine, /\.update\(\{\s*strategy_tag: nextStrategy,/);
 assert.ok(financeForecast.includes('function buildThreeYearRoadmap'));
 assert.ok(financeForecast.includes('function buildCalendarYearRoadmap'));
 assert.ok(assetTrend.includes('referenceMonthNumber - 1 + 36'));
