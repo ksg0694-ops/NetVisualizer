@@ -13,6 +13,7 @@ const files = featureEntries
 
 files.push(path.join(rootDir, 'sw.js'));
 files.push(path.join(rootDir, 'js', 'generated', 'personal-cfo-domain.js'));
+files.push(path.join(rootDir, 'js', 'shared', 'noteEditor.js'));
 
 let failed = false;
 for (const file of files) {

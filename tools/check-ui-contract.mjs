@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 const index = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const appShell = await readFile(new URL('../js/features/appShell.js', import.meta.url), 'utf8');
 const appCore = await readFile(new URL('../js/features/appCore.js', import.meta.url), 'utf8');
+const noteEditor = await readFile(new URL('../js/shared/noteEditor.js', import.meta.url), 'utf8');
 const checklist = await readFile(new URL('../js/features/checklist.js', import.meta.url), 'utf8');
 const learningArchive = await readFile(new URL('../js/features/learningArchive.js', import.meta.url), 'utf8');
 const health = await readFile(new URL('../js/features/healthTracker.js', import.meta.url), 'utf8');
@@ -24,6 +25,7 @@ const stepEditorMarkup = checklist.slice(
 
 const requiredScripts = [
     './js/shared/appUtils.js',
+    './js/shared/noteEditor.js',
     './js/features/financeRepository.js',
     './js/features/financeModel.js',
     './js/features/financeForecast.js',
@@ -156,11 +158,11 @@ assert.ok(!checklist.includes("renderStepEditor('checklist-detail-steps-edit'"),
 assert.ok(checklist.includes("if (stepsEl) task.steps = parseStepEditorSteps"), 'hidden Step data must be preserved on detail save');
 assert.ok(!checklist.includes('완료 항목 지우기'));
 assert.ok(!checklist.includes('function clearDone()'));
-assert.ok(checklist.includes('tasks = saveStore(remoteTasks)'));
-assert.ok(!checklist.includes('saveStore([...remoteTasks, ...localTasks])'), 'stale local tasks must not resurrect remote deletions');
+assert.ok(checklist.includes('tasks = saveStore([...merged.values()])'));
+assert.ok(checklist.includes('dirtyIds.forEach') && checklist.includes('pendingDeleteIds.has'), 'remote refresh must merge only unsynced local tasks and exclude pending deletions');
 assert.ok(checklist.includes('async function refreshFromServer()'));
 assert.ok(appCore.includes('await window.ChecklistFeature?.refreshFromServer?.()'));
-assert.ok(checklist.includes('서버 삭제에 실패해 항목을 복원했습니다.'));
+assert.ok(checklist.includes('온라인이 되면 서버에도 반영됩니다.'), 'offline Todo deletion must remain safely queued in its own trash');
 assert.ok(checklist.includes('data-checklist-detail-dialog'));
 assert.ok(appCore.includes("const APP_UI_STATE_KEY = 'netvisualizer.app.ui-state.v1'"));
 assert.ok(appCore.includes('const restoredAppUiState = readAppUiState()'));
@@ -199,14 +201,27 @@ assert.ok(checklist.includes('function queueTodoNoteAutosave'), 'Todo note editi
 assert.ok(checklist.includes('data-checklist-version-restore'), 'Todo note versions must be restorable');
 assert.ok(learningArchive.includes("xl:grid-cols-[280px_minmax(520px,1fr)_280px]"), 'Learning Archive must use the selected hierarchy/editor/context-dock layout');
 assert.ok(learningArchive.includes('data-learning-dock-tab="${key}"'), 'Learning Archive must expose links, versions, and TOC tabs');
-assert.ok(learningArchive.includes('function renderConnectionDock'), 'Learning Archive must resolve note and Todo context');
+assert.ok(learningArchive.includes('function renderConnectionDock'), 'Learning Archive must resolve its own internal note links');
 assert.ok(learningArchive.includes('function queueAutosave'), 'Learning Archive editing must autosave');
 assert.ok(!learningArchive.includes('data-learning-convert'), 'Learning Archive must stay a simple memo without Todo or Step conversion');
-assert.ok(!learningArchive.includes('data-learning-block') && !learningArchive.includes('const BLOCKS'), 'Learning Archive must not expose block or block-icon features');
+assert.ok(!learningArchive.includes('const BLOCKS'), 'Learning Archive must not restore the removed icon/block system');
+assert.ok(learningArchive.includes('data-learning-block') && learningArchive.includes('NoteEditor.renderBlockStyleToolbar'), 'Learning Archive must support lightweight paragraph styles without feature coupling');
 assert.ok(!learningArchive.includes('data-learning-icon'), 'Learning Archive must not expose an inline icon feature');
 assert.ok(!learningArchive.includes('data-learning-checkbox') && !learningArchive.includes('setLearningCheckboxState'), 'Learning Archive must render checkbox syntax as plain memo text');
 assert.ok(!learningArchive.includes('ChecklistFeature') && !learningArchive.includes('관련 할 일') && !learningArchive.includes('관련 Step'), 'Learning Archive must not couple memo editing to Todo context');
-assert.ok(learningArchive.includes('data-learning-format="bold"') && learningArchive.includes('data-learning-format="underline"') && learningArchive.includes('data-learning-format="strike"'), 'Learning Archive must retain only basic text formatting');
+assert.ok(learningArchive.includes('data-learning-format="bold"') && learningArchive.includes('data-learning-format="underline"') && learningArchive.includes('data-learning-format="strike"'), 'Learning Archive must retain basic inline text formatting');
+assert.ok(learningArchive.includes('NoteEditor.renderFontSizeToolbar') && learningArchive.includes('function applySelectionFontSize'), 'Learning Archive must use the shared flexible font-size control');
+assert.ok(learningArchive.includes('NoteEditor.renderHistoryToolbar') && learningArchive.includes('flushLearningDraftBeforeUnload'), 'Learning Archive must expose note history controls and flush pending local drafts before unload');
+assert.ok(learningArchive.includes('learning.archive.trash.v1') && learningArchive.includes('restoreLearningEntryFromTrash'), 'Learning Archive must keep an independent local trash and restore flow');
+assert.ok(learningArchive.includes('learning.archive.dirty.v1') && learningArchive.includes('readDirtyIds'), 'Learning Archive must preserve unsynced device edits independently');
+assert.ok(learningArchive.includes('learning.archive.delete-queue.v1') && learningArchive.includes('readPendingDeleteIds'), 'Learning Archive permanent deletions must survive offline trash purging');
+assert.ok(learningArchive.includes('learning-new-template') && learningArchive.includes("getTemplate('learning'"), 'Learning Archive must create notes from its own templates');
+assert.ok(learningArchive.includes('function renderRecentEntries') && learningArchive.includes('제목·본문 검색'), 'Learning Archive must expose independent recent-note navigation and content search');
+assert.ok(learningArchive.includes('renderExportToolbar') && learningArchive.includes('exportLearningEntry'), 'Learning Archive must expose independent note export');
+assert.ok(learningArchive.includes('renderLineDiff') && learningArchive.includes('data-learning-version-restore'), 'Learning Archive versions must show a comparison before restore');
+assert.ok(learningArchive.includes("${isOpen(field) ? 'open' : ''}"), 'Learning Archive must only expand the active tree path');
+assert.ok(!learningArchive.includes('<details open data-learning-tree-node'), 'Learning Archive must not force every hierarchy level open');
+assert.ok(learningArchive.includes('leading-[1.4]'), 'Learning Archive lines must use compact, stable spacing');
 assert.ok(!learningArchive.includes('data-learning-drag-handle'), 'Learning Archive must not show dedicated drag handles');
 assert.ok(learningArchive.includes('LONG_PRESS_DELAY_MS = 180'), 'Learning Archive desktop reorder must activate quickly after a short hold');
 assert.ok(learningArchive.includes('TOUCH_LONG_PRESS_DELAY_MS = 260'), 'Learning Archive touch reorder must preserve scroll-safe long press');
@@ -246,6 +261,23 @@ assert.ok(!checklist.includes('스텝'));
 assert.ok(!checklist.includes('스탭'));
 assert.ok(!checklist.includes('하위 할 일'));
 assert.ok(!checklist.includes('Sub tasks'));
+assert.ok(checklist.includes('NoteEditor.renderFontSizeToolbar') && checklist.includes('function applyNoteSelectionFontSize'), 'Todo must use the shared flexible font-size control');
+assert.ok(checklist.includes('NoteEditor.renderHistoryToolbar') && checklist.includes('flushPendingTodoNoteBeforeUnload'), 'Todo must expose note history controls and flush pending local drafts before unload');
+assert.ok(checklist.includes('life.checklist.trash.v1') && checklist.includes('restoreTaskFromTrash'), 'Todo must keep an independent local trash and restore flow');
+assert.ok(checklist.includes('life.checklist.dirty.v1') && checklist.includes('getDirtyTaskIds'), 'Todo must preserve unsynced device edits independently');
+assert.ok(checklist.includes('life.checklist.delete-queue.v1') && checklist.includes('getPendingDeleteIds'), 'Todo permanent deletions must survive offline trash purging');
+assert.ok(checklist.includes('checklist-task-search') && checklist.includes('checklist-task-sort'), 'Todo must expose independent search and recent sorting');
+assert.ok(checklist.includes('checklist-note-template') && checklist.includes("getTemplate('todo'"), 'Todo must provide task-note templates without Learning Archive coupling');
+assert.ok(checklist.includes('renderExportToolbar') && checklist.includes('exportTodoNote'), 'Todo must expose independent note export');
+assert.ok(checklist.includes('renderLineDiff') && checklist.includes('data-checklist-version-restore'), 'Todo versions must show a comparison before restore');
+assert.ok(checklist.includes('leading-[1.4]'), 'Todo editor lines must use compact, stable spacing');
+assert.ok(noteEditor.includes('MIN_FONT_SIZE = 10') && noteEditor.includes('MAX_FONT_SIZE = 32'), 'shared note editor must support a flexible 10px-32px range');
+assert.ok(noteEditor.includes('data-note-font-input') && noteEditor.includes('data-note-font-step'), 'shared note editor must expose direct input and incremental controls');
+assert.ok(noteEditor.includes('renderFontSizeMarkup') && noteEditor.includes('serializeFontSize'), 'shared note editor must persist and restore inline font sizes');
+assert.ok(noteEditor.includes('function applyHistory') && noteEditor.includes('renderHistoryToolbar'), 'shared note editor must provide undo and redo controls');
+assert.ok(noteEditor.includes('BLOCK_STYLES') && noteEditor.includes('renderBlockStyleToolbar'), 'shared note editor must provide paragraph styles and format reset');
+assert.ok(noteEditor.includes('exportMarkdown') && noteEditor.includes('exportWord') && noteEditor.includes('printNote'), 'shared note editor must support Markdown, Word, and PDF-print export');
+assert.ok(noteEditor.includes('sanitizeExportHtml') && noteEditor.includes('renderLineDiff'), 'shared note editor must sanitize rich exports and compare saved versions');
 assert.ok(!checklist.includes('<div data-checklist-step-item='), 'detail view must not render a second saved Step list');
 assert.ok(!checklist.includes('id="checklist-due-input"'));
 assert.ok(!checklist.includes('id="checklist-detail-due-edit"'));
@@ -367,7 +399,7 @@ assert.ok(quantEngine.includes('async function savePortfolioStrategyName'));
 assert.ok(quantEngine.includes('const returnPct = investedCost > 0'));
 assert.ok(quantEngine.includes("draggable=\"true\""));
 assert.ok(!quantEngine.includes('tabindex="0"'), 'strategy holdings must not force keyboard tab navigation');
-assert.ok(quantEngine.includes(".update({\n                    strategy_tag: nextStrategy"));
+assert.match(quantEngine, /\.update\(\{\s*strategy_tag: nextStrategy,/);
 assert.ok(financeForecast.includes('function buildThreeYearRoadmap'));
 assert.ok(financeForecast.includes('function buildCalendarYearRoadmap'));
 assert.ok(assetTrend.includes('referenceMonthNumber - 1 + 36'));
