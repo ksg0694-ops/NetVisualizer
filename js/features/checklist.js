@@ -82,11 +82,12 @@
     let reportSearch = '';
     let reportSort = 'recent';
     let taskSearch = '';
-    let taskSort = 'default';
     let isReportLinkFormOpen = false;
     let noteAutosaveTimer = null;
     let pendingTodoNote = null;
     let isNoteVersionPanelOpen = false;
+    let noteSelectionGesture = null;
+    let preservedNoteSelection = null;
 
     function escapeHtml(value) {
         return window.AppUtils.escapeHtml(value);
@@ -212,7 +213,7 @@
                     ${window.NoteEditor.renderBlockStyleToolbar(id)}
                 </div>
                 <textarea id="${escapeAttr(id)}" data-checklist-note-source class="hidden" tabindex="-1" aria-hidden="true">${escapeHtml(value)}</textarea>
-                <div data-checklist-note-surface data-note-target="${escapeAttr(id)}" role="textbox" aria-multiline="true" aria-label="상세내역" contenteditable="true" spellcheck="true" style="font-size:14px;line-height:1.4" class="${minHeightClass} cursor-text overflow-y-auto rounded-b-md bg-white px-3 py-2 outline-none">
+                <div data-checklist-note-surface data-note-target="${escapeAttr(id)}" role="textbox" aria-multiline="true" aria-label="상세내역" contenteditable="true" spellcheck="true" style="font-size:14px;line-height:1.4" class="${minHeightClass} cursor-text select-text overflow-y-auto rounded-b-md bg-white px-3 py-2 outline-none">
                     ${renderNoteSurface(value, id, placeholder)}
                 </div>
             </div>
@@ -221,6 +222,60 @@
 
     function getNoteSurface(targetId) {
         return document.querySelector(`[data-checklist-note-surface][data-note-target="${CSS.escape(targetId)}"]`);
+    }
+
+    function selectionBelongsToNoteSurface(selection, surface) {
+        return Boolean(selection?.rangeCount
+            && !selection.isCollapsed
+            && surface?.contains(selection.anchorNode)
+            && surface.contains(selection.focusNode));
+    }
+
+    function beginNoteSelectionGesture(event) {
+        const surface = event.target.closest?.('[data-checklist-note-surface]');
+        if (!surface || (event.button !== undefined && event.button !== 0)) return;
+        preservedNoteSelection = null;
+        noteSelectionGesture = {
+            surface,
+            pointerId: event.pointerId ?? 'mouse',
+            startX: event.clientX,
+            startY: event.clientY,
+            moved: false,
+        };
+    }
+
+    function updateNoteSelectionGesture(event) {
+        if (!noteSelectionGesture || (event.pointerId ?? 'mouse') !== noteSelectionGesture.pointerId) return;
+        const distance = Math.hypot(event.clientX - noteSelectionGesture.startX, event.clientY - noteSelectionGesture.startY);
+        if (distance > 3) noteSelectionGesture.moved = true;
+    }
+
+    function finishNoteSelectionGesture(event) {
+        const gesture = noteSelectionGesture;
+        if (!gesture || (event.pointerId ?? 'mouse') !== gesture.pointerId) return;
+        noteSelectionGesture = null;
+        const selection = window.getSelection();
+        if (!gesture.moved || !selectionBelongsToNoteSurface(selection, gesture.surface)) return;
+        preservedNoteSelection = {
+            surface: gesture.surface,
+            range: selection.getRangeAt(0).cloneRange(),
+            expiresAt: performance.now() + 500,
+        };
+    }
+
+    function preserveNoteTextSelection(surface) {
+        const selection = window.getSelection();
+        if (selectionBelongsToNoteSurface(selection, surface)) {
+            preservedNoteSelection = null;
+            return true;
+        }
+        const preserved = preservedNoteSelection;
+        preservedNoteSelection = null;
+        if (!preserved || preserved.surface !== surface || performance.now() > preserved.expiresAt) return false;
+        surface.focus({ preventScroll: true });
+        selection?.removeAllRanges();
+        selection?.addRange(preserved.range);
+        return true;
     }
 
     function serializeNoteInline(node) {
@@ -1545,7 +1600,6 @@
         }
         const query = taskSearch.trim().toLowerCase();
         if (query) nextTasks = nextTasks.filter((task) => [task.title, task.note, ...(task.steps || []).flatMap((step) => [step.title, step.detail, step.groupName])].join(' ').toLowerCase().includes(query));
-        if (taskSort === 'recent') nextTasks.sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
         return nextTasks;
     }
 
@@ -1715,12 +1769,6 @@
                         <span id="checklist-note-autosave-status" class="mr-1 inline whitespace-nowrap text-[9px] font-medium text-gray-400"><i class="fas fa-circle-check mr-1 text-emerald-500"></i>자동 저장됨</span>
                         <button type="button" data-checklist-version-toggle class="inline-flex h-8 items-center justify-center gap-1 rounded-md border ${isNoteVersionPanelOpen ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white text-gray-500 hover:text-indigo-700'} px-2 text-[9px] font-bold" title="노트 버전 기록"><i class="fas fa-clock-rotate-left text-[10px]"></i><span class="hidden 2xl:inline">버전 기록</span></button>
                         ${window.NoteEditor.renderExportToolbar(task.id)}
-                        <select id="checklist-status-filter" class="h-8 min-w-0 flex-1 rounded-md border border-gray-200 bg-white px-2 text-[10px] font-bold text-gray-600 outline-none focus:border-indigo-300 sm:max-w-[104px] sm:flex-none" aria-label="할 일 상태 필터">
-                            <option value="open" ${activeFilter === 'open' ? 'selected' : ''}>진행 중 ${getSummary().open}</option>
-                            <option value="paused" ${activeFilter === 'paused' ? 'selected' : ''}>Monitor ${getSummary().paused}</option>
-                            <option value="done" ${activeFilter === 'done' ? 'selected' : ''}>완료 ${getSummary().done}</option>
-                            <option value="all" ${activeFilter === 'all' ? 'selected' : ''}>전체 ${getSummary().total}</option>
-                        </select>
                         <select id="checklist-detail-domain-edit" class="h-8 min-w-0 flex-1 rounded-md border border-gray-200 bg-white px-2 text-[10px] font-bold text-gray-600 outline-none focus:border-indigo-300 sm:max-w-[94px] sm:flex-none" aria-label="할 일 영역">
                             ${DOMAINS.map((item) => `<option value="${escapeAttr(item.key)}" ${item.key === task.domain ? 'selected' : ''}>${escapeHtml(item.label)}</option>`).join('')}
                         </select>
@@ -1758,7 +1806,7 @@
         root.innerHTML = `
             <div class="grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-[minmax(210px,0.75fr)_minmax(430px,1.9fr)_minmax(270px,1fr)]">
                 <section class="min-w-0 rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
-                    <div class="mb-2 flex items-center gap-1.5"><label class="relative min-w-0 flex-1"><i class="fas fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-[9px] text-gray-300"></i><input id="checklist-task-search" type="search" value="${escapeAttr(taskSearch)}" class="h-8 w-full rounded-md border border-gray-200 pl-7 pr-2 text-[10px] outline-none focus:border-indigo-300" placeholder="할 일·본문 검색"></label><select id="checklist-task-sort" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-[9px] font-bold text-gray-500 outline-none" aria-label="할 일 정렬"><option value="default" ${taskSort === 'default' ? 'selected' : ''}>기본순</option><option value="recent" ${taskSort === 'recent' ? 'selected' : ''}>최근 수정</option></select><div id="checklist-add-panel"></div></div>
+                    <div class="mb-2 flex items-center gap-1.5"><label class="relative min-w-0 flex-1"><i class="fas fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-[9px] text-gray-300"></i><input id="checklist-task-search" type="search" value="${escapeAttr(taskSearch)}" class="h-8 w-full rounded-md border border-gray-200 pl-7 pr-2 text-[10px] outline-none focus:border-indigo-300" placeholder="할 일·본문 검색"></label><select id="checklist-status-filter" class="h-8 max-w-[108px] rounded-md border border-gray-200 bg-white px-2 text-[9px] font-bold text-gray-600 outline-none focus:border-indigo-300" aria-label="할 일 목록 상태"><option value="open" ${activeFilter === 'open' ? 'selected' : ''}>진행 중 ${getSummary().open}</option><option value="paused" ${activeFilter === 'paused' ? 'selected' : ''}>Monitor ${getSummary().paused}</option><option value="done" ${activeFilter === 'done' ? 'selected' : ''}>완료 ${getSummary().done}</option><option value="all" ${activeFilter === 'all' ? 'selected' : ''}>전체 ${getSummary().total}</option></select><div id="checklist-add-panel"></div></div>
                     <div id="checklist-task-list" class="space-y-3 max-h-[calc(100vh-215px)] overflow-y-auto pr-1"></div>
                 </section>
                 <aside id="checklist-detail-panel" class="min-w-0"></aside>
@@ -2239,6 +2287,7 @@
             void refreshFromServer();
         });
         root?.addEventListener('pointerdown', (event) => {
+            beginNoteSelectionGesture(event);
             const selectionToolbar = event.target.closest('[data-note-font-toolbar], [data-note-block-toolbar]');
             const fontSurface = selectionToolbar?.closest('.relative')?.querySelector('[data-checklist-note-surface]');
             if (selectionToolbar && fontSurface) window.NoteEditor.rememberSelection(fontSurface);
@@ -2275,12 +2324,13 @@
             }
             const emptyNoteSurface = event.target.matches?.('[data-checklist-note-surface]') ? event.target : null;
             if (emptyNoteSurface) {
+                if (preserveNoteTextSelection(emptyNoteSurface)) return;
                 let content = emptyNoteSurface.querySelector('[data-note-line]:last-child [data-note-line-content]');
                 if (!content) {
                     emptyNoteSurface.innerHTML = renderNoteSurface('', emptyNoteSurface.dataset.noteTarget);
                     content = emptyNoteSurface.querySelector('[data-note-line-content]');
+                    placeNoteCaret(content, true);
                 }
-                placeNoteCaret(content, true);
                 return;
             }
             if (event.target.closest('[data-checklist-version-toggle]')) {
@@ -2500,11 +2550,6 @@
                 if (surface) surface.innerHTML = renderNoteSurface(template, 'checklist-note-input', '필요한 맥락, 참고 내용, 처리 기준을 길게 적어두세요.');
                 return;
             }
-            if (event.target.matches('#checklist-task-sort')) {
-                taskSort = event.target.value === 'recent' ? 'recent' : 'default';
-                renderTasks();
-                return;
-            }
             if (event.target.matches('#checklist-status-filter')) {
                 activeFilter = event.target.value || 'open';
                 render({ skipRemoteLoad: true });
@@ -2661,6 +2706,7 @@
             clearDragHints(root);
         });
         root?.addEventListener('mousedown', (event) => {
+            if (!noteSelectionGesture) beginNoteSelectionGesture(event);
             if (!pointerDrag) beginPointerDrag(event);
         });
         root?.addEventListener('mousemove', (event) => updatePointerDrag(event, root));
@@ -2668,20 +2714,33 @@
             updatePointerDrag(event, root);
             finishPointerDrag(root);
         });
-        document.addEventListener('pointermove', (event) => updatePointerDrag(event, root));
+        document.addEventListener('pointermove', (event) => {
+            updateNoteSelectionGesture(event);
+            updatePointerDrag(event, root);
+        });
         document.addEventListener('pointerup', (event) => {
+            finishNoteSelectionGesture(event);
             updatePointerDrag(event, root);
             finishPointerDrag(root);
+        });
+        document.addEventListener('pointercancel', () => {
+            noteSelectionGesture = null;
+            preservedNoteSelection = null;
         });
         document.addEventListener('pointerdown', (event) => {
             if (!pointerDrag) beginPointerDrag(event);
         });
-        document.addEventListener('mousemove', (event) => updatePointerDrag(event, root));
+        document.addEventListener('mousemove', (event) => {
+            updateNoteSelectionGesture(event);
+            updatePointerDrag(event, root);
+        });
         document.addEventListener('mouseup', (event) => {
+            finishNoteSelectionGesture(event);
             updatePointerDrag(event, root);
             finishPointerDrag(root);
         });
         document.addEventListener('mousedown', (event) => {
+            if (!noteSelectionGesture) beginNoteSelectionGesture(event);
             if (!pointerDrag) beginPointerDrag(event);
         });
         root?.addEventListener('dragstart', (event) => {

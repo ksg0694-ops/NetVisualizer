@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Update 1.04.03 Todo Work Domain",
+  "feature": "Update 1.04.03 Todo Selection and Status Filter",
   "phase": "report",
   "progress": 100,
   "updatedAt": "2026-08-18T12:00:00+09:00",
   "status": "complete",
-  "currentFocus": "Todo now supports Work as the fourth fixed domain across creation, editing, listing, and cloud synchronization.",
+  "currentFocus": "Todo preserves multiline pointer selections and exposes status filtering in the list rail without redundant sorting.",
   "completed": [
     "Documented Plan, Design, Check, Report, and design QA phases.",
     "Replaced arbitrary Todo groups with Career, Finance, and Life.",
@@ -131,8 +131,14 @@
     "Preserved Life as the fallback for unknown legacy domain values.",
     "Applied the Work domain constraint migration to the linked Supabase project.",
     "Passed the full automated suite and live Work selection check.",
-    "Bumped the correction cache to v178."
+    "Bumped the correction cache to v178.",
+    "Preserved multiline Todo text selections across trailing click events for pointer and mouse input.",
+    "Stopped populated note surfaces from forcing the caret to the last line.",
+    "Moved the Todo status filter from the selected item header to the list rail.",
+    "Removed default and recent-modified Todo sorting controls and logic.",
+    "Passed the full automated suite and live status-filter browser checks.",
+    "Bumped the correction cache to v179."
   ],
   "remaining": [],
-  "nextStep": "Publish the completed Work domain patch and verify it on GitHub Pages."
+  "nextStep": "Publish the Todo selection and list-status patch and verify it on GitHub Pages."
 }

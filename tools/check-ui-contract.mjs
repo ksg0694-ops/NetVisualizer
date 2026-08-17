@@ -141,6 +141,8 @@ assert.ok(!index.includes('data-target="life-notes-view"'), 'Life Notes route mu
 assert.ok(checklist.includes('data-checklist-domain-choice'));
 assert.ok(checklist.includes('role="radiogroup"'));
 assert.ok(checklist.includes('id="checklist-status-filter"'), 'status filters must use one compact select');
+assert.ok(checklist.indexOf('id="checklist-status-filter"') > checklist.indexOf('function ensureShell()'), 'the status filter must live in the Todo list rail');
+assert.ok(!checklist.includes('id="checklist-task-sort"') && !checklist.includes("taskSort === 'recent'"), 'Todo list sorting must be removed in favor of the status filter');
 assert.ok(checklist.includes('id="checklist-detail-domain-edit"'), 'the selected task domain must use one compact select');
 assert.ok(!checklist.includes('id="checklist-filters"'), 'the four wide status buttons must stay removed');
 assert.ok(!checklist.includes('>할 일 목록<'), 'the redundant task-list heading must stay removed');
@@ -190,6 +192,9 @@ assert.ok(checklist.includes('data-checklist-note-surface'), 'Todo notes must us
 assert.ok(checklist.includes('data-checklist-note-surface data-note-target="${escapeAttr(id)}" role="textbox" aria-multiline="true" aria-label="상세내역" contenteditable="true"'), 'the whole Todo note surface must be the single editing host');
 assert.ok(!checklist.includes('data-note-line-content contenteditable="true"'), 'Todo note lines must not be isolated editing hosts');
 assert.ok(checklist.includes('getNoteContentFromSelection(noteSurface)'), 'Todo notes must resolve the active line from the shared selection');
+assert.ok(checklist.includes('function preserveNoteTextSelection') && checklist.includes('function finishNoteSelectionGesture'), 'Todo pointer selection must survive the trailing click event');
+assert.ok(checklist.includes('if (!noteSelectionGesture) beginNoteSelectionGesture(event)') && checklist.includes('updateNoteSelectionGesture(event);'), 'Todo selection gestures must support pointer and mouse input');
+assert.ok(checklist.includes('cursor-text select-text overflow-y-auto'), 'Todo note surfaces must explicitly allow native text selection');
 assert.ok(checklist.includes("['ArrowUp', 'ArrowDown'].includes(event.key)"), 'Todo notes must support vertical caret movement across lines');
 assert.ok(checklist.includes('mergeNoteLineForward(noteContent)'), 'Todo notes must merge lines forward with Delete');
 assert.ok(checklist.includes('data-checklist-note-source class="hidden"'), 'the legacy note markup must remain as hidden persistence data');
@@ -279,7 +284,7 @@ assert.ok(checklist.includes('NoteEditor.renderHistoryToolbar') && checklist.inc
 assert.ok(checklist.includes('life.checklist.trash.v1') && checklist.includes('restoreTaskFromTrash'), 'Todo must keep an independent local trash and restore flow');
 assert.ok(checklist.includes('life.checklist.dirty.v1') && checklist.includes('getDirtyTaskIds'), 'Todo must preserve unsynced device edits independently');
 assert.ok(checklist.includes('life.checklist.delete-queue.v1') && checklist.includes('getPendingDeleteIds'), 'Todo permanent deletions must survive offline trash purging');
-assert.ok(checklist.includes('checklist-task-search') && checklist.includes('checklist-task-sort'), 'Todo must expose independent search and recent sorting');
+assert.ok(checklist.includes('checklist-task-search') && checklist.includes('checklist-status-filter'), 'Todo list rail must expose search and status filtering');
 assert.ok(checklist.includes('checklist-note-template') && checklist.includes("getTemplate('todo'"), 'Todo must provide task-note templates without Learning Archive coupling');
 assert.ok(checklist.includes('renderExportToolbar') && checklist.includes('exportTodoNote'), 'Todo must expose independent note export');
 assert.ok(checklist.includes('renderLineDiff') && checklist.includes('data-checklist-version-restore'), 'Todo versions must show a comparison before restore');
