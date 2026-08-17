@@ -10,6 +10,7 @@
         { key: 'career', label: 'Career', tone: 'sky' },
         { key: 'finance', label: 'Finance', tone: 'emerald' },
         { key: 'life', label: 'Life', tone: 'indigo' },
+        { key: 'work', label: 'Work', tone: 'slate' },
     ];
     const LEGACY_CATEGORIES = [
         { key: 'today', label: 'Today' },
@@ -656,7 +657,7 @@
     }
 
     function getDomain(key) {
-        return DOMAINS.find((item) => item.key === key) || DOMAINS[DOMAINS.length - 1];
+        return DOMAINS.find((item) => item.key === key) || DOMAINS.find((item) => item.key === 'life');
     }
 
     function renderDomainChoiceButtons(inputId, selectedKey = 'career') {
@@ -664,7 +665,7 @@
         const visibleDomains = DOMAINS;
         return `
             <input id="${escapeAttr(inputId)}" type="hidden" value="${escapeAttr(normalizedKey)}">
-            <div role="radiogroup" aria-label="할 일 그룹" class="mt-1 grid grid-cols-3 gap-1.5">
+            <div role="radiogroup" aria-label="할 일 그룹" class="mt-1 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
                 ${visibleDomains.map((item) => {
                     const selected = item.key === normalizedKey;
                     return `
