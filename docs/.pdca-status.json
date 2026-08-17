@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Advanced Independent Note Suite",
+  "feature": "Update 1.04.03 Todo Create Form Cleanup",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-08-11T23:45:00+09:00",
+  "updatedAt": "2026-08-18T12:00:00+09:00",
   "status": "complete",
-  "currentFocus": "Todo and Learning Archive provide advanced note workflows while keeping records, search, trash, and synchronization independent.",
+  "currentFocus": "Todo creation now opens in the foreground without Step or Subgroup fields, with concise supporting copy.",
   "completed": [
     "Documented Plan, Design, Check, Report, and design QA phases.",
     "Replaced arbitrary Todo groups with Career, Finance, and Life.",
@@ -120,8 +120,13 @@
     "Added independent dirty-record and pending-delete queues for offline reconciliation.",
     "Removed local version history when an item is permanently purged.",
     "Passed the full automated suite and live template, search, reload-persistence, diff, and cleanup checks.",
-    "Bumped the correction cache to v176."
+    "Bumped the correction cache to v176.",
+    "Raised the Todo creation dialog above existing detail content and focused its title field immediately.",
+    "Removed Step and Subgroup from new Todo creation while preserving historical Step data.",
+    "Removed stale routine examples and redundant Todo guidance.",
+    "Passed the full automated suite and desktop/mobile creation-flow checks.",
+    "Bumped the correction cache to v177."
   ],
   "remaining": [],
-  "nextStep": "Review the pushed branch in GitHub, then merge it when the note workflow looks right."
+  "nextStep": "Publish the completed patch and verify the public GitHub Pages Todo creation flow."
 }

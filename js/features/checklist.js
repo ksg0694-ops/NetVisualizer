@@ -1598,7 +1598,6 @@
             list.innerHTML = `
                 <div class="border border-dashed border-gray-200 rounded-lg bg-white px-4 py-8 text-center">
                     <p class="text-sm font-bold text-gray-700">${taskSearch ? '검색 결과가 없습니다.' : '등록된 할 일이 없습니다.'}</p>
-                    <p class="text-xs text-gray-400 mt-1">${taskSearch ? '다른 제목이나 본문 단어로 찾아보세요.' : '지금 떠오른 일을 하나만 남겨두세요.'}</p>
                 </div>
             `;
             return;
@@ -1608,7 +1607,7 @@
             return `
                 <section class="space-y-1.5" data-checklist-group="${escapeAttr(domain.key)}">
                     <div class="sticky top-0 z-[1] flex items-center justify-between rounded-md bg-gray-50/95 px-2 py-1 backdrop-blur"><h4 class="text-[10px] font-black tracking-wide text-gray-600">${escapeHtml(domain.label)}</h4><span class="text-[10px] text-gray-400">${domainTasks.length}</span></div>
-                    ${domainTasks.length ? domainTasks.map(renderTaskCard).join('') : '<p class="px-2 py-2 text-[10px] text-gray-300">표시할 할 일이 없습니다.</p>'}
+                    ${domainTasks.map(renderTaskCard).join('')}
                 </section>`;
         }).join('');
     }
@@ -1664,10 +1663,10 @@
                             const assetType = getReportAssetType(item);
                             const date = item.createdAt ? new Date(item.createdAt).toLocaleDateString('ko-KR') : '';
                             return `<article class="group flex items-center gap-2 rounded-md border border-gray-100 bg-white p-2 hover:border-indigo-200"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${assetType.tone}"><i class="fas ${assetType.icon} text-xs"></i></span><div class="min-w-0 flex-1"><strong class="block truncate text-[10px] text-gray-800">${escapeHtml(item.name || (isLink ? 'Report 링크' : 'Report 파일'))}</strong><span class="mt-0.5 block text-[9px] text-gray-400">${escapeHtml(assetType.label)} ${isLink ? '링크' : '파일'}${date ? ` · ${escapeHtml(date)}` : ''}</span></div>${isLink ? `<a href="${escapeAttr(linkUrl)}" target="_blank" rel="noopener noreferrer" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-indigo-500 hover:bg-indigo-50" title="Report 열기" aria-label="${escapeAttr(item.name || 'Report')} 열기"><i class="fas fa-arrow-up-right-from-square text-[10px]"></i></a><button type="button" data-checklist-report-link-delete="${escapeAttr(selectedTask.id)}" data-report-index="${escapeAttr(item.sourceIndex)}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-300 hover:bg-rose-50 hover:text-rose-500" title="링크 삭제" aria-label="${escapeAttr(item.name || 'Report')} 링크 삭제"><i class="fas fa-trash text-[10px]"></i></button>` : `<button type="button" data-checklist-report-open="${escapeAttr(selectedTask.id)}" data-report-index="${escapeAttr(item.sourceIndex)}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-indigo-500 hover:bg-indigo-50" title="파일 열기" aria-label="${escapeAttr(item.name || 'Report')} 파일 열기"><i class="fas fa-download text-[10px]"></i></button>`}</article>`;
-                        }).join('') : '<div class="rounded-lg border border-dashed border-gray-200 px-4 py-12 text-center"><p class="text-xs font-bold text-gray-500">아직 등록된 Report가 없습니다.</p><p class="mt-1 text-[9px] text-gray-400">이 할 일의 Report 링크를 추가하세요.</p></div>'}
+                        }).join('') : '<div class="rounded-lg border border-dashed border-gray-200 px-4 py-12 text-center"><p class="text-xs font-bold text-gray-500">등록된 Report가 없습니다.</p></div>'}
                     </div>
                 ` : `
-                    <div class="flex flex-1 flex-col items-center justify-center py-16 text-center"><div class="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 text-gray-300"><i class="fas fa-folder-open"></i></div><p class="mt-3 text-xs font-bold text-gray-600">할 일을 선택하세요</p><p class="mt-1 text-[9px] text-gray-400">선택한 할 일의 Report Library가 표시됩니다.</p></div>
+                    <div class="flex flex-1 flex-col items-center justify-center py-16 text-center"><div class="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 text-gray-300"><i class="fas fa-folder-open"></i></div><p class="mt-3 text-xs font-bold text-gray-600">할 일을 선택하세요</p></div>
                 `}
             </section>`;
     }
@@ -1684,7 +1683,6 @@
                         <i class="fas fa-list-check"></i>
                     </div>
                     <p class="text-sm font-bold text-gray-600">할 일을 선택하세요</p>
-                    <p class="mt-1 text-xs text-gray-400">왼쪽 카드 하나를 누르면 상세내역을 확인하고 수정할 수 있습니다.</p>
                 </div>
             `;
             return;
@@ -1710,7 +1708,7 @@
                                 <h4 data-checklist-title-display="${escapeAttr(task.id)}" tabindex="0" class="min-w-0 cursor-text truncate rounded px-1 py-0.5 text-lg font-black leading-snug text-gray-900 outline-none hover:bg-gray-50 focus:ring-2 focus:ring-indigo-200" title="더블클릭하여 제목 수정">${escapeHtml(task.title)}</h4>
                             `}
                         </div>
-                        <p class="mt-1 text-[11px] text-gray-400">${escapeHtml(domain.label)} · ${stepSummary.done}/${stepSummary.total} Step · 제목은 더블클릭으로 수정</p>
+                        <p class="mt-1 text-[11px] text-gray-400">${escapeHtml(domain.label)}${stepSummary.total ? ` · ${stepSummary.done}/${stepSummary.total} Step` : ''}</p>
                     </div>
                     <div class="flex w-full shrink-0 flex-wrap items-center justify-end gap-1 sm:w-auto">
                         <span id="checklist-note-autosave-status" class="mr-1 inline whitespace-nowrap text-[9px] font-medium text-gray-400"><i class="fas fa-circle-check mr-1 text-emerald-500"></i>자동 저장됨</span>
@@ -1784,13 +1782,13 @@
             ${isTrashOpen ? `
                 <div data-checklist-trash-close class="fixed inset-0 z-50 flex items-stretch justify-center bg-gray-950/30 p-0 backdrop-blur-[1px] sm:items-center sm:p-4">
                     <div class="flex h-full w-full max-w-lg flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[calc(100vh-2rem)] sm:rounded-lg sm:border sm:border-gray-200" role="dialog" aria-modal="true" aria-label="할 일 휴지통" data-checklist-trash-dialog>
-                        <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3"><div><p class="text-sm font-black text-gray-900">할 일 휴지통</p><p class="mt-0.5 text-[9px] text-gray-400">이 기기에 보관됩니다.</p></div><button type="button" data-checklist-trash-close class="h-8 w-8 rounded-md text-gray-400 hover:bg-gray-100" aria-label="할 일 휴지통 닫기"><i class="fas fa-xmark"></i></button></div>
+                        <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3"><p class="text-sm font-black text-gray-900">할 일 휴지통</p><button type="button" data-checklist-trash-close class="h-8 w-8 rounded-md text-gray-400 hover:bg-gray-100" aria-label="할 일 휴지통 닫기"><i class="fas fa-xmark"></i></button></div>
                         <div class="max-h-[70vh] flex-1 space-y-2 overflow-y-auto p-4">${trash.length ? trash.map(({ task, deletedAt }) => `<article class="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2.5"><div class="min-w-0 flex-1"><p class="truncate text-[12px] font-bold text-gray-800">${escapeHtml(task.title)}</p><p class="mt-0.5 text-[9px] text-gray-400">${new Date(deletedAt).toLocaleString('ko-KR')}</p></div><button type="button" data-checklist-trash-restore="${escapeAttr(task.id)}" class="rounded-md border border-indigo-100 px-2 py-1.5 text-[9px] font-bold text-indigo-600 hover:bg-indigo-50">복원</button><button type="button" data-checklist-trash-purge="${escapeAttr(task.id)}" class="h-7 w-7 rounded-md text-gray-400 hover:bg-rose-50 hover:text-rose-600" aria-label="${escapeAttr(task.title)} 영구 삭제"><i class="fas fa-trash text-[10px]"></i></button></article>`).join('') : '<div class="rounded-lg border border-dashed border-gray-200 px-4 py-12 text-center text-xs text-gray-400">휴지통이 비어 있습니다.</div>'}</div>
                     </div>
                 </div>
             ` : ''}
             ${isAddFormOpen ? `
-                <div data-checklist-close-add-form class="fixed inset-0 z-50 flex items-stretch justify-center bg-gray-950/30 p-0 backdrop-blur-[1px] sm:items-center sm:p-4">
+                <div data-checklist-close-add-form class="fixed inset-0 z-[70] flex items-stretch justify-center bg-gray-950/30 p-0 backdrop-blur-[1px] sm:items-center sm:p-4">
                     <div id="checklist-add-form" class="flex h-full w-full max-w-xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[calc(100vh-2rem)] sm:rounded-lg sm:border sm:border-gray-200" role="dialog" aria-modal="true" aria-label="새 할 일 추가" data-checklist-dialog>
                         <div class="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:pt-3">
                             <p class="text-sm font-black text-gray-900">새 할 일</p>
@@ -1813,13 +1811,8 @@
                                 ${renderNoteEditor({
                                     id: 'checklist-note-input',
                                     minHeightClass: 'min-h-[160px]',
-                                    placeholder: '필요한 맥락, 참고 내용, 처리 기준을 길게 적어두세요.',
+                                    placeholder: '상세내역 입력',
                                 })}
-                            </div>
-
-                            <div class="block">
-                                <span class="text-[11px] font-bold text-gray-500">Step</span>
-                                <div class="mt-1">${renderStepEditor('checklist-steps-input')}</div>
                             </div>
                         </div>
                         <div class="flex shrink-0 items-center justify-end gap-2 border-t border-gray-100 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-3">
@@ -1859,12 +1852,11 @@
     async function addTaskFromForm() {
         const titleEl = document.getElementById('checklist-title-input');
         const noteEl = document.getElementById('checklist-note-input');
-        const stepsEl = document.getElementById('checklist-steps-input');
         const domainEl = document.getElementById('checklist-domain-input');
         const task = normalizeTask({
             title: titleEl?.value,
             note: noteEl?.value,
-            steps: parseStepEditorSteps(stepsEl?.value || ''),
+            steps: [],
             dueDate: todayString(),
             domain: domainEl?.value || activeDomain,
             priority: 'normal',
@@ -1881,7 +1873,6 @@
         await persistRemoteTask(task);
         if (titleEl) titleEl.value = '';
         if (noteEl) noteEl.value = '';
-        if (stepsEl) stepsEl.value = '';
         toast('할 일을 추가했습니다.', 'info');
     }
 
@@ -2342,6 +2333,7 @@
             if (toggleAddFormBtn) {
                 isAddFormOpen = true;
                 isTrashOpen = false;
+                isDetailPanelOpen = false;
                 render({ skipRemoteLoad: true });
                 return;
             }
