@@ -43,7 +43,7 @@
     <script src="./js/features/portfolioViews.js?v=20260731-portfolio-scope-split-2"></script>
     <script src="./js/features/financeViews.js?v=20260802-forecast-input-1"></script>
     <script src="./js/features/healthTracker.js?v=20260713-public-server"></script>
-    <script src="./js/features/checklist.js?v=20260811-note-advanced-1"></script>
+    <script src="./js/features/checklist.js?v=20260818-todo-create-cleanup-1"></script>
     <script src="./js/features/personalCfo.js?v=20260726-phase2-portfolio-1"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
@@ -768,46 +768,7 @@
             </div>
 
             <!-- 1-6. Life Tool: Todo -->
-            <div id="routine-checklist-view" class="view-section hidden max-w-none w-full flex flex-col">
-                <div class="mb-5 md:mb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-                    <div>
-                        <p class="text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Life Tool</p>
-                        <h2 class="text-xl md:text-2xl font-bold text-gray-900">할 일</h2>
-                        <p class="text-xs md:text-sm text-gray-500 mt-1">하루를 망치지 않게 만드는 최소 루틴만 체크합니다.</p>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <span class="text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-xl whitespace-nowrap">Daily Loop</span>
-                        <span class="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl whitespace-nowrap">Minimum Viable Day</span>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
-                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Morning</p>
-                        <div class="space-y-3">
-                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-indigo-600"><span class="text-sm font-medium text-gray-700">물 한 컵 + 약/영양제</span></label>
-                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-indigo-600"><span class="text-sm font-medium text-gray-700">오늘 일정 3분 확인</span></label>
-                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-indigo-600"><span class="text-sm font-medium text-gray-700">가벼운 스트레칭</span></label>
-                        </div>
-                    </div>
-                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">After Work</p>
-                        <div class="space-y-3">
-                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-emerald-600"><span class="text-sm font-medium text-gray-700">가계부/메모 5분 정리</span></label>
-                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-emerald-600"><span class="text-sm font-medium text-gray-700">운동 또는 산책</span></label>
-                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-emerald-600"><span class="text-sm font-medium text-gray-700">개인 프로젝트 30분</span></label>
-                        </div>
-                    </div>
-                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Night</p>
-                        <div class="space-y-3">
-                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-sky-600"><span class="text-sm font-medium text-gray-700">내일 첫 행동 정하기</span></label>
-                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-sky-600"><span class="text-sm font-medium text-gray-700">방/책상 5분 리셋</span></label>
-                            <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"><input type="checkbox" class="w-4 h-4 accent-sky-600"><span class="text-sm font-medium text-gray-700">수면 준비 알림</span></label>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <div id="routine-checklist-view" class="view-section hidden max-w-none w-full flex flex-col"></div>
 
             <div id="learning-archive-view" class="view-section hidden -mx-4 w-[calc(100%+2rem)] max-w-none flex-col md:-mx-6 md:w-[calc(100%+3rem)] lg:-mx-8 lg:w-[calc(100%+4rem)]"></div>
 

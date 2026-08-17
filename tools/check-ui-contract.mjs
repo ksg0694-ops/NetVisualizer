@@ -22,6 +22,10 @@ const stepEditorMarkup = checklist.slice(
     checklist.indexOf('list.innerHTML = steps.map'),
     checklist.indexOf('function hydrateStepEditors'),
 );
+const todoAddFormMarkup = checklist.slice(
+    checklist.indexOf('function renderAddForm'),
+    checklist.indexOf('function render(options'),
+);
 
 const requiredScripts = [
     './js/shared/appUtils.js',
@@ -261,6 +265,12 @@ assert.ok(!checklist.includes('스텝'));
 assert.ok(!checklist.includes('스탭'));
 assert.ok(!checklist.includes('하위 할 일'));
 assert.ok(!checklist.includes('Sub tasks'));
+assert.ok(!todoAddFormMarkup.includes('checklist-steps-input') && !todoAddFormMarkup.includes("renderStepEditor('checklist-steps-input')"), 'new Todo form must not expose Step creation');
+assert.ok(!todoAddFormMarkup.includes('Subgroup'), 'new Todo form must not expose Subgroup creation');
+assert.ok(todoAddFormMarkup.includes('z-[70]'), 'new Todo form must render above an existing detail dialog');
+assert.ok(checklist.includes('isAddFormOpen = true;\n                isTrashOpen = false;\n                isDetailPanelOpen = false;'), 'opening a new Todo must close the existing detail dialog');
+assert.ok(!index.includes('Daily Loop') && !index.includes('Minimum Viable Day'), 'Todo must not retain obsolete routine slogans');
+assert.ok(!checklist.includes('제목은 더블클릭으로 수정'), 'Todo must not repeat title-editing instructions');
 assert.ok(checklist.includes('NoteEditor.renderFontSizeToolbar') && checklist.includes('function applyNoteSelectionFontSize'), 'Todo must use the shared flexible font-size control');
 assert.ok(checklist.includes('NoteEditor.renderHistoryToolbar') && checklist.includes('flushPendingTodoNoteBeforeUnload'), 'Todo must expose note history controls and flush pending local drafts before unload');
 assert.ok(checklist.includes('life.checklist.trash.v1') && checklist.includes('restoreTaskFromTrash'), 'Todo must keep an independent local trash and restore flow');
