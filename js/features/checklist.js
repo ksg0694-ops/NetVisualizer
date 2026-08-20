@@ -1630,6 +1630,7 @@
                         <i class="fas fa-check text-[8px]"></i>
                     </button>
                     <p class="min-w-0 flex-1 truncate text-[13px] font-bold leading-5 ${titleClass}">${escapeHtml(task.title)}</p>
+                    ${task.paused ? '<span class="shrink-0 rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold text-amber-600"><i class="fas fa-pause mr-1 text-[7px]"></i>Monitor</span>' : ''}
                     <button type="button" data-checklist-delete="${escapeAttr(task.id)}" class="-mt-0.5 shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 text-gray-400 hover:text-rose-500 transition px-1 py-0.5" title="삭제" aria-label="${escapeAttr(task.title)} 삭제">
                         <i class="fas fa-trash text-xs"></i>
                     </button>
@@ -1637,10 +1638,7 @@
                         <i class="fas fa-grip-vertical text-xs"></i>
                     </button>
                 </div>
-                ${(task.paused || stepBadge) ? `<div class="mt-1 flex min-w-0 items-center gap-1.5 pl-7 text-[10px] text-gray-500">
-                    ${task.paused ? '<span class="shrink-0 font-bold text-amber-600"><i class="fas fa-pause mr-1"></i>Monitor</span>' : ''}
-                    ${stepBadge ? `<span class="shrink-0">${stepBadge}</span>` : ''}
-                </div>` : ''}
+                ${stepBadge ? `<div class="mt-1 flex min-w-0 items-center gap-1.5 pl-7 text-[10px] text-gray-500"><span class="shrink-0">${stepBadge}</span></div>` : ''}
             </article>
         `;
     }
@@ -1753,15 +1751,7 @@
                 <div class="flex shrink-0 flex-col items-stretch gap-2 border-b border-gray-100 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:flex-row sm:items-start sm:justify-between xl:border-0 xl:p-0">
                     <div class="min-w-0 flex-1">
                         <div class="flex flex-wrap items-center gap-1.5">
-                            ${isEditingTitle ? `
-                                <div class="flex min-w-0 flex-1 items-center gap-1.5">
-                                    <input id="checklist-detail-title-edit" type="text" value="${escapeAttr(task.title)}" class="min-w-0 flex-1 rounded-md border border-indigo-300 bg-white px-2.5 py-1.5 text-lg font-black text-gray-900 outline-none ring-2 ring-indigo-100" aria-label="할 일 제목 수정">
-                                    <button type="button" data-checklist-save-title="${escapeAttr(task.id)}" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gray-900 text-white hover:bg-gray-800" title="제목 저장" aria-label="제목 저장"><i class="fas fa-check text-[10px]"></i></button>
-                                    <button type="button" data-checklist-cancel-title class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400 hover:text-gray-700" title="제목 수정 취소" aria-label="제목 수정 취소"><i class="fas fa-xmark text-[10px]"></i></button>
-                                </div>
-                            ` : `
-                                <h4 data-checklist-title-display="${escapeAttr(task.id)}" tabindex="0" class="min-w-0 cursor-text truncate rounded px-1 py-0.5 text-lg font-black leading-snug text-gray-900 outline-none hover:bg-gray-50 focus:ring-2 focus:ring-indigo-200" title="더블클릭하여 제목 수정">${escapeHtml(task.title)}</h4>
-                            `}
+                            <h4 data-checklist-title-display="${escapeAttr(task.id)}" tabindex="0" contenteditable="${isEditingTitle ? 'true' : 'false'}" spellcheck="${isEditingTitle ? 'true' : 'false'}" class="min-w-0 cursor-text truncate rounded px-1 py-0.5 text-lg font-black leading-snug text-gray-900 outline-none hover:bg-gray-50 focus:ring-2 focus:ring-indigo-200 ${isEditingTitle ? 'bg-indigo-50/60 ring-2 ring-indigo-200' : ''}" title="더블클릭하여 제목 수정">${escapeHtml(task.title)}</h4>
                         </div>
                         <p class="mt-1 text-[11px] text-gray-400">${escapeHtml(domain.label)}${stepSummary.total ? ` · ${stepSummary.done}/${stepSummary.total} Step` : ''}</p>
                     </div>
@@ -1885,9 +1875,7 @@
         hydrateStepEditors();
         persistChecklistUiState();
         if (editingTitleTaskId) {
-            const titleInput = document.getElementById('checklist-detail-title-edit');
-            titleInput?.focus();
-            titleInput?.select();
+            document.querySelector(`[data-checklist-title-display="${CSS.escape(editingTitleTaskId)}"]`)?.focus();
         }
         if (isAddFormOpen) document.getElementById('checklist-title-input')?.focus();
         if (remoteAvailable) {
@@ -2146,11 +2134,11 @@
         const now = new Date().toISOString();
         const task = tasks.find((item) => item.id === id);
         if (!task) return;
-        const titleEl = document.getElementById('checklist-detail-title-edit');
+        const titleEl = document.querySelector(`[data-checklist-title-display="${CSS.escape(id)}"]`);
         const domainEl = document.getElementById('checklist-detail-domain-edit');
         const noteEl = document.getElementById('checklist-detail-note-edit');
         const stepsEl = document.getElementById('checklist-detail-steps-edit');
-        const title = String(titleEl?.value || task.title).trim();
+        const title = String(editingTitleTaskId === id ? titleEl?.textContent : task.title).trim();
         if (!title) {
             toast('할 일 제목을 입력해주세요.', 'warning');
             return;
@@ -2196,22 +2184,43 @@
     function startTitleEditing(id) {
         if (!tasks.some((item) => item.id === id)) return;
         editingTitleTaskId = id;
-        render({ skipRemoteLoad: true });
+        const titleEl = document.querySelector(`[data-checklist-title-display="${CSS.escape(id)}"]`);
+        if (!titleEl) return;
+        titleEl.contentEditable = 'true';
+        titleEl.spellcheck = true;
+        titleEl.classList.add('bg-indigo-50/60', 'ring-2', 'ring-indigo-200');
+        titleEl.focus({ preventScroll: true });
+        const range = document.createRange();
+        range.selectNodeContents(titleEl);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
     }
 
     function cancelTitleEditing() {
+        const task = tasks.find((item) => item.id === editingTitleTaskId);
+        const titleEl = editingTitleTaskId
+            ? document.querySelector(`[data-checklist-title-display="${CSS.escape(editingTitleTaskId)}"]`)
+            : null;
+        if (titleEl && task) titleEl.textContent = task.title;
         editingTitleTaskId = null;
-        render({ skipRemoteLoad: true });
+        if (titleEl) {
+            titleEl.contentEditable = 'false';
+            titleEl.spellcheck = false;
+            titleEl.classList.remove('bg-indigo-50/60', 'ring-2', 'ring-indigo-200');
+            titleEl.blur();
+        }
     }
 
     async function saveTaskTitle(id) {
         const task = tasks.find((item) => item.id === id);
         if (!task) return;
-        const titleEl = document.getElementById('checklist-detail-title-edit');
-        const title = String(titleEl?.value || '').trim();
+        if (editingTitleTaskId !== id) return;
+        const titleEl = document.querySelector(`[data-checklist-title-display="${CSS.escape(id)}"]`);
+        const title = String(titleEl?.textContent || '').trim();
         if (!title) {
             toast('할 일 제목을 입력해주세요.', 'warning');
-            titleEl?.focus();
+            titleEl?.focus({ preventScroll: true });
             return;
         }
         if (task.title === title) {
@@ -2454,15 +2463,6 @@
                 deleteTask(deleteBtn.dataset.checklistDelete);
                 return;
             }
-            const saveTitleBtn = event.target.closest('[data-checklist-save-title]');
-            if (saveTitleBtn) {
-                saveTaskTitle(saveTitleBtn.dataset.checklistSaveTitle);
-                return;
-            }
-            if (event.target.closest('[data-checklist-cancel-title]')) {
-                cancelTitleEditing();
-                return;
-            }
             const toggleBtn = event.target.closest('[data-checklist-toggle]');
             if (toggleBtn) {
                 toggleTask(toggleBtn.dataset.checklistToggle);
@@ -2521,6 +2521,13 @@
             if (!title) return;
             event.preventDefault();
             startTitleEditing(title.dataset.checklistTitleDisplay);
+        });
+        root?.addEventListener('focusout', (event) => {
+            const title = event.target.closest('[data-checklist-title-display][contenteditable="true"]');
+            if (!title || editingTitleTaskId !== title.dataset.checklistTitleDisplay) return;
+            window.setTimeout(() => {
+                if (editingTitleTaskId === title.dataset.checklistTitleDisplay) saveTaskTitle(title.dataset.checklistTitleDisplay);
+            }, 0);
         });
         root?.addEventListener('change', (event) => {
             const blockStyle = event.target.closest('[data-note-block-style]');
@@ -2661,18 +2668,18 @@
                 return;
             }
             const titleDisplay = event.target?.closest?.('[data-checklist-title-display]');
-            if (titleDisplay && (event.key === 'Enter' || event.key === ' ')) {
+            if (titleDisplay && titleDisplay.contentEditable !== 'true' && (event.key === 'Enter' || event.key === ' ')) {
                 event.preventDefault();
                 startTitleEditing(titleDisplay.dataset.checklistTitleDisplay);
                 return;
             }
-            const titleInput = event.target?.closest?.('#checklist-detail-title-edit');
-            if (titleInput && event.key === 'Enter') {
+            const inlineTitle = event.target?.closest?.('[data-checklist-title-display][contenteditable="true"]');
+            if (inlineTitle && event.key === 'Enter') {
                 event.preventDefault();
-                saveTaskTitle(activeTaskId);
+                saveTaskTitle(inlineTitle.dataset.checklistTitleDisplay);
                 return;
             }
-            if (titleInput && event.key === 'Escape') {
+            if (inlineTitle && event.key === 'Escape') {
                 event.preventDefault();
                 cancelTitleEditing();
                 return;
