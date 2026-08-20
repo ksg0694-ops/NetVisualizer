@@ -260,9 +260,12 @@ assert.ok(learningArchive.includes('function moveEditorLineHorizontally') && lea
 assert.ok(learningArchive.includes('function mergeEditorLineForward') && learningArchive.includes("event.key === 'Delete'"), 'Learning Archive must merge adjacent lines from either boundary');
 assert.ok(learningArchive.includes('learning-character-count') && learningArchive.includes('function updateEditorCharacterCount'), 'Learning Archive character count must update during editing');
 assert.ok(checklist.includes('data-checklist-title-display'));
+assert.ok(checklist.includes('contenteditable="${isEditingTitle ? \'true\' : \'false\'}"'), 'Todo titles must edit in place without a replacement input');
+assert.ok(!checklist.includes('id="checklist-detail-title-edit"') && !checklist.includes('data-checklist-save-title'), 'Todo title editing must not render a separate input or save button');
+assert.ok(checklist.includes("task.paused ? '<span class=\"shrink-0 rounded bg-amber-50"), 'Monitor must render on the same row as the Todo title');
 assert.ok(checklist.includes("root?.addEventListener('dblclick'"));
 assert.ok(!checklist.includes('<span class="text-[11px] font-bold text-gray-500">제목</span>'), 'detail title must not use a separate field row');
-assert.ok(checklist.includes("titleEl?.value || task.title"), 'detail save must retain the title outside inline edit mode');
+assert.ok(checklist.includes("editingTitleTaskId === id ? titleEl?.textContent : task.title"), 'detail save must retain or commit the inline title');
 assert.ok(stepEditorMarkup.indexOf('data-step-editor-remove') < stepEditorMarkup.indexOf('data-step-editor-drag-handle'), 'Step drag handle must sit at the right edge');
 assert.ok(checklist.includes('sm:h-auto sm:max-h-[calc(100vh-2rem)]'));
 assert.ok(checklist.includes('aria-pressed="${task.completed}"'));

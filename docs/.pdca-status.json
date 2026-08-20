@@ -1,12 +1,12 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Update 1.04.03 Todo Selection and Status Filter",
+  "feature": "Update 1.04.03 Todo Inline Title and Monitor",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-08-18T12:00:00+09:00",
+  "updatedAt": "2026-08-20T22:45:00+09:00",
   "status": "complete",
-  "currentFocus": "Todo preserves multiline pointer selections and exposes status filtering in the list rail without redundant sorting.",
+  "currentFocus": "Todo titles edit in place and Monitor status stays on the title row for compact cards.",
   "completed": [
     "Documented Plan, Design, Check, Report, and design QA phases.",
     "Replaced arbitrary Todo groups with Career, Finance, and Life.",
@@ -137,8 +137,13 @@
     "Moved the Todo status filter from the selected item header to the list rail.",
     "Removed default and recent-modified Todo sorting controls and logic.",
     "Passed the full automated suite and live status-filter browser checks.",
-    "Bumped the correction cache to v179."
+    "Bumped the correction cache to v179.",
+    "Replaced the separate Todo title input with in-place contenteditable editing.",
+    "Added Enter save, Escape cancel, outside-click save, and detail-save compatibility for inline titles.",
+    "Moved the Monitor badge onto the Todo title row and removed its extra metadata row.",
+    "Passed the full automated suite and live inline-title and Monitor-row browser checks.",
+    "Bumped the correction cache to v180."
   ],
   "remaining": [],
-  "nextStep": "Publish the Todo selection and list-status patch and verify it on GitHub Pages."
+  "nextStep": "Publish the inline title and compact Monitor patch and verify it on GitHub Pages."
 }
