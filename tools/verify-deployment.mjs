@@ -28,7 +28,7 @@ const remoteShell = requireMatch(remoteIndex, /js\/features\/appShell\.js\?v=([^
 
 if (remoteCache !== localCache || remoteShell !== localShell) {
     console.error(`Deployment mismatch: local ${localCache}/${localShell}, remote ${remoteCache}/${remoteShell}`);
-    process.exit(1);
+    process.exitCode = 1;
+} else {
+    console.log(`Deployment verified: ${deployBaseUrl} (${remoteCache}, appShell ${remoteShell})`);
 }
-
-console.log(`Deployment verified: ${deployBaseUrl} (${remoteCache}, appShell ${remoteShell})`);

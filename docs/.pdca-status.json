@@ -2,11 +2,11 @@
   "project": "NetVisualizer",
   "level": "dynamic",
   "feature": "Update 1.04.03 Performance and Deployment Foundation",
-  "phase": "check",
-  "progress": 75,
-  "updatedAt": "2026-08-24T21:30:00+09:00",
-  "status": "in_progress",
-  "currentFocus": "Separate initial loading and active-view rendering, then verify each main push against GitHub Pages.",
+  "phase": "report",
+  "progress": 100,
+  "updatedAt": "2026-08-24T21:40:00+09:00",
+  "status": "complete",
+  "currentFocus": "Startup loading and active-view rendering are isolated, and each main push can be verified against GitHub Pages.",
   "completed": [
     "Documented Plan, Design, Check, Report, and design QA phases.",
     "Replaced arbitrary Todo groups with Career, Finance, and Life.",
@@ -142,11 +142,15 @@
     "Added Enter save, Escape cancel, outside-click save, and detail-save compatibility for inline titles.",
     "Moved the Monitor badge onto the Todo title row and removed its extra metadata row.",
     "Passed the full automated suite and live inline-title and Monitor-row browser checks.",
-    "Bumped the correction cache to v180."
+    "Bumped the correction cache to v180.",
+    "Replaced Tailwind Play CDN with a Tailwind CSS v4.3.3 static build.",
+    "Deferred all 23 startup scripts and lazy-loaded the PPT export runtime.",
+    "Removed duplicate Todo, Learning Archive, and Personal CFO navigation renders.",
+    "Separated dashboard, Monthly Report, cash-flow, portfolio, and asset chart rendering by active view.",
+    "Added performance contracts and a GitHub Pages deployment verifier.",
+    "Passed the full automated suite and desktop, mobile, and deployed-browser regression checks.",
+    "Verified GitHub Pages cache v181 and app shell 20260824-active-view-render-1."
   ],
-  "remaining": [
-    "Publish and verify GitHub Pages cache v181.",
-    "Document the final report."
-  ],
-  "nextStep": "Publish the validated changes to main and verify GitHub Pages."
+  "remaining": [],
+  "nextStep": "Start future changes from the latest origin/main, run npm run check, push main, then run npm run deploy:verify."
 }
