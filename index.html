@@ -14,40 +14,39 @@
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/5501/5501360.png">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/5501/5501360.png">
 
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="./styles/app.css?v=20260824-tailwind-v4-1">
     <!-- Supabase JS -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Completion report PPT export -->
-    <script src="./vendor/pptxgen.bundle.js?v=3.12.0"></script>
-    <script>window.NetVisualizerPptxGenJS = typeof PptxGenJS === 'function' ? PptxGenJS : null;</script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Completion report PPT export is loaded only when the user exports a report. -->
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Chart.js -->
-    <script src="./vendor/chart.umd.min.js?v=4.4.7"></script>
+    <script defer src="./vendor/chart.umd.min.js?v=4.4.7"></script>
     <!-- Shared runtime and feature modules -->
-    <script src="./js/shared/appUtils.js?v=20260715-foundation-1"></script>
-    <script src="./js/shared/noteEditor.js?v=20260811-note-advanced-1"></script>
-    <script src="./js/features/financeRepository.js?v=20260803-gmail-incremental-1"></script>
-    <script src="./js/features/financeModel.js?v=20260726-phase2-portfolio-2"></script>
-    <script src="./js/generated/personal-cfo-domain.js?v=20260726-monthly-report-1"></script>
-    <script src="./js/features/monthlyClose.js?v=20260717-monthly-close-5"></script>
-    <script src="./js/features/appCore.js?v=20260803-mobile-state-1"></script>
-    <script src="./js/features/assetTrend.js?v=20260731-update-10401-patch-v1"></script>
-    <script src="./js/features/financeForecast.js?v=20260802-forecast-input-1"></script>
-    <script src="./js/features/quantEngine.js?v=20260731-update-10401-patch-v1"></script>
-    <script src="./js/features/realEstate.js?v=20260726-phase1-cfo-5"></script>
-    <script src="./js/features/transactionImport.js?v=20260708-auth-cloud"></script>
-    <script src="./js/features/portfolioEditor.js?v=20260717-portfolio-draft-1"></script>
-    <script src="./js/features/cashflowControls.js"></script>
-    <script src="./js/features/portfolioViews.js?v=20260731-portfolio-scope-split-2"></script>
-    <script src="./js/features/financeViews.js?v=20260802-forecast-input-1"></script>
-    <script src="./js/features/healthTracker.js?v=20260713-public-server"></script>
-    <script src="./js/features/checklist.js?v=20260820-todo-inline-title-monitor-1"></script>
-    <script src="./js/features/personalCfo.js?v=20260726-phase2-portfolio-1"></script>
+    <script defer src="./js/shared/appUtils.js?v=20260715-foundation-1"></script>
+    <script defer src="./js/shared/noteEditor.js?v=20260811-note-advanced-1"></script>
+    <script defer src="./js/features/financeRepository.js?v=20260803-gmail-incremental-1"></script>
+    <script defer src="./js/features/financeModel.js?v=20260726-phase2-portfolio-2"></script>
+    <script defer src="./js/generated/personal-cfo-domain.js?v=20260726-monthly-report-1"></script>
+    <script defer src="./js/features/monthlyClose.js?v=20260717-monthly-close-5"></script>
+    <script defer src="./js/features/appCore.js?v=20260803-mobile-state-1"></script>
+    <script defer src="./js/features/assetTrend.js?v=20260731-update-10401-patch-v1"></script>
+    <script defer src="./js/features/financeForecast.js?v=20260802-forecast-input-1"></script>
+    <script defer src="./js/features/quantEngine.js?v=20260731-update-10401-patch-v1"></script>
+    <script defer src="./js/features/realEstate.js?v=20260726-phase1-cfo-5"></script>
+    <script defer src="./js/features/transactionImport.js?v=20260708-auth-cloud"></script>
+    <script defer src="./js/features/portfolioEditor.js?v=20260717-portfolio-draft-1"></script>
+    <script defer src="./js/features/cashflowControls.js"></script>
+    <script defer src="./js/features/portfolioViews.js?v=20260731-portfolio-scope-split-2"></script>
+    <script defer src="./js/features/financeViews.js?v=20260824-active-view-render-1"></script>
+    <script defer src="./js/features/healthTracker.js?v=20260713-public-server"></script>
+    <script defer src="./js/features/checklist.js?v=20260820-todo-inline-title-monitor-1"></script>
+    <script defer src="./js/features/personalCfo.js?v=20260726-phase2-portfolio-1"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif; -webkit-tap-highlight-color: transparent; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         @keyframes spin-slow { 100% { transform: rotate(360deg); } }
@@ -1873,7 +1872,7 @@
     <!-- Toast Message Container -->
     <div id="toast-container" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[90%] md:w-auto max-w-sm"></div>
 
-    <script src="./js/features/learningArchive.js?v=20260811-note-advanced-1"></script>
-    <script src="./js/features/appShell.js?v=20260805-update-10402-2"></script>
+    <script defer src="./js/features/learningArchive.js?v=20260811-note-advanced-1"></script>
+    <script defer src="./js/features/appShell.js?v=20260824-active-view-render-1"></script>
 </body>
 </html>

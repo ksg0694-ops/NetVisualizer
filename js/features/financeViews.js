@@ -215,6 +215,7 @@
 
     function renderAssetTrendCharts(model) {
         if (!model) return;
+        const isActiveView = (viewId) => activeViewId === viewId && !document.getElementById(viewId)?.classList.contains('hidden');
         const periodElement = document.getElementById('asset-trend-period');
         if (periodElement) {
             const firstLabel = model.fullSeries.labels[0] || '-';
@@ -222,7 +223,7 @@
             periodElement.textContent = `${firstLabel}–${lastLabel}`;
         }
 
-        if (document.getElementById('dashboardAssetChart')) {
+        if (isActiveView('dashboard-view') && document.getElementById('dashboardAssetChart')) {
             renderOrUpdateChart(
                 'dashAsset',
                 'dashboardAssetChart',
@@ -230,14 +231,14 @@
             );
         }
 
-        if (document.getElementById('fullAssetChart')) {
+        if (isActiveView('asset-view') && document.getElementById('fullAssetChart')) {
             renderOrUpdateChart(
                 'fullAsset',
                 'fullAssetChart',
                 createAssetTrendChartConfig(model.fullSeries.labels, model.fullSeries.data, model.targetGoalAsset, model.incomeTrendForecast)
             );
         }
-        if (document.getElementById('monthlyReportAssetChart')) {
+        if (isActiveView('stats-view') && document.getElementById('monthlyReportAssetChart')) {
             const selectedMonthNumber = Number(String(currentMonthKey || '').split('-')[1]) || 12;
             const reportData = model.dashboardSeries.data.map(
                 (value, index) => (index < selectedMonthNumber ? value : null),
@@ -987,7 +988,7 @@
         return /상환/u.test(classification);
     }
 
-    function renderCashFlowCategoryAnalysis(txData = []) {
+    function renderCashFlowCategoryAnalysis(txData = [], targetViewId = activeViewId) {
         const incomeDetailItems = getCashFlowCategoryBreakdown(txData, '수입', Number.MAX_SAFE_INTEGER);
         const consumptionTxData = txData.filter((item) => !isRepaymentExpense(item));
         const expenseDetailItems = getCashFlowCategoryBreakdown(consumptionTxData, '지출', Number.MAX_SAFE_INTEGER);
@@ -998,11 +999,13 @@
         const incomeColors = ['#3B82F6', '#60A5FA', '#93C5FD', '#2563EB', '#BFDBFE'];
         const expenseColors = ['#EF4444', '#F97316', '#F59E0B', '#EC4899', '#FCA5A5'];
 
-        [
-            ['cashflowIncomeCategory', 'cashflow-income-category-chart', 'cashflow-income-category-list', incomeDetailItems],
-            ['cashflowMainIncomeCategory', 'cashflow-main-income-category-chart', 'cashflow-main-income-category-list', incomeMainItems],
-            ['monthlyReportIncomeCategory', 'monthly-report-income-category-chart', 'monthly-report-income-category-list', incomeMainItems]
-        ].forEach(([chartKey, chartId, listId, items]) => {
+        const incomeTargets = targetViewId === 'stats-view'
+            ? [['monthlyReportIncomeCategory', 'monthly-report-income-category-chart', 'monthly-report-income-category-list', incomeMainItems]]
+            : [
+                ['cashflowIncomeCategory', 'cashflow-income-category-chart', 'cashflow-income-category-list', incomeDetailItems],
+                ['cashflowMainIncomeCategory', 'cashflow-main-income-category-chart', 'cashflow-main-income-category-list', incomeMainItems],
+            ];
+        incomeTargets.forEach(([chartKey, chartId, listId, items]) => {
             renderCategoryDoughnutBlock({
                 chartKey,
                 chartId,
@@ -1016,11 +1019,13 @@
             });
         });
 
-        [
-            ['cashflowExpenseCategory', 'cashflow-expense-category-chart', 'cashflow-expense-category-list', expenseDetailItems],
-            ['cashflowMainExpenseCategory', 'cashflow-main-expense-category-chart', 'cashflow-main-expense-category-list', expenseMainItems],
-            ['monthlyReportExpenseCategory', 'monthly-report-expense-category-chart', 'monthly-report-expense-category-list', expenseMainItems]
-        ].forEach(([chartKey, chartId, listId, items]) => {
+        const expenseTargets = targetViewId === 'stats-view'
+            ? [['monthlyReportExpenseCategory', 'monthly-report-expense-category-chart', 'monthly-report-expense-category-list', expenseMainItems]]
+            : [
+                ['cashflowExpenseCategory', 'cashflow-expense-category-chart', 'cashflow-expense-category-list', expenseDetailItems],
+                ['cashflowMainExpenseCategory', 'cashflow-main-expense-category-chart', 'cashflow-main-expense-category-list', expenseMainItems],
+            ];
+        expenseTargets.forEach(([chartKey, chartId, listId, items]) => {
             renderCategoryDoughnutBlock({
                 chartKey,
                 chartId,
@@ -1582,6 +1587,9 @@
 
     function renderCashFlow() {
         if(!currentMonthKey || !monthlyDB[currentMonthKey]) return;
+        const isMonthlyReportView = activeViewId === 'stats-view';
+        const isCashFlowView = activeViewId === 'cashflow-view';
+        if (!isMonthlyReportView && !isCashFlowView) return;
         const db = monthlyDB[currentMonthKey];
         const sourceTxData = db.transactions;
         const txData = window.MonthlyCloseFeature?.getEffectiveTransactions?.(
@@ -1610,18 +1618,24 @@
         const { totalIncome, totalExpense } = getCashFlowStats(txData);
         const cashFlowStructure = getCashFlowStructureSummary(currentMonthKey);
 
+        if (isMonthlyReportView) {
+            renderMonthlyInterimReport(db, cashFlowStructure, txData);
+            renderMonthlyReportSummary(db, cashFlowStructure);
+            renderMonthlyReportPortfolioSummary();
+            renderCashFlowCategoryAnalysis(txData, 'stats-view');
+            renderAssetTrend(db);
+            return;
+        }
+
         const selectedIncome = document.getElementById('cashflow-selected-income');
         const selectedExpense = document.getElementById('cashflow-selected-expense');
         if (selectedIncome) selectedIncome.textContent = formatWon(totalIncome);
         if (selectedExpense) selectedExpense.textContent = formatWon(cashFlowStructure?.spending ?? totalExpense);
         renderCashFlowAllocationPanel(cashFlowStructure);
-        renderMonthlyInterimReport(db, cashFlowStructure, txData);
-        renderMonthlyReportSummary(db, cashFlowStructure);
-        renderMonthlyReportPortfolioSummary();
 
         const manageList = document.getElementById('manageTransactionList');
         if (manageList) manageList.innerHTML = '';
-        renderCashFlowCategoryAnalysis(txData);
+        renderCashFlowCategoryAnalysis(txData, 'cashflow-view');
         renderRemainingFixedCosts(currentMonthKey, txData);
 
         const getBadgeStyle = (type) => {
@@ -1705,7 +1719,6 @@
                 }, 480)
             });
         }
-        renderAssetTrend(db);
         destroyChart('expense');
     }
 

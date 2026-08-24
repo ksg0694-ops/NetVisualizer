@@ -1035,14 +1035,16 @@
 
     function renderSections({ dashboard = false, financeSummary = false, cashFlow = false, portfolio = false, addons = false, realEstate = false, investDetail = false } = {}) {
         updateNavigationButtons();
-        if (dashboard || financeSummary) {
+        const financeSummaryVisible = activeViewId === 'dashboard-view' || activeViewId === 'asset-view';
+        const cashFlowVisible = activeViewId === 'stats-view' || activeViewId === 'cashflow-view';
+        if ((dashboard || financeSummary) && financeSummaryVisible) {
             renderFinanceSummary();
         }
-        if (dashboard || cashFlow) {
+        if ((dashboard || cashFlow) && cashFlowVisible) {
             renderCashFlow();
         }
-        if (portfolio) renderPortfolio();
-        if (addons && typeof renderAddons === 'function') renderAddons();
+        if (portfolio && activeViewId === 'portfolio-view') renderPortfolio();
+        if (addons && activeViewId === 'cashflow-view' && typeof renderAddons === 'function') renderAddons();
         if (realEstate && typeof renderRealEstate === 'function') renderRealEstate();
         if (investDetail && activeInvestGroupName) renderInvestDetail(activeInvestGroupName);
     }

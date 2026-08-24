@@ -140,9 +140,6 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
             else { nav.classList.remove('text-indigo-600', 'bg-indigo-50'); nav.classList.add('text-gray-600', 'hover:bg-gray-50'); }
         });
         Object.values(views).forEach(v => { if(v) v.classList.add('hidden'); });
-        if (targetId === 'routine-checklist-view') window.ChecklistFeature?.render({ skipRemoteLoad: true });
-        if (targetId === 'learning-archive-view') window.LearningArchiveFeature?.render();
-        if (targetId === 'personal-cfo-view') window.PersonalCfoFeature?.render();
         if(views[targetId]) views[targetId].classList.remove('hidden');
 
         // ???[?????怨뚮뼺?됰뗀??? FAB ???????????? '?????????????????stats-view)' ??????饔낅떽????????????怨뺤른??????怨쀫뮡?壤굿??곸읆????ル폆???
@@ -157,26 +154,24 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         }
         if (targetId === 'cashflow-view') toggleManageView(false);
 
-        setTimeout(() => {
-            if (targetId === 'dashboard-view') renderSections({ financeSummary: true, portfolio: true });
-            else if (targetId === 'portfolio-view') renderSections({ portfolio: true });
-            else if (targetId === 'stats-view' || targetId === 'cashflow-view') renderSections({ cashFlow: true });
-            else if (targetId === 'asset-view') renderSections({ financeSummary: true });
-            else if (targetId === 'personal-cfo-view') window.PersonalCfoFeature?.render();
-            else if (targetId === 'realestate-view') renderSections({ realEstate: true });
-            else if (targetId === 'health-view') {
-                window.HealthTrackerFeature?.bindControls();
-                window.HealthTrackerFeature?.render();
-            }
-            else if (targetId === 'routine-checklist-view') {
-                window.ChecklistFeature?.bindControls();
-                window.ChecklistFeature?.render();
-            }
-            else if (targetId === 'learning-archive-view') {
-                window.LearningArchiveFeature?.bindControls();
-                window.LearningArchiveFeature?.render();
-            }
-        }, 20);
+        if (targetId === 'dashboard-view') renderSections({ financeSummary: true });
+        else if (targetId === 'portfolio-view') renderSections({ portfolio: true });
+        else if (targetId === 'stats-view' || targetId === 'cashflow-view') renderSections({ cashFlow: true });
+        else if (targetId === 'asset-view') renderSections({ financeSummary: true });
+        else if (targetId === 'personal-cfo-view') window.PersonalCfoFeature?.render();
+        else if (targetId === 'realestate-view') renderSections({ realEstate: true });
+        else if (targetId === 'health-view') {
+            window.HealthTrackerFeature?.bindControls();
+            window.HealthTrackerFeature?.render();
+        }
+        else if (targetId === 'routine-checklist-view') {
+            window.ChecklistFeature?.bindControls();
+            window.ChecklistFeature?.render({ skipRemoteLoad: true });
+        }
+        else if (targetId === 'learning-archive-view') {
+            window.LearningArchiveFeature?.bindControls();
+            window.LearningArchiveFeature?.render();
+        }
     }
 
     document.querySelectorAll('.nav-link').forEach(link => {

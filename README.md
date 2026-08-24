@@ -93,7 +93,7 @@ The first MCP candidate used a generated file-data endpoint that does not match 
 
 ## 기술 스택
 
-- Frontend: HTML, Vanilla JavaScript, Tailwind CSS CDN
+- Frontend: HTML, Vanilla JavaScript, Tailwind CSS v4 CLI build
 - Data/API: Supabase JS SDK v2, Supabase PostgreSQL
 - Visualization: Chart.js, Leaflet/OpenStreetMap
 - PWA: Web App Manifest, Service Worker, Cache API
@@ -104,9 +104,11 @@ The first MCP candidate used a generated file-data endpoint that does not match 
 ### 1. 앱 초기화
 
 1. 브라우저가 `index.html`을 로드합니다.
-2. CDN에서 Tailwind, Supabase JS, FontAwesome, Chart.js, Leaflet, Pretendard 폰트를 가져옵니다.
+2. 미리 빌드한 Tailwind CSS를 적용하고 Supabase JS, FontAwesome과 Chart.js를 병렬로 내려받습니다. 기능 런타임은 HTML 파싱 후 선언 순서대로 실행합니다.
 3. `window.load`에서 `sw.js`를 서비스 워커로 등록합니다.
 4. `DOMContentLoaded`에서 `loadSettings()` 후 `fetchSheetData(true)`를 실행합니다.
+
+PPT 생성기와 Leaflet/XLSX는 첫 화면에서 받지 않고 해당 내보내기·지도·가져오기 기능을 사용할 때만 불러옵니다. 화면 렌더도 현재 보이는 기능으로 제한합니다.
 
 ### 2. 초기 데이터 로딩
 
@@ -245,6 +247,18 @@ npx http-server -p 8080
 ```
 
 브라우저에서 `http://localhost:8080`으로 접속합니다.
+
+### GitHub Pages 배포
+
+배포 기준은 `origin/main`의 저장소 루트이며, GitHub Pages가 `main` 변경을 자동 반영합니다. 수정 전에는 항상 최신 `origin/main`에서 브랜치를 만들고, 전체 검증을 통과한 커밋만 `main`으로 fast-forward합니다.
+
+```bash
+npm run check
+git push origin main
+npm run deploy:verify
+```
+
+`deploy:verify`는 로컬 Service Worker 캐시 이름과 앱 셸 버전을 실제 배포 페이지와 비교합니다. Pages 반영 중에는 실패할 수 있으므로 잠시 후 같은 명령을 다시 실행합니다.
 
 ### 기능 테스트
 

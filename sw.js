@@ -1,9 +1,10 @@
-const CACHE_NAME = 'smartbook-v2-app-cache-v180';
+const CACHE_NAME = 'smartbook-v2-app-cache-v181';
 const urlsToCache = [
   './',
   './index.html',
   './manifest.json',
   './sw.js',
+  './styles/app.css',
   './vendor/chart.umd.min.js',
   './vendor/pptxgen.bundle.js',
   './js/shared/appUtils.js',

@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:styles": "npx @tailwindcss/cli -i ./styles/tailwind.css -o ./styles/app.css --minify",
     "build:cfo-runtime": "vite build --config vite.personal-cfo.config.ts",
-    "check": "npm run build:cfo-runtime && npm run check:manifest && npm run check:js && npm run check:ts && npm run check:repository && npm run check:domain && npm run check:cfo-runtime && npm run check:monthly-close && npm run check:finance-forecast && npm run check:ui-contract && npm run check:supabase-contract && npm run check:market-prices && npm run check:static-assets",
+    "check": "npm run build:styles && npm run build:cfo-runtime && npm run check:manifest && npm run check:js && npm run check:ts && npm run check:repository && npm run check:domain && npm run check:cfo-runtime && npm run check:monthly-close && npm run check:finance-forecast && npm run check:ui-contract && npm run check:performance && npm run check:supabase-contract && npm run check:market-prices && npm run check:static-assets",
     "check:manifest": "node tools/check-manifest.mjs",
     "check:js": "node tools/check-js-syntax.mjs",
     "check:ts": "tsc --noEmit",
@@ -15,12 +16,16 @@
     "check:monthly-close": "node tools/check-monthly-close.mjs",
     "check:finance-forecast": "node tools/check-finance-forecast.mjs",
     "check:ui-contract": "node tools/check-ui-contract.mjs",
+    "check:performance": "node tools/check-performance-contract.mjs",
     "check:supabase-contract": "node tools/check-supabase-contract.mjs",
     "check:market-prices": "node tools/check-market-price-sync.mjs",
-    "check:static-assets": "node tools/check-static-assets.mjs"
+    "check:static-assets": "node tools/check-static-assets.mjs",
+    "deploy:verify": "node tools/verify-deployment.mjs"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
     "postcss": "^8.5.25",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.5.4",
     "vite": "^8.1.4"
   },

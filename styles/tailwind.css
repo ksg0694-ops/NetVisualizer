@@ -1,0 +1,16 @@
+@import "tailwindcss" source(none);
+
+@source "../index.html";
+@source "../js";
+@source "../src";
+
+/* Keep the v3 border default while moving the existing UI to Tailwind v4. */
+@layer base {
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentColor);
+    }
+}
