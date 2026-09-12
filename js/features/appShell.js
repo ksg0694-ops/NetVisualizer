@@ -2,9 +2,18 @@
 // This script intentionally shares the global app state used by the legacy static app.
 
 // PWA ServiceWorker ?????濡?씀?濾????ㅼ굡???
-    if ('serviceWorker' in navigator) {
+    // Vite hot reload must not mix current HTML with a previous offline bundle.
+    const isViteDevelopment = !!document.querySelector('script[src="/@vite/client"]');
+    if ('serviceWorker' in navigator && isViteDevelopment) {
+        window.addEventListener('load', async () => {
+            const scope = new URL('./', location.href).href;
+            const registration = await navigator.serviceWorker.getRegistration(scope);
+            if (registration?.scope === scope && await registration.unregister()) location.reload();
+        });
+    }
+    if ('serviceWorker' in navigator && !isViteDevelopment) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
+            navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
                 .then(registration => console.log('PWA ServiceWorker registered'))
                 .catch(error => console.log('PWA ServiceWorker registration failed:', error));
         });

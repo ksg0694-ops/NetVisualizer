@@ -99,13 +99,13 @@
 
     function getStore() {
         try {
-            const current = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+            const current = JSON.parse(window.AccountStorage.current.getItem(STORAGE_KEY) || 'null');
             if (current && typeof current === 'object') return normalizeSnapshot(current);
-            const legacy = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) || 'null');
+            const legacy = JSON.parse(window.AccountStorage.current.getItem(LEGACY_STORAGE_KEY) || 'null');
             if (legacy && typeof legacy === 'object') {
                 const migrated = normalizeSnapshot(legacy, 2);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-                localStorage.removeItem(LEGACY_STORAGE_KEY);
+                window.AccountStorage.current.setItem(STORAGE_KEY, JSON.stringify(migrated));
+                window.AccountStorage.current.removeItem(LEGACY_STORAGE_KEY);
                 return migrated;
             }
         } catch (error) {
@@ -177,7 +177,7 @@
 
     function saveStore(nextSnapshot = currentSnapshot) {
         const normalized = normalizeSnapshot(nextSnapshot);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+        window.AccountStorage.current.setItem(STORAGE_KEY, JSON.stringify(normalized));
         return normalized;
     }
 

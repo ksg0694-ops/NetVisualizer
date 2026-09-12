@@ -13,7 +13,9 @@ const files = featureEntries
 
 files.push(path.join(rootDir, 'sw.js'));
 files.push(path.join(rootDir, 'js', 'generated', 'personal-cfo-domain.js'));
-files.push(path.join(rootDir, 'js', 'shared', 'noteEditor.js'));
+for (const entry of await readdir(path.join(rootDir, 'js', 'shared'))) {
+    if (entry.endsWith('.js')) files.push(path.join(rootDir, 'js', 'shared', entry));
+}
 
 let failed = false;
 for (const file of files) {

@@ -1318,7 +1318,7 @@
     function loadRealEstateAnalysisOverrides() {
         if (realEstateAnalysisOverrides) return realEstateAnalysisOverrides;
         try {
-            realEstateAnalysisOverrides = JSON.parse(localStorage.getItem(REAL_ESTATE_ANALYSIS_STORAGE_KEY) || '{}') || {};
+            realEstateAnalysisOverrides = JSON.parse(window.AccountStorage.current.getItem(REAL_ESTATE_ANALYSIS_STORAGE_KEY) || '{}') || {};
         } catch (error) {
             realEstateAnalysisOverrides = {};
         }
@@ -1349,7 +1349,7 @@
 
     function saveRealEstateAnalysisAssumptions(assumptions) {
         realEstateAnalysisOverrides = { ...assumptions };
-        localStorage.setItem(REAL_ESTATE_ANALYSIS_STORAGE_KEY, JSON.stringify(realEstateAnalysisOverrides));
+        window.AccountStorage.current.setItem(REAL_ESTATE_ANALYSIS_STORAGE_KEY, JSON.stringify(realEstateAnalysisOverrides));
     }
 
     function readRealEstateAnalysisForm() {
@@ -1394,7 +1394,7 @@
         if (resetBtn) {
             resetBtn.onclick = () => {
                 realEstateAnalysisOverrides = {};
-                localStorage.removeItem(REAL_ESTATE_ANALYSIS_STORAGE_KEY);
+                window.AccountStorage.current.removeItem(REAL_ESTATE_ANALYSIS_STORAGE_KEY);
                 renderRealEstateAnalysis();
                 if (typeof updateFinanceRoadmap === 'function') updateFinanceRoadmap(monthlyDB[currentMonthKey]?.asset || 0);
                 showToast('청약 자금 분석 가정을 기본값으로 되돌렸습니다.', 'info');
@@ -1558,6 +1558,7 @@
     }
 
     function renderFinanceSummary() {
+        requestAnimationFrame(() => window.AppExperience?.update());
         if(!currentMonthKey || !monthlyDB[currentMonthKey]) return;
         const db = monthlyDB[currentMonthKey];
         applyAssetStateForMonth(db, currentMonthKey);

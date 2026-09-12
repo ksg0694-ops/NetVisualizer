@@ -186,31 +186,15 @@ assert.deepEqual(
 
 const writeLog = [];
 const writeClient = {
-    from(table) {
-        return {
-            async upsert(payload, options) {
-                writeLog.push({ table, action: 'upsert', payload, options });
-                return { error: null };
-            },
-            async insert(payload) {
-                writeLog.push({ table, action: 'insert', payload });
-                return { error: null };
-            },
-            delete() {
-                return {
-                    async in(column, values) {
-                        writeLog.push({ table, action: 'delete', column, values });
-                        return { error: null };
-                    },
-                };
-            },
-        };
-    },
+    async rpc(name, payload) { writeLog.push({ name, payload }); return { error: null }; },
 };
 const writeRepository = repository.createSupabaseFinanceRepository({ getClient: () => writeClient });
 await writeRepository.savePortfolioDraft(draft);
-assert.deepEqual(writeLog.map((entry) => entry.action), ['upsert', 'insert', 'delete']);
-assert.equal(writeLog[0].options.onConflict, 'id');
-assert.deepEqual(writeLog[2].values, ['cash']);
+await writeRepository.savePortfolioDraft(draft);
+assert.equal(writeLog[0].name, 'save_portfolio_atomic');
+assert.deepEqual(writeLog[0].payload.mutation.removedIds, ['cash']);
+assert.equal(writeLog[0].payload.operation_id, writeLog[1].payload.operation_id, 'retry must reuse operation id');
+const failingRepository = repository.createSupabaseFinanceRepository({ getClient: () => ({rpc: async () => ({error: {code: 'PGRST202'}})}) });
+await assert.rejects(() => failingRepository.savePortfolioDraft(draft), /서버 업데이트/);
 
 console.log('Finance repository checks ok');

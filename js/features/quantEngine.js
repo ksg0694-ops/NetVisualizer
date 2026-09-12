@@ -1045,7 +1045,7 @@
             const message = syncedCount > 0
                 ? (failedCount > 0 ? `시세 ${syncedCount}건 동기화, ${failedCount}건 보류` : `시세 ${syncedCount}건 동기화 완료`)
                 : `오늘 캐시 ${cachedCount}건 사용`;
-            localStorage.setItem(MARKET_PRICE_AUTO_SYNC_KEY, new Date().toISOString());
+            window.AccountStorage.current.setItem(MARKET_PRICE_AUTO_SYNC_KEY, new Date().toISOString());
             if (!silent) showToast(message, failedCount > 0 ? 'warning' : 'info', 2200);
             return data;
         } catch (error) {
@@ -1062,7 +1062,7 @@
     };
 
     window.maybeAutoSyncMarketPrices = function() {
-        const lastSyncAt = new Date(localStorage.getItem(MARKET_PRICE_AUTO_SYNC_KEY) || '').getTime();
+        const lastSyncAt = new Date(window.AccountStorage.current.getItem(MARKET_PRICE_AUTO_SYNC_KEY) || '').getTime();
         if (Number.isFinite(lastSyncAt) && Date.now() - lastSyncAt < MARKET_PRICE_AUTO_SYNC_INTERVAL_MS) {
             return;
         }

@@ -24,7 +24,7 @@
 
     function loadTxImportAuditRuns() {
         try {
-            const parsed = JSON.parse(localStorage.getItem(IMPORT_AUDIT_KEY) || '[]');
+            const parsed = JSON.parse(window.AccountStorage.current.getItem(IMPORT_AUDIT_KEY) || '[]');
             txImportAuditRuns = Array.isArray(parsed) ? parsed.slice(0, 20) : [];
         } catch (error) {
             txImportAuditRuns = [];
@@ -33,7 +33,7 @@
 
     function persistTxImportAuditRuns() {
         try {
-            localStorage.setItem(IMPORT_AUDIT_KEY, JSON.stringify(txImportAuditRuns.slice(0, 20)));
+            window.AccountStorage.current.setItem(IMPORT_AUDIT_KEY, JSON.stringify(txImportAuditRuns.slice(0, 20)));
         } catch (error) {
             console.warn('import audit 저장 실패:', error.message);
         }

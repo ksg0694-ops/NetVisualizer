@@ -1,0 +1,9 @@
+# Generated/vendor artifacts: use rg --no-ignore <path> when intentionally inspecting them.
+vendor/
+node_modules/
+.venv/
+.bkit-codex/
+outputs/
+styles/app.css
+js/generated/
+package-lock.json

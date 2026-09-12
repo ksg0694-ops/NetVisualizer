@@ -35,14 +35,14 @@
 
     function readUiState() {
         try {
-            const value = JSON.parse(localStorage.getItem(UI_KEY) || '{}');
+            const value = JSON.parse(window.AccountStorage.current.getItem(UI_KEY) || '{}');
             activeId = typeof value.activeId === 'string' ? value.activeId : null;
             dockTab = ['links', 'versions', 'toc'].includes(value.dockTab) ? value.dockTab : 'links';
         } catch (_error) { /* use defaults */ }
     }
 
     function saveUiState() {
-        localStorage.setItem(UI_KEY, JSON.stringify({ activeId, dockTab, savedAt: now() }));
+        window.AccountStorage.current.setItem(UI_KEY, JSON.stringify({ activeId, dockTab, savedAt: now() }));
     }
 
     function normalize(raw = {}) {
@@ -71,7 +71,7 @@
     }
 
     function readStore() {
-        try { return (JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') || []).map(normalize).filter(Boolean); }
+        try { return (JSON.parse(window.AccountStorage.current.getItem(STORAGE_KEY) || '[]') || []).map(normalize).filter(Boolean); }
         catch (error) { console.warn('Learning archive storage parse failed.', error); return []; }
     }
 
@@ -132,12 +132,12 @@
     function saveStore(options = {}) {
         if (!options.skipOrdering) ensureOrdering(entries);
         entries.sort(compareEntries);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+        window.AccountStorage.current.setItem(STORAGE_KEY, JSON.stringify(entries));
     }
 
     function readTrash() {
         try {
-            const parsed = JSON.parse(localStorage.getItem(TRASH_KEY) || '[]');
+            const parsed = JSON.parse(window.AccountStorage.current.getItem(TRASH_KEY) || '[]');
             if (!Array.isArray(parsed)) return [];
             return parsed.map((item) => ({
                 entry: normalize(item?.entry || item),
@@ -151,13 +151,13 @@
 
     function saveTrash(items) {
         const normalized = (Array.isArray(items) ? items : []).filter((item) => item?.entry).slice(0, 100);
-        localStorage.setItem(TRASH_KEY, JSON.stringify(normalized));
+        window.AccountStorage.current.setItem(TRASH_KEY, JSON.stringify(normalized));
         return normalized;
     }
 
     function readDirtyIds() {
         try {
-            const value = JSON.parse(localStorage.getItem(DIRTY_KEY) || '[]');
+            const value = JSON.parse(window.AccountStorage.current.getItem(DIRTY_KEY) || '[]');
             return new Set(Array.isArray(value) ? value.map(String) : []);
         } catch (_error) { return new Set(); }
     }
@@ -167,12 +167,12 @@
         const ids = readDirtyIds();
         if (dirty) ids.add(String(id));
         else ids.delete(String(id));
-        localStorage.setItem(DIRTY_KEY, JSON.stringify([...ids]));
+        window.AccountStorage.current.setItem(DIRTY_KEY, JSON.stringify([...ids]));
     }
 
     function readPendingDeleteIds() {
         try {
-            const value = JSON.parse(localStorage.getItem(DELETE_QUEUE_KEY) || '[]');
+            const value = JSON.parse(window.AccountStorage.current.getItem(DELETE_QUEUE_KEY) || '[]');
             return new Set(Array.isArray(value) ? value.map(String) : []);
         } catch (_error) { return new Set(); }
     }
@@ -182,12 +182,12 @@
         const ids = readPendingDeleteIds();
         if (pending) ids.add(String(id));
         else ids.delete(String(id));
-        localStorage.setItem(DELETE_QUEUE_KEY, JSON.stringify([...ids]));
+        window.AccountStorage.current.setItem(DELETE_QUEUE_KEY, JSON.stringify([...ids]));
     }
 
     function readVersions() {
         try {
-            const value = JSON.parse(localStorage.getItem(VERSION_KEY) || '{}');
+            const value = JSON.parse(window.AccountStorage.current.getItem(VERSION_KEY) || '{}');
             return value && typeof value === 'object' ? value : {};
         } catch (_error) { return {}; }
     }
@@ -201,7 +201,7 @@
         const store = readVersions();
         if (!store[entryId]) return;
         delete store[entryId];
-        localStorage.setItem(VERSION_KEY, JSON.stringify(store));
+        window.AccountStorage.current.setItem(VERSION_KEY, JSON.stringify(store));
     }
 
     function captureVersion(entry, reason = '자동 저장 전') {
@@ -221,7 +221,7 @@
             reason,
             createdAt: now(),
         }, ...versions].slice(0, 24);
-        localStorage.setItem(VERSION_KEY, JSON.stringify(store));
+        window.AccountStorage.current.setItem(VERSION_KEY, JSON.stringify(store));
     }
 
     function getClient() {
@@ -259,37 +259,36 @@
         updateDirtyId(entry.id, true);
         const client = getClient();
         if (!client) return false;
-        let { error } = await client.from(TABLE_NAME).upsert(toRow(entry), { onConflict: 'id' });
-        if (error && remoteSupportsOrdering && (String(error.code || '') === 'PGRST204' || /(?:field|item|chapter|display)_order/i.test(String(error.message || '')))) {
-            remoteSupportsOrdering = false;
-            ({ error } = await client.from(TABLE_NAME).upsert(toRow(entry, false), { onConflict: 'id' }));
+        const row = toRow(entry);
+        const fingerprint = JSON.stringify(row);
+        try {
+            await window.RecordSync.save(client, TABLE_NAME, row);
+            const latest = entries.find((item) => item.id === entry.id);
+            if (latest && JSON.stringify(toRow(latest)) === fingerprint) updateDirtyId(entry.id, false);
+            return true;
+        } catch (error) {
+            console.warn('Learning archive sync failed.', error.message);
+            setAutosaveStatus('local', error.message);
+            return false;
         }
-        if (error && !['42P01', 'PGRST204', 'PGRST205'].includes(String(error.code || ''))) console.warn('Learning archive sync failed.', error);
-        if (!error) updateDirtyId(entry.id, false);
-        return !error;
     }
 
     async function persistMany(source) {
-        const client = getClient();
         const unique = [...new Map(source.map((entry) => [entry.id, entry])).values()];
-        unique.forEach((entry) => updateDirtyId(entry.id, true));
-        if (!client || unique.length === 0) return;
-        let { error } = await client.from(TABLE_NAME).upsert(unique.map((entry) => toRow(entry)), { onConflict: 'id' });
-        if (error && remoteSupportsOrdering && (String(error.code || '') === 'PGRST204' || /(?:field|item|chapter|display)_order/i.test(String(error.message || '')))) {
-            remoteSupportsOrdering = false;
-            ({ error } = await client.from(TABLE_NAME).upsert(unique.map((entry) => toRow(entry, false)), { onConflict: 'id' }));
-        }
-        if (error && !['42P01', 'PGRST204', 'PGRST205'].includes(String(error.code || ''))) console.warn('Learning archive batch sync failed.', error);
-        if (!error) unique.forEach((entry) => updateDirtyId(entry.id, false));
+        return (await Promise.all(unique.map(persist))).every(Boolean);
     }
 
     async function removeRemote(id) {
         const client = getClient();
         if (!client) return false;
-        const { error } = await client.from(TABLE_NAME).delete().eq('id', id);
-        if (error && !['42P01', 'PGRST204', 'PGRST205'].includes(String(error.code || ''))) console.warn('Learning archive delete failed.', error);
-        if (!error) updatePendingDeleteId(id, false);
-        return !error;
+        try {
+            await window.RecordSync.remove(client, TABLE_NAME, id);
+            updatePendingDeleteId(id, false);
+            return true;
+        } catch (error) {
+            setAutosaveStatus('local', error.message);
+            return false;
+        }
     }
 
     async function loadRemote() {
@@ -306,6 +305,7 @@
         }
         if (error) return;
         const dirtyIds = readDirtyIds();
+        window.RecordSync.remember(TABLE_NAME, data || [], new Set([...dirtyIds, ...readPendingDeleteIds()]));
         const trashIds = new Set(readTrash().map((item) => item.entry.id));
         const pendingDeleteIds = new Set([...readPendingDeleteIds(), ...trashIds]);
         pendingDeleteIds.forEach((id) => updatePendingDeleteId(id, true));
@@ -1323,6 +1323,7 @@
         bound = true;
         const root = document.getElementById('learning-archive-view');
         window.addEventListener('beforeunload', flushLearningDraftBeforeUnload);
+        window.addEventListener('account-will-change', flushLearningDraftBeforeUnload);
         window.addEventListener('offline', () => setAutosaveStatus('local', '오프라인 · 이 기기에 저장'));
         window.addEventListener('online', () => {
             loaded = false;
@@ -1522,6 +1523,7 @@
             if ((pendingTreePress || longPressDrag) && event.target.closest('[data-learning-tree-node]')) event.preventDefault();
         });
         root?.addEventListener('keydown', (event) => {
+            if (event.isComposing || event.keyCode === 229) return;
             const fontInput = event.target.closest?.('[data-note-font-input]');
             if (fontInput && event.key === 'Enter') {
                 event.preventDefault();

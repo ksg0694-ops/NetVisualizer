@@ -16,5 +16,6 @@ tools/external/
 node_modules/
 
 # Local Python test caches
+.venv/
 __pycache__/
 *.py[cod]

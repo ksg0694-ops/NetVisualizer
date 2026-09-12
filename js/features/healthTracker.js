@@ -61,7 +61,7 @@
 
     function getStore() {
         try {
-            const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            const parsed = JSON.parse(window.AccountStorage.current.getItem(STORAGE_KEY) || '[]');
             if (Array.isArray(parsed)) return sortLogs(parsed);
         } catch (error) {
             console.warn('Health weight storage parse failed', error);
@@ -70,12 +70,12 @@
     }
 
     function saveStore(nextLogs = logs) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(sortLogs(nextLogs)));
+        window.AccountStorage.current.setItem(STORAGE_KEY, JSON.stringify(sortLogs(nextLogs)));
     }
 
     function getProfile() {
         try {
-            const parsed = JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}');
+            const parsed = JSON.parse(window.AccountStorage.current.getItem(PROFILE_KEY) || '{}');
             return {
                 heightCm: parseHeight(parsed.heightCm),
             };
@@ -87,7 +87,7 @@
     function saveProfile(nextProfile = {}) {
         const profile = { ...getProfile(), ...nextProfile };
         if (!profile.heightCm) delete profile.heightCm;
-        localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+        window.AccountStorage.current.setItem(PROFILE_KEY, JSON.stringify(profile));
         return getProfile();
     }
 

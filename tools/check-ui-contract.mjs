@@ -60,10 +60,9 @@ assert.ok(index.includes('id="monthly-report-interim-title"'));
 assert.ok(index.includes('id="monthly-report-interim-insights"'));
 assert.ok(index.includes('id="monthly-report-interim-spending-forecast"'));
 assert.ok(index.includes('id="monthly-report-interim-retained-rate"'));
-assert.ok(index.includes('./js/features/appCore.js?v=20260803-mobile-state-1'));
-assert.ok(index.includes('./js/features/financeForecast.js?v=20260802-forecast-input-1'));
-assert.ok(index.includes('./js/features/financeViews.js?v=20260824-active-view-render-1'));
-assert.ok(index.includes('./js/features/financeRepository.js?v=20260803-gmail-incremental-1'));
+for (const feature of ['appCore', 'financeForecast', 'financeViews', 'financeRepository']) {
+    assert.match(index, new RegExp(`src="\\./js/features/${feature}\\.js\\?v=[^\"]+"`));
+}
 assert.ok(appCore.includes("const CACHE_KEY = 'smartbook_v2_data_cache_v5'"));
 assert.ok(index.includes('id="monthly-report-income-category-chart"'));
 assert.ok(index.includes('id="monthly-report-expense-category-chart"'));
@@ -242,7 +241,7 @@ assert.ok(learningArchive.includes('learning-tree-drag-ghost') && learningArchiv
 assert.ok(learningArchive.includes('requestAnimationFrame(() => paintTreeDragFrame(root))'), 'Learning Archive drag painting must be frame-throttled');
 assert.ok(learningArchive.includes('function reorderTreeNode'), 'Learning Archive hierarchy order must be persisted');
 assert.ok(learningArchive.includes('function renderTreeOnly'), 'Learning Archive search and reorder must avoid full workbench rerenders');
-assert.ok(learningArchive.includes("upsert(unique.map((entry) => toRow(entry))"), 'Learning Archive reordered rows must be saved in one batch');
+assert.ok(learningArchive.includes('window.RecordSync.save'), 'Learning Archive saves must detect concurrent edits');
 assert.ok(learningArchive.includes("event.altKey && ['ArrowUp', 'ArrowDown'].includes(event.key)"), 'Learning Archive rows must support keyboard reorder');
 assert.ok(learningArchive.includes('field_order,item_order,chapter_order,display_order'), 'Learning Archive server reads must include hierarchy order');
 assert.ok(learningArchive.includes('data-learning-meta-toggle') && learningArchive.includes('분류 수정'), 'Learning Archive must label metadata editing separately from note-body editing');

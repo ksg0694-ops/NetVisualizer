@@ -46,7 +46,7 @@
 
     function readChecklistUiState() {
         try {
-            const parsed = JSON.parse(localStorage.getItem(UI_STATE_KEY) || '{}');
+            const parsed = JSON.parse(window.AccountStorage.current.getItem(UI_STATE_KEY) || '{}');
             const validFilters = new Set(['open', 'paused', 'done', 'all']);
             const validDomains = new Set(DOMAINS.map((domain) => domain.key));
             return {
@@ -111,7 +111,7 @@
 
     function persistChecklistUiState() {
         try {
-            localStorage.setItem(UI_STATE_KEY, JSON.stringify({
+            window.AccountStorage.current.setItem(UI_STATE_KEY, JSON.stringify({
                 activeFilter,
                 activeDomain,
                 activeTaskId,
@@ -130,7 +130,7 @@
 
     function readNoteVersions() {
         try {
-            const value = JSON.parse(localStorage.getItem(NOTE_VERSION_KEY) || '{}');
+            const value = JSON.parse(window.AccountStorage.current.getItem(NOTE_VERSION_KEY) || '{}');
             return value && typeof value === 'object' ? value : {};
         } catch (error) {
             console.warn('Todo note versions could not be restored.', error);
@@ -147,7 +147,7 @@
         const store = readNoteVersions();
         if (!store[taskId]) return;
         delete store[taskId];
-        localStorage.setItem(NOTE_VERSION_KEY, JSON.stringify(store));
+        window.AccountStorage.current.setItem(NOTE_VERSION_KEY, JSON.stringify(store));
     }
 
     function captureNoteVersion(task, note, reason = '자동 저장') {
@@ -162,7 +162,7 @@
             reason,
             createdAt: new Date().toISOString(),
         }, ...versions].slice(0, 20);
-        localStorage.setItem(NOTE_VERSION_KEY, JSON.stringify(store));
+        window.AccountStorage.current.setItem(NOTE_VERSION_KEY, JSON.stringify(store));
     }
 
     function renderNoteAutosaveStatus(label = '자동 저장됨') {
@@ -1284,7 +1284,7 @@
 
     function getStore() {
         try {
-            const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            const parsed = JSON.parse(window.AccountStorage.current.getItem(STORAGE_KEY) || '[]');
             if (Array.isArray(parsed)) return sortTasks(parsed);
         } catch (error) {
             console.warn('Todo storage parse failed', error);
@@ -1294,13 +1294,13 @@
 
     function saveStore(nextTasks = tasks) {
         const normalized = sortTasks(nextTasks);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+        window.AccountStorage.current.setItem(STORAGE_KEY, JSON.stringify(normalized));
         return normalized;
     }
 
     function getTrashStore() {
         try {
-            const parsed = JSON.parse(localStorage.getItem(TRASH_KEY) || '[]');
+            const parsed = JSON.parse(window.AccountStorage.current.getItem(TRASH_KEY) || '[]');
             if (!Array.isArray(parsed)) return [];
             return parsed.map((item) => ({
                 task: normalizeTask(item?.task || item),
@@ -1314,13 +1314,13 @@
 
     function saveTrashStore(items) {
         const normalized = (Array.isArray(items) ? items : []).filter((item) => item?.task).slice(0, 100);
-        localStorage.setItem(TRASH_KEY, JSON.stringify(normalized));
+        window.AccountStorage.current.setItem(TRASH_KEY, JSON.stringify(normalized));
         return normalized;
     }
 
     function getDirtyTaskIds() {
         try {
-            const parsed = JSON.parse(localStorage.getItem(DIRTY_KEY) || '[]');
+            const parsed = JSON.parse(window.AccountStorage.current.getItem(DIRTY_KEY) || '[]');
             return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
         } catch (_error) { return new Set(); }
     }
@@ -1330,12 +1330,12 @@
         const ids = getDirtyTaskIds();
         if (dirty) ids.add(String(id));
         else ids.delete(String(id));
-        localStorage.setItem(DIRTY_KEY, JSON.stringify([...ids]));
+        window.AccountStorage.current.setItem(DIRTY_KEY, JSON.stringify([...ids]));
     }
 
     function getPendingDeleteIds() {
         try {
-            const parsed = JSON.parse(localStorage.getItem(DELETE_QUEUE_KEY) || '[]');
+            const parsed = JSON.parse(window.AccountStorage.current.getItem(DELETE_QUEUE_KEY) || '[]');
             return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
         } catch (_error) { return new Set(); }
     }
@@ -1345,7 +1345,7 @@
         const ids = getPendingDeleteIds();
         if (pending) ids.add(String(id));
         else ids.delete(String(id));
-        localStorage.setItem(DELETE_QUEUE_KEY, JSON.stringify([...ids]));
+        window.AccountStorage.current.setItem(DELETE_QUEUE_KEY, JSON.stringify([...ids]));
     }
 
     function getClient() {
@@ -1444,24 +1444,14 @@
         updateDirtyTaskId(normalized.id, true);
         const client = getClient();
         if (!client) return false;
+        const fingerprint = JSON.stringify(toRemotePayload(normalized));
         try {
-            let { error } = await client
-                .from(TABLE_NAME)
-                .upsert(toRemotePayload(normalized), { onConflict: 'id' });
-            if (error && remoteSupportsUpdate10402 && isUpdate10402SchemaError(error)) {
-                remoteSupportsUpdate10402 = false;
-                ({ error } = await client.from(TABLE_NAME).upsert(toRemotePayload(normalized), { onConflict: 'id' }));
+            await window.RecordSync.save(client, TABLE_NAME, toRemotePayload(normalized));
+            const latest = tasks.find((item) => item.id === normalized.id);
+            if (latest && JSON.stringify(toRemotePayload(latest)) === fingerprint) {
+                updateDirtyTaskId(normalized.id, false);
+                renderSyncStatus('서버 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
             }
-            if (error && remoteSupportsDisplayOrder && isDisplayOrderSchemaError(error)) {
-                remoteSupportsDisplayOrder = false;
-                ({ error } = await client
-                    .from(TABLE_NAME)
-                    .upsert(toRemotePayload(normalized), { onConflict: 'id' }));
-            }
-            if (error) throw error;
-            remoteLoaded = true;
-            updateDirtyTaskId(normalized.id, false);
-            renderSyncStatus('서버 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
             return true;
         } catch (error) {
             handleRemoteError(error, 'persistRemoteTask');
@@ -1470,41 +1460,15 @@
     }
 
     async function persistAllRemote() {
-        tasks.forEach((task) => updateDirtyTaskId(task.id, true));
-        const client = getClient();
-        if (!client || tasks.length === 0) return false;
-        try {
-            let { error } = await client
-                .from(TABLE_NAME)
-                .upsert(tasks.map(toRemotePayload), { onConflict: 'id' });
-            if (error && remoteSupportsUpdate10402 && isUpdate10402SchemaError(error)) {
-                remoteSupportsUpdate10402 = false;
-                ({ error } = await client.from(TABLE_NAME).upsert(tasks.map(toRemotePayload), { onConflict: 'id' }));
-            }
-            if (error && remoteSupportsDisplayOrder && isDisplayOrderSchemaError(error)) {
-                remoteSupportsDisplayOrder = false;
-                ({ error } = await client
-                    .from(TABLE_NAME)
-                    .upsert(tasks.map(toRemotePayload), { onConflict: 'id' }));
-            }
-            if (error) throw error;
-            remoteLoaded = true;
-            tasks.forEach((task) => updateDirtyTaskId(task.id, false));
-            renderSyncStatus('서버 저장됨', 'text-emerald-600 bg-emerald-50 border-emerald-100');
-            return true;
-        } catch (error) {
-            handleRemoteError(error, 'persistAllRemote');
-            return false;
-        }
+        const snapshot = tasks.map((task) => normalizeTask(task));
+        return (await Promise.all(snapshot.map(persistRemoteTask))).every(Boolean);
     }
 
     async function deleteRemoteTask(id) {
         const client = getClient();
         if (!client) return false;
         try {
-            const { error } = await client.from(TABLE_NAME).delete().eq('id', id);
-            if (error) throw error;
-            remoteLoaded = true;
+            await window.RecordSync.remove(client, TABLE_NAME, id);
             updatePendingDeleteId(id, false);
             return true;
         } catch (error) {
@@ -1545,6 +1509,7 @@
             if (error) throw error;
 
             const dirtyIds = getDirtyTaskIds();
+            window.RecordSync.remember(TABLE_NAME, data || [], new Set([...dirtyIds, ...getPendingDeleteIds()]));
             const trashIds = new Set(getTrashStore().map((item) => item.task.id));
             const pendingDeleteIds = new Set([...getPendingDeleteIds(), ...trashIds]);
             pendingDeleteIds.forEach((id) => updatePendingDeleteId(id, true));
@@ -1680,6 +1645,7 @@
         const panel = document.getElementById('checklist-report-library');
         if (!panel) return;
         const selectedTask = tasks.find((task) => task.id === activeTaskId);
+        panel.dataset.empty = String(!selectedTask);
         const legacyUrl = normalizeReportUrl(selectedTask?.completionReport?.externalUrl);
         const allLibraryItems = selectedTask ? [
             ...(selectedTask.reportFiles || []).map((item, index) => ({ ...item, sourceIndex: index })),
@@ -2289,6 +2255,7 @@
         isBound = true;
         const root = document.getElementById('routine-checklist-view');
         window.addEventListener('beforeunload', flushPendingTodoNoteBeforeUnload);
+        window.addEventListener('account-will-change', flushPendingTodoNoteBeforeUnload);
         window.addEventListener('offline', () => renderSyncStatus('오프라인 · 이 기기에 저장', 'text-amber-600 bg-amber-50 border-amber-100'));
         window.addEventListener('online', () => {
             remoteLoadStarted = false;
@@ -2624,6 +2591,7 @@
             if (blockSelect && activeLine) blockSelect.value = activeLine.dataset.noteBlock || 'body';
         });
         root?.addEventListener('keydown', (event) => {
+            if (event.isComposing || event.keyCode === 229) return;
             const fontInput = event.target?.closest?.('[data-note-font-input]');
             if (fontInput && event.key === 'Enter') {
                 event.preventDefault();

@@ -603,6 +603,7 @@
             }));
             const patch = {};
             responses.forEach(({ table, spec, response }) => {
+                options.onTableStatus?.(table, response.error || null);
                 if (response.error) {
                     if (!spec.optional) throw response.error;
                     options.onOptionalError?.(table, response.error);
@@ -614,18 +615,22 @@
         }
         async function savePortfolioDraft(draft) {
             const client = options.getClient();
-            const mutation = buildPortfolioMutation(draft);
-            if (mutation.upserts.length > 0) {
-                const { error } = await client.from('portfolios').upsert(mutation.upserts, { onConflict: 'id' });
-                if (error) throw error;
+            const sourceFingerprint = JSON.stringify([draft.items, draft.originalIds]);
+            const mutation = draft.sourceFingerprint === sourceFingerprint && draft.saveMutation
+                ? draft.saveMutation : buildPortfolioMutation(draft);
+            draft.sourceFingerprint = sourceFingerprint;
+            draft.saveMutation = mutation;
+            const fingerprint = JSON.stringify(mutation);
+            if (draft.saveFingerprint !== fingerprint) {
+                draft.saveOperationId = crypto.randomUUID();
+                draft.saveFingerprint = fingerprint;
             }
-            if (mutation.inserts.length > 0) {
-                const { error } = await client.from('portfolios').insert(mutation.inserts);
-                if (error) throw error;
-            }
-            if (mutation.removedIds.length > 0) {
-                const { error } = await client.from('portfolios').delete().in('id', mutation.removedIds);
-                if (error) throw error;
+            const { error } = await client.rpc('save_portfolio_atomic', {
+                mutation, operation_id: draft.saveOperationId,
+            });
+            if (error) {
+                if (error.code === 'PGRST202') throw new Error('안전 저장을 위한 서버 업데이트가 필요합니다. 입력 내용은 유지됩니다.');
+                throw error;
             }
             return mutation;
         }

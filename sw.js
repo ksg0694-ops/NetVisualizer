@@ -1,79 +1,30 @@
-const CACHE_NAME = 'smartbook-v2-app-cache-v181';
-const urlsToCache = [
-  './',
-  './index.html',
-  './manifest.json',
-  './sw.js',
-  './styles/app.css',
-  './vendor/chart.umd.min.js',
-  './vendor/pptxgen.bundle.js',
-  './js/shared/appUtils.js',
-  './js/shared/noteEditor.js',
-  './js/features/financeRepository.js',
-  './js/features/financeModel.js',
-  './js/generated/personal-cfo-domain.js',
-  './js/features/appCore.js',
-  './js/features/assetTrend.js',
-  './js/features/financeForecast.js',
-  './js/features/quantEngine.js',
-  './js/features/realEstate.js',
-  './js/features/transactionImport.js',
-  './js/features/portfolioEditor.js',
-  './js/features/cashflowControls.js',
-  './js/features/portfolioViews.js',
-  './js/features/financeViews.js',
-  './js/features/healthTracker.js',
-  './js/features/checklist.js',
-  './js/features/learningArchive.js',
-  './js/features/personalCfo.js',
-  './js/features/appShell.js',
-  './img/cards/s_choice.png'
-];
-
-// 설치 시 캐싱
+const CACHE_NAME = 'smartbook-v2-app-cache-v182';
+importScripts('./offline-assets.js');
+const cacheId = CACHE_NAME + '-' + self.NETVISUALIZER_OFFLINE.revision;
+const urlsToCache = self.NETVISUALIZER_OFFLINE.assets;
+const scopeUrl = new URL('./', self.location.href);
+const required = new Set(urlsToCache.map(path => new URL(path, scopeUrl).href));
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        return cache.addAll(urlsToCache);
-      })
-  );
-  self.skipWaiting();
+  event.waitUntil(caches.open(cacheId).then(cache => cache.addAll(urlsToCache)));
+  // A waiting update activates after existing tabs close, preserving live edits.
 });
-
-// 활성화 시 이전 캐시 삭제
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-  self.clients.claim();
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys
+    .filter(key => key.startsWith('smartbook-v2-app-cache-') && key !== cacheId)
+    .map(key => caches.delete(key)))).then(() => self.clients.claim()));
 });
-
-// 네트워크 요청 가로채기 (Network First, fallback to Cache)
 self.addEventListener('fetch', event => {
-  const requestUrl = new URL(event.request.url);
-
-  // API 요청은 캐싱하지 않고 무조건 네트워크로 보냄
-  if (
-    requestUrl.hostname.endsWith('supabase.co') ||
-    event.request.url.includes('script.google.com') ||
-    event.request.method !== 'GET'
-  ) {
-    return; 
-  }
-
-  // HTML이나 정적 파일은 네트워크 먼저 시도 후, 실패 시 캐시 반환
-  event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request);
-    })
-  );
+  const url = new URL(event.request.url);
+  if (event.request.method !== 'GET' || url.origin !== scopeUrl.origin || !url.pathname.startsWith(scopeUrl.pathname)) return;
+  const isShell = required.has(url.href);
+  const lazy = url.pathname.startsWith(scopeUrl.pathname + 'vendor/') || url.pathname.startsWith(scopeUrl.pathname + 'img/');
+  if (!isShell && !lazy) return;
+  event.respondWith((async () => {
+    const cache = await caches.open(cacheId);
+    const hit = await cache.match(event.request);
+    if (hit) return hit;
+    const response = await fetch(event.request);
+    if (response.ok) await cache.put(event.request, response.clone());
+    return response;
+  })());
 });

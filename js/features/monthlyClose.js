@@ -31,7 +31,7 @@
 
     function loadLocal() {
         try {
-            const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            const parsed = JSON.parse(window.AccountStorage.current.getItem(STORAGE_KEY) || '[]');
             if (!Array.isArray(parsed)) return;
             parsed.forEach((value) => {
                 const record = domain.normalizeFinanceMonthlyCloseRecord(value);
@@ -43,7 +43,7 @@
     }
 
     function persistLocal() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(records.values())));
+        window.AccountStorage.current.setItem(STORAGE_KEY, JSON.stringify(Array.from(records.values())));
     }
 
     function hydrate(rows = []) {

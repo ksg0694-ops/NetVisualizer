@@ -41,11 +41,11 @@
         'asset-view',
         'invest-detail-view',
     ]);
-    let lastFinanceDataSyncAt = localStorage.getItem(CACHE_META_KEY) || '';
+    let lastFinanceDataSyncAt = window.AccountStorage.current.getItem(CACHE_META_KEY) || '';
 
     function readAppUiState() {
         try {
-            const parsed = JSON.parse(localStorage.getItem(APP_UI_STATE_KEY) || '{}');
+            const parsed = JSON.parse(window.AccountStorage.current.getItem(APP_UI_STATE_KEY) || '{}');
             const isMonthKey = (value) => /^\d{4}-\d{2}$/.test(String(value || ''));
             return {
                 activeViewId: RESTORABLE_VIEW_IDS.has(parsed.activeViewId) ? parsed.activeViewId : 'dashboard-view',
@@ -62,7 +62,7 @@
 
     function persistAppUiState() {
         try {
-            localStorage.setItem(APP_UI_STATE_KEY, JSON.stringify({
+            window.AccountStorage.current.setItem(APP_UI_STATE_KEY, JSON.stringify({
                 activeViewId: RESTORABLE_VIEW_IDS.has(activeViewId) ? activeViewId : 'dashboard-view',
                 currentMonthKey,
                 cashFlowMonthKey,
@@ -81,7 +81,7 @@
         // 설정 저장 로직 제거됨
     }
 
-    function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
+    function closeSettings() { window.AppExperience.closeSettings(); }
     // 원본 버튼 제거됨
 
     // ==========================================
@@ -203,7 +203,7 @@
 
     function getStoredPortfolioAccountOrder() {
         try {
-            const parsed = JSON.parse(localStorage.getItem(PORTFOLIO_ACCOUNT_ORDER_KEY) || '{}');
+            const parsed = JSON.parse(window.AccountStorage.current.getItem(PORTFOLIO_ACCOUNT_ORDER_KEY) || '{}');
             return parsed && typeof parsed === 'object' ? parsed : {};
         } catch (error) {
             return {};
@@ -215,7 +215,7 @@
         accountNames
             .filter(name => name && name !== PORTFOLIO_UNASSIGNED_ACCOUNT)
             .forEach((name, index) => { order[name] = (index + 1) * 10; });
-        localStorage.setItem(PORTFOLIO_ACCOUNT_ORDER_KEY, JSON.stringify(order));
+        window.AccountStorage.current.setItem(PORTFOLIO_ACCOUNT_ORDER_KEY, JSON.stringify(order));
         return order;
     }
 
@@ -563,12 +563,14 @@
     }
 
     function getAuthenticatedSupabaseClient() {
+        if (window.AccountStorage.switching) throw new Error('계정 전환 중입니다.');
         const client = getSupabaseClient();
         requireSupabaseSession();
         return client;
     }
 
     function updateAuthUi() {
+        requestAnimationFrame(() => window.AppExperience?.update());
         const signedIn = isSignedIn();
         const email = authUser?.email || '';
         const statusEl = document.getElementById('auth-status');
@@ -678,15 +680,18 @@
     }
 
     function setAuthSession(session) {
+        if (!window.AccountStorage.activate(session?.user?.id)) return false;
         authSession = session || null;
         authUser = authSession?.user || null;
         updateAuthUi();
+        return true;
     }
 
     async function initAuth() {
         if (CLOUD_AUTH_PAUSED) {
             setAuthSession(null);
             authReady = true;
+            if (!window.AccountStorage.switching) document.documentElement.classList.remove('auth-pending');
             return;
         }
 
@@ -694,11 +699,11 @@
             const client = getSupabaseClient();
             const { data, error } = await client.auth.getSession();
             if (error) throw error;
-            setAuthSession(data?.session || null);
+            if (!setAuthSession(data?.session || null)) return;
             cleanAuthCallbackUrl();
             client.auth.onAuthStateChange((_event, session) => {
                 const hadUser = isSignedIn();
-                setAuthSession(session);
+                if (!setAuthSession(session)) return;
                 if (!hadUser && session?.user) fetchSheetData(false);
             });
         } catch (error) {
@@ -706,6 +711,7 @@
             setAuthSession(null);
         } finally {
             authReady = true;
+            if (!window.AccountStorage.switching) document.documentElement.classList.remove('auth-pending');
         }
     }
 
@@ -789,7 +795,7 @@
             const { error } = await getSupabaseClient().auth.signOut();
             if (error) throw error;
             setAuthSession(null);
-            showToast('로그아웃했습니다. 로컬 캐시만 표시합니다.', 'info');
+            showToast('로그아웃했습니다. 이 계정의 기기 데이터는 잠겼습니다.', 'info');
         } catch (error) {
             console.error('로그아웃 실패:', error);
             showToast(`로그아웃 실패: ${error.message}`, 'error');
@@ -971,10 +977,10 @@
         return financeRepositoryRuntime.normalizeCache(data);
     }
 
-    function persistDataCache() {
-        localStorage.setItem(CACHE_KEY, JSON.stringify(dataCache));
-        lastFinanceDataSyncAt = new Date().toISOString();
-        localStorage.setItem(CACHE_META_KEY, lastFinanceDataSyncAt);
+    function persistDataCache(updateSyncTime = false) {
+        window.AccountStorage.current.setItem(CACHE_KEY, JSON.stringify(dataCache));
+        if (updateSyncTime) lastFinanceDataSyncAt = new Date().toISOString();
+        window.AccountStorage.current.setItem(CACHE_META_KEY, lastFinanceDataSyncAt);
     }
 
     window.getFinanceDataSyncMeta = function() {
@@ -1034,6 +1040,7 @@
     }
 
     function renderSections({ dashboard = false, financeSummary = false, cashFlow = false, portfolio = false, addons = false, realEstate = false, investDetail = false } = {}) {
+        requestAnimationFrame(() => window.AppExperience?.update());
         updateNavigationButtons();
         const financeSummaryVisible = activeViewId === 'dashboard-view' || activeViewId === 'asset-view';
         const cashFlowVisible = activeViewId === 'stats-view' || activeViewId === 'cashflow-view';
@@ -1153,6 +1160,13 @@
             financeRepository = financeRepositoryRuntime.createSupabaseFinanceRepository({
                 getClient: getAuthenticatedSupabaseClient,
                 onOptionalError: (table, error) => console.warn(`${table} 로딩 실패:`, error.message),
+                onTableStatus: (table, error) => {
+                    let meta = {};
+                    try { meta = JSON.parse(window.AccountStorage.current.getItem('sync.tables.v1') || '{}'); } catch { /* new scope */ }
+                    const now = new Date().toISOString();
+                    meta[table] = { lastAttemptAt: now, lastSuccessAt: error ? meta[table]?.lastSuccessAt || null : now, error: error ? String(error.code || 'FETCH_FAILED') : null };
+                    window.AccountStorage.current.setItem('sync.tables.v1', JSON.stringify(meta));
+                },
             });
         }
         return financeRepository;
@@ -1346,7 +1360,7 @@
     // Phase 1: 로딩 0초 매커니즘 (캐시)
     // ==========================================
     function loadCachedData() {
-        const cachedStr = localStorage.getItem(CACHE_KEY);
+        const cachedStr = window.AccountStorage.current.getItem(CACHE_KEY);
         if (cachedStr) {
             try {
                 dataCache = normalizeCache(JSON.parse(cachedStr));
@@ -1364,6 +1378,7 @@
     // Fetch 데이터 (GET & Background Sync)
     // ==========================================
     async function fetchSheetData(isAutoSync = true, tables = DEFAULT_DATA_TABLES) {
+        if (window.AccountStorage.switching) return;
         const syncIcon = document.getElementById('sync-icon');
         const syncStatus = document.getElementById('sync-status');
         const sidebarSync = document.getElementById('sidebar-sync-status');
@@ -1394,7 +1409,9 @@
         try {
             const patch = await fetchRemoteTables(tables);
             dataCache = normalizeCache({ ...dataCache, ...patch });
-            persistDataCache();
+            const meta = JSON.parse(window.AccountStorage.current.getItem('sync.tables.v1') || '{}');
+            const partial = tables.some(table => meta[table]?.error);
+            persistDataCache(!partial && DEFAULT_DATA_TABLES.every(table => tables.includes(table)));
             applyCachedData();
             renderSections(getRenderTargetsForTables(tables));
             await window.ChecklistFeature?.refreshFromServer?.();
@@ -1406,12 +1423,12 @@
             const now = new Date();
             const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
             if(syncStatus) {
-                syncStatus.textContent = `최신 갱신: ${timeStr}`;
+                syncStatus.textContent = `${partial ? '일부 갱신 실패' : '요청 데이터 갱신'}: ${timeStr}`;
                 syncStatus.className = "hidden md:inline-block text-xs text-gray-400 font-medium mr-2 max-w-[150px] truncate";
             }
-            if(sidebarSync) sidebarSync.innerHTML = `<i class="fas fa-check-circle text-[10px]"></i> 최근 동기화됨`;
+            if(sidebarSync) sidebarSync.textContent = partial ? '일부 데이터 갱신 실패 · 설정에서 확인' : `요청 데이터 갱신 ${timeStr}`;
 
-            if(!isAutoSync) showToast('최신 데이터가 동기화되었습니다.', 'info');
+            if(!isAutoSync) showToast(partial ? '일부 데이터 갱신에 실패했습니다. 설정에서 상태를 확인해 주세요.' : '요청한 데이터가 동기화되었습니다.', partial ? 'warning' : 'info');
             if (tables.includes('portfolios')) {
                 window.setTimeout(() => window.maybeAutoSyncMarketPrices?.(), 0);
             }
