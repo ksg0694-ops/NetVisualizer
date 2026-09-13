@@ -9,7 +9,7 @@ await build({ configFile: false, build: { emptyOutDir: false, outDir: fileURLToP
 }, minify: true, sourcemap: false } });
 const html = await readFile(new URL('index.html', root), 'utf8');
 const refs = [...html.matchAll(/<(?:script|link)\b[^>]*\b(?:src|href)=["'](\.\/[^"']+)["']/g)].map(m => m[1]);
-const assets = [...new Set(['./', './index.html', './manifest.json', './img/cards/s_choice.png', ...refs])].sort();
+const assets = [...new Set(['./', './index.html', './manifest.json', ...refs])].sort();
 const hash = createHash('sha256');
 for (const ref of [...assets, './sw.js']) {
   const path = ref === './' ? 'index.html' : ref.split('?')[0];

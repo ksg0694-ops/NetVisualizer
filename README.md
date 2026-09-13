@@ -87,7 +87,7 @@ The first MCP candidate used a generated file-data endpoint that does not match 
 | `AI_AGENT_GUIDE.md` | AI 작업자를 위한 기존 아키텍처 설명 문서입니다. 일부 파일 설명은 현재 저장소와 다를 수 있습니다. |
 | `docs/03-analysis/fintech-expansion-feasibility.md` | 계좌 자동 동기화, Quant 기능, 자산유형 자동분류의 실행가능성 검토 문서입니다. |
 | `supabase_transactions_template.csv` | 거래 데이터 템플릿입니다. |
-| `img/cards/s_choice.png` | 카드 이미지 정적 자산입니다. |
+| `img/cards/s_choice.png` | 과거 다운로드가 HTML로 저장된 미사용 파일입니다. 이미지가 아니므로 오프라인 자산에서 제외했습니다. |
 
 현재 저장소에는 `code.gs`, `scripts/migrate_to_supabase.js`가 포함되어 있지 않습니다. Google Sheets 백업 또는 마이그레이션 스크립트는 외부에 있거나 과거 구조 설명으로 보입니다.
 

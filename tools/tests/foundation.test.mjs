@@ -76,6 +76,7 @@ test('offline manifest matches actual versioned assets and includes every requir
   for(const m of html.matchAll(/<script\b[^>]*src="(\.\/[^\"]+)"/g))assert.ok(self.NETVISUALIZER_OFFLINE.assets.includes(m[1]),m[1]);
   assert.ok(self.NETVISUALIZER_OFFLINE.assets.includes('./vendor/supabase.js'));
   assert.ok(!self.NETVISUALIZER_OFFLINE.assets.includes('./vendor/pptxgen.bundle.js'));
+  assert.ok(!self.NETVISUALIZER_OFFLINE.assets.includes('./img/cards/s_choice.png'),'legacy HTML masquerading as PNG is not an offline asset');
 });
 test('owner guards and atomic portfolio save execute in an isolated PostgreSQL engine',async()=>{
   const db=new PGlite();

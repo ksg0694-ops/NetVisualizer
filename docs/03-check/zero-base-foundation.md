@@ -30,6 +30,7 @@ Authentication was restored. All three migrations were applied successfully thro
 - Existing security-definer maintenance functions are executable only by postgres/service_role.
 - tools/sql/foundation-verify.sql passed on live PostgreSQL: own writes, cross-account read/update isolation, stale edit/delete rejection, idempotent RPC retry and transaction rollback. All synthetic users/records were inside a rolled-back transaction; no real financial record was modified.
 - Full npm run check passed after the permission correction. Browser login and physical-device acceptance remain separate limitations, not claimed by the SQL tests.
+- Linux CI caught two reproducibility issues before deployment: embedded CRLF in source-map sourcesContent, and a legacy .png containing HTML. Source-map content is now normalized and the unused fake image is excluded from precache (original file preserved). CI runs on codex branches before main publication.
 
 1. Restore Supabase management authentication locally; never paste credentials into chat or commit them.
 2. Inspect live schema, grants, policies, triggers and relevant security-definer functions. Confirm each public user_id table is private; the owner-guard migration intentionally covers them all.
