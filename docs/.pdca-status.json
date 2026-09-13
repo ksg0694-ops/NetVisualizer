@@ -2,21 +2,24 @@
   "project": "NetVisualizer",
   "level": "dynamic",
   "feature": "Zero-base foundation",
-  "phase": "check",
-  "progress": 95,
+  "phase": "report",
+  "progress": 98,
   "updatedAt": "2026-09-13",
-  "status": "server-verified-awaiting-deployment",
-  "currentFocus": "Server migrations and rollback-only live checks passed; verify production deployment next.",
+  "status": "deployed-awaiting-user-acceptance",
+  "currentFocus": "Server changes, Linux CI and production deployment verified; actual-account and physical-device acceptance remains.",
   "completed": [
     "Account storage and guarded record synchronization",
     "Atomic portfolio SQL and isolated PostgreSQL tests",
-    "Offline asset build, mobile/auth refinements and quality gates"
+    "Offline asset build, mobile/auth refinements and quality gates",
+    "Three live migrations with history and rollback-only safety tests",
+    "Anonymous private-data API access blocked",
+    "Linux CI, main publication and GitHub Pages asset hash verified",
+    "Deployed 390px login modal focus, overflow and console checks"
   ],
   "remaining": [
-    "Production deployment verification",
     "Physical-device and signed-in browser acceptance (requires user session)"
   ],
-  "nextStep": "Publish verified changes, then npm run deploy:verify and browser smoke check.",
+  "nextStep": "User signs in on desktop/mobile and confirms sync; no credentials or private exports in chat. See docs/04-report/zero-base-foundation.md.",
   "previousStatus": "docs/archive/pdca-20260824.json",
   "changeMap": "docs/architecture/change-map.md"
 }

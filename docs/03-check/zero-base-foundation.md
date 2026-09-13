@@ -18,7 +18,7 @@
 - Browser: fresh static origin on port 8081 renders the guest dashboard and login modal; at 390 x 844 the document width is 390, email receives focus and console warnings/errors are empty.
 - Previous Vite origin had a stale service worker and blank auth-pending screen; fresh origin isolated the cause. Development registration cleanup and feature asset version bump added.
 - Rechecked the existing Vite origin after the fix: auth-pending is cleared, dashboard rendered, console has no warnings/errors. Python mail-sync tests: 15 passed.
-- Tests use synthetic records only. No private remote note content was downloaded, and no production test records were written.
+- Tests use synthetic records only. No private remote note content was downloaded. Live verification fixtures were created only inside a rolled-back transaction; no test records were persisted.
 
 ## Server gate — verified 2026-09-13
 
@@ -31,6 +31,7 @@ Authentication was restored. All three migrations were applied successfully thro
 - tools/sql/foundation-verify.sql passed on live PostgreSQL: own writes, cross-account read/update isolation, stale edit/delete rejection, idempotent RPC retry and transaction rollback. All synthetic users/records were inside a rolled-back transaction; no real financial record was modified.
 - Full npm run check passed after the permission correction. Browser login and physical-device acceptance remain separate limitations, not claimed by the SQL tests.
 - Linux CI caught two reproducibility issues before deployment: embedded CRLF in source-map sourcesContent, and a legacy .png containing HTML. Source-map content is now normalized and the unused fake image is excluded from precache (original file preserved). CI runs on codex branches before main publication.
+- Production main publication succeeded at 0abd405; branch CI, main CI and Pages deployment succeeded. npm run deploy:verify matched cache v182, shell 20260913-foundation-1 and assets b9b66c436bbffd57. Deployed browser shows the new auth banner; mobile login has focused email, 390px document width and no warning/error logs.
 
 1. Restore Supabase management authentication locally; never paste credentials into chat or commit them.
 2. Inspect live schema, grants, policies, triggers and relevant security-definer functions. Confirm each public user_id table is private; the owner-guard migration intentionally covers them all.
