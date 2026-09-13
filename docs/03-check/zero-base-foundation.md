@@ -20,13 +20,20 @@
 - Rechecked the existing Vite origin after the fix: auth-pending is cleared, dashboard rendered, console has no warnings/errors. Python mail-sync tests: 15 passed.
 - Tests use synthetic records only. No private remote note content was downloaded, and no production test records were written.
 
-## Deployment gate — NOT complete
+## Server gate — verified 2026-09-13
 
-The configured Supabase management credential returns HTTP 401. The three migrations are local only. The anonymous Learning Archive access found in the prior audit must be considered unresolved until remote verification succeeds. Do not merge/deploy the frontend before the RPC migration is applied: portfolio saves intentionally fail closed while the RPC is missing.
+Authentication was restored. All three migrations were applied successfully through the Management API and recorded in migration history. Local filenames now use the server-assigned versions: 20260913123733, 20260913123755, 20260913123757. Do not reapply the original draft versions.
+
+- 20 original private tables have restrictive owner guards; the new operation table has its own owner policy. Anonymous SELECT grants on all 21 private tables: zero.
+- Public anonymous HEAD on learning_archive_notes now returns 401 (no record content fetched).
+- banksalad_sync_runs remains read-only for authenticated users: no permissive write policy was added.
+- Existing security-definer maintenance functions are executable only by postgres/service_role.
+- tools/sql/foundation-verify.sql passed on live PostgreSQL: own writes, cross-account read/update isolation, stale edit/delete rejection, idempotent RPC retry and transaction rollback. All synthetic users/records were inside a rolled-back transaction; no real financial record was modified.
+- Full npm run check passed after the permission correction. Browser login and physical-device acceptance remain separate limitations, not claimed by the SQL tests.
 
 1. Restore Supabase management authentication locally; never paste credentials into chat or commit them.
 2. Inspect live schema, grants, policies, triggers and relevant security-definer functions. Confirm each public user_id table is private; the owner-guard migration intentionally covers them all.
-3. Apply migrations 20260912090000, 20260912091000, 20260912092000 in order using the normal migration workflow and record migration history. The maintenance query helper alone does not update Supabase migration history.
+3. For a new environment, apply the three server-versioned migration files in order using the normal migration workflow and record migration history. The maintenance query helper alone does not update Supabase migration history.
 4. Verify anon rejection and cross-account isolation with controlled accounts; verify portfolio rollback/retry and note conflict with two sessions. Do not test writes on real financial records.
 5. Merge the reviewed branch, wait for GitHub Pages, then npm run deploy:verify. Check an existing installed PWA after closing/reopening old tabs as well as a clean profile.
 

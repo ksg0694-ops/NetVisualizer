@@ -92,9 +92,10 @@ test('owner guards and atomic portfolio save execute in an isolated PostgreSQL e
       grant all on public.portfolios,public.learning_archive_notes,public.life_todos to anon,authenticated;
       grant select on public.learning_archive_notes to public;
       create policy old_public on public.learning_archive_notes for all to anon,authenticated using(true) with check(true);
+      create policy existing_portfolio_owner on public.portfolios for all to authenticated using(auth.uid()=user_id) with check(auth.uid()=user_id);
       insert into public.portfolios(id,user_id,name,group_name,amount) values('${position}','${a}','original','cash',100);
       insert into public.learning_archive_notes values('${position}','${a}','private',now());`);
-    for(const file of ['20260912090000_private_owner_guards.sql','20260912091000_atomic_portfolio_save.sql','20260912092000_monotonic_note_versions.sql'])await db.exec(await source('supabase/migrations/'+file));
+    for(const file of ['20260913123733_20260912090000_private_owner_guards.sql','20260913123755_20260912091000_atomic_portfolio_save.sql','20260913123757_20260912092000_monotonic_note_versions.sql'])await db.exec(await source('supabase/migrations/'+file));
     async function as(role,user,fn) {
       await db.exec('begin');
       try {await db.exec(`set local role ${role}`);await db.query("select set_config('request.jwt.claim.sub',$1,true)",[user||'']);return await fn();}

@@ -1,4 +1,5 @@
 -- Add restrictive ownership guards without changing any record or owner ID.
+-- Version assigned by Supabase Management API when applied to the linked project.
 -- Existing permissive policies cannot bypass a restrictive guard.
 begin;
 do $$
@@ -12,8 +13,6 @@ begin
     execute format('revoke all on table public.%I from public, anon', t.table_name);
     execute format('drop policy if exists private_owner_guard on public.%I', t.table_name);
     execute format('create policy private_owner_guard on public.%I as restrictive for all to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id)', t.table_name);
-    execute format('drop policy if exists private_owner_access on public.%I', t.table_name);
-    execute format('create policy private_owner_access on public.%I for all to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id)', t.table_name);
     execute format('alter table public.%I alter column user_id set default auth.uid()', t.table_name);
   end loop;
 end $$;

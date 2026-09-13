@@ -1,3 +1,4 @@
+-- Version assigned by Supabase Management API when applied to the linked project.
 begin;
 create table if not exists public.portfolio_save_operations (
   user_id uuid not null references auth.users(id),

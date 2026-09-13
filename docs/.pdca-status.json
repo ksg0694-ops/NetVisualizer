@@ -3,21 +3,20 @@
   "level": "dynamic",
   "feature": "Zero-base foundation",
   "phase": "check",
-  "progress": 90,
+  "progress": 95,
   "updatedAt": "2026-09-13",
-  "status": "awaiting-backend-access",
-  "currentFocus": "Local implementation verified; publish review branch, apply and verify backend before production deployment.",
+  "status": "server-verified-awaiting-deployment",
+  "currentFocus": "Server migrations and rollback-only live checks passed; verify production deployment next.",
   "completed": [
     "Account storage and guarded record synchronization",
     "Atomic portfolio SQL and isolated PostgreSQL tests",
     "Offline asset build, mobile/auth refinements and quality gates"
   ],
   "remaining": [
-    "Restore Supabase management authentication (HTTP 401)",
-    "Review live schema and apply three migrations",
-    "Signed-in cross-device acceptance and production deployment verification"
+    "Production deployment verification",
+    "Physical-device and signed-in browser acceptance (requires user session)"
   ],
-  "nextStep": "Restore Supabase access locally, then follow docs/03-check/zero-base-foundation.md.",
+  "nextStep": "Publish verified changes, then npm run deploy:verify and browser smoke check.",
   "previousStatus": "docs/archive/pdca-20260824.json",
   "changeMap": "docs/architecture/change-map.md"
 }

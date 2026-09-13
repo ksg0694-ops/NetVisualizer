@@ -1,3 +1,4 @@
+-- Version assigned by Supabase Management API when applied to the linked project.
 begin;
 create or replace function public.advance_note_version()
 returns trigger language plpgsql set search_path = public, pg_temp as $$
