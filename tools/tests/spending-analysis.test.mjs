@@ -58,6 +58,7 @@ test('date boundaries, empty current and full periods', () => {
     assert.equal(context.SpendingAnalysis.analyze(periods, '2026-08', '2026-09-01', repayment).baseline, 600);
     periods.at(-1).transactions = []; periods.at(-1).closeStatus = 'unconfirmed';
     assert.equal(analyze(periods).baseline, null);
+    assert.equal(analyze(periods).hasCurrent, false);
 });
 test('render uses text nodes for untrusted period labels and has separate income/spending headings', () => {
     class Element {
