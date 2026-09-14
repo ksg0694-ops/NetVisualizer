@@ -298,13 +298,14 @@
         if (!client) return;
         const orderedColumns = 'id,field_name,item_name,chapter_name,title,content,source_links,tags,is_pinned,field_order,item_order,chapter_order,display_order,created_at,updated_at';
         const legacyColumns = 'id,field_name,item_name,chapter_name,title,content,source_links,tags,is_pinned,created_at,updated_at';
-        let { data, error } = await client.from(TABLE_NAME).select(orderedColumns);
+        let { data, error } = await window.RecordSync.readAllRows(() => client.from(TABLE_NAME).select(orderedColumns));
         if (error && (String(error.code || '') === 'PGRST204' || /(?:field|item|chapter|display)_order/i.test(String(error.message || '')))) {
             remoteSupportsOrdering = false;
-            ({ data, error } = await client.from(TABLE_NAME).select(legacyColumns).order('updated_at', { ascending: false }));
+            ({ data, error } = await window.RecordSync.readAllRows(() => client.from(TABLE_NAME).select(legacyColumns).order('updated_at', { ascending: false })));
         }
-        if (error) return;
+        if (error) { loaded = false; setAutosaveStatus('local', '서버 읽기 실패 · 기기 기록 유지'); return; }
         const dirtyIds = readDirtyIds();
+        if (window.AppExperience?.isEditing()) { loaded = false; window.AppExperience.deferRefresh(); return; }
         window.RecordSync.remember(TABLE_NAME, data || [], new Set([...dirtyIds, ...readPendingDeleteIds()]));
         const trashIds = new Set(readTrash().map((item) => item.entry.id));
         const pendingDeleteIds = new Set([...readPendingDeleteIds(), ...trashIds]);
@@ -1586,5 +1587,22 @@
     readUiState();
     entries = readStore();
     if (activeId && !entries.some((entry) => entry.id === activeId)) activeId = null;
+    window.RecordSync.register(TABLE_NAME, {
+        snapshot(id) {
+            if (activeId === id) flushLearningDraftBeforeUnload();
+            const entry = entries.find(item => item.id === id);
+            return entry ? toRow(entry) : null;
+        },
+        adopt(id, row) {
+            entries = entries.filter(item => item.id !== id);
+            if (row) entries.push(normalize(row));
+            saveStore();
+            updateDirtyId(id, false);
+            updatePendingDeleteId(id, false);
+            saveTrash(readTrash().filter(item => item.entry.id !== id));
+            if (!row && activeId === id) activeId = null;
+            render({ skipRemote: true });
+        },
+    });
     window.LearningArchiveFeature = { render, bindControls, refresh: () => { loaded = false; return loadRemote(); } };
 })(window);

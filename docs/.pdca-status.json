@@ -1,25 +1,21 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Zero-base foundation",
-  "phase": "report",
-  "progress": 98,
-  "updatedAt": "2026-09-13",
-  "status": "deployed-awaiting-user-acceptance",
-  "currentFocus": "Server changes, Linux CI and production deployment verified; actual-account and physical-device acceptance remains.",
+  "feature": "Sync usability",
+  "phase": "check",
+  "progress": 85,
+  "updatedAt": "2026-09-14",
+  "status": "local-verified",
   "completed": [
-    "Account storage and guarded record synchronization",
-    "Atomic portfolio SQL and isolated PostgreSQL tests",
-    "Offline asset build, mobile/auth refinements and quality gates",
-    "Three live migrations with history and rollback-only safety tests",
-    "Anonymous private-data API access blocked",
-    "Linux CI, main publication and GitHub Pages asset hash verified",
-    "Deployed 390px login modal focus, overflow and console checks"
+    "Conflict comparison and recoverable server adoption",
+    "Shared paginated reads",
+    "Deferred refresh with active-edit protection",
+    "Behavior tests and synthetic browser verification"
   ],
   "remaining": [
-    "Physical-device and signed-in browser acceptance (requires user session)"
+    "Branch CI and production deployment verification"
   ],
-  "nextStep": "User signs in on desktop/mobile and confirms sync; no credentials or private exports in chat. See docs/04-report/zero-base-foundation.md.",
-  "previousStatus": "docs/archive/pdca-20260824.json",
+  "nextStep": "Publish verified branch, await CI, then fast-forward main and verify deployment.",
+  "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }

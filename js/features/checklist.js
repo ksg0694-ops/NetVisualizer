@@ -1485,30 +1485,31 @@
         }
         renderSyncStatus('서버 확인 중', 'text-sky-600 bg-sky-50 border-sky-100');
         try {
-            let { data, error } = await client
+            let { data, error } = await window.RecordSync.readAllRows(() => client
                 .from(TABLE_NAME)
                 .select('id,title,note,category,domain,steps,due_date,priority,is_done,completed_at,created_at,updated_at,display_order,is_paused,completion_report,report_files')
                 .order('display_order', { ascending: true, nullsFirst: false })
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false }));
             if (error && remoteSupportsUpdate10402 && isUpdate10402SchemaError(error)) {
                 remoteSupportsUpdate10402 = false;
-                ({ data, error } = await client
+                ({ data, error } = await window.RecordSync.readAllRows(() => client
                     .from(TABLE_NAME)
                     .select('id,title,note,category,domain,steps,due_date,priority,is_done,completed_at,created_at,updated_at,display_order')
                     .order('display_order', { ascending: true, nullsFirst: false })
-                    .order('created_at', { ascending: false }));
+                    .order('created_at', { ascending: false })));
             }
             if (error && remoteSupportsDisplayOrder && isDisplayOrderSchemaError(error)) {
                 remoteSupportsDisplayOrder = false;
-                ({ data, error } = await client
+                ({ data, error } = await window.RecordSync.readAllRows(() => client
                     .from(TABLE_NAME)
                     .select('id,title,note,category,domain,steps,due_date,priority,is_done,completed_at,created_at,updated_at')
                     .order('is_done', { ascending: true })
-                    .order('created_at', { ascending: false }));
+                    .order('created_at', { ascending: false })));
             }
             if (error) throw error;
 
             const dirtyIds = getDirtyTaskIds();
+            if (window.AppExperience?.isEditing()) { window.AppExperience.deferRefresh(); return null; }
             window.RecordSync.remember(TABLE_NAME, data || [], new Set([...dirtyIds, ...getPendingDeleteIds()]));
             const trashIds = new Set(getTrashStore().map((item) => item.task.id));
             const pendingDeleteIds = new Set([...getPendingDeleteIds(), ...trashIds]);
@@ -2877,6 +2878,23 @@
         return task;
     }
 
+    window.RecordSync.register(TABLE_NAME, {
+        snapshot(id) {
+            if (pendingTodoNote?.taskId === id) flushPendingTodoNoteBeforeUnload();
+            const task = tasks.find(item => item.id === id);
+            return task ? toRemotePayload(task) : null;
+        },
+        adopt(id, row) {
+            tasks = tasks.filter(item => item.id !== id);
+            if (row) tasks.push(fromRemoteRow(row));
+            saveStore();
+            updateDirtyTaskId(id, false);
+            updatePendingDeleteId(id, false);
+            saveTrashStore(getTrashStore().filter(item => item.task.id !== id));
+            if (!row && activeTaskId === id) activeTaskId = null;
+            render({ skipRemoteLoad: true });
+        },
+    });
     window.ChecklistFeature = {
         bindControls,
         render,

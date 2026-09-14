@@ -5,6 +5,15 @@
 #settings-modal button { min-height: 44px; }
 #settings-modal input { font-size: 16px; }
 #source-sync-detail { white-space: pre-line; overflow-wrap: anywhere; font-size: 12px; }
+#sync-conflict-list button { display: block; margin: 8px 0; color: #4338ca; text-align: left; }
+.sync-conflict-dialog { margin: auto; width: min(960px, calc(100% - 24px)); max-height: 90dvh; overflow: auto; padding: 20px; border: 0; border-radius: 16px; color: #1e293b; }
+.sync-conflict-dialog::backdrop { background: #0f172a99; }
+.sync-conflict-dialog h2 { font-size: 20px; font-weight: 700; }
+.sync-conflict-dialog p { margin: 12px 0; }
+.sync-conflict-dialog button { min-height: 44px; padding: 8px 12px; margin: 8px 8px 0 0; border: 1px solid #cbd5e1; border-radius: 8px; }
+.sync-conflict-dialog button:disabled { opacity: .5; }
+.sync-conflict-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 12px; }
+.sync-conflict-columns pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 45dvh; overflow: auto; font-size: 12px; padding: 12px; background: #f1f5f9; }
 @media (max-width: 767px) {
   #checklist-report-library[data-empty="true"] { display: none; }
   #settings-modal { padding: 8px; }

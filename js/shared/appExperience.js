@@ -2,10 +2,16 @@
     let restoreFocus = null;
     let lastRefresh = 0;
     let refreshing = false;
+    let pendingRefresh = false;
+    function isEditing() {
+        return !!document.querySelector('[contenteditable="true"]:focus-within, textarea:focus, input:focus, dialog[open], .modal-overlay:not(.hidden)');
+    }
+    function deferRefresh() { pendingRefresh = true; }
     function openSettings() {
         restoreFocus = document.activeElement;
         document.getElementById('settings-modal').classList.remove('hidden');
         document.getElementById('auth-email')?.focus();
+        root.ConflictPanel?.renderList();
     }
     function closeSettings() {
         document.getElementById('settings-modal').classList.add('hidden');
@@ -37,14 +43,15 @@
     }
     async function refreshIfStale() {
         if (document.visibilityState !== 'visible' || refreshing || !root.navigator.onLine || !isSignedIn()) return;
-        if (document.querySelector('[contenteditable="true"]:focus, textarea:focus, input:focus')) return;
-        if (Date.now() - lastRefresh < 60000) return;
+        if (isEditing()) { deferRefresh(); return; }
+        if (!pendingRefresh && Date.now() - lastRefresh < 60000) return;
+        pendingRefresh = false;
         refreshing = true; lastRefresh = Date.now();
         try { await fetchSheetData(true); await root.LearningArchiveFeature?.refresh(); }
         catch (error) { root.showToast?.('자동 갱신에 실패했습니다. 연결 후 새로고침해 주세요.', 'warning'); }
         finally { refreshing = false; update(); }
     }
-    root.AppExperience = { openSettings, closeSettings, update, refreshIfStale };
+    root.AppExperience = { openSettings, closeSettings, update, refreshIfStale, isEditing, deferRefresh };
     document.addEventListener('DOMContentLoaded', () => {
         const modal = document.getElementById('settings-modal');
         modal?.addEventListener('keydown', event => {
@@ -58,6 +65,7 @@
         update();
     });
     document.addEventListener('visibilitychange', refreshIfStale);
+    document.addEventListener('focusout', () => { if (pendingRefresh) setTimeout(refreshIfStale, 0); });
     root.addEventListener('online', refreshIfStale);
-    root.addEventListener('record-sync-conflict', () => root.showToast?.('다른 기기 변경과 충돌했습니다. 설정에서 충돌 사본을 내려받을 수 있습니다.', 'warning', 8000));
+    root.addEventListener('record-sync-conflict', () => root.showToast?.('다른 기기 변경과 충돌했습니다. 설정의 충돌 비교 및 해결을 확인하세요.', 'warning', 8000));
 })(window);

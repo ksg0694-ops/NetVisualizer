@@ -4,6 +4,9 @@
     const KEY = 'record-sync.bases.v1';
     const CONFLICTS = 'record-sync.conflicts.v1';
     const queues = new Map();
+    const adapters = new Map();
+    const generations = new Map();
+    const HISTORY = 'record-sync.resolved.v1';
     const read = (key) => { try { return JSON.parse(storage.getItem(key) || '{}'); } catch { return {}; } };
     function remember(table, rows, dirty = new Set()) {
         const bases = read(KEY);
@@ -35,7 +38,9 @@
     function save(client, table, source) {
         const row = JSON.parse(JSON.stringify(source));
         const key = `${table}:${row.id}`;
+        const generation = generations.get(key) || 0;
         return enqueue(key, async () => {
+            if (generation !== (generations.get(key) || 0)) throw new Error('이미 해결된 충돌의 이전 저장 요청입니다.');
             if (root.AccountStorage.switching) throw new Error('계정 전환 중입니다.');
             const base = read(KEY)[key];
             if (base === undefined) {
@@ -56,7 +61,9 @@
     }
     function remove(client, table, id) {
         const key = `${table}:${id}`;
+        const generation = generations.get(key) || 0;
         return enqueue(key, async () => {
+            if (generation !== (generations.get(key) || 0)) throw new Error('이미 해결된 충돌의 이전 삭제 요청입니다.');
             if (root.AccountStorage.switching) throw new Error('계정 전환 중입니다.');
             const base = read(KEY)[key];
             const existing = await client.from(table).select('id,updated_at').eq('id', id).maybeSingle();
@@ -72,9 +79,61 @@
     }
     function exportConflicts() {
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([JSON.stringify(read(CONFLICTS), null, 2)], { type: 'application/json' }));
+        a.href = URL.createObjectURL(new Blob([JSON.stringify({ pending: read(CONFLICTS), resolved: read(HISTORY) }, null, 2)], { type: 'application/json' }));
         a.download = 'netvisualizer-conflict-copies.json'; a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     }
-    root.RecordSync = { remember, save, remove, exportConflicts };
+    async function review(client, table, id) {
+        const adapter = adapters.get(table);
+        if (!adapter || root.AccountStorage.switching) throw new Error('계정 또는 기능 상태를 확인해 주세요.');
+        const key = `${table}:${id}`;
+        return enqueue(key, async () => {
+            if (!read(CONFLICTS)[key]) throw new Error('이미 해결된 충돌입니다.');
+            const { data, error } = await client.from(table).select('*').eq('id', id).maybeSingle();
+            if (error) throw error;
+            if (root.AccountStorage.switching) throw new Error('계정 전환 중입니다.');
+            const conflicts = read(CONFLICTS);
+            conflicts[key] = { local: adapter.snapshot(id) || { id, deleted: true }, server: data, detectedAt: new Date().toISOString() };
+            storage.setItem(CONFLICTS, JSON.stringify(conflicts));
+            return conflicts[key];
+        });
+    }
+    function acceptServer(client, table, id, expected) {
+        const key = `${table}:${id}`;
+        return enqueue(key, async () => {
+            const adapter = adapters.get(table);
+            const matches = () => !root.AccountStorage.switching && adapter
+                && JSON.stringify(read(CONFLICTS)[key]) === JSON.stringify(expected)
+                && JSON.stringify(adapter.snapshot(id) || { id, deleted: true }) === JSON.stringify(expected.local);
+            if (!matches()) throw new Error('기기 내용이 바뀌었습니다. 비교를 다시 열어 주세요.');
+            const { data: server, error } = await client.from(table).select('*').eq('id', id).maybeSingle();
+            if (error) throw error;
+            if (!matches() || (server?.updated_at ?? null) !== (expected.server?.updated_at ?? null)) {
+                throw new Error('비교 이후 내용이 바뀌었습니다. 비교를 다시 열어 주세요.');
+            }
+            // Preserve the local copy before changing any state; no database write.
+            const history = read(HISTORY);
+            const entries = history[key] || [];
+            history[key] = [...entries, { ...expected, resolvedAt: new Date().toISOString() }];
+            storage.setItem(HISTORY, JSON.stringify(history));
+            generations.set(key, (generations.get(key) || 0) + 1);
+            adapter.adopt(id, server);
+            setBase(key, server?.updated_at);
+            const conflicts = read(CONFLICTS); delete conflicts[key];
+            storage.setItem(CONFLICTS, JSON.stringify(conflicts));
+            return true;
+        });
+    }
+    async function readAllRows(makeQuery, pageSize = 500) {
+        const rows = new Map();
+        for (let offset = 0; ; offset += pageSize) {
+            if (root.AccountStorage.switching) return { data: null, error: new Error('계정 전환 중입니다.') };
+            const { data, error } = await makeQuery().order('id', { ascending: true }).range(offset, offset + pageSize - 1);
+            if (error) return { data: null, error };
+            for (const row of data || []) rows.set(row.id, row);
+            if (!data || data.length < pageSize) return { data: [...rows.values()], error: null };
+        }
+    }
+    root.RecordSync = { remember, save, remove, exportConflicts, review, acceptServer, readAllRows,
+        listConflicts: () => read(CONFLICTS), register: (table, adapter) => adapters.set(table, adapter) };
 })(window);

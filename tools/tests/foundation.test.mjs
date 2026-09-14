@@ -78,6 +78,56 @@ test('offline manifest matches actual versioned assets and includes every requir
   assert.ok(!self.NETVISUALIZER_OFFLINE.assets.includes('./vendor/pptxgen.bundle.js'));
   assert.ok(!self.NETVISUALIZER_OFFLINE.assets.includes('./img/cards/s_choice.png'),'legacy HTML masquerading as PNG is not an offline asset');
 });
+test('conflict adoption preserves local backup without any server write and rejects stale comparison', async()=>{
+  const r=await runtime(),db=remote([{id:'n',content:'server',updated_at:'v2'}]);
+  let local={id:'n',content:'local'};
+  r.window.RecordSync.register('notes',{snapshot:()=>local,adopt:(_id,row)=>{local=row;}});
+  await assert.rejects(()=>r.window.RecordSync.save(db,'notes',local),/충돌/);
+  let comparison=await r.window.RecordSync.review(db,'notes','n');
+  db.rows.set('n',{id:'n',content:'newer server',updated_at:'v3'});
+  await assert.rejects(()=>r.window.RecordSync.acceptServer(db,'notes','n',comparison),/바뀌었/);
+  assert.equal(local.content,'local');
+  comparison=await r.window.RecordSync.review(db,'notes','n');
+  local={id:'n',content:'new local draft'};
+  await assert.rejects(()=>r.window.RecordSync.acceptServer(db,'notes','n',comparison),/바뀌었/);
+  comparison=await r.window.RecordSync.review(db,'notes','n');
+  const adopt=r.window.RecordSync.acceptServer(db,'notes','n',comparison);
+  const obsolete=r.window.RecordSync.save(db,'notes',{id:'n',content:'obsolete'});
+  await adopt;
+  await assert.rejects(()=>obsolete,/이전 저장/);
+  assert.equal(local.content,'newer server');
+  assert.equal(db.rows.get('n').updated_at,'v3');
+  assert.equal(Object.keys(r.window.RecordSync.listConflicts()).length,0);
+  const history=JSON.parse(r.window.AccountStorage.current.getItem('record-sync.resolved.v1'));
+  assert.equal(history['notes:n'][0].local.content,'new local draft');
+});
+test('adopting server deletion never resurrects the record',async()=>{
+  const r=await runtime(),db=remote([{id:'n',updated_at:'v0'}]); let local={id:'n',content:'draft'};
+  r.window.RecordSync.remember('notes',[db.rows.get('n')]); db.rows.delete('n');
+  r.window.RecordSync.register('notes',{snapshot:()=>local,adopt:(_id,row)=>{local=row;}});
+  await assert.rejects(()=>r.window.RecordSync.save(db,'notes',local),/충돌/);
+  const comparison=await r.window.RecordSync.review(db,'notes','n');
+  await r.window.RecordSync.acceptServer(db,'notes','n',comparison);
+  assert.equal(local,null);assert.equal(db.rows.size,0);
+});
+test('paged reads include all rows and fail closed on a later page error',async()=>{
+  const r=await runtime();const rows=Array.from({length:1001},(_,id)=>({id:String(id)}));
+  const builder=(fail=false)=>()=>({order(){return this;},range:async(start,end)=>fail&&start>=500?{data:null,error:new Error('offline')}:{data:rows.slice(start,end+1),error:null}});
+  assert.equal((await r.window.RecordSync.readAllRows(builder())).data.length,1001);
+  const failure=await r.window.RecordSync.readAllRows(builder(true));
+  assert.equal(failure.data,null);assert.ok(failure.error);
+});
+test('refresh defers while editing and pending refresh bypasses the normal throttle',async()=>{
+  let editing=false,fetches=0;
+  const document={visibilityState:'visible',querySelector:()=>editing?{}:null,getElementById:()=>null,addEventListener(){}};
+  const window={navigator:{onLine:true},addEventListener(){},LearningArchiveFeature:{refresh:async()=>{}}};
+  const context=vm.createContext({window,document,isSignedIn:()=>true,fetchSheetData:async()=>{fetches++;},setTimeout,Date});
+  vm.runInContext(await source('js/shared/appExperience.js'),context);
+  await window.AppExperience.refreshIfStale();assert.equal(fetches,1);
+  editing=true;await window.AppExperience.refreshIfStale();assert.equal(fetches,1);
+  editing=false;await window.AppExperience.refreshIfStale();assert.equal(fetches,2);
+  await window.AppExperience.refreshIfStale();assert.equal(fetches,2);
+});
 test('owner guards and atomic portfolio save execute in an isolated PostgreSQL engine',async()=>{
   const db=new PGlite();
   const a='10000000-0000-0000-0000-000000000001',b='10000000-0000-0000-0000-000000000002',position='20000000-0000-0000-0000-000000000001';

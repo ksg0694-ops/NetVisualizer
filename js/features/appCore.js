@@ -1408,6 +1408,7 @@
 
         try {
             const patch = await fetchRemoteTables(tables);
+            if (window.AppExperience?.isEditing()) { window.AppExperience.deferRefresh(); return; }
             dataCache = normalizeCache({ ...dataCache, ...patch });
             const meta = JSON.parse(window.AccountStorage.current.getItem('sync.tables.v1') || '{}');
             const partial = tables.some(table => meta[table]?.error);
