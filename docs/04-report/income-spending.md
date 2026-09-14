@@ -6,4 +6,4 @@ Data KPI-design principles informed separate denominators, explicit source/perio
 
 Local full checks and six new behavioral tests passed. Synthetic desktop/mobile UI and actual unauthenticated app integration checked. No DB/storage/schema changes; no actual financial records edited. Remaining limitation: comparison reflects only ingested/classified transactions, not guaranteed complete history, actual personal budget or future commitments. Different fixed-expense posting dates can affect comparisons.
 
-Publication status: pending GitHub CI and production verification.
+Publication verified 2026-09-15: implementation `9e95fd4`, branch CI `34900344102`, main CI `34900424053`, Pages `34900423215` all success. `npm run deploy:verify` passed with cache v183 / asset revision `4fe7ff6bfc5347eb`; published spendingAnalysis source hash matches local (newline-normalized). Final app empty-state UI verified after refreshing versioned script URLs. User should reopen old installed-app tabs to activate waiting PWA updates.

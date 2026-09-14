@@ -2,19 +2,20 @@
   "project": "NetVisualizer",
   "level": "dynamic",
   "feature": "Income / spending separation",
-  "phase": "check",
-  "progress": 90,
+  "phase": "report",
+  "progress": 100,
   "updatedAt": "2026-09-15",
-  "status": "in_progress",
+  "status": "complete",
   "completed": [
     "Plan and metric definitions documented",
     "Income-independent same-elapsed-day consumption comparison",
     "Separate income and spending cards with evidence and caveats",
     "Full check suite and six new behavioral tests passed",
-    "Synthetic desktop/mobile and actual unauthenticated app rendering checked"
+    "Synthetic desktop/mobile and actual unauthenticated app rendering checked",
+    "Branch/main CI, Pages deployment and production asset hashes verified"
   ],
-  "remaining": ["GitHub CI and deployment verification"],
-  "nextStep": "Publish verified change batch, verify CI and production assets.",
+  "remaining": [],
+  "nextStep": "Review comparison against the user's ledger; only add a budget target if explicitly supplied.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }
