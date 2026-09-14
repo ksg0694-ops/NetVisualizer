@@ -9,6 +9,7 @@
 | Conflict comparison / recovery | js/shared/conflictPanel.js, js/shared/recordSync.js | npm run check:foundation |
 | Finance persistence / portfolio save | js/features/financeRepository.js, supabase/migrations | npm run check:repository |
 | Finance calculations | src/domain, js/features/financeViews.js | npm run check:domain |
+| Independent income / spending comparison | js/features/spendingAnalysis.js, financeViews.js | node --test tools/tests/spending-analysis.test.mjs |
 | Personal CFO | src/features/personal-cfo, js/features/personalCfo.js | npm run build:cfo-runtime && npm run check:cfo-runtime |
 | Bootstrap / responsive UI | index.html, js/features/appShell.js, js/shared/appExperience.js, styles/foundation.css | npm run check:ui-contract |
 | Offline delivery | tools/build-offline.mjs, sw.js | npm run build:offline && npm run check:foundation |

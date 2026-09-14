@@ -1,20 +1,20 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Sync usability",
-  "phase": "report",
-  "progress": 100,
-  "updatedAt": "2026-09-14",
-  "status": "complete",
+  "feature": "Income / spending separation",
+  "phase": "check",
+  "progress": 90,
+  "updatedAt": "2026-09-15",
+  "status": "in_progress",
   "completed": [
-    "Conflict comparison and recoverable server adoption",
-    "Shared paginated reads",
-    "Deferred refresh with active-edit protection",
-    "Behavior tests and synthetic browser verification",
-    "Branch/main CI and production deployment verified"
+    "Plan and metric definitions documented",
+    "Income-independent same-elapsed-day consumption comparison",
+    "Separate income and spending cards with evidence and caveats",
+    "Full check suite and six new behavioral tests passed",
+    "Synthetic desktop/mobile and actual unauthenticated app rendering checked"
   ],
-  "remaining": [],
-  "nextStep": "Continue incremental feature-module extraction; automatic merge/push subscriptions remain separate future scope.",
+  "remaining": ["GitHub CI and deployment verification"],
+  "nextStep": "Publish verified change batch, verify CI and production assets.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }

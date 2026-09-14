@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 8080",
     "build:offline": "node tools/build-offline.mjs",
-    "check:foundation": "node --test tools/tests/foundation.test.mjs",
+    "check:foundation": "node --test tools/tests/foundation.test.mjs tools/tests/spending-analysis.test.mjs",
     "build:styles": "npx @tailwindcss/cli -i ./styles/tailwind.css -o ./styles/app.css --minify",
     "build:cfo-runtime": "vite build --config vite.personal-cfo.config.ts && node tools/normalize-source-maps.mjs",
     "check": "npm run build:styles && npm run build:cfo-runtime && npm run build:offline && npm run check:foundation && npm run check:manifest && npm run check:js && npm run check:ts && npm run check:repository && npm run check:domain && npm run check:cfo-runtime && npm run check:monthly-close && npm run check:finance-forecast && npm run check:ui-contract && npm run check:performance && npm run check:supabase-contract && npm run check:market-prices && npm run check:static-assets",

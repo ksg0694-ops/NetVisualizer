@@ -1631,8 +1631,16 @@
         const selectedIncome = document.getElementById('cashflow-selected-income');
         const selectedExpense = document.getElementById('cashflow-selected-expense');
         if (selectedIncome) selectedIncome.textContent = formatWon(totalIncome);
-        if (selectedExpense) selectedExpense.textContent = formatWon(cashFlowStructure?.spending ?? totalExpense);
+        if (selectedExpense) selectedExpense.textContent = formatWon(txData
+            .filter(item => item.type === '지출' && !isRepaymentExpense(item))
+            .reduce((sum, item) => sum + Math.abs(Number(item.amount) || 0), 0));
         renderCashFlowAllocationPanel(cashFlowStructure);
+        const analysisPeriods = getCashFlowPeriods().map(period => period.key === currentMonthKey
+            ? { ...period, transactions: txData } : period);
+        const spendingAnalysis = window.SpendingAnalysis?.analyze(
+            analysisPeriods, currentMonthKey, window.AppUtils.toLocalDateString(), isRepaymentExpense,
+        );
+        window.SpendingAnalysis?.render(spendingAnalysis);
 
         const manageList = document.getElementById('manageTransactionList');
         if (manageList) manageList.innerHTML = '';
