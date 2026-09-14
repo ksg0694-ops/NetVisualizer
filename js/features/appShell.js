@@ -52,6 +52,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         'personal-cfo-view': document.getElementById('personal-cfo-view'),
         'stats-view': document.getElementById('stats-view'), 'cashflow-view': document.getElementById('cashflow-view'),
         'asset-view': document.getElementById('asset-view'),
+        'cashflow-lab-view': document.getElementById('cashflow-lab-view'),
         'realestate-view': document.getElementById('realestate-view'), 'invest-detail-view': document.getElementById('invest-detail-view')
     };
 
@@ -64,12 +65,14 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         'portfolio-view': { label: '재무 도구', title: '포트폴리오' },
         'stats-view': { label: '재무 도구', title: 'Monthly Report' },
         'cashflow-view': { label: '재무 도구', title: '현금흐름' },
+        'cashflow-lab-view': { label: '재무 도구 · 실험실', title: '현금흐름 Lab' },
         'asset-view': { label: '재무 도구', title: '장기 목표' },
         'realestate-view': { label: '재무 도구', title: '부동산' },
         'invest-detail-view': { label: '재무 도구', title: '투자 상세' }
     };
 
     const financeToolViews = new Set(['personal-cfo-view', 'portfolio-view', 'stats-view', 'cashflow-view', 'asset-view', 'realestate-view', 'invest-detail-view']);
+    financeToolViews.add('cashflow-lab-view');
     const mobileNavigationDialog = document.getElementById('mobile-navigation-dialog');
     const mobileMenuButton = document.getElementById('btn-mobile-menu');
 
@@ -165,6 +168,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
 
         if (targetId === 'dashboard-view') renderSections({ financeSummary: true });
         else if (targetId === 'portfolio-view') renderSections({ portfolio: true });
+        else if (targetId === 'cashflow-lab-view') window.CashflowLab?.render();
         else if (targetId === 'stats-view' || targetId === 'cashflow-view') renderSections({ cashFlow: true });
         else if (targetId === 'asset-view') renderSections({ financeSummary: true });
         else if (targetId === 'personal-cfo-view') window.PersonalCfoFeature?.render();
@@ -231,6 +235,11 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         switchView(target);
     });
 
+    if (new URLSearchParams(location.search).get('view') === 'cashflow-lab') activeViewId = 'cashflow-lab-view';
+    window.openLegacyCashflowFromLab = (periodKey) => {
+        if (monthlyDB[periodKey]) cashFlowMonthKey = periodKey;
+        switchView('cashflow-view');
+    };
     if (!views[activeViewId]) activeViewId = 'dashboard-view';
     switchView(activeViewId);
 

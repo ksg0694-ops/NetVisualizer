@@ -1,21 +1,20 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Income / spending separation",
-  "phase": "report",
-  "progress": 100,
+  "feature": "Cashflow Lab",
+  "phase": "check",
+  "progress": 90,
   "updatedAt": "2026-09-15",
-  "status": "complete",
+  "status": "in_progress",
   "completed": [
-    "Plan and metric definitions documented",
-    "Income-independent same-elapsed-day consumption comparison",
-    "Separate income and spending cards with evidence and caveats",
-    "Full check suite and six new behavioral tests passed",
-    "Synthetic desktop/mobile and actual unauthenticated app rendering checked",
-    "Branch/main CI, Pages deployment and production asset hashes verified"
+    "Zero-base visual plan and metric contract documented",
+    "Separate app tab, annual charts, consumption pace and category charts",
+    "Report mode and old-view comparison preserve original view",
+    "Full suite including 21 behavior tests passed",
+    "Synthetic charts/filters/report/mobile and actual unauthenticated navigation checked"
   ],
-  "remaining": [],
-  "nextStep": "Review comparison against the user's ledger; only add a budget target if explicitly supplied.",
+  "remaining": ["GitHub CI and production deployment verification"],
+  "nextStep": "Publish experimental tab without replacing the original cashflow view.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }

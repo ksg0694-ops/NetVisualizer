@@ -38,6 +38,7 @@
         'personal-cfo-view',
         'stats-view',
         'cashflow-view',
+        'cashflow-lab-view',
         'asset-view',
         'invest-detail-view',
     ]);
@@ -1050,6 +1051,7 @@
         if ((dashboard || cashFlow) && cashFlowVisible) {
             renderCashFlow();
         }
+        if ((dashboard || cashFlow) && activeViewId === 'cashflow-lab-view') window.CashflowLab?.render();
         if (portfolio && activeViewId === 'portfolio-view') renderPortfolio();
         if (addons && activeViewId === 'cashflow-view' && typeof renderAddons === 'function') renderAddons();
         if (realEstate && typeof renderRealEstate === 'function') renderRealEstate();
