@@ -8,4 +8,4 @@ The Data dashboard and visualization skills informed the hierarchy, independent 
 
 Local full suite and browser verification passed (details in Check). PDF output was not independently rendered/verified. No claim of authenticated ledger completeness or financial adequacy. Existing refresh re-renders active Lab after finance data updates.
 
-Publication: pending CI/deployment checks.
+Publication verified 2026-09-15: code `4d408fa`; branch CI `34903550312`, main CI `34903624920`, Pages `34903623903` all success. Deployment verifier passed cache v184 / appShell `20260915-lab-1` / manifest `208c59e7852cc4e2`. Live direct route opened successfully and shows the new tab; anonymous session correctly displays unknown totals/empty charts. User's real records require existing login.
