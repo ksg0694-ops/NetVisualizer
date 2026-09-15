@@ -26,7 +26,9 @@
             const income = rows.filter(tx => tx.type === '수입').reduce((n, tx) => n + Number(tx.amount), 0);
             const expense = sum(tx => tx.type === '지출');
             const repayment = sum(isRepayment);
-            return { key: period.key, start: period.startDate, end: period.endDate, known,
+            const observedDays = Math.max(0, Math.min(day(period.endDate), day(today)) - day(period.startDate) + 1);
+            return { key: period.key, start: period.startDate, end: period.endDate, known, observedDays,
+                dailySpending: known && observedDays > 0 ? (expense - repayment) / observedDays : null,
                 income: known ? income : null, spending: known ? expense - repayment : null,
                 repayment: known ? repayment : null, net: known ? income - expense : null,
                 count: rows.length, latest: rows.map(tx => tx.date).sort().at(-1) || '—',
@@ -36,12 +38,12 @@
         const monthly = Array.from({ length: 12 }, (_, index) => {
             const key = `2026-${String(index + 1).padStart(2, '0')}`;
             const period = ordered.find(p => p.key === key);
-            return period ? summarize(period) : { key, known: false, income: null, spending: null, repayment: null, net: null, count: 0, start: '—', end: '—', latest: '—', status: '기록 없음', partial: false };
+            return period ? summarize(period) : { key, known: false, income: null, spending: null, dailySpending: null, observedDays: 0, repayment: null, net: null, count: 0, start: '—', end: '—', latest: '—', status: '기록 없음', partial: false };
         });
         const available = monthly.filter(row => row.known);
         const annual = Object.fromEntries(['income', 'spending', 'repayment', 'net'].map(field => [field,
             available.length ? available.reduce((sum, row) => sum + row[field], 0) : null]));
-        const analysis = selected ? analyze(ordered, selected.key, today, isRepayment) : null;
+        const analysis = selected ? analyze(ordered, selected.key, today, isRepayment, { includeChanged: true, minimumSamples: 1, historyLimit: 12 }) : null;
         const cohort = analysis?.samples.map(sample => ordered.find(p => p.key === sample.key)).filter(Boolean) || [];
         const consumption = rows => rows.filter(tx => tx.type === '지출' && !isRepayment(tx));
         const cumulative = (period, days) => {
@@ -50,13 +52,15 @@
             let total = 0;
             return daily.map(value => total += value);
         };
-        const curves = { labels: [], current: [], baseline: [] };
+        const curves = { labels: [], dates: [], current: [], baseline: [] };
         let categories = [];
         if (analysis) {
             const series = cumulative(selected, analysis.duration);
             const history = cohort.map(p => cumulative(p, analysis.elapsed));
             for (let index = 0; index < analysis.duration; index++) {
-                curves.labels.push(`${index + 1}일`);
+                const date = new Date((day(selected.startDate) + index) * DAY).toISOString().slice(0, 10);
+                curves.dates.push(date);
+                curves.labels.push(`${Number(date.slice(5, 7))}/${Number(date.slice(8))}`);
                 curves.current.push(analysis.hasCurrent && index < analysis.elapsed ? series[index] : null);
                 curves.baseline.push(analysis.baseline !== null && index < analysis.elapsed ? median(history.map(values => values[index])) : null);
             }
@@ -75,9 +79,14 @@
         }
         const closedIncome = monthly.filter(row => row.known && row.end < today).map(row => row.income);
         const incomeRange = closedIncome.length ? { min: Math.min(...closedIncome), max: Math.max(...closedIncome), median: median(closedIncome), count: closedIncome.length } : null;
+        const closed = available.filter(row => row.end < today);
+        const spendingReference = median(closed.map(row => row.spending));
+        const dailySpendingReference = median(closed.map(row => row.dailySpending));
+        const maximumConsumption = Math.max(0, ...ordered.map(p => summarize(p).spending || 0));
+        const paceAxisMax = Math.max(100000, Math.ceil(maximumConsumption * 1.05 / 100000) * 100000);
         return { monthly, annual, availableCount: available.length, selected, currentKey: currentPeriod?.key,
             isCurrent: !!selected && selected.startDate <= today && selected.endDate >= today,
-            analysis, curves, categories, incomeRange, today,
+            analysis, curves, categories, incomeRange, spendingReference, dailySpendingReference, paceAxisMax, today,
             periods: ordered.filter(p => p.startDate <= today).map(p => ({ key: p.key, label: p.label || p.key })),
             provisional: available.some(row => row.status !== '마감 확인') };
     }

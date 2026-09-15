@@ -50,12 +50,37 @@ test('selected period only changes detail, annual totals stable; insufficient hi
     const a = build(periods), b = build(periods, '2026-02');
     assert.equal(a.annual.income, b.annual.income);
     assert.equal(b.selected.key, '2026-02');
-    assert.equal(b.analysis.baseline, null);
-    assert.ok(b.curves.baseline.every(value => value === null));
+    assert.equal(b.analysis.baseline, 300);
+    assert.equal(b.analysis.samples.length, 1);
+    assert.equal(b.curves.baseline.at(-1), 300);
     const empty = build([]);
     assert.equal(empty.annual.income, null);
     assert.equal(empty.analysis, null);
     assert.equal(empty.availableCount, 0);
+});
+test('changed close histories are included; real payday dates and stable Y scale across selections', () => {
+    const bounds = [
+        ['2025-12-24','2026-01-22'], ['2026-01-23','2026-02-24'],
+        ['2026-02-25','2026-03-24'], ['2026-03-25','2026-04-23'],
+        ['2026-04-24','2026-05-21'], ['2026-05-22','2026-06-24'],
+        ['2026-06-25','2026-07-23'], ['2026-07-24','2026-08-24'],
+        ['2026-08-25','2026-09-22'],
+    ];
+    const periods = bounds.map(([startDate,endDate],i) => ({ key:`2026-${String(i+1).padStart(2,'0')}`,startDate,endDate,closeStatus:'stale',transactions:[tx(startDate,-(i+1)*100000)] }));
+    const september = build(periods,'2026-09','2026-09-15');
+    const august = build(periods,'2026-08','2026-09-15');
+    assert.equal(september.analysis.samples.length,8);
+    assert.equal(september.analysis.baseline,450000);
+    assert.equal(september.curves.labels[0],'8/25');
+    assert.equal(september.curves.dates[21],'2026-09-15');
+    assert.equal(september.curves.labels.at(-1),'9/22');
+    assert.equal(august.analysis.samples.length,2);
+    assert.equal(august.analysis.baseline,400000);
+    assert.equal(august.analysis.shortPeriodCount,5);
+    assert.equal(september.paceAxisMax,august.paceAxisMax);
+    assert.ok(september.paceAxisMax >= 900000);
+    assert.equal(september.monthly[8].dailySpending,900000/22);
+    assert.equal(september.monthly[7].dailySpending,800000/32);
 });
 test('navigation, refresh and asset integration remain independent of old view', async () => {
     const read = path => readFile(new URL(`../../${path}`, import.meta.url), 'utf8');

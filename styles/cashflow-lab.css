@@ -15,6 +15,9 @@
 .cfl-section-heading h3 { font-size:17px; font-weight:750; }
 .cfl-section-heading p, .cfl-note { font-size:12px; color:var(--lab-muted); }
 .cfl-grid { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(0,1fr); gap:16px; }
+.cfl-grid.cfl-annual { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.cfl-annual .cfl-panel {display:flex;flex-direction:column;}
+.cfl-annual .cfl-chart {margin-top:auto;min-height:260px;}
 .cfl-panel { background:white; border:1px solid #e0e6eb; border-radius:12px; padding:20px; min-width:0; }
 .cfl-panel h4 { font-size:14px; font-weight:700; margin-bottom:5px; }
 .cfl-chart { position:relative; height:260px; margin-top:14px; }
@@ -39,7 +42,7 @@
 .cfl-evidence th:first-child, .cfl-evidence td:first-child { text-align:left; }
 .cfl-evidence th { background:#f3f6f8; }
 .cfl-status { color:#87651c; font-size:12px; }
-@media(max-width:900px) { .cfl-grid { grid-template-columns:1fr; } .cfl-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:900px) { .cfl-grid, .cfl-grid.cfl-annual { grid-template-columns:1fr; } .cfl-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:600px) { .cfl-header h2 {font-size:23px;} .cfl-panel {padding:14px;} .cfl-chart {height:250px;} .cfl-kpi {padding:14px;} .cfl-controls {gap:6px;} .cfl-controls button,.cfl-controls select {min-height:44px;font-size:14px;} .cfl-report ol {grid-template-columns:1fr;gap:10px;} .cfl-section-heading {align-items:flex-start;} }
 @media print {
     body:has(#cashflow-lab-view:not(.hidden)) { background:white!important; height:auto!important; overflow:visible!important; }

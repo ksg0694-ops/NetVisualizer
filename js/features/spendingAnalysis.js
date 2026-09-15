@@ -12,7 +12,10 @@
         const middle = Math.floor(sorted.length / 2);
         return sorted.length ? (sorted[middle] + sorted[Math.floor((sorted.length - 1) / 2)]) / 2 : null;
     }
-    function analyze(periods, key, today, isRepayment) {
+    function analyze(periods, key, today, isRepayment, policy = {}) {
+        const includeChanged = policy.includeChanged === true;
+        const minimumSamples = policy.minimumSamples === 1 ? 1 : 3;
+        const historyLimit = policy.historyLimit === 12 ? 12 : 6;
         const selected = periods.find(period => period.key === key);
         if (!selected) return null;
         const start = day(selected.startDate), end = day(selected.endDate), now = day(today);
@@ -35,20 +38,20 @@
         const history = periods.filter(period => {
             const first = day(period.startDate), last = day(period.endDate);
             return period.key !== key && Number.isFinite(first) && Number.isFinite(last) && last >= first
-                && last < start && last < now && period.closeStatus !== 'stale'
+                && last < start && last < now && (includeChanged || period.closeStatus !== 'stale')
                 && (period.closeStatus === 'confirmed' || totals(period, last - first + 1).count > 0);
-        }).sort((a, b) => b.endDate.localeCompare(a.endDate)).slice(0, 6);
+        }).sort((a, b) => b.endDate.localeCompare(a.endDate)).slice(0, historyLimit);
         const samples = history.filter(period => day(period.endDate) - day(period.startDate) + 1 >= elapsed)
             .map(period => ({ key: period.key, startDate: period.startDate, endDate: period.endDate,
                 confirmed: period.closeStatus === 'confirmed', ...totals(period, elapsed) }));
         const current = totals(selected, elapsed);
-        const ready = elapsed > 0 && samples.length >= 3 && (current.count > 0 || selected.closeStatus === 'confirmed');
+        const ready = elapsed > 0 && samples.length >= minimumSamples && (current.count > 0 || selected.closeStatus === 'confirmed');
         const baseline = ready ? median(samples.map(sample => sample.consumption)) : null;
         const difference = baseline === null ? null : current.consumption - baseline;
         const incomes = history.map(period => totals(period, day(period.endDate) - day(period.startDate) + 1).income);
         return { current, hasCurrent: current.count > 0 || selected.closeStatus === 'confirmed', elapsed, duration: end - start + 1, baseline, difference,
             percent: baseline > 0 ? difference / baseline * 100 : null,
-            samples, historyCount: history.length,
+            samples, historyCount: history.length, shortPeriodCount: history.length - samples.length,
             incomeMedian: median(incomes), incomeMin: incomes.length ? Math.min(...incomes) : null,
             incomeMax: incomes.length ? Math.max(...incomes) : null,
             partial: now <= end, future: now < start,

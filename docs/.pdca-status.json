@@ -1,21 +1,20 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Cashflow Lab",
-  "phase": "report",
-  "progress": 100,
+  "feature": "Cashflow comparability",
+  "phase": "check",
+  "progress": 90,
   "updatedAt": "2026-09-15",
-  "status": "complete",
+  "status": "in_progress",
   "completed": [
-    "Zero-base visual plan and metric contract documented",
-    "Separate app tab, annual charts, consumption pace and category charts",
-    "Report mode and old-view comparison preserve original view",
-    "Full suite including 21 behavior tests passed",
-    "Synthetic charts/filters/report/mobile and actual unauthenticated navigation checked",
-    "Branch/main CI, Pages deployment and live Lab direct route verified"
+    "Changed close histories included in Lab comparison without modifying records",
+    "Independent income/spending charts and total/daily consumption toggle",
+    "Actual-date X labels and selection-independent consumption Y scale",
+    "Full suite with 22 behavioral tests and mobile/desktop chart checks passed",
+    "Read-only source check confirms September uses all eight previous 2026 periods"
   ],
-  "remaining": [],
-  "nextStep": "User compares Lab and original cashflow before choosing either layout.",
+  "remaining": ["CI and production verification"],
+  "nextStep": "Publish and verify corrected comparison charts.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }
