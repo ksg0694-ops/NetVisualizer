@@ -1,7 +1,7 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Investment Lab and sync repair",
+  "feature": "Lab neutral palette",
   "phase": "report",
   "progress": 100,
   "updatedAt": "2026-09-16",
@@ -14,7 +14,7 @@
     "Branch/main quality gates and Pages passed; live investment-lab route and v187 assets verified"
   ],
   "remaining": [],
-  "nextStep": "Review authenticated holdings in Investment Lab against the preserved legacy screen.",
+  "nextStep": "Review the neutral palette in both Labs; investigate stale market prices separately.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }

@@ -23,7 +23,7 @@
         <div><span>손익 계산 가능 비중</span><strong id="il-coverage"></strong><small id="il-issues"></small></div></div>
         <p class="il-scope">가격손익은 계산 가능한 보유분만 포함합니다. 환율 변동·배당·수수료·실현손익 제외.</p>
         <section class="il-panel"><div class="il-heading"><h3>보유 히트맵</h3><span id="il-map-encoding" class="il-note">크기: 평가금액 · 색: 가격 수익률</span></div>
-        <div class="il-legend" aria-label="가격 수익률 색상 범례"><span style="--swatch:#96502e">−20% 이하</span><span style="--swatch:#f0c7a8">−5%</span><span style="--swatch:#f3f4f6">0%</span><span style="--swatch:#b0d1e8">+5%</span><span style="--swatch:#235b86">+20% 이상</span><span style="--swatch:#e5e9ee">미확인·오래된 시세</span></div>
+        <div class="il-legend" aria-label="가격 수익률 색상 범례"><span style="--swatch:#1e40af">−20% 이하</span><span style="--swatch:#bfdbfe">−5%</span><span style="--swatch:#fafafa">0%</span><span style="--swatch:#fecaca">+5%</span><span style="--swatch:#991b1b">+20% 이상</span><span style="--swatch:#e4e4e7">미확인·오래된 시세</span></div>
         <p id="il-map-note" class="il-note"></p><div id="il-map" class="il-map" aria-label="전략별 보유 평가금액 히트맵"></div></section>
         <section id="il-detail" class="il-panel" hidden aria-label="선택 종목 상세"><div class="il-heading"><h3 id="il-detail-title" tabindex="-1"></h3><button type="button" id="il-close">닫기</button></div><p id="il-detail-status" class="il-note"></p><div id="il-detail-data" class="il-table-wrap"></div><button type="button" id="il-edit">기존 화면에서 보유·시세 편집 ↗</button></section>
         <div class="il-bottom"><section class="il-panel"><h3>손익 기여금액</h3><p class="il-note">절댓값 상위 6개 · 비교 가능한 보유분</p><div id="il-contributors"></div></section>
@@ -66,8 +66,8 @@
             const tile = node('button', null, 'il-tile'); tile.type = 'button';
             Object.assign(tile.style, { left: `${p.x / width * 100}%`, top: `${p.y / height * 100}%`, width: `${p.width / width * 100}%`, height: `${p.height / height * 100}%` });
             const dark = !groupMode && p.colorReady && Math.abs(p.returnPct) >= 15;
-            tile.style.background = groupMode ? '#e4eaf5' : root.InvestmentLabModel.color(p.returnPct, p.colorReady);
-            tile.style.color = dark ? '#fff' : '#213547';
+            tile.style.background = groupMode ? '#f4f4f5' : root.InvestmentLabModel.color(p.returnPct, p.colorReady);
+            tile.style.color = dark ? '#fff' : '#27272a';
             const weight = p.value / model.total * 100;
             const label = groupMode ? `${p.label} · ${pct(weight)} · ${won(p.value)} · 확대` : `${p.name} · ${p.strategyLabel} · 비중 ${pct(weight)} · ${won(p.value)} · 가격 수익률 ${signed(p.returnPct)}${p.issues.length ? ` · ${p.issues.join(', ')}` : ''}`;
             tile.setAttribute('aria-label', label); tile.title = label;
@@ -97,7 +97,7 @@
         rows.forEach(p => {
             const button = node('button', null, 'il-contributor'); button.type = 'button';
             const label = node('span', `${p.name} · ${p.strategyLabel}`), amount = node('strong', `${p.pnl > 0 ? '+' : ''}${won(p.pnl)}${p.complete ? '' : ' (일부)'}`);
-            const track = node('span', null, 'il-bar-track'), bar = node('i'); bar.style.width = `${Math.abs(p.pnl) / max * 100}%`; bar.style.background = p.pnl >= 0 ? '#2874b8' : '#bf774c'; track.append(bar);
+            const track = node('span', null, 'il-bar-track'), bar = node('i'); bar.style.width = `${Math.abs(p.pnl) / max * 100}%`; bar.style.background = p.pnl >= 0 ? '#b91c1c' : '#1d4ed8'; track.append(bar);
             button.append(label, amount, track); button.addEventListener('click', () => openDetail(p.key)); target.append(button);
         });
         if (!rows.length) target.append(node('p', '원가·시세를 연결하면 표시됩니다.', 'il-empty'));

@@ -9,6 +9,15 @@ const holding = (id, value = 120, cost = 100, extra = {}) => ({ id, name: id, ti
     portKey: 'growth', portLabel: '성장', valuationKrw: value, costKrw: cost, unrealizedPnlKrw: value - cost,
     hasComparableCost: true, isMarketValued: true, priceCurrency: 'KRW', marketPrice: {priceDate:'2026-09-16'}, ...extra });
 const build = (rows, options = {}) => api.build(rows, { today: '2026-09-16', ...options });
+
+test('neutral theme keeps gains red, losses blue, and the legend aligned', async () => {
+    const view = await readFile(new URL('../../js/features/investmentLab.js', import.meta.url), 'utf8');
+    for (const [value, expected] of [[-20, '#1e40af'], [-5, '#bfdbfe'], [0, '#fafafa'], [5, '#fecaca'], [20, '#991b1b']]) {
+        assert.equal(api.color(value), expected);
+        assert.ok(view.includes(`--swatch:${expected}`));
+    }
+    assert.equal(api.color(20, false), '#e4e4e7');
+});
 test('same instrument aggregates accounts with cost weighting; scope reconciles everywhere', () => {
     const rows = [holding('a'), holding('b', 330, 300, { accountName: '계좌 B' })];
     const model = build(rows);
@@ -25,7 +34,7 @@ test('partial cost never colors a whole instrument as fully comparable', () => {
     assert.equal(model.holdings[0].returnPct, null);
     assert.equal(model.holdings[0].colorReady, false);
     assert.equal(model.pnl, 20); assert.equal(model.comparablePct, 60);
-    assert.equal(api.color(null), '#e5e9ee'); assert.notEqual(api.color(0), api.color(null));
+    assert.equal(api.color(null), '#e4e4e7'); assert.notEqual(api.color(0), api.color(null));
 });
 test('old, missing and future prices/FX preserve value but never imply a fresh return color', () => {
     for (const date of ['', '2026-02-30', '2026-09-17', '2026-09-08']) {

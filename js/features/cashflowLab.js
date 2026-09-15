@@ -2,7 +2,7 @@
 (function (root) {
     'use strict';
     let selectedKey = '', reportMode = false, spendingUnit = 'daily';
-    const colors = { income: '#2874b8', spending: '#c76c32', comparison: '#8d9aa6', positive: '#355e78', negative: '#b96e41' };
+    const colors = { income: '#64748b', spending: '#3f3f46', comparison: '#a1a1aa', positive: '#64748b', negative: '#3f3f46' };
     const won = value => value == null ? '—' : `${Math.round(value).toLocaleString('ko-KR')}원`;
     const compact = value => value == null ? '—' : `${(value / 10000).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}만`;
     function text(id, value) { const element = document.getElementById(id); if (element) element.textContent = value; }
@@ -74,7 +74,7 @@
             responsive: true, maintainAspectRatio: false, animation: false,
             interaction: { mode: 'index', intersect: false },
             plugins: { legend: { position: 'top', align: 'start', labels: { boxWidth: 12, font: { size: 12 } } }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${won(ctx.raw)}` } } },
-            scales: { x: { grid: { display: false }, ticks: { color: '#68788a', font: { size: 11 }, maxRotation: 0 } }, y: { beginAtZero: true, grid: { color: '#edf1f5' }, ticks: { color: '#68788a', callback: compact, font: { size: 11 } } } },
+            scales: { x: { grid: { display: false }, ticks: { color: '#71717a', font: { size: 11 }, maxRotation: 0 } }, y: { beginAtZero: true, grid: { color: '#f4f4f5' }, ticks: { color: '#71717a', callback: compact, font: { size: 11 } } } },
             ...extra,
         };
         // A missing comparison is not a zero series or an available legend entry.
@@ -103,11 +103,11 @@
         text('cfl-spending-reference', `종료 주기 중앙값 ${won(daily ? model.dailySpendingReference : model.spendingReference)}${daily ? '/일' : ''}`);
         text('cfl-income-reference', `종료 주기 중앙값 ${won(model.incomeRange?.median ?? null)}`);
         chart('year', labels, [
-            { label: daily ? '일평균 소비' : '월 총소비', data: model.monthly.map(row => daily ? row.dailySpending : row.spending), backgroundColor: model.monthly.map(row => row.partial ? '#dfb298' : colors.spending), borderRadius: 3 },
+            { label: daily ? '일평균 소비' : '월 총소비', data: model.monthly.map(row => daily ? row.dailySpending : row.spending), backgroundColor: model.monthly.map(row => row.partial ? '#a1a1aa' : colors.spending), borderRadius: 3 },
             reference(daily ? model.dailySpendingReference : model.spendingReference, '종료 주기 중앙값'),
         ], { onClick: selectFromChart });
         chart('income', labels, [
-            { label: '월 소득', data: model.monthly.map(row => row.income), backgroundColor: model.monthly.map(row => row.partial ? '#9ebfdb' : colors.income), borderRadius: 3 },
+            { label: '월 소득', data: model.monthly.map(row => row.income), backgroundColor: model.monthly.map(row => row.partial ? '#cbd5e1' : colors.income), borderRadius: 3 },
             reference(model.incomeRange?.median ?? null, '종료 주기 중앙값'),
         ], { onClick: selectFromChart });
         chart('net', labels, [{ label: '장부상 잉여', data: model.monthly.map(row => row.net), backgroundColor: model.monthly.map(row => row.net < 0 ? colors.negative : colors.positive), borderRadius: 3 }]);
@@ -127,13 +127,13 @@
             scales: { x: { grid: { display: false }, ticks: { autoSkip: false, maxRotation: 0, font: { size: 11 }, callback: (_value, index) => {
                 const last = model.curves.labels.length - 1, observed = (a?.elapsed || 1) - 1;
                 return index === 0 || index === last || index === observed || (index % 7 === 0 && last - index >= 4 && Math.abs(index - observed) >= 4) ? model.curves.labels[index] : '';
-            } } }, y: { min: 0, max: model.paceAxisMax, grid: { color: '#edf1f5' }, ticks: { callback: compact, font: { size: 11 } } } },
+            } } }, y: { min: 0, max: model.paceAxisMax, grid: { color: '#f4f4f5' }, ticks: { callback: compact, font: { size: 11 } } } },
             plugins: { legend: { position: 'top', align: 'start', labels: { boxWidth: 12, font: { size: 12 } } }, tooltip: { callbacks: { title: items => { const i = items[0]?.dataIndex; return i == null ? '' : `${model.curves.dates[i]} · ${i + 1}일차`; }, label: ctx => `${ctx.dataset.label}: ${won(ctx.raw)}`, afterBody: () => `과거 ${a?.samples.length || 0}개 주기를 같은 경과일에 정렬` } } },
         }, 'line');
         chart('category', model.categories.map(row => row.category), [
             { label: '선택 주기', data: model.categories.map(row => row.current), backgroundColor: colors.spending, borderRadius: 3 },
-            { label: '과거 평균', data: model.categories.map(row => row.average), backgroundColor: '#bcc6cf', borderRadius: 3 },
-        ], { indexAxis: 'y', scales: { x: { beginAtZero: true, grid: { color: '#edf1f5' }, ticks: { callback: compact, font: { size: 11 }, maxRotation: 0 } }, y: { grid: { display: false }, ticks: { font: { size: 12 }, callback: function(value) { const label = this.getLabelForValue(value); return label.length > 10 ? `${label.slice(0, 9)}…` : label; } } } } });
+            { label: '과거 평균', data: model.categories.map(row => row.average), backgroundColor: '#d4d4d8', borderRadius: 3 },
+        ], { indexAxis: 'y', scales: { x: { beginAtZero: true, grid: { color: '#f4f4f5' }, ticks: { callback: compact, font: { size: 11 }, maxRotation: 0 } }, y: { grid: { display: false }, ticks: { font: { size: 12 }, callback: function(value) { const label = this.getLabelForValue(value); return label.length > 10 ? `${label.slice(0, 9)}…` : label; } } } } });
         const findings = document.getElementById('cfl-findings'); findings.replaceChildren();
         const biggest = [...model.categories].sort((x, y) => y.current - x.current)[0];
         text('cfl-top-category', biggest?.category || '기록 없음');

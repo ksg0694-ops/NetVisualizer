@@ -94,9 +94,9 @@
             : [...layout(nodes.slice(0, split), width, height * ratio, x, y), ...layout(nodes.slice(split), width, height * (1 - ratio), x, y + height * ratio)];
     }
     function color(value, ready = true) {
-        if (!ready || !finite(value)) return '#e5e9ee';
-        if (Number(value) === 0) return '#f3f4f6';
-        const ramp = value > 0 ? ['#d8eaf5', '#b0d1e8', '#7aafd1', '#326c96', '#235b86'] : ['#fae6d5', '#f0c7a8', '#dea174', '#9f603a', '#96502e'];
+        if (!ready || !finite(value)) return '#e4e4e7';
+        if (Number(value) === 0) return '#fafafa';
+        const ramp = value > 0 ? ['#fee2e2', '#fecaca', '#fca5a5', '#b91c1c', '#991b1b'] : ['#dbeafe', '#bfdbfe', '#93c5fd', '#1d4ed8', '#1e40af'];
         return ramp[Math.min(4, Math.floor(Math.abs(value) / 5))];
     }
     root.InvestmentLabModel = Object.freeze({ build, layout, color, ageStatus });
