@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smartbook-v2-app-cache-v186';
+const CACHE_NAME = 'smartbook-v2-app-cache-v187';
 importScripts('./offline-assets.js');
 const cacheId = CACHE_NAME + '-' + self.NETVISUALIZER_OFFLINE.revision;
 const urlsToCache = self.NETVISUALIZER_OFFLINE.assets;

@@ -553,7 +553,14 @@ class SupabaseRest:
     def _request(self, method: str, path: str, **kwargs: Any) -> requests.Response:
         response = self.session.request(method, f"{self.url}/rest/v1/{path}", timeout=45, **kwargs)
         if not response.ok:
-            raise SyncError(f"supabase_http_{response.status_code}")
+            # Never log DB messages/details: they can contain transaction data.
+            try:
+                code = str(response.json().get("code", ""))
+            except (ValueError, AttributeError):
+                code = ""
+            safe_code = code if re.fullmatch(r"(?:PGRST\d{3}|[0-9A-Z]{5})", code) else "unknown"
+            safe_path = path if path in {"transactions", "banksalad_sync_runs"} else "other"
+            raise SyncError(f"supabase_http_{response.status_code}:{safe_path}:{safe_code}")
         return response
 
     def completed_message_ids(self, message_ids: Sequence[str]) -> set[str]:

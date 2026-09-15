@@ -1,6 +1,18 @@
 // Portfolio and investment detail rendering extracted from index.html.
 // This script intentionally shares the global app state used by the legacy static app.
 
+    window.getInvestmentLabSource = function() {
+        const group = getPortfolioDetailGroup('investment').group;
+        return { owner: authUser?.id || '', authenticated: Boolean(authUser),
+            today: window.AppUtils.toLocalDateString(),
+            positions: authUser ? buildCurrentPortfolioValuation((group?.items || []).filter(item => !item.isDebt)).positions : [],
+        };
+    };
+    window.openLegacyInvestmentFromLab = function() {
+        switchView('invest-detail-view');
+        renderInvestDetail('investment');
+    };
+
     const CFO_PORTFOLIO_GROUP_UI = {
         operating: { icon: 'fa-wallet', iconClass: 'bg-slate-100 text-slate-600', borderClass: 'border-slate-200' },
         safe: { icon: 'fa-shield-halved', iconClass: 'bg-indigo-50 text-indigo-600', borderClass: 'border-indigo-100' },

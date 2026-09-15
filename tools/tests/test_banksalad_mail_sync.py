@@ -5,6 +5,8 @@ import os
 import sys
 import tempfile
 import unittest
+import re
+from unittest.mock import Mock
 from pathlib import Path
 
 import pyzipper
@@ -23,6 +25,10 @@ from banksalad_mail_sync import (  # noqa: E402
     normalize_time,
     parse_workbook_bytes,
     select_incremental_transactions,
+    SupabaseRest,
+    SyncError,
+    GmailAttachment,
+    process_attachment,
 )
 
 
@@ -55,6 +61,25 @@ def build_encrypted_zip(workbook_bytes: bytes, password: str) -> bytes:
 
 
 class BankSaladParserTests(unittest.TestCase):
+    def test_sync_summary_columns_exist_in_migrations(self) -> None:
+        attachment = Mock(spec=GmailAttachment)
+        attachment.data = build_encrypted_zip(build_test_workbook(), "test-only")
+        summary = process_attachment(attachment, "test-only", None, set(), True, "2026-07-24")
+        schema = "\n".join(path.read_text(encoding="utf-8") for path in (REPOSITORY_ROOT / "supabase/migrations").glob("*banksalad*.sql"))
+        for column in summary:
+            self.assertRegex(schema, rf"\b{re.escape(column)}\s+(?:date|integer|text)\b")
+
+    def test_database_error_retains_safe_code_not_private_message(self) -> None:
+        database = SupabaseRest("https://example.invalid", "test-only", "test-owner")
+        response = Mock(ok=False, status_code=400)
+        response.json.return_value = {"code": "PGRST204", "message": "private transaction"}
+        database.session.request = Mock(return_value=response)
+        with self.assertRaisesRegex(SyncError, "^supabase_http_400:banksalad_sync_runs:PGRST204$"):
+            database._request("POST", "banksalad_sync_runs")
+        response.json.return_value = {"code": "private transaction"}
+        with self.assertRaisesRegex(SyncError, "unknown$"):
+            database._request("POST", "banksalad_sync_runs")
+
     def test_selects_ledger_normalizes_signs_and_removes_exact_duplicates(self) -> None:
         result = parse_workbook_bytes(build_test_workbook())
 

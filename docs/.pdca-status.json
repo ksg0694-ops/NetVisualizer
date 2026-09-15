@@ -1,20 +1,19 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Cashflow polish",
-  "phase": "report",
-  "progress": 100,
+  "feature": "Investment Lab and sync repair",
+  "phase": "check",
+  "progress": 85,
   "updatedAt": "2026-09-16",
-  "status": "complete",
+  "status": "in_progress",
   "completed": [
-    "June 34-day boundary explained and regression-tested; annual values retained",
-    "Daily consumption default, compact headers, aligned plots and mobile controls",
-    "Repeated prose moved to calculation disclosure; missing series legends removed",
-    "Full checks and 22 tests passed; synthetic 390px/1280px UI verified",
-    "Branch/main CI and Pages succeeded; v186 assets and live UI verified"
+    "Additive sync metadata migration applied; normal workflow 34996445980 succeeded",
+    "17 Python tests and 29 JavaScript tests passed",
+    "Investment Lab weighted treemap, account/strategy filters, contribution and exact source details",
+    "Synthetic desktop/mobile, missing data, logout and scope reset checked"
   ],
-  "remaining": [],
-  "nextStep": "Review deployed Lab; separately investigate BankSalad sync run 34966773540 failure.",
+  "remaining": ["Final quality checks and GitHub Pages deployment"],
+  "nextStep": "Publish investment Lab after CI and verify live assets.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }

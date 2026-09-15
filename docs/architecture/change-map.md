@@ -11,6 +11,8 @@
 | Finance calculations | src/domain, js/features/financeViews.js | npm run check:domain |
 | Independent income / spending comparison | js/features/spendingAnalysis.js, financeViews.js | node --test tools/tests/spending-analysis.test.mjs |
 | Visual cashflow Lab (old view preserved) | js/features/cashflowLabModel.js, cashflowLab.js, styles/cashflow-lab.css | node --test tools/tests/cashflow-lab.test.mjs |
+| Investment heatmap Lab (read-only; legacy editor handoff) | js/features/investmentLabModel.js, investmentLab.js, styles/investment-lab.css; portfolioViews.js source adapter | node --test tools/tests/investment-lab.test.mjs |
+| BankSalad sync result contract | tools/banksalad_mail_sync.py, supabase/migrations/*banksalad*.sql | .venv/Scripts/python.exe -m unittest discover -s tools/tests -p "test_*.py" |
 | Personal CFO | src/features/personal-cfo, js/features/personalCfo.js | npm run build:cfo-runtime && npm run check:cfo-runtime |
 | Bootstrap / responsive UI | index.html, js/features/appShell.js, js/shared/appExperience.js, styles/foundation.css | npm run check:ui-contract |
 | Offline delivery | tools/build-offline.mjs, sw.js | npm run build:offline && npm run check:foundation |

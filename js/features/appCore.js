@@ -39,6 +39,7 @@
         'stats-view',
         'cashflow-view',
         'cashflow-lab-view',
+        'investment-lab-view',
         'asset-view',
         'invest-detail-view',
     ]);
@@ -1040,7 +1041,7 @@
         parseFxRates(dataCache.fxRates);
     }
 
-    function renderSections({ dashboard = false, financeSummary = false, cashFlow = false, portfolio = false, addons = false, realEstate = false, investDetail = false } = {}) {
+    function renderSections({ dashboard = false, financeSummary = false, cashFlow = false, portfolio = false, addons = false, realEstate = false, investDetail = false, investmentLab = false } = {}) {
         requestAnimationFrame(() => window.AppExperience?.update());
         updateNavigationButtons();
         const financeSummaryVisible = activeViewId === 'dashboard-view' || activeViewId === 'asset-view';
@@ -1053,6 +1054,7 @@
         }
         if ((dashboard || cashFlow) && activeViewId === 'cashflow-lab-view') window.CashflowLab?.render();
         if (portfolio && activeViewId === 'portfolio-view') renderPortfolio();
+        if ((dashboard || portfolio || investDetail || investmentLab) && activeViewId === 'investment-lab-view') window.InvestmentLab?.render();
         if (addons && activeViewId === 'cashflow-view' && typeof renderAddons === 'function') renderAddons();
         if (realEstate && typeof renderRealEstate === 'function') renderRealEstate();
         if (investDetail && activeInvestGroupName) renderInvestDetail(activeInvestGroupName);
@@ -1070,6 +1072,10 @@
                 || tableSet.has('portfolio_fx_rates')
                 || tableSet.has('portfolio_monthly_snapshots')
                 || tableSet.has('short_term_roadmap_goals'),
+            investmentLab: activeViewId === 'investment-lab-view' && [
+                'portfolios', 'portfolio_strategy_definitions', 'quant_strategy_rules', 'quant_strategy_rule_overrides',
+                'portfolio_market_prices', 'portfolio_market_price_overrides', 'portfolio_fx_rates',
+            ].some(table => tableSet.has(table)),
             portfolio: tableSet.has('transactions')
                 || tableSet.has('assets')
                 || tableSet.has('portfolios')
