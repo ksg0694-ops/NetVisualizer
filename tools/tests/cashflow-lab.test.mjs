@@ -81,6 +81,15 @@ test('changed close histories are included; real payday dates and stable Y scale
     assert.ok(september.paceAxisMax >= 900000);
     assert.equal(september.monthly[8].dailySpending,900000/22);
     assert.equal(september.monthly[7].dailySpending,800000/32);
+    const june = build(periods,'2026-06','2026-09-15');
+    assert.equal(june.analysis.duration,34);
+    assert.equal(june.analysis.historyCount,5);
+    assert.equal(june.analysis.shortPeriodCount,5);
+    assert.equal(june.analysis.samples.length,0);
+    assert.equal(june.analysis.baseline,null);
+    assert.ok(june.curves.baseline.every(value => value === null));
+    assert.equal(june.monthly[5].spending,600000);
+    assert.equal(june.monthly[5].dailySpending,600000/34);
 });
 test('navigation, refresh and asset integration remain independent of old view', async () => {
     const read = path => readFile(new URL(`../../${path}`, import.meta.url), 'utf8');
