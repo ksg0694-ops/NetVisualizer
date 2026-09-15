@@ -2,20 +2,19 @@
   "project": "NetVisualizer",
   "level": "dynamic",
   "feature": "Cashflow polish",
-  "phase": "check",
-  "progress": 85,
-  "updatedAt": "2026-09-15",
-  "status": "in_progress",
+  "phase": "report",
+  "progress": 100,
+  "updatedAt": "2026-09-16",
+  "status": "complete",
   "completed": [
-    "Changed close histories included in Lab comparison without modifying records",
-    "Independent income/spending charts and total/daily consumption toggle",
-    "Actual-date X labels and selection-independent consumption Y scale",
-    "Full suite with 22 behavioral tests and mobile/desktop chart checks passed",
-    "Read-only source check confirms September uses all eight previous 2026 periods",
-    "Branch/main CI, Pages, asset version and live separated panels verified"
+    "June 34-day boundary explained and regression-tested; annual values retained",
+    "Daily consumption default, compact headers, aligned plots and mobile controls",
+    "Repeated prose moved to calculation disclosure; missing series legends removed",
+    "Full checks and 22 tests passed; synthetic 390px/1280px UI verified",
+    "Branch/main CI and Pages succeeded; v186 assets and live UI verified"
   ],
-  "remaining": ["Publish polished Lab after desktop/mobile checks"],
-  "nextStep": "Verify deployment and record the June boundary explanation.",
+  "remaining": [],
+  "nextStep": "Review deployed Lab; separately investigate BankSalad sync run 34966773540 failure.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }
