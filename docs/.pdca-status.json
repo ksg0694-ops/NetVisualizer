@@ -2,19 +2,20 @@
   "project": "NetVisualizer",
   "level": "dynamic",
   "feature": "Cashflow comparability",
-  "phase": "check",
-  "progress": 90,
+  "phase": "report",
+  "progress": 100,
   "updatedAt": "2026-09-15",
-  "status": "in_progress",
+  "status": "complete",
   "completed": [
     "Changed close histories included in Lab comparison without modifying records",
     "Independent income/spending charts and total/daily consumption toggle",
     "Actual-date X labels and selection-independent consumption Y scale",
     "Full suite with 22 behavioral tests and mobile/desktop chart checks passed",
-    "Read-only source check confirms September uses all eight previous 2026 periods"
+    "Read-only source check confirms September uses all eight previous 2026 periods",
+    "Branch/main CI, Pages, asset version and live separated panels verified"
   ],
-  "remaining": ["CI and production verification"],
-  "nextStep": "Publish and verify corrected comparison charts.",
+  "remaining": [],
+  "nextStep": "Review within-consumption totals/daily averages and fixed-scale pace in Lab.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }
