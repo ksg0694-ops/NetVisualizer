@@ -21,14 +21,14 @@
         <div><span>미실현 가격손익</span><strong id="il-pnl"></strong><small id="il-return"></small></div>
         <div><span>상위 3종목 비중</span><strong id="il-top"></strong><small>선택 범위 평가액 기준</small></div>
         <div><span>손익 계산 가능 비중</span><strong id="il-coverage"></strong><small id="il-issues"></small></div></div>
-        <p class="il-scope">가격손익은 계산 가능한 보유분만 포함합니다. 환율 변동·배당·수수료·실현손익 제외.</p>
+        <p class="il-scope">미실현 가격손익 · 환차손익·배당·수수료 제외</p>
         <section class="il-panel il-market-panel"><div class="il-heading"><h3>보유 히트맵</h3><span id="il-map-encoding" class="il-note">크기: 평가금액 · 색: 매입가 대비 가격 수익률</span></div>
         <div class="il-legend" aria-label="가격 수익률 색상 범례"></div>
         <p id="il-map-note" class="il-note"></p><div id="il-map" class="il-map" aria-label="전략별 보유 평가금액 히트맵"></div><div id="il-map-readout" class="il-map-readout">종목을 가리키거나 선택하면 상세 정보를 확인할 수 있습니다.</div></section>
         <section id="il-detail" class="il-panel" hidden aria-label="선택 종목 상세"><div class="il-heading"><h3 id="il-detail-title" tabindex="-1"></h3><button type="button" id="il-close">닫기</button></div><p id="il-detail-status" class="il-note"></p><div id="il-detail-data" class="il-table-wrap"></div><button type="button" id="il-edit">기존 화면에서 보유·시세 편집 ↗</button></section>
         <div class="il-bottom"><section class="il-panel"><h3>손익 기여금액</h3><p class="il-note">절댓값 상위 6개 · 비교 가능한 보유분</p><div id="il-contributors"></div></section>
         <section class="il-panel"><div class="il-heading"><h3>보유 목록</h3><label class="il-note">정렬 <select id="il-sort"><option value="value">평가금액</option><option value="pnl">손익금액</option><option value="name">종목명</option></select></label></div><div id="il-holdings" class="il-table-wrap"></div></section></div></div>
-        <details class="il-evidence"><summary>계산 기준 및 데이터 출처</summary><p>로그인 계정의 포트폴리오·전략과 연결 시세·환율을 사용합니다. 평가액은 수량 × 현재가 × 환율이며 연결 불가 시 입력 평가액을 보존합니다. 전략 안의 동일 티커·시장·통화는 합산하고, 계좌 필터를 먼저 적용합니다.</p><p>가격 수익률 = (비교 가능한 평가액 − 평균매입가 기준 원가) ÷ 원가. 외화 원가도 현재 환율로 환산하므로 환차손익은 아닙니다. 일부 원가가 없으면 해당 종목의 색상 수익률은 표시하지 않습니다. 손익 계산 가능 비중은 종목 수가 아닌 평가금액 기준입니다.</p><p>시세 또는 외화 환율의 기준일이 없거나 미래이거나 7일을 초과하면 색은 회색으로 표시합니다. 7일은 달력 기준의 경과 경고이며 거래소 휴장일 판정이 아닙니다. 평가액·계산 가능한 손익은 마지막 확보 값을 유지합니다. 색 강도는 ±20%에서 멈추지만 숫자는 실제 값을 표시합니다.</p><p>현재 보유 미실현 가격손익만 표시합니다. 오늘 등락과 목표비중 편차는 비교 시세·목표의 연결을 검증한 뒤 추가할 항목으로, 현재 수치로 추정하지 않습니다. 개인 보유 데이터는 이 화면을 통해 공개 저장되지 않습니다.</p></details>`;
+        <details class="il-evidence"><summary>계산 기준</summary><p>평가액 = 수량 × 현재가 × 환율 · 시세 미연결 시 입력 평가액 사용</p><p>가격 수익률: 평균매입가 대비 · 외화 원가는 현재 환율 적용</p><p>회색: 원가·기준일 미확인 또는 7일 초과 시세 · 색 강도 ±20% 한도</p></details>`;
         el('il-account').addEventListener('change', event => { account = event.target.value; strategy = ''; selected = ''; render(); });
         el('il-strategy').addEventListener('change', event => { strategy = event.target.value; selected = ''; render(); });
         el('il-reset').addEventListener('click', () => { account = strategy = selected = ''; render(); });

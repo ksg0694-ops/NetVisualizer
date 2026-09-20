@@ -32,16 +32,13 @@
             <p class="cfl-note cfl-annual-footnote">* 진행 중 · 오늘까지 반영 <span>단위: 만원 · 소득/소비 별도 축</span></p>
             <div class="cfl-section-heading"><div><h3 id="cfl-current-title">이번 급여 주기</h3><p id="cfl-period-range"></p></div><div class="cfl-controls"><label for="cfl-period">상세 주기</label><select id="cfl-period"></select><button type="button" id="cfl-current">현재 주기</button></div></div>
             <div class="cfl-grid">
-                <article class="cfl-panel cfl-detail-panel"><div class="cfl-panel-heading"><h4>소비 속도</h4><span class="cfl-unit" title="월을 바꿔도 동일한 금액 범위로 비교합니다">Y축 고정 · 만원</span></div><div class="cfl-detail-summary"><div class="cfl-pace-total"><strong id="cfl-current-spending"></strong><span id="cfl-pace-delta" role="status"></span></div><p class="cfl-note" id="cfl-baseline-note"></p></div><div class="cfl-chart cfl-chart-tall"><canvas id="cfl-pace-chart" role="img" aria-label="실제 날짜별 누적 소비. 월을 변경해도 같은 Y축 범위를 사용합니다."></canvas><p id="cfl-pace-empty" class="cfl-empty" hidden></p></div></article>
-                <article class="cfl-panel cfl-detail-panel"><div class="cfl-panel-heading"><h4>소비 구성</h4><span class="cfl-unit">단위: 만원</span></div><div class="cfl-detail-summary"><div class="cfl-pace-total"><strong id="cfl-top-category"></strong><span id="cfl-top-share"></span></div><p class="cfl-note">같은 경과일 비교 · 상위 6개 + 그 외</p></div><div class="cfl-chart cfl-chart-tall"><canvas id="cfl-category-chart" role="img" aria-label="카테고리별 현재 소비와 과거 평균 비교"></canvas><p id="cfl-category-empty" class="cfl-empty" hidden></p></div></article>
+                <article class="cfl-panel cfl-detail-panel"><div class="cfl-panel-heading"><h4>소비 속도</h4><span class="cfl-unit" title="월을 바꿔도 동일한 금액 범위로 비교합니다">단위: 만원</span></div><div class="cfl-detail-summary"><div class="cfl-pace-total"><strong id="cfl-current-spending"></strong><span id="cfl-pace-delta" role="status"></span></div><p class="cfl-note" id="cfl-baseline-note"></p></div><div class="cfl-chart cfl-chart-tall"><canvas id="cfl-pace-chart" role="img" aria-label="실제 날짜별 누적 소비. 월을 변경해도 같은 Y축 범위를 사용합니다."></canvas><p id="cfl-pace-empty" class="cfl-empty" hidden></p></div></article>
+                <article class="cfl-panel cfl-detail-panel"><div class="cfl-panel-heading"><h4>소비 구성</h4><span class="cfl-unit">단위: 만원</span></div><div class="cfl-detail-summary"><div class="cfl-pace-total"><strong id="cfl-top-category"></strong><span id="cfl-top-share"></span></div><p class="cfl-note">상위 6개 + 그 외</p></div><div class="cfl-chart cfl-chart-tall"><canvas id="cfl-category-chart" role="img" aria-label="카테고리별 현재 소비와 과거 평균 비교"></canvas><p id="cfl-category-empty" class="cfl-empty" hidden></p></div></article>
             </div>
-            <details class="cfl-evidence"><summary>계산 기준 및 원자료</summary>
-                <p>원천: 로그인 계정의 동기화된 거래와 유효한 월 마감. 금액은 원화, 급여일~다음 급여일 전날 기준입니다. 2026년 주기에는 전년 말 거래가 포함될 수 있습니다. 진행 중인 기간은 오늘까지만 표시하며, 빈 미확정 기간은 0원으로 채우지 않습니다.</p>
-                <p id="cfl-source-status"></p>
-                <p>소비 기준선: 종료된 최근 최대 12개 주기에서 최신 유효 거래를 사용합니다. 마감 후 변경 여부로 제외하지 않습니다. 같은 경과일까지 존재하는 주기가 1개라도 있으면 참고 비교를 표시합니다. 선택 주기보다 짧은 과거 주기는 소비속도 비교에서만 제외하며, 연간 소비 차트에는 표시합니다. 빈 미확정 주기는 0원으로 추정하지 않습니다.</p>
-                <p>일평균 소비 = 반영 소비 ÷ 관측 경과일(종료 주기는 전체 일수). 월별 점선은 기록이 있는 2026 종료 주기 중앙값입니다. 소비속도 Y축은 전체 조회 주기의 최대 소비를 바탕으로 고정하며, 새 거래가 들어오면 범위가 바뀔 수 있습니다. 과거 수준은 적정 예산이 아닙니다. 환불은 기존 장부 분류와 절댓값 규칙을 따릅니다.</p>
-                <p>장부상 잉여 = 소득 − 소비 − 상환(저축이체 미차감). 소비 구성의 과거 값은 합산 가능한 평균이며, 소비 속도는 중앙값입니다. 연간 막대를 선택하면 아래 상세 주기가 바뀝니다. 과거 누적선은 선택 주기의 같은 경과일에 정렬합니다.</p>
-                <p id="cfl-axis-note"></p>
+            <details class="cfl-evidence"><summary>계산 기준 · 집계표</summary>
+                <p>급여 주기 기준 · 진행 중 주기는 오늘까지 반영</p>
+                <p>소비 속도: 과거 동일 경과일 중앙값 · 소비 구성: 과거 평균</p>
+                <p>일평균 = 소비 ÷ 경과일 · 잉여 = 소득 − 소비 − 상환</p>
                 <article class="cfl-panel"><h4>참고 · 월별 장부상 잉여</h4><p class="cfl-note">소득 − 전체 지출 · 실제 계좌 잔액과 다름</p><div class="cfl-chart"><canvas id="cfl-net-chart" role="img" aria-label="2026 월별 장부상 잉여"></canvas><p id="cfl-net-empty" class="cfl-empty" hidden></p></div></article>
                 <h4>2026 주기별 집계</h4><div id="cfl-year-table" class="cfl-table-wrap"></div>
                 <h4>선택 주기 카테고리 비교</h4><div id="cfl-category-table" class="cfl-table-wrap"></div>
@@ -119,7 +116,6 @@
         text('cfl-pace-delta', a?.difference == null ? unavailable : a.difference === 0 ? '과거와 동일' : `과거 대비 ${won(Math.abs(a.difference))} ${a.difference > 0 ? '↑' : '↓'}`);
         document.getElementById('cfl-pace-delta').dataset.trend = a?.difference == null ? 'unavailable' : a.difference > 0 ? 'more' : a.difference < 0 ? 'less' : 'same';
         text('cfl-baseline-note', a?.hasCurrent && a.historyCount && !a.samples.length ? `이전 ${a.historyCount}개 주기가 더 짧습니다 · 위 일평균으로 비교` : `과거 ${a?.samples.length || 0}개 주기 중앙값 · ${a?.elapsed || 0}일차`);
-        text('cfl-axis-note', `Y축 고정: 0 ~ ${won(model.paceAxisMax)} · X축: 선택 주기의 실제 날짜`);
         chart('pace', model.curves.labels, [
             { label: '선택 주기 소비', data: model.curves.current, borderColor: colors.spending, backgroundColor: colors.spending, borderWidth: 3, pointRadius: a?.elapsed === 1 ? 4 : 0, pointHitRadius: 12, spanGaps: false },
             { label: '과거 중앙값', data: model.curves.baseline, borderColor: colors.comparison, backgroundColor: colors.comparison, borderDash: [5, 4], borderWidth: 2, pointRadius: a?.elapsed === 1 ? 4 : 0, spanGaps: false },
@@ -142,7 +138,6 @@
             a?.difference != null ? `${model.selected.key} ${a.elapsed}일차 소비 ${compact(a.current.consumption)}원. 과거 ${a.samples.length}개 주기의 같은 경과일 중앙값과 ${won(Math.abs(a.difference))} ${a.difference > 0 ? '증가' : a.difference < 0 ? '감소' : '차이 없음'}.` : unavailable,
             biggest ? `선택 주기 최대 소비 묶음은 ${biggest.category}, ${won(biggest.current)}. 지출 시점·일회성 여부는 원장과 함께 확인하세요.` : '선택 주기에 표시할 소비 분류가 없습니다.'];
         lines.forEach(line => { const li = document.createElement('li'); li.textContent = line; findings.appendChild(li); });
-        text('cfl-source-status', `관측 기준 ${model.today} · *는 진행 중 주기. 비교 주기: ${a?.samples.map(p => p.key).join(', ') || '없음'}. 마감 상태로 비교에서 제외하지 않으며, 최신 유효 거래 기준입니다. 거래 누락에 따라 결과가 달라질 수 있습니다.`);
         table('cfl-year-table', ['주기', '날짜', '소득', '소비', '일평균 소비', '상환', '잉여', '건수', '마지막 거래', '상태'], model.monthly.map(row => [row.key, `${row.start} ~ ${row.end}`, won(row.income), won(row.spending), won(row.dailySpending), won(row.repayment), won(row.net), row.count, row.latest, row.status]));
         table('cfl-category-table', ['분류', '선택 주기', '과거 평균'], model.categories.map(row => [row.category, won(row.current), won(row.average)]));
         table('cfl-pace-table', ['실제 날짜', '경과일', '선택 주기 누적', '과거 중앙값'], model.curves.labels.map((label, index) => [model.curves.dates[index], `${index + 1}일차`, won(model.curves.current[index]), won(model.curves.baseline[index])]));

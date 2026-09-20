@@ -3,6 +3,15 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
 const context = vm.createContext({});
+test('Lab reference copy stays short without removing tables or data warnings', async () => {
+    const view = await readFile(new URL('../../js/features/cashflowLab.js', import.meta.url), 'utf8');
+    for (const removed of ['원천: 로그인 계정', '관측 기준', '소비 기준선:', 'Y축 고정:', 'cfl-source-status', 'cfl-axis-note']) assert.ok(!view.includes(removed));
+    assert.ok(view.includes('<details class="cfl-evidence"><summary>계산 기준 · 집계표</summary>'));
+    for (const id of ['cfl-year-table', 'cfl-category-table', 'cfl-pace-table', 'cfl-pace-empty']) assert.ok(view.includes(`id="${id}"`));
+    const investment = await readFile(new URL('../../js/features/investmentLab.js', import.meta.url), 'utf8');
+    assert.ok(investment.includes('<summary>계산 기준</summary>'));
+    assert.ok(investment.includes('미실현 가격손익 · 환차손익·배당·수수료 제외'));
+});
 for (const file of ['spendingAnalysis', 'cashflowLabModel']) vm.runInContext(await readFile(new URL(`../../js/features/${file}.js`, import.meta.url), 'utf8'), context);
 const repayment = tx => tx.type === '지출' && tx.category === '상환';
 const tx = (date, amount, type = '지출', category = '생활') => ({ date, amount, type, category });
