@@ -10,13 +10,16 @@ const holding = (id, value = 120, cost = 100, extra = {}) => ({ id, name: id, ti
     hasComparableCost: true, isMarketValued: true, priceCurrency: 'KRW', marketPrice: {priceDate:'2026-09-16'}, ...extra });
 const build = (rows, options = {}) => api.build(rows, { today: '2026-09-16', ...options });
 
-test('neutral theme keeps gains red, losses blue, and the legend aligned', async () => {
+test('market map keeps gains red, losses blue, and derives the legend from the scale', async () => {
     const view = await readFile(new URL('../../js/features/investmentLab.js', import.meta.url), 'utf8');
-    for (const [value, expected] of [[-20, '#1e40af'], [-5, '#bfdbfe'], [0, '#fafafa'], [5, '#fecaca'], [20, '#991b1b']]) {
+    for (const [value, expected] of [[-20, '#155cb0'], [-5, '#365878'], [0, '#343943'], [5, '#77404a'], [20, '#cf3545']]) {
         assert.equal(api.color(value), expected);
-        assert.ok(view.includes(`--swatch:${expected}`));
     }
-    assert.equal(api.color(20, false), '#e4e4e7');
+    assert.ok(view.includes("swatch.style.setProperty('--swatch', root.InvestmentLabModel.color(value))"));
+    assert.equal(api.color(20, false), '#555962');
+    assert.ok(view.includes("tile.addEventListener('focus'"));
+    assert.ok(view.includes('p.ticker || p.name'));
+    assert.ok(view.includes('il-map-group'));
 });
 test('same instrument aggregates accounts with cost weighting; scope reconciles everywhere', () => {
     const rows = [holding('a'), holding('b', 330, 300, { accountName: '계좌 B' })];
@@ -34,7 +37,7 @@ test('partial cost never colors a whole instrument as fully comparable', () => {
     assert.equal(model.holdings[0].returnPct, null);
     assert.equal(model.holdings[0].colorReady, false);
     assert.equal(model.pnl, 20); assert.equal(model.comparablePct, 60);
-    assert.equal(api.color(null), '#e4e4e7'); assert.notEqual(api.color(0), api.color(null));
+    assert.equal(api.color(null), '#555962'); assert.notEqual(api.color(0), api.color(null));
 });
 test('old, missing and future prices/FX preserve value but never imply a fresh return color', () => {
     for (const date of ['', '2026-02-30', '2026-09-17', '2026-09-08']) {

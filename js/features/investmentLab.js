@@ -22,9 +22,9 @@
         <div><span>상위 3종목 비중</span><strong id="il-top"></strong><small>선택 범위 평가액 기준</small></div>
         <div><span>손익 계산 가능 비중</span><strong id="il-coverage"></strong><small id="il-issues"></small></div></div>
         <p class="il-scope">가격손익은 계산 가능한 보유분만 포함합니다. 환율 변동·배당·수수료·실현손익 제외.</p>
-        <section class="il-panel"><div class="il-heading"><h3>보유 히트맵</h3><span id="il-map-encoding" class="il-note">크기: 평가금액 · 색: 가격 수익률</span></div>
-        <div class="il-legend" aria-label="가격 수익률 색상 범례"><span style="--swatch:#1e40af">−20% 이하</span><span style="--swatch:#bfdbfe">−5%</span><span style="--swatch:#fafafa">0%</span><span style="--swatch:#fecaca">+5%</span><span style="--swatch:#991b1b">+20% 이상</span><span style="--swatch:#e4e4e7">미확인·오래된 시세</span></div>
-        <p id="il-map-note" class="il-note"></p><div id="il-map" class="il-map" aria-label="전략별 보유 평가금액 히트맵"></div></section>
+        <section class="il-panel il-market-panel"><div class="il-heading"><h3>보유 히트맵</h3><span id="il-map-encoding" class="il-note">크기: 평가금액 · 색: 매입가 대비 가격 수익률</span></div>
+        <div class="il-legend" aria-label="가격 수익률 색상 범례"></div>
+        <p id="il-map-note" class="il-note"></p><div id="il-map" class="il-map" aria-label="전략별 보유 평가금액 히트맵"></div><div id="il-map-readout" class="il-map-readout">종목을 가리키거나 선택하면 상세 정보를 확인할 수 있습니다.</div></section>
         <section id="il-detail" class="il-panel" hidden aria-label="선택 종목 상세"><div class="il-heading"><h3 id="il-detail-title" tabindex="-1"></h3><button type="button" id="il-close">닫기</button></div><p id="il-detail-status" class="il-note"></p><div id="il-detail-data" class="il-table-wrap"></div><button type="button" id="il-edit">기존 화면에서 보유·시세 편집 ↗</button></section>
         <div class="il-bottom"><section class="il-panel"><h3>손익 기여금액</h3><p class="il-note">절댓값 상위 6개 · 비교 가능한 보유분</p><div id="il-contributors"></div></section>
         <section class="il-panel"><div class="il-heading"><h3>보유 목록</h3><label class="il-note">정렬 <select id="il-sort"><option value="value">평가금액</option><option value="pnl">손익금액</option><option value="name">종목명</option></select></label></div><div id="il-holdings" class="il-table-wrap"></div></section></div></div>
@@ -54,28 +54,49 @@
     }
     function renderMap() {
         const map = el('il-map'); map.replaceChildren();
+        const legend = document.querySelector('#investment-lab-view .il-legend');
+        legend.replaceChildren();
+        for (const [value, label] of [[-20, '−20% 이하'], [-5, '−5%'], [0, '0%'], [5, '+5%'], [20, '+20% 이상'], [null, '미확인·오래된 시세']]) {
+            const swatch = node('span', label); swatch.style.setProperty('--swatch', root.InvestmentLabModel.color(value)); legend.append(swatch);
+        }
+        const resetReadout = () => text('il-map-readout', '종목을 가리키거나 선택하면 상세 정보를 확인할 수 있습니다.');
+        resetReadout();
         const width = map.clientWidth, height = map.clientHeight;
         if (!(width > 0) || !model?.total) { map.append(node('p', '양수 평가금액이 없습니다. 아래 목록에서 확인하세요.', 'il-empty')); return; }
         const groupMode = width < 600 && !model.strategy;
-        el('il-map-encoding').textContent = groupMode ? '크기: 전략별 평가금액' : '크기: 평가금액 · 색: 가격 수익률';
-        document.querySelector('#investment-lab-view .il-legend').hidden = groupMode;
-        text('il-map-note', groupMode ? '전략을 선택하면 종목별로 확대합니다.' : '같은 전략끼리 묶음 · 작은 종목은 아래 목록에서도 선택할 수 있습니다.');
+        el('il-map-encoding').textContent = groupMode ? '크기: 전략별 평가금액' : '크기: 평가금액 · 색: 매입가 대비 가격 수익률';
+        legend.hidden = groupMode;
+        text('il-map-note', groupMode ? '전략을 선택하면 종목별로 확대합니다.' : '전략별 보유 현황 · 작은 종목은 아래 목록에서 확인');
         const strategyRects = root.InvestmentLabModel.layout(model.strategyGroups, width, height);
-        const rectangles = groupMode ? strategyRects : strategyRects.flatMap(g => root.InvestmentLabModel.layout(model.holdings.filter(p => p.strategy === g.key), g.width, g.height, g.x, g.y));
+        const rectangles = groupMode ? strategyRects : strategyRects.flatMap(g => {
+            const headerHeight = g.width >= 65 && g.height >= 65 ? 22 : 0;
+            if (headerHeight) {
+                const heading = node('div', `${g.label}  ${pct(g.value / model.total * 100)}`, 'il-map-group');
+                Object.assign(heading.style, { left: `${g.x}px`, top: `${g.y}px`, width: `${g.width}px` });
+                map.append(heading);
+            }
+            return root.InvestmentLabModel.layout(model.holdings.filter(p => p.strategy === g.key), Math.max(0, g.width - 3), Math.max(0, g.height - headerHeight - 3), g.x + 1.5, g.y + headerHeight + 1.5);
+        });
         rectangles.forEach(p => {
             const tile = node('button', null, 'il-tile'); tile.type = 'button';
             Object.assign(tile.style, { left: `${p.x / width * 100}%`, top: `${p.y / height * 100}%`, width: `${p.width / width * 100}%`, height: `${p.height / height * 100}%` });
-            const dark = !groupMode && p.colorReady && Math.abs(p.returnPct) >= 15;
-            tile.style.background = groupMode ? '#f4f4f5' : root.InvestmentLabModel.color(p.returnPct, p.colorReady);
-            tile.style.color = dark ? '#fff' : '#27272a';
+            tile.style.background = groupMode ? '#343943' : root.InvestmentLabModel.color(p.returnPct, p.colorReady);
+            tile.style.color = '#fff';
+            tile.style.setProperty('--tile-type', `${Math.max(11, Math.min(44, p.width / 6, p.height / 4))}px`);
+            if (!groupMode && !p.colorReady) tile.classList.add('il-tile-unverified');
             const weight = p.value / model.total * 100;
             const label = groupMode ? `${p.label} · ${pct(weight)} · ${won(p.value)} · 확대` : `${p.name} · ${p.strategyLabel} · 비중 ${pct(weight)} · ${won(p.value)} · 가격 수익률 ${signed(p.returnPct)}${p.issues.length ? ` · ${p.issues.join(', ')}` : ''}`;
             tile.setAttribute('aria-label', label); tile.title = label;
-            if (p.width >= 72 && p.height >= 60) {
-                tile.append(node('strong', groupMode ? p.label : p.name), node('span', groupMode ? pct(weight) : signed(p.returnPct)));
-                if (p.height >= 100) tile.append(node('small', groupMode ? won(p.value) : `${p.strategyLabel} · ${pct(weight)}`));
-                if (!groupMode && p.issues.length && p.height >= 128) tile.append(node('small', '데이터 확인 필요'));
+            if (p.width >= 42 && p.height >= 30) {
+                tile.append(node('strong', groupMode ? p.label : p.ticker || p.name));
+                if (p.width >= 65 && p.height >= 55) tile.append(node('span', groupMode ? pct(weight) : signed(p.returnPct)));
+                if (p.width >= 130 && p.height >= 130) tile.append(node('small', groupMode ? won(p.value) : p.name));
+                if (!groupMode && p.issues.length && p.height >= 155 && p.width >= 130) tile.append(node('small', '기준일·원가 확인'));
             } else { tile.classList.add('il-tile-small'); }
+            tile.addEventListener('mouseenter', () => text('il-map-readout', label));
+            tile.addEventListener('mouseleave', resetReadout);
+            tile.addEventListener('focus', () => text('il-map-readout', label));
+            tile.addEventListener('blur', resetReadout);
             tile.addEventListener('click', () => { if (groupMode) { strategy = p.key; selected = ''; render(); el('il-strategy').focus(); } else openDetail(p.key); });
             map.append(tile);
         });

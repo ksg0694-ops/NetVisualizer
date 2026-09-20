@@ -1,20 +1,20 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Lab neutral palette",
+  "feature": "Investment market map",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-09-16",
+  "updatedAt": "2026-09-21",
   "status": "complete",
   "completed": [
-    "Additive sync metadata migration applied; normal workflow 34996445980 succeeded",
-    "17 Python tests and 29 JavaScript tests passed",
-    "Investment Lab weighted treemap, account/strategy filters, contribution and exact source details",
-    "Synthetic desktop/mobile, missing data, logout and scope reset checked",
-    "Branch/main quality gates and Pages passed; live investment-lab route and v187 assets verified"
+    "Finviz-inspired dark map with strategy headers and ticker-first adaptive labels",
+    "User red-gain and blue-loss convention preserved; legend uses model color scale",
+    "Full npm check passed, including 30 foundation tests",
+    "Synthetic desktop/mobile strategy zoom and detail navigation verified",
+    "Offline assets and v189 cache prepared; financial calculations unchanged"
   ],
   "remaining": [],
-  "nextStep": "Review the neutral palette in both Labs; investigate stale market prices separately.",
+  "nextStep": "Review the market-map presentation with authenticated holdings.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }
