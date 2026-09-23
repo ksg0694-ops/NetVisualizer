@@ -20,6 +20,7 @@
 
 ## Invariants
 
+- Finance Home, legacy Cashflow, Todo and Learning tabs are retired. Old routes resolve to current Cashflow; note editor scripts are not loaded. Hidden/inert finance DOM remains for shared renderer compatibility. Source records and private backups are preserved; never publish outputs/.
 - Feature scripts still share legacy globals. This change isolates persistence; it is not a full framework rewrite.
 - Read account data only through AccountStorage.current. Its scope never changes in the lifetime of a document. Auth switching flushes drafts and reloads; do not replace the facade while old requests are running.
 - Do not automatically import unscoped local records into a newly signed-in account. Preserve original data and use the original-account backup control.

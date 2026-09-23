@@ -46,13 +46,11 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     const views = {
         'fixed-costs-view': document.getElementById('fixed-costs-view'),
         'insurance-cards-view': document.getElementById('insurance-cards-view'),
-        'dashboard-view': document.getElementById('dashboard-view'), 'portfolio-view': document.getElementById('portfolio-view'),
+        'portfolio-view': document.getElementById('portfolio-view'),
         'career-view': document.getElementById('career-view'), 'project-view': document.getElementById('project-view'),
-        'routine-checklist-view': document.getElementById('routine-checklist-view'),
-        'learning-archive-view': document.getElementById('learning-archive-view'),
         'health-view': document.getElementById('health-view'),
         'personal-cfo-view': document.getElementById('personal-cfo-view'),
-        'stats-view': document.getElementById('stats-view'), 'cashflow-view': document.getElementById('cashflow-view'),
+        'stats-view': document.getElementById('stats-view'),
         'asset-view': document.getElementById('asset-view'),
         'cashflow-lab-view': document.getElementById('cashflow-lab-view'),
         'investment-lab-view': document.getElementById('investment-lab-view'),
@@ -62,14 +60,10 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     const viewContextMeta = {
         'fixed-costs-view': { label: '생활 도구', title: '고정비 관리' },
         'insurance-cards-view': { label: '생활 도구', title: '보험·카드 관리' },
-        'dashboard-view': { label: '재무 목표', title: '재무 홈' },
-        'routine-checklist-view': { label: '생활 도구', title: '할 일 (삭제 예정)' },
-        'learning-archive-view': { label: '생활 도구', title: '학습 아카이브 (삭제 예정)' },
         'health-view': { label: '생활 도구', title: '건강 기록' },
         'personal-cfo-view': { label: '재무 도구', title: '개인 CFO' },
         'portfolio-view': { label: '재무 도구', title: '포트폴리오' },
         'stats-view': { label: '재무 도구', title: 'Monthly Report' },
-        'cashflow-view': { label: '재무 도구', title: '현금흐름 (삭제 예정)' },
         'cashflow-lab-view': { label: '재무 도구', title: '현금흐름' },
         'investment-lab-view': { label: '재무 도구 · 실험실', title: '투자 Lab' },
         'asset-view': { label: '재무 도구', title: '장기 목표' },
@@ -97,7 +91,6 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     applyFeatureVisibility();
 
     function resolveActiveGoalTarget(targetId) {
-        if (financeToolViews.has(targetId)) return 'dashboard-view';
         return targetId;
     }
 
@@ -110,14 +103,14 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         button.dataset.target = homeTarget;
         button.classList.toggle('hidden', !shouldShow);
         button.classList.toggle('flex', shouldShow);
-        const homeLabel = homeTarget === 'dashboard-view' ? '재무 홈' : '홈';
+        const homeLabel = '홈';
         if (label) label.textContent = homeLabel;
         button.title = `${homeLabel}으로 돌아가기`;
         button.setAttribute('aria-label', button.title);
     }
 
     function updateAppContext(targetId) {
-        const meta = viewContextMeta[targetId] || viewContextMeta['dashboard-view'];
+        const meta = viewContextMeta[targetId] || viewContextMeta['cashflow-lab-view'];
         const labelEl = document.getElementById('app-context-label');
         const titleEl = document.getElementById('app-context-title');
         if (labelEl) labelEl.textContent = meta.label;
@@ -147,8 +140,9 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     }
 
     function switchView(targetId) {
-        if (targetId === 'project-view' || targetId === 'career-view') targetId = 'dashboard-view';
-        if (targetId === 'health-view' && !isFeatureEnabled('health')) targetId = 'routine-checklist-view';
+        if (['dashboard-view', 'cashflow-view', 'routine-checklist-view', 'learning-archive-view', 'project-view', 'career-view'].includes(targetId)) targetId = 'cashflow-lab-view';
+        if (!views[targetId]) targetId = 'cashflow-lab-view';
+        if (targetId === 'health-view' && !isFeatureEnabled('health')) targetId = 'cashflow-lab-view';
         useMonthScopeForView(targetId);
         activeViewId = targetId;
         persistAppUiState();
@@ -173,8 +167,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         }
         if (targetId === 'cashflow-view') toggleManageView(false);
 
-        if (targetId === 'dashboard-view') renderSections({ financeSummary: true });
-        else if (targetId === 'fixed-costs-view') window.FixedCosts?.render();
+        if (targetId === 'fixed-costs-view') window.FixedCosts?.render();
         else if (targetId === 'insurance-cards-view') renderSections({ addons: true });
         else if (targetId === 'portfolio-view') renderSections({ portfolio: true });
         else if (targetId === 'cashflow-lab-view') window.CashflowLab?.render();
@@ -187,14 +180,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
             window.HealthTrackerFeature?.bindControls();
             window.HealthTrackerFeature?.render();
         }
-        else if (targetId === 'routine-checklist-view') {
-            window.ChecklistFeature?.bindControls();
-            window.ChecklistFeature?.render({ skipRemoteLoad: true });
-        }
-        else if (targetId === 'learning-archive-view') {
-            window.LearningArchiveFeature?.bindControls();
-            window.LearningArchiveFeature?.render();
-        }
+
     }
 
     document.querySelectorAll('.nav-link').forEach(link => {
@@ -205,7 +191,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         link.addEventListener('click', (event) => {
             if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
             event.preventDefault();
-            switchView('dashboard-view');
+            switchView('cashflow-lab-view');
         });
         link.addEventListener('auxclick', (event) => {
             if (event.button !== 1) return;
@@ -254,7 +240,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         if (monthlyDB[periodKey]) cashFlowMonthKey = periodKey;
         switchView('cashflow-view');
     };
-    if (!views[activeViewId]) activeViewId = 'dashboard-view';
+    if (!views[activeViewId]) activeViewId = 'cashflow-lab-view';
     switchView(activeViewId);
 
     document.getElementById('asset-year-filter')?.addEventListener('change', (e) => {

@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
 const context = vm.createContext({});
-test('promoted cashflow name keeps legacy view and both direct links', async () => {
+test('promoted cashflow keeps both direct links and retires legacy navigation', async () => {
     const shell = await readFile(new URL('../../js/features/appShell.js', import.meta.url), 'utf8');
     const view = await readFile(new URL('../../js/features/cashflowLab.js', import.meta.url), 'utf8');
-    assert.ok(shell.includes("title: '현금흐름 (삭제 예정)'"));
+    assert.ok(!shell.includes("title: '현금흐름 (삭제 예정)'"));
     assert.ok(shell.includes("get('view') === 'cashflow'"));
     assert.ok(shell.includes('cashflow-lab'));
     assert.ok(!view.includes('현금흐름 Lab'));

@@ -26,13 +26,13 @@ const switchViewEnd = appShell.indexOf("\n    document.querySelectorAll('.nav-li
 const switchViewSource = appShell.slice(switchViewStart, switchViewEnd);
 assert.equal(
     (switchViewSource.match(/ChecklistFeature\?\.render/g) || []).length,
-    1,
-    'Todo view must render once per navigation',
+    0,
+    'Retired Todo must not render on navigation',
 );
 assert.equal(
     (switchViewSource.match(/LearningArchiveFeature\?\.render/g) || []).length,
-    1,
-    'Learning Archive must render once per navigation',
+    0,
+    'Retired Learning Archive must not render on navigation',
 );
 assert.ok(
     !appCore.includes('if (dashboard || cashFlow)'),

@@ -5,18 +5,46 @@ import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 const root = new URL('../../', import.meta.url);
 const source = async path => readFile(new URL(path, root), 'utf8');
-test('life tools route reuses card/insurance data and preserves pending-deletion features', async () => {
+test('life tools route reuses card/insurance data and retires backed-up note tabs', async () => {
   const html = await source('index.html'), shell = await source('js/features/appShell.js');
   for (const attr of ['data-target', 'data-mobile-nav-target']) assert.ok(html.includes(`${attr}="insurance-cards-view"`));
-  for (const id of ['insurance-cards-view', 'routine-checklist-view', 'learning-archive-view', 'addon-cards-list', 'addon-insurance-list']) assert.equal(html.split(`id="${id}"`).length - 1, 1);
+  for (const id of ['insurance-cards-view', 'addon-cards-list', 'addon-insurance-list']) assert.equal(html.split(`id="${id}"`).length - 1, 1);
   assert.ok(shell.includes("'insurance-cards-view': document.getElementById('insurance-cards-view')"));
-  assert.ok(shell.includes("title: '할 일 (삭제 예정)'"));
-  assert.ok(shell.includes("title: '학습 아카이브 (삭제 예정)'"));
+  assert.ok(!shell.includes("title: '할 일 (삭제 예정)'"));
+  assert.ok(!shell.includes("title: '학습 아카이브 (삭제 예정)'"));
   const controls = await source('js/features/cashflowControls.js');
   const card = {textContent:'old'}, insurance = {textContent:'old'};
   const ctx = vm.createContext({document:{getElementById:id=>id==='addon-cards-list'?card:insurance},authUser:null,switchView:id=>{ctx.target=id;}});
   vm.runInContext(controls,ctx); ctx.toggleAddonView(); assert.equal(ctx.target,'insurance-cards-view');
   ctx.renderAddons(); assert.equal(card.textContent,'로그인 후 확인할 수 있습니다.'); assert.equal(insurance.textContent,card.textContent);
+});
+test('retired and unknown routes resolve safely to current cashflow', async () => {
+  const shell = await source('js/features/appShell.js');
+  const fn = shell.slice(shell.indexOf('    function switchView('), shell.indexOf("    document.querySelectorAll('.nav-link').forEach(link"));
+  const visible = new Set();
+  const node = id => ({classList:{add:()=>visible.delete(id),remove:()=>visible.add(id)}});
+  const ctx = vm.createContext({
+    views: {'cashflow-lab-view':node('cashflow-lab-view'), 'fixed-costs-view':node('fixed-costs-view'), 'stats-view':node('stats-view'), 'health-view':node('health-view')},
+    document:{querySelectorAll:()=>[],getElementById:()=>null},
+    window:{CashflowLab:{render(){}},FixedCosts:{render(){}}},
+    isFeatureEnabled:()=>false,useMonthScopeForView(){},persistAppUiState(){},updateAppContext(){},updateGoalNavigation(){},renderSections(){},
+  });
+  vm.runInContext(fn,ctx);
+  for (const id of ['dashboard-view','cashflow-view','routine-checklist-view','learning-archive-view','health-view','unknown']) {
+    ctx.switchView(id);
+    assert.equal(ctx.activeViewId,'cashflow-lab-view');
+    assert.deepEqual([...visible],['cashflow-lab-view']);
+  }
+  for (const id of ['fixed-costs-view','stats-view']) {
+    ctx.switchView(id); assert.equal(ctx.activeViewId,id); assert.deepEqual([...visible],[id]);
+  }
+  const core = await source('js/features/appCore.js');
+  const restore = core.slice(core.indexOf('    const APP_UI_STATE_KEY'),core.indexOf('    function persistAppUiState'));
+  for (const id of ['dashboard-view','cashflow-view','routine-checklist-view','learning-archive-view','fixed-costs-view']) {
+    const state=vm.createContext({CACHE_META_KEY:'test-meta',window:{AccountStorage:{current:{getItem:()=>JSON.stringify({activeViewId:id})}}},console});
+    vm.runInContext(restore+';globalThis.result=restoredAppUiState;',state);
+    assert.equal(state.result.activeViewId,id==='fixed-costs-view'?id:'cashflow-lab-view');
+  }
 });
 function memory() {
   const values = new Map();

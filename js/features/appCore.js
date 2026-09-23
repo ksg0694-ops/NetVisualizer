@@ -33,13 +33,9 @@
     const RESTORABLE_VIEW_IDS = new Set([
         'insurance-cards-view',
         'fixed-costs-view',
-        'dashboard-view',
         'portfolio-view',
-        'routine-checklist-view',
-        'learning-archive-view',
         'personal-cfo-view',
         'stats-view',
-        'cashflow-view',
         'cashflow-lab-view',
         'investment-lab-view',
         'asset-view',
@@ -52,13 +48,13 @@
             const parsed = JSON.parse(window.AccountStorage.current.getItem(APP_UI_STATE_KEY) || '{}');
             const isMonthKey = (value) => /^\d{4}-\d{2}$/.test(String(value || ''));
             return {
-                activeViewId: RESTORABLE_VIEW_IDS.has(parsed.activeViewId) ? parsed.activeViewId : 'dashboard-view',
+                activeViewId: RESTORABLE_VIEW_IDS.has(parsed.activeViewId) ? parsed.activeViewId : 'cashflow-lab-view',
                 currentMonthKey: isMonthKey(parsed.currentMonthKey) ? parsed.currentMonthKey : '',
                 cashFlowMonthKey: isMonthKey(parsed.cashFlowMonthKey) ? parsed.cashFlowMonthKey : '',
             };
         } catch (error) {
             console.warn('Saved UI state could not be restored.', error);
-            return { activeViewId: 'dashboard-view', currentMonthKey: '', cashFlowMonthKey: '' };
+            return { activeViewId: 'cashflow-lab-view', currentMonthKey: '', cashFlowMonthKey: '' };
         }
     }
 
@@ -67,7 +63,7 @@
     function persistAppUiState() {
         try {
             window.AccountStorage.current.setItem(APP_UI_STATE_KEY, JSON.stringify({
-                activeViewId: RESTORABLE_VIEW_IDS.has(activeViewId) ? activeViewId : 'dashboard-view',
+                activeViewId: RESTORABLE_VIEW_IDS.has(activeViewId) ? activeViewId : 'cashflow-lab-view',
                 currentMonthKey,
                 cashFlowMonthKey,
                 savedAt: new Date().toISOString(),
@@ -1429,7 +1425,6 @@
             persistDataCache(!partial && DEFAULT_DATA_TABLES.every(table => tables.includes(table)));
             applyCachedData();
             renderSections(getRenderTargetsForTables(tables));
-            await window.ChecklistFeature?.refreshFromServer?.();
             const personalCfoView = document.getElementById('personal-cfo-view');
             if (tables.includes('portfolios') && personalCfoView && !personalCfoView.classList.contains('hidden')) {
                 window.PersonalCfoFeature?.render({ skipRemoteLoad: true });
