@@ -5,6 +5,19 @@ import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 const root = new URL('../../', import.meta.url);
 const source = async path => readFile(new URL(path, root), 'utf8');
+test('life tools route reuses card/insurance data and preserves pending-deletion features', async () => {
+  const html = await source('index.html'), shell = await source('js/features/appShell.js');
+  for (const attr of ['data-target', 'data-mobile-nav-target']) assert.ok(html.includes(`${attr}="insurance-cards-view"`));
+  for (const id of ['insurance-cards-view', 'routine-checklist-view', 'learning-archive-view', 'addon-cards-list', 'addon-insurance-list']) assert.equal(html.split(`id="${id}"`).length - 1, 1);
+  assert.ok(shell.includes("'insurance-cards-view': document.getElementById('insurance-cards-view')"));
+  assert.ok(shell.includes("title: '할 일 (삭제 예정)'"));
+  assert.ok(shell.includes("title: '학습 아카이브 (삭제 예정)'"));
+  const controls = await source('js/features/cashflowControls.js');
+  const card = {textContent:'old'}, insurance = {textContent:'old'};
+  const ctx = vm.createContext({document:{getElementById:id=>id==='addon-cards-list'?card:insurance},authUser:null,switchView:id=>{ctx.target=id;}});
+  vm.runInContext(controls,ctx); ctx.toggleAddonView(); assert.equal(ctx.target,'insurance-cards-view');
+  ctx.renderAddons(); assert.equal(card.textContent,'로그인 후 확인할 수 있습니다.'); assert.equal(insurance.textContent,card.textContent);
+});
 function memory() {
   const values = new Map();
   return { getItem: k => values.get(k) ?? null, setItem: (k,v) => values.set(k,String(v)), removeItem: k => values.delete(k), values };

@@ -31,6 +31,7 @@
     const IMPORT_AUDIT_KEY = 'smartbook_v2_tx_import_runs';
     const APP_UI_STATE_KEY = 'netvisualizer.app.ui-state.v1';
     const RESTORABLE_VIEW_IDS = new Set([
+        'insurance-cards-view',
         'dashboard-view',
         'portfolio-view',
         'routine-checklist-view',
@@ -1055,7 +1056,7 @@
         if ((dashboard || cashFlow) && activeViewId === 'cashflow-lab-view') window.CashflowLab?.render();
         if (portfolio && activeViewId === 'portfolio-view') renderPortfolio();
         if ((dashboard || portfolio || investDetail || investmentLab) && activeViewId === 'investment-lab-view') window.InvestmentLab?.render();
-        if (addons && activeViewId === 'cashflow-view' && typeof renderAddons === 'function') renderAddons();
+        if (addons && (activeViewId === 'cashflow-view' || activeViewId === 'insurance-cards-view') && typeof renderAddons === 'function') renderAddons();
         if (realEstate && typeof renderRealEstate === 'function') renderRealEstate();
         if (investDetail && activeInvestGroupName) renderInvestDetail(activeInvestGroupName);
     }

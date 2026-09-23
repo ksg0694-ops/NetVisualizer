@@ -44,6 +44,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     // Cashflow view controls and add-on rendering live in js/features/cashflowControls.js.
 
     const views = {
+        'insurance-cards-view': document.getElementById('insurance-cards-view'),
         'dashboard-view': document.getElementById('dashboard-view'), 'portfolio-view': document.getElementById('portfolio-view'),
         'career-view': document.getElementById('career-view'), 'project-view': document.getElementById('project-view'),
         'routine-checklist-view': document.getElementById('routine-checklist-view'),
@@ -58,9 +59,10 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     };
 
     const viewContextMeta = {
+        'insurance-cards-view': { label: '생활 도구', title: '보험·카드 관리' },
         'dashboard-view': { label: '재무 목표', title: '재무 홈' },
-        'routine-checklist-view': { label: '생활 도구', title: '할 일' },
-        'learning-archive-view': { label: '생활 도구', title: '학습 아카이브' },
+        'routine-checklist-view': { label: '생활 도구', title: '할 일 (삭제 예정)' },
+        'learning-archive-view': { label: '생활 도구', title: '학습 아카이브 (삭제 예정)' },
         'health-view': { label: '생활 도구', title: '건강 기록' },
         'personal-cfo-view': { label: '재무 도구', title: '개인 CFO' },
         'portfolio-view': { label: '재무 도구', title: '포트폴리오' },
@@ -170,6 +172,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         if (targetId === 'cashflow-view') toggleManageView(false);
 
         if (targetId === 'dashboard-view') renderSections({ financeSummary: true });
+        else if (targetId === 'insurance-cards-view') renderSections({ addons: true });
         else if (targetId === 'portfolio-view') renderSections({ portfolio: true });
         else if (targetId === 'cashflow-lab-view') window.CashflowLab?.render();
         else if (targetId === 'investment-lab-view') window.InvestmentLab?.render();
@@ -241,6 +244,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
 
     if (new URLSearchParams(location.search).get('view') === 'cashflow-lab') activeViewId = 'cashflow-lab-view';
     if (new URLSearchParams(location.search).get('view') === 'investment-lab') activeViewId = 'investment-lab-view';
+    if (new URLSearchParams(location.search).get('view') === 'insurance-cards') activeViewId = 'insurance-cards-view';
     window.openLegacyCashflowFromLab = (periodKey) => {
         if (monthlyDB[periodKey]) cashFlowMonthKey = periodKey;
         switchView('cashflow-view');

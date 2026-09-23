@@ -1,20 +1,20 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Lab copy cleanup",
+  "feature": "Life tools navigation",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-09-21",
+  "updatedAt": "2026-09-23",
   "status": "complete",
   "completed": [
-    "Removed repetitive source, comparison-month and numeric axis explanations",
-    "Both Lab calculation references reduced to three short lines",
-    "Full npm check passed, including 31 foundation tests",
-    "Collapsed and expanded cashflow reference visually verified using synthetic data",
-    "Offline assets and v190 cache prepared; data and calculations unchanged"
+    "Independent insurance/card life-tools view and desktop/mobile navigation",
+    "Legacy shortcut, restorable state, direct route and data refresh integrated",
+    "Task/archive marked pending deletion with features and data retained",
+    "Full npm check passed including 32 foundation tests; desktop/mobile navigation verified",
+    "v191 assets prepared; no backup, deletion or database changes performed"
   ],
   "remaining": [],
-  "nextStep": "Refresh the live Labs to review the reduced copy.",
+  "nextStep": "Review the life-tools menu; back up task/archive data before any future deletion.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }

@@ -17,17 +17,17 @@
         }
     }
     function toggleAddonView() {
-        const main = document.getElementById('stats-main-content');
-        const manage = document.getElementById('stats-manage-content');
-        const addon = document.getElementById('stats-addon-content');
-        if(main) { main.classList.add('hidden'); main.classList.remove('flex'); }
-        if(manage) { manage.classList.add('hidden'); manage.classList.remove('flex'); }
-        if(addon) { addon.classList.remove('hidden'); addon.classList.add('flex'); }
+        switchView('insurance-cards-view');
     }
 
     function renderAddons() {
         const cardsContainer = document.getElementById('addon-cards-list');
         const insContainer = document.getElementById('addon-insurance-list');
+
+        if (!authUser) {
+            for (const container of [cardsContainer, insContainer]) if (container) container.textContent = '로그인 후 확인할 수 있습니다.';
+            return;
+        }
 
         if (cardsContainer) {
             cardsContainer.innerHTML = addonCards.map(c => `
@@ -59,7 +59,7 @@
                         ${c.prt_real ? `<span class="bg-emerald-50 text-emerald-600 px-2 py-1 rounded">Real 피킹률: <b>${escapeHtml(c.prt_real)}</b></span>` : ''}
                     </div>` : ''}
                 </div>
-            `).join('');
+            `).join('') || '<p class="text-sm text-gray-500">등록된 카드가 없습니다.</p>';
         }
 
         if (insContainer) {
@@ -97,7 +97,7 @@
                     </div>
                 </div>
                 `;
-            }).join('');
+            }).join('') || '<p class="text-sm text-gray-500">등록된 보험이 없습니다.</p>';
 
             setTimeout(() => {
                 const bars = insContainer.querySelectorAll('[data-width]');
