@@ -2,19 +2,19 @@
 (function (root) {
     'use strict';
     let selectedKey = '', reportMode = false, spendingUnit = 'daily';
-    const colors = { income: '#64748b', spending: '#3f3f46', comparison: '#a1a1aa', positive: '#64748b', negative: '#3f3f46' };
+    const colors = { income: '#0d9488', spending: '#6366f1', comparison: '#94a3b8', positive: '#0f766e', negative: '#b45309' };
     const won = value => value == null ? '—' : `${Math.round(value).toLocaleString('ko-KR')}원`;
     const compact = value => value == null ? '—' : `${(value / 10000).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}만`;
     function text(id, value) { const element = document.getElementById(id); if (element) element.textContent = value; }
     function mount(container) {
         container.innerHTML = `
             <div class="cfl-header">
-                <div><p class="cfl-eyebrow">2026 · CASH FLOW</p><h2>현금흐름 Lab</h2></div>
+                <div><p class="cfl-eyebrow">2026 · CASH FLOW</p><h2>현금흐름</h2></div>
                 <div class="cfl-controls">
                     <button type="button" id="cfl-dashboard" aria-pressed="true">대시보드</button>
                     <button type="button" id="cfl-report" aria-pressed="false">리포트</button>
                     <button type="button" id="cfl-print">인쇄 / PDF</button>
-                    <button type="button" id="cfl-old">구버전 비교 ↗</button>
+                    <button type="button" id="cfl-old">구버전 (삭제 예정) ↗</button>
                 </div>
             </div>
             <div class="cfl-report" id="cfl-report-summary"><h3>2026 현금흐름 리포트</h3><ol id="cfl-findings"></ol></div>
@@ -100,11 +100,11 @@
         text('cfl-spending-reference', `종료 주기 중앙값 ${won(daily ? model.dailySpendingReference : model.spendingReference)}${daily ? '/일' : ''}`);
         text('cfl-income-reference', `종료 주기 중앙값 ${won(model.incomeRange?.median ?? null)}`);
         chart('year', labels, [
-            { label: daily ? '일평균 소비' : '월 총소비', data: model.monthly.map(row => daily ? row.dailySpending : row.spending), backgroundColor: model.monthly.map(row => row.partial ? '#a1a1aa' : colors.spending), borderRadius: 3 },
+            { label: daily ? '일평균 소비' : '월 총소비', data: model.monthly.map(row => daily ? row.dailySpending : row.spending), backgroundColor: model.monthly.map(row => row.partial ? '#c7d2fe' : colors.spending), borderRadius: 6, maxBarThickness: 34 },
             reference(daily ? model.dailySpendingReference : model.spendingReference, '종료 주기 중앙값'),
         ], { onClick: selectFromChart });
         chart('income', labels, [
-            { label: '월 소득', data: model.monthly.map(row => row.income), backgroundColor: model.monthly.map(row => row.partial ? '#cbd5e1' : colors.income), borderRadius: 3 },
+            { label: '월 소득', data: model.monthly.map(row => row.income), backgroundColor: model.monthly.map(row => row.partial ? '#99f6e4' : colors.income), borderRadius: 6, maxBarThickness: 34 },
             reference(model.incomeRange?.median ?? null, '종료 주기 중앙값'),
         ], { onClick: selectFromChart });
         chart('net', labels, [{ label: '장부상 잉여', data: model.monthly.map(row => row.net), backgroundColor: model.monthly.map(row => row.net < 0 ? colors.negative : colors.positive), borderRadius: 3 }]);

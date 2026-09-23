@@ -1,20 +1,20 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Life tools navigation",
+  "feature": "Cashflow promotion and visual refresh",
   "phase": "report",
   "progress": 100,
   "updatedAt": "2026-09-23",
   "status": "complete",
   "completed": [
-    "Independent insurance/card life-tools view and desktop/mobile navigation",
-    "Legacy shortcut, restorable state, direct route and data refresh integrated",
-    "Task/archive marked pending deletion with features and data retained",
-    "Full npm check passed including 32 foundation tests; desktop/mobile navigation verified",
-    "v191 assets prepared; no backup, deletion or database changes performed"
+    "Cashflow Lab promoted; legacy cashflow marked pending deletion without removal",
+    "Clean cashflow direct link added with existing Lab route preserved",
+    "Teal income and indigo spending palette with softly tinted KPI cards",
+    "Full npm check passed including 33 foundation tests; desktop and 390px mobile inspected",
+    "v192 assets prepared; private read-only fixed-cost review, no database changes"
   ],
   "remaining": [],
-  "nextStep": "Review the life-tools menu; back up task/archive data before any future deletion.",
+  "nextStep": "Review fixed-cost categories and billing-month attribution before implementing a fixed-cost dashboard.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }

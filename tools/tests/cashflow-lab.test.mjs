@@ -3,6 +3,15 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
 const context = vm.createContext({});
+test('promoted cashflow name keeps legacy view and both direct links', async () => {
+    const shell = await readFile(new URL('../../js/features/appShell.js', import.meta.url), 'utf8');
+    const view = await readFile(new URL('../../js/features/cashflowLab.js', import.meta.url), 'utf8');
+    assert.ok(shell.includes("title: '현금흐름 (삭제 예정)'"));
+    assert.ok(shell.includes("get('view') === 'cashflow'"));
+    assert.ok(shell.includes('cashflow-lab'));
+    assert.ok(!view.includes('현금흐름 Lab'));
+    assert.ok(view.includes('구버전 (삭제 예정)'));
+});
 test('Lab reference copy stays short without removing tables or data warnings', async () => {
     const view = await readFile(new URL('../../js/features/cashflowLab.js', import.meta.url), 'utf8');
     for (const removed of ['원천: 로그인 계정', '관측 기준', '소비 기준선:', 'Y축 고정:', 'cfl-source-status', 'cfl-axis-note']) assert.ok(!view.includes(removed));

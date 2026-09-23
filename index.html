@@ -19,7 +19,7 @@
     <!-- Tailwind CSS -->
     <link rel="stylesheet" href="./styles/app.css?v=20260824-tailwind-v4-1">
     <link rel="stylesheet" href="./styles/foundation.css">
-    <link rel="stylesheet" href="./styles/cashflow-lab.css?v=20260916-neutral-1">
+    <link rel="stylesheet" href="./styles/cashflow-lab.css?v=20260923-cashflow-1">
     <link rel="stylesheet" href="./styles/investment-lab.css?v=20260916-map-1">
     <!-- Supabase JS -->
     <script defer src="./vendor/supabase.js"></script>
@@ -51,7 +51,7 @@
     <script defer src="./js/features/spendingAnalysis.js?v=20260915-comparison-2"></script>
     <script defer src="./js/features/financeViews.js?v=20260915-income-spending-2"></script>
     <script defer src="./js/features/cashflowLabModel.js?v=20260915-comparison-2"></script>
-    <script defer src="./js/features/cashflowLab.js?v=20260921-copy-1"></script>
+    <script defer src="./js/features/cashflowLab.js?v=20260923-cashflow-1"></script>
     <script defer src="./js/features/investmentLabModel.js?v=20260916-map-1"></script>
     <script defer src="./js/features/investmentLab.js?v=20260921-copy-1"></script>
     <script defer src="./js/features/healthTracker.js?v=20260913-foundation-1"></script>
@@ -116,9 +116,9 @@
                             <i class="fas fa-file-invoice-dollar w-4 text-center text-xs"></i> <span class="truncate">Monthly Report</span>
                         </a>
                         <a href="#" data-target="cashflow-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
-                            <i class="fas fa-arrow-right-arrow-left w-4 text-center text-xs"></i> <span class="truncate">현금흐름</span>
+                            <i class="fas fa-arrow-right-arrow-left w-4 text-center text-xs"></i> <span class="truncate">현금흐름 <small class="text-gray-400">(삭제 예정)</small></span>
                         </a>
-                        <a href="#" data-target="cashflow-lab-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all"><i class="fas fa-chart-column w-4 text-center text-xs"></i><span>현금흐름 Lab</span><span class="text-[10px] text-indigo-600">NEW</span></a>
+                        <a href="#" data-target="cashflow-lab-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all"><i class="fas fa-chart-column w-4 text-center text-xs"></i><span>현금흐름</span></a>
                         <a href="#" data-target="investment-lab-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all"><i class="fas fa-table-cells-large w-4 text-center text-xs"></i><span>투자 Lab</span><span class="text-[10px] text-indigo-600">NEW</span></a>
                         <a href="#" data-target="portfolio-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
                             <i class="fas fa-briefcase w-4 text-center text-xs"></i> <span class="truncate">포트폴리오</span>
@@ -1036,7 +1036,7 @@
                 </div>
             </div>
 
-            <div id="cashflow-lab-view" class="view-section hidden max-w-6xl mx-auto w-full" aria-label="현금흐름 Lab 분석 대시보드"></div>
+            <div id="cashflow-lab-view" class="view-section hidden max-w-6xl mx-auto w-full" aria-label="현금흐름 분석 대시보드"></div>
             <div id="investment-lab-view" class="view-section hidden max-w-6xl mx-auto w-full" aria-label="투자 Lab 히트맵"></div>
             <!-- 4. 현금흐름 상세 뷰 -->
             <div id="cashflow-view" class="view-section hidden max-w-6xl mx-auto w-full flex flex-col">
@@ -1607,8 +1607,8 @@
                 <div class="space-y-1">
                     <button type="button" data-mobile-nav-target="dashboard-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-coins mr-2 w-4 text-center text-xs"></i>재무 홈</button>
                     <button type="button" data-mobile-nav-target="stats-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-file-invoice-dollar mr-2 w-4 text-center text-xs"></i>Monthly Report</button>
-                    <button type="button" data-mobile-nav-target="cashflow-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-arrow-right-arrow-left mr-2 w-4 text-center text-xs"></i>현금흐름</button>
-                    <button type="button" data-mobile-nav-target="cashflow-lab-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-chart-column mr-2 w-4 text-center text-xs"></i>현금흐름 Lab · NEW</button>
+                    <button type="button" data-mobile-nav-target="cashflow-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-arrow-right-arrow-left mr-2 w-4 text-center text-xs"></i>현금흐름 (삭제 예정)</button>
+                    <button type="button" data-mobile-nav-target="cashflow-lab-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-chart-column mr-2 w-4 text-center text-xs"></i>현금흐름</button>
                     <button type="button" data-mobile-nav-target="investment-lab-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-table-cells-large mr-2 w-4 text-center text-xs"></i>투자 Lab · NEW</button>
                     <button type="button" data-mobile-nav-target="portfolio-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-briefcase mr-2 w-4 text-center text-xs"></i>포트폴리오</button>
                     <button type="button" data-mobile-nav-target="asset-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-bullseye mr-2 w-4 text-center text-xs"></i>장기 목표</button>
@@ -1900,6 +1900,6 @@
     <div id="toast-container" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[90%] md:w-auto max-w-sm"></div>
 
     <script defer src="./js/features/learningArchive.js?v=20260913-foundation-1"></script>
-    <script defer src="./js/features/appShell.js?v=20260923-life-1"></script>
+    <script defer src="./js/features/appShell.js?v=20260923-cashflow-1"></script>
 </body>
 </html>

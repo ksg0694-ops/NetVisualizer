@@ -67,8 +67,8 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         'personal-cfo-view': { label: '재무 도구', title: '개인 CFO' },
         'portfolio-view': { label: '재무 도구', title: '포트폴리오' },
         'stats-view': { label: '재무 도구', title: 'Monthly Report' },
-        'cashflow-view': { label: '재무 도구', title: '현금흐름' },
-        'cashflow-lab-view': { label: '재무 도구 · 실험실', title: '현금흐름 Lab' },
+        'cashflow-view': { label: '재무 도구', title: '현금흐름 (삭제 예정)' },
+        'cashflow-lab-view': { label: '재무 도구', title: '현금흐름' },
         'investment-lab-view': { label: '재무 도구 · 실험실', title: '투자 Lab' },
         'asset-view': { label: '재무 도구', title: '장기 목표' },
         'realestate-view': { label: '재무 도구', title: '부동산' },
@@ -243,6 +243,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     });
 
     if (new URLSearchParams(location.search).get('view') === 'cashflow-lab') activeViewId = 'cashflow-lab-view';
+    if (new URLSearchParams(location.search).get('view') === 'cashflow') activeViewId = 'cashflow-lab-view';
     if (new URLSearchParams(location.search).get('view') === 'investment-lab') activeViewId = 'investment-lab-view';
     if (new URLSearchParams(location.search).get('view') === 'insurance-cards') activeViewId = 'insurance-cards-view';
     window.openLegacyCashflowFromLab = (periodKey) => {
