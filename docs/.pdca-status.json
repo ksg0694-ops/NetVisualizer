@@ -1,20 +1,20 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Cashflow promotion and visual refresh",
+  "feature": "Cashflow feedback and fixed-cost management",
   "phase": "report",
   "progress": 100,
   "updatedAt": "2026-09-23",
   "status": "complete",
   "completed": [
-    "Cashflow Lab promoted; legacy cashflow marked pending deletion without removal",
-    "Clean cashflow direct link added with existing Lab route preserved",
-    "Teal income and indigo spending palette with softly tinted KPI cards",
-    "Full npm check passed including 33 foundation tests; desktop and 390px mobile inspected",
-    "v192 assets prepared; private read-only fixed-cost review, no database changes"
+    "Annotated cashflow feedback applied; compact cards, adaptive pace axis and category deltas",
+    "Life tools fixed-cost register with create/edit/pause and candidate drafts",
+    "Owner-scoped cloud table applied; optimistic version checks and no hard delete",
+    "Full npm check passed including 38 foundation tests; desktop and 390px mobile inspected",
+    "v193 assets prepared; no changes to existing transaction or insurance records"
   ],
   "remaining": [],
-  "nextStep": "Review fixed-cost categories and billing-month attribution before implementing a fixed-cost dashboard.",
+  "nextStep": "Register fixed-cost items and confirm planned monthly amounts before saving.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }

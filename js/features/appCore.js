@@ -32,6 +32,7 @@
     const APP_UI_STATE_KEY = 'netvisualizer.app.ui-state.v1';
     const RESTORABLE_VIEW_IDS = new Set([
         'insurance-cards-view',
+        'fixed-costs-view',
         'dashboard-view',
         'portfolio-view',
         'routine-checklist-view',
@@ -682,8 +683,11 @@
         }
     }
 
+    window.getFixedCostContext = () => ({ userId: authUser?.id || '', client: getSupabaseClient() });
+
     function setAuthSession(session) {
         if (!window.AccountStorage.activate(session?.user?.id)) return false;
+        if (authUser?.id !== session?.user?.id) window.FixedCosts?.reset();
         authSession = session || null;
         authUser = authSession?.user || null;
         updateAuthUi();
@@ -1054,6 +1058,7 @@
             renderCashFlow();
         }
         if ((dashboard || cashFlow) && activeViewId === 'cashflow-lab-view') window.CashflowLab?.render();
+        if (activeViewId === 'fixed-costs-view') window.FixedCosts?.render();
         if (portfolio && activeViewId === 'portfolio-view') renderPortfolio();
         if ((dashboard || portfolio || investDetail || investmentLab) && activeViewId === 'investment-lab-view') window.InvestmentLab?.render();
         if (addons && (activeViewId === 'cashflow-view' || activeViewId === 'insurance-cards-view') && typeof renderAddons === 'function') renderAddons();

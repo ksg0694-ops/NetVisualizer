@@ -7,6 +7,12 @@
         const sorted = [...values].sort((a, b) => a - b), middle = Math.floor(sorted.length / 2);
         return sorted.length ? (sorted[middle] + sorted[Math.floor((sorted.length - 1) / 2)]) / 2 : null;
     };
+    function categoryDelta(row) {
+        if (row.average == null) return '비교 없음';
+        if (row.average === 0) return row.current === 0 ? '0%' : '신규';
+        const percent = (row.current / row.average - 1) * 100;
+        return `${percent > 0 ? '+' : ''}${percent.toFixed(0)}%`;
+    }
     function build(periods, selectedKey, today, isRepayment, analyze) {
         const ordered = [...periods].filter(p => Number.isFinite(day(p.startDate)) && day(p.endDate) >= day(p.startDate))
             .sort((a, b) => a.startDate.localeCompare(b.startDate));
@@ -84,11 +90,12 @@
         const dailySpendingReference = median(closed.map(row => row.dailySpending));
         const maximumConsumption = Math.max(0, ...ordered.map(p => summarize(p).spending || 0));
         const paceAxisMax = Math.max(100000, Math.ceil(maximumConsumption * 1.05 / 100000) * 100000);
+        const visiblePaceAxisMax = Math.max(100000, Math.ceil(Math.max(0, ...curves.current.filter(Number.isFinite), ...curves.baseline.filter(Number.isFinite)) * 1.1 / 100000) * 100000);
         return { monthly, annual, availableCount: available.length, selected, currentKey: currentPeriod?.key,
             isCurrent: !!selected && selected.startDate <= today && selected.endDate >= today,
-            analysis, curves, categories, incomeRange, spendingReference, dailySpendingReference, paceAxisMax, today,
+            analysis, curves, categories, incomeRange, spendingReference, dailySpendingReference, paceAxisMax, visiblePaceAxisMax, today,
             periods: ordered.filter(p => p.startDate <= today).map(p => ({ key: p.key, label: p.label || p.key })),
             provisional: available.some(row => row.status !== '마감 확인') };
     }
-    root.CashflowLabModel = Object.freeze({ build });
+    root.CashflowLabModel = Object.freeze({ build, categoryDelta });
 })(globalThis);

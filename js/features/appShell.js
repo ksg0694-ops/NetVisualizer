@@ -44,6 +44,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     // Cashflow view controls and add-on rendering live in js/features/cashflowControls.js.
 
     const views = {
+        'fixed-costs-view': document.getElementById('fixed-costs-view'),
         'insurance-cards-view': document.getElementById('insurance-cards-view'),
         'dashboard-view': document.getElementById('dashboard-view'), 'portfolio-view': document.getElementById('portfolio-view'),
         'career-view': document.getElementById('career-view'), 'project-view': document.getElementById('project-view'),
@@ -59,6 +60,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
     };
 
     const viewContextMeta = {
+        'fixed-costs-view': { label: '생활 도구', title: '고정비 관리' },
         'insurance-cards-view': { label: '생활 도구', title: '보험·카드 관리' },
         'dashboard-view': { label: '재무 목표', title: '재무 홈' },
         'routine-checklist-view': { label: '생활 도구', title: '할 일 (삭제 예정)' },
@@ -172,6 +174,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         if (targetId === 'cashflow-view') toggleManageView(false);
 
         if (targetId === 'dashboard-view') renderSections({ financeSummary: true });
+        else if (targetId === 'fixed-costs-view') window.FixedCosts?.render();
         else if (targetId === 'insurance-cards-view') renderSections({ addons: true });
         else if (targetId === 'portfolio-view') renderSections({ portfolio: true });
         else if (targetId === 'cashflow-lab-view') window.CashflowLab?.render();
@@ -242,6 +245,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         switchView(target);
     });
 
+    if (new URLSearchParams(location.search).get('view') === 'fixed-costs') activeViewId = 'fixed-costs-view';
     if (new URLSearchParams(location.search).get('view') === 'cashflow-lab') activeViewId = 'cashflow-lab-view';
     if (new URLSearchParams(location.search).get('view') === 'cashflow') activeViewId = 'cashflow-lab-view';
     if (new URLSearchParams(location.search).get('view') === 'investment-lab') activeViewId = 'investment-lab-view';

@@ -10,7 +10,7 @@ test('promoted cashflow name keeps legacy view and both direct links', async () 
     assert.ok(shell.includes("get('view') === 'cashflow'"));
     assert.ok(shell.includes('cashflow-lab'));
     assert.ok(!view.includes('현금흐름 Lab'));
-    assert.ok(view.includes('구버전 (삭제 예정)'));
+    assert.ok(!view.includes('id="cfl-old"'));
 });
 test('Lab reference copy stays short without removing tables or data warnings', async () => {
     const view = await readFile(new URL('../../js/features/cashflowLab.js', import.meta.url), 'utf8');
@@ -22,6 +22,15 @@ test('Lab reference copy stays short without removing tables or data warnings', 
     assert.ok(investment.includes('미실현 가격손익 · 환차손익·배당·수수료 제외'));
 });
 for (const file of ['spendingAnalysis', 'cashflowLabModel']) vm.runInContext(await readFile(new URL(`../../js/features/${file}.js`, import.meta.url), 'utf8'), context);
+test('annotation feedback removes header actions and handles percentage baselines', async () => {
+    const view = await readFile(new URL('../../js/features/cashflowLab.js', import.meta.url), 'utf8');
+    for (const id of ['cfl-report', 'cfl-print', 'cfl-old']) assert.ok(!view.includes(`id="${id}"`));
+    assert.ok(view.includes('cfl-common-scale'));
+    assert.equal(context.CashflowLabModel.categoryDelta({current:120,average:100}), '+20%');
+    assert.equal(context.CashflowLabModel.categoryDelta({current:50,average:100}), '-50%');
+    assert.equal(context.CashflowLabModel.categoryDelta({current:50,average:0}), '신규');
+    assert.equal(context.CashflowLabModel.categoryDelta({current:50,average:null}), '비교 없음');
+});
 const repayment = tx => tx.type === '지출' && tx.category === '상환';
 const tx = (date, amount, type = '지출', category = '생활') => ({ date, amount, type, category });
 function fixture() {

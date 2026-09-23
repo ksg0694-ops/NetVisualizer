@@ -1,4 +1,35 @@
-# Version 1.04.03 Design QA
+# Cashflow feedback / fixed-cost management QA — 2026-09-23
+
+## Latest evidence and findings
+- Source visual truth: user-annotated clipboard images ending `bfe1-2e92950a0fb8.png`,
+  `b15c-ff251c780969.png`, `befd-0c6ef3f6ddae.png` (private attachments, not published).
+- Implementation: `outputs/cashflow-feedback-desktop.png` (private local fixture).
+- Desktop CSS viewport 1217x900, full-page capture 1217x1336, 1x density;
+  source first crop 1217x742. Compared matching dashboard regions in the same
+  image-tool response. Synthetic values differ intentionally from account data;
+  this review covers layout and controls, not financial-value pixel equality.
+- Typography: existing font family and hierarchy retained; category delta labels
+  readable. No decorative raster assets are present or needed.
+- Spacing: KPI and summary padding reduced; removed actions and explanatory copy.
+- Colors: existing mint/indigo mapping retained. No new color-only meanings.
+- Copy: report/print/legacy header actions removed; category signed percent and
+  unavailable/zero-baseline states shown. Legacy navigation remains available.
+- First screenshot found unequal annual chart baselines from select/header heights
+  (P2). Matched header heights and recaptured; latest screenshot shows alignment.
+- Detail region: visible-series Y-axis avoids unused range; common-scale option
+  retains cross-period comparison. Labels and chart regions do not overlap.
+- Fixed-cost fixture: edit 20000 to 22000, candidate draft/insert, and pause/save
+  update list and totals. 390x844 mobile viewport: no horizontal overflow; all
+  fields, save/cancel and list controls remain accessible. Console error lists empty.
+- Integrated app route and signed-out disabled controls inspected. Production
+  authenticated UI save was not tested with personal records; SQL/RLS and store
+  behavior have automated tests. No actionable P0/P1/P2 findings remain.
+
+final result: passed
+
+---
+
+# Previous Version 1.04.03 Design QA
 
 ## Evidence
 
