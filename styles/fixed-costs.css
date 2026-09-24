@@ -34,4 +34,39 @@
 .fc-candidates summary {cursor:pointer;font-size:14px;font-weight:600;margin-bottom:10px;}
 .fc-candidate {padding:10px 0;border-bottom:1px solid #e2e8f0;font-size:13px;}
 .fc-candidate span {overflow-wrap:anywhere;min-width:0;}
-@media(max-width:600px) {.fc-header {padding:16px;}.fc-summary {grid-template-columns:1fr;gap:8px;}.fc-summary>div {display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;}.fc-summary strong {font-size:21px;margin:0;}.fc-fields {grid-template-columns:1fr;}.fc-item {align-items:flex-start;padding:14px;}.fc-item-end {flex-direction:column;gap:8px;align-items:flex-end;}.fc-item-end strong {font-size:16px;}#fixed-costs-view input,#fixed-costs-view select {font-size:16px;min-height:44px;}#fixed-costs-view button {min-height:44px;}}
+.fc-header {padding:0 0 14px;background:transparent;border:0;border-radius:0;}
+.fc-header h2 {font-size:22px;}
+#fc-message:empty {display:none;}
+.fc-summary {gap:10px;}
+.fc-summary>div {padding:12px 16px;border-radius:10px;}
+.fc-summary>div:first-child {background:#f0fdfa;border-color:#99e3d7;}
+.fc-summary strong {font-size:22px;margin-top:3px;}
+.fc-list-heading {margin:18px 0 10px;flex-wrap:wrap;}
+.fc-list-heading h3 {font-size:15px;}
+#fc-count {display:block;font-size:11px;font-weight:400;color:#64748b;margin-top:3px;}
+#fc-list {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:12px;}
+.fc-group {background:white;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;min-width:0;}
+.fc-group-heading {display:flex;align-items:center;justify-content:space-between;gap:4px;flex-wrap:wrap;padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;}
+.fc-group-heading h3 {font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.fc-group-heading i {color:#0f766e;width:16px;text-align:center;}
+.fc-group-heading small {font-size:11px;font-weight:400;color:#64748b;margin-left:4px;}
+.fc-group-heading>span {font-size:12px;color:#64748b;}
+.fc-group-heading strong {font-size:14px;color:#334155;font-variant-numeric:tabular-nums;}
+.fc-group .fc-item {padding:11px 14px;align-items:flex-start;border:0;border-bottom:1px solid #f1f5f9;border-radius:0;margin:0;gap:10px;}
+.fc-group .fc-item:last-child {border-bottom:0;}
+.fc-item-main {min-width:0;overflow-wrap:anywhere;}
+.fc-group .fc-item h4 {font-weight:650;font-size:13px;line-height:1.45;margin:0 0 3px;}
+.fc-group .fc-item p {font-size:11px;line-height:1.6;margin:0;}
+.fc-tag {display:inline-block;font-size:10px;background:#f0fdfa;border-radius:4px;padding:1px 5px;margin-top:3px;}
+.fc-paused .fc-tag {color:#64748b;background:#f1f5f9;}
+.fc-group .fc-item-end {align-items:flex-end;flex-direction:column;gap:5px;flex-shrink:0;}
+.fc-group .fc-item-end strong {font-size:14px;font-variant-numeric:tabular-nums;}
+#fixed-costs-view .fc-item-end button {min-height:30px;font-size:12px;padding:3px 10px;}
+.fc-item-note {margin-top:4px;}
+.fc-item-note summary {font-size:11px;color:#64748b;cursor:pointer;min-height:24px;padding:3px 0;}
+.fc-group .fc-item-note p {padding:5px 0;white-space:pre-wrap;}
+.fc-empty {grid-column:1/-1;}
+.fc-candidates {margin-top:18px;border-top:1px solid #e2e8f0;padding-top:12px;}
+.fc-candidates>summary {font-size:13px;min-height:36px;padding:6px 0;}
+@media(max-width:1100px) {#fc-list {grid-template-columns:1fr;}}
+@media(max-width:600px) {.fc-header {padding:0 0 12px;gap:10px;}.fc-header h2 {font-size:20px;}.fc-header .fc-actions {width:100%;justify-content:flex-end;gap:8px;}.fc-summary {grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}.fc-summary>div {padding:10px 12px;}.fc-summary>div:first-child {grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:8px;}.fc-summary strong {font-size:19px;}.fc-summary>div:first-child strong {margin:0;font-size:23px;}.fc-fields {grid-template-columns:1fr;}#fixed-costs-view input,#fixed-costs-view select {font-size:16px;min-height:44px;}#fixed-costs-view button,#fixed-costs-view .fc-item-end button {min-height:44px;}.fc-item-note summary {min-height:44px;padding-top:12px;}}

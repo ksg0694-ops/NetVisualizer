@@ -1,12 +1,15 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Retire legacy tabs and populate fixed costs",
+  "feature": "Compact grouped fixed-cost register",
   "phase": "report",
   "progress": 100,
   "updatedAt": "2026-09-24",
   "status": "complete",
   "completed": [
+    "Category grouping with active-only subtotals; display aliases leave stored records unchanged",
+    "Compact summary and grouped rows with expandable notes and explicit list refresh label",
+    "Synthetic desktop/mobile UI and editing/subtotal behavior inspected",
     "Private Todo and Learning TXT exports verified; source records preserved",
     "Finance Home and three retired tabs removed from navigation; retired routes resolve to current Cashflow",
     "Retired note editors no longer loaded; persisted route migration covered by regression tests",
@@ -19,7 +22,7 @@
     "v193 assets prepared; no changes to existing transaction or insurance records"
   ],
   "remaining": [],
-  "nextStep": "Verify v194 deployment, download private TXT backups and review inactive fixed-cost candidates.",
+  "nextStep": "Verify v195 deployment and review grouped fixed costs on the signed-in device.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }

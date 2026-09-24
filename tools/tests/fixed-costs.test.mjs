@@ -7,6 +7,17 @@ const source = p => readFile(new URL('../../'+p,import.meta.url),'utf8');
 const c=vm.createContext({});
 vm.runInContext(await source('js/features/fixedCostsStore.js'),c);
 const draft={name:'Internet',category:'인터넷',kind:'fixed',monthly_amount:20000,pay_day:25,is_active:true};
+test('category groups preserve rows and exclude paused amounts without mutating inputs',()=>{
+    const rows = [{...draft,id:'1',category:'보험료',monthly_amount:100}, {...draft,id:'2',category:'보험',monthly_amount:200,is_active:false}, {...draft,id:'3',category:'관리비',monthly_amount:300}, {...draft,id:'4',category:'미지정 분류',monthly_amount:400}];
+    const before = JSON.stringify(rows), groups = c.FixedCostsStore.groupRows(rows);
+    assert.equal(groups.map(g=>g.label).join(','),'보험,주거,기타');
+    assert.equal(groups.reduce((n,g)=>n+g.total,0),800);
+    assert.equal(groups.reduce((n,g)=>n+g.rows.length,0),4);
+    assert.equal(groups[0].activeCount,1);
+    assert.equal(JSON.stringify(rows),before);
+    assert.equal(c.FixedCostsStore.groupRows([]).length,0);
+    assert.equal(c.FixedCostsStore.groupRows([{...draft,is_active:false}])[0].total,0);
+});
 test('fixed-cost validation rejects invalid amounts and days; preserves inactive state',()=>{
     assert.equal(c.FixedCostsStore.normalize(draft).monthly_amount,20000);
     for(const monthly_amount of ['',-1,Infinity,1.5,null]) {

@@ -37,5 +37,24 @@
             }
         };
     }
-    root.FixedCostsStore = Object.freeze({ normalize, create });
+    const categoryGroups = [
+        ['보험', ['보험', '보험료']], ['통신', ['통신', '통신비']],
+        ['인터넷', ['인터넷', '인터넷비']], ['구독', ['구독', '구독비']],
+        ['주거', ['주거', '주거비', '관리비', '월세']], ['교통', ['교통', '교통비', '대중교통', '철도']],
+    ];
+    function groupRows(rows) {
+        const groups = new Map();
+        for (const row of rows) {
+            const label = categoryGroups.find(([, aliases]) => aliases.includes(String(row.category).trim()))?.[0] || '기타';
+            if (!groups.has(label)) groups.set(label, { label, rows: [], total: 0, activeCount: 0 });
+            const group = groups.get(label); group.rows.push(row);
+            if (row.is_active) { group.total += Number(row.monthly_amount); group.activeCount++; }
+        }
+        return [...categoryGroups.map(([label]) => label), '기타'].filter(label => groups.has(label)).map(label => {
+            const group = groups.get(label);
+            group.rows.sort((a,b) => Number(b.is_active) - Number(a.is_active) || (a.pay_day || 32) - (b.pay_day || 32) || a.name.localeCompare(b.name, 'ko'));
+            return group;
+        });
+    }
+    root.FixedCostsStore = Object.freeze({ normalize, create, groupRows });
 })(globalThis);
