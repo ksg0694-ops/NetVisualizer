@@ -423,7 +423,13 @@ Deno.serve(async (req) => {
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey)
+  const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || ''
+  const { data: identity, error: identityError } = await supabase.auth.getUser(bearer)
+  if (identityError || !identity.user) return jsonResponse({ error: 'Authentication required' }, 401)
   const body = (await req.json().catch(() => ({}))) as QuoteRequest
+  if (body.tickers && (!Array.isArray(body.tickers) || body.tickers.length > 64 || body.tickers.some(t => typeof t !== 'string'))) {
+    return jsonResponse({ error: 'At most 64 ticker strings required' }, 400)
+  }
   let tickers = normalizeTickers(body.tickers)
   const currencyByTicker: Record<string, string> = {}
 
@@ -431,6 +437,7 @@ Deno.serve(async (req) => {
     const { data, error } = await supabase
       .from('portfolios')
       .select('ticker,currency')
+      .eq('user_id', identity.user.id)
       .not('ticker', 'is', null)
 
     if (error) return jsonResponse({ error: error.message }, 500)
@@ -448,6 +455,25 @@ Deno.serve(async (req) => {
 
   try {
     const today = getKoreaDateString()
+    // USD holdings need a current KRW conversion, not the old seed rate.
+    // Reuse the configured free Yahoo provider; failures preserve the previous rate.
+    const fxErrors: string[] = []
+    if (String(Deno.env.get('MARKET_PRICE_PROVIDER')).toLowerCase() === 'yahoo') {
+      const { data: fx } = await supabase.from('portfolio_fx_rates').select('rate_date,updated_at').eq('currency', 'USD').maybeSingle()
+      if (!fx || Date.now() - new Date(fx.updated_at).getTime() > 6 * 60 * 60 * 1000) {
+        try {
+          const result = await fetchYahooQuotes(['KRW=X'], { 'KRW=X': 'KRW' })
+          const quote = result.quotes[0]
+          if (!quote) throw new Error(result.errors.join('; ') || 'USD/KRW quote unavailable')
+          const age = (Date.parse(today) - Date.parse(quote.priceDate)) / 86400000
+          if (!(age >= 0 && age <= 7)) throw new Error('USD/KRW quote is stale')
+          if (!body.dryRun) {
+            const { error } = await supabase.from('portfolio_fx_rates').upsert({ currency: 'USD', krw_per_unit: quote.price, rate_date: quote.priceDate, source: 'api', source_label: 'Yahoo USD/KRW', updated_at: new Date().toISOString() }, { onConflict: 'currency' })
+            if (error) throw error
+          }
+        } catch (error) { fxErrors.push(`FX: ${error instanceof Error ? error.message : String(error)}`) }
+      }
+    }
     const { data: cachedRows, error: cacheError } = await supabase
       .from('portfolio_market_prices')
       .select('ticker,price,currency,price_date,source,updated_at')
@@ -481,11 +507,12 @@ Deno.serve(async (req) => {
         synced: 0,
         cached: cachedQuotes.length,
         tickers: cachedQuotes.map((quote) => quote.ticker),
-        errors: [],
+        errors: fxErrors,
       })
     }
 
     const { quotes, errors } = await fetchProviderQuotes(missingTickers, currencyByTicker)
+    errors.push(...fxErrors)
     if (quotes.length === 0) {
       return jsonResponse({ synced: 0, cached: cachedQuotes.length, errors }, cachedQuotes.length > 0 ? 200 : 502)
     }

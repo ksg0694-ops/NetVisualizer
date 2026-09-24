@@ -175,6 +175,7 @@
     };
 
     function renderPortfolio() {
+        if (window.BalanceSheet) return window.BalanceSheet.render();
         if (!currentMonthKey) return;
         const shortYear = currentMonthKey.substring(2, 4);
         const shortMonth = currentMonthKey.substring(5, 7);

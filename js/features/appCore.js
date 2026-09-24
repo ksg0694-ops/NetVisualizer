@@ -934,6 +934,15 @@
         });
     }
 
+    window.getBalanceSheetSource = function() {
+        const input = (dataCache.balanceSheetInputs || []).filter(r => r.user_id === authUser?.id).at(-1);
+        const positions = input?.positions || window.FinanceModel.buildCfoAssetGroups(dynamicPortfolioData).groups.flatMap(g => g.items.map(p => ({...p, group:g.key,account:p.accountName})));
+        return { owner:authUser?.id || '', authenticated:Boolean(authUser), today:window.AppUtils.toLocalDateString(),
+            positions:authUser ? positions : [], asOf:input?.as_of || '', url:input?.source_url || '',
+            history:authUser ? dataCache.asset || [] : [], flows:authUser ? (dataCache.balanceSheetFlows || []).filter(r=>r.user_id===authUser.id) : [],
+            getPrice:getMarketPriceForTicker, getFx:getFxRateForCurrency };
+    };
+
     function formatUnitPrice(value, currency = '') {
         const number = Number(value);
         if (!Number.isFinite(number)) return '미입력';
@@ -1079,6 +1088,11 @@
                 'portfolio_market_prices', 'portfolio_market_price_overrides', 'portfolio_fx_rates',
             ].some(table => tableSet.has(table)),
             portfolio: tableSet.has('transactions')
+                || tableSet.has('personal_balance_sheet_inputs')
+                || tableSet.has('personal_balance_sheet_flows')
+                || tableSet.has('portfolio_market_prices')
+                || tableSet.has('portfolio_market_price_overrides')
+                || tableSet.has('portfolio_fx_rates')
                 || tableSet.has('assets')
                 || tableSet.has('portfolios')
                 || tableSet.has('portfolio_strategy_definitions'),

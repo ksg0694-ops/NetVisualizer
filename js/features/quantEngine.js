@@ -979,7 +979,8 @@
         const scopeKey = activeInvestGroupName === 'pension' ? 'pension' : 'investment';
         const cfoModel = window.FinanceModel?.buildCfoAssetGroups(dynamicPortfolioData || {});
         const groupData = cfoModel?.groups?.find((group) => group.key === scopeKey);
-        const items = groupData?.items || [];
+        const inputItems = window.getBalanceSheetSource?.().positions?.filter(p => ['investment', 'pension'].includes(p.group)) || [];
+        const items = inputItems.length ? inputItems : groupData?.items || [];
         return [...new Set(
             items
                 .map(item => String(item.ticker || '').trim().toUpperCase())
@@ -1003,8 +1004,11 @@
 
     const MARKET_PRICE_AUTO_SYNC_KEY = 'netvisualizer_market_price_auto_sync_at';
     const MARKET_PRICE_AUTO_SYNC_INTERVAL_MS = 4 * 60 * 60 * 1000;
+    let marketPriceSyncRunning = false;
 
     window.syncMarketPrices = async function(options = {}) {
+        const requestOwner = authUser?.id;
+        if (!requestOwner || marketPriceSyncRunning) return null;
         const silent = Boolean(options?.silent);
         const btn = document.getElementById('btn-sync-market-prices');
         const status = document.getElementById('invest-quant-status');
@@ -1021,6 +1025,7 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin text-[9px]"></i> 시세';
         }
         if (status && !silent) status.textContent = '시세 동기화';
+        marketPriceSyncRunning = true;
 
         try {
             const _supabase = getAuthenticatedSupabaseClient();
@@ -1036,11 +1041,12 @@
                 throw new Error(reason);
             }
 
-            const patch = await fetchRemoteTables(['portfolio_market_prices', 'portfolio_market_price_overrides']);
+            const patch = await fetchRemoteTables(['portfolio_market_prices', 'portfolio_market_price_overrides', 'portfolio_fx_rates']);
+            if (authUser?.id !== requestOwner) return null;
             dataCache = normalizeCache({ ...dataCache, ...patch });
             persistDataCache();
             applyCachedData();
-            renderSections({ investDetail: activeViewId === 'invest-detail-view' });
+            renderSections({ portfolio: activeViewId === 'portfolio-view', investDetail: activeViewId === 'invest-detail-view' });
             const failedCount = Array.isArray(data.errors) ? data.errors.length : 0;
             const message = syncedCount > 0
                 ? (failedCount > 0 ? `시세 ${syncedCount}건 동기화, ${failedCount}건 보류` : `시세 ${syncedCount}건 동기화 완료`)
@@ -1054,6 +1060,7 @@
             if (!silent) showToast(`시세 동기화 보류: ${error.message}`, 'warning', 3200);
             return null;
         } finally {
+            marketPriceSyncRunning = false;
             if (btn && !silent) {
                 btn.disabled = false;
                 btn.innerHTML = originalHtml || '<i class="fas fa-cloud-download-alt text-[9px]"></i> 시세';

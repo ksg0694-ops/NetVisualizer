@@ -1,12 +1,16 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Compact grouped fixed-cost register",
+  "feature": "Personal balance sheet and monthly attribution foundation",
   "phase": "report",
   "progress": 100,
   "updatedAt": "2026-09-24",
   "status": "complete",
   "completed": [
+    "Compact five-group balance sheet with housing debt nested; private sheet snapshot imported without replacing legacy records",
+    "35-month long-term net-worth history reused with balance/change chart and yearly filter",
+    "Monthly attribution schema, null-safe reconciliation and owner-RLS implemented; 46 tests and full npm check passed",
+    "Desktop and mobile synthetic UI verified; authenticated market service extended with USD/KRW refresh",
     "Category grouping with active-only subtotals; display aliases leave stored records unchanged",
     "Compact summary and grouped rows with expandable notes and explicit list refresh label",
     "Synthetic desktop/mobile UI and editing/subtotal behavior inspected",
@@ -22,7 +26,7 @@
     "v193 assets prepared; no changes to existing transaction or insurance records"
   ],
   "remaining": [],
-  "nextStep": "Verify v195 deployment and review grouped fixed costs on the signed-in device.",
+  "nextStep": "Verify v196 on the signed-in device; collect calendar-month contributions and saving for reviewed attribution. Ongoing Sheets sync is not implemented.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }

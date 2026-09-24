@@ -2,6 +2,16 @@
     const BANKSALAD_SOURCE = 'banksalad_gmail';
     const BANKSALAD_INCREMENTAL_START_DATE = '2026-07-24';
     const TABLE_SPECS = Object.freeze({
+        personal_balance_sheet_inputs: {
+            cacheKey: 'balanceSheetInputs', optional: true,
+            columns: ['id','user_id','as_of','source_url','positions','created_at'],
+            order: [['as_of', true], ['created_at', true]],
+        },
+        personal_balance_sheet_flows: {
+            cacheKey: 'balanceSheetFlows', optional: true,
+            columns: ['user_id','month','basis','scope','opening_net_worth','closing_net_worth','opening_investment','closing_investment','net_contributions','net_saving','other_change','reviewed','evidence','updated_at'],
+            order: [['month',true]],
+        },
         transactions: {
             cacheKey: 'tx',
             columns: ['id', 'date', 'time', 'type', 'category', 'subcategory', 'memo', 'amount', 'currency', 'method', 'source'],
@@ -159,6 +169,8 @@
         'portfolio_market_price_overrides',
         'portfolio_fx_rates',
         'portfolio_monthly_snapshots',
+        'personal_balance_sheet_inputs',
+        'personal_balance_sheet_flows',
         'finance_month_closes',
         'real_estate_subscription_sites',
     ]);

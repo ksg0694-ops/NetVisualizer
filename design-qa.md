@@ -1,85 +1,26 @@
-# Cashflow feedback / fixed-cost management QA — 2026-09-23
+# Personal balance sheet design QA
 
-## Latest evidence and findings
-- Source visual truth: user-annotated clipboard images ending `bfe1-2e92950a0fb8.png`,
-  `b15c-ff251c780969.png`, `befd-0c6ef3f6ddae.png` (private attachments, not published).
-- Implementation: `outputs/cashflow-feedback-desktop.png` (private local fixture).
-- Desktop CSS viewport 1217x900, full-page capture 1217x1336, 1x density;
-  source first crop 1217x742. Compared matching dashboard regions in the same
-  image-tool response. Synthetic values differ intentionally from account data;
-  this review covers layout and controls, not financial-value pixel equality.
-- Typography: existing font family and hierarchy retained; category delta labels
-  readable. No decorative raster assets are present or needed.
-- Spacing: KPI and summary padding reduced; removed actions and explanatory copy.
-- Colors: existing mint/indigo mapping retained. No new color-only meanings.
-- Copy: report/print/legacy header actions removed; category signed percent and
-  unavailable/zero-baseline states shown. Legacy navigation remains available.
-- First screenshot found unequal annual chart baselines from select/header heights
-  (P2). Matched header heights and recaptured; latest screenshot shows alignment.
-- Detail region: visible-series Y-axis avoids unused range; common-scale option
-  retains cross-period comparison. Labels and chart regions do not overlap.
-- Fixed-cost fixture: edit 20000 to 22000, candidate draft/insert, and pause/save
-  update list and totals. 390x844 mobile viewport: no horizontal overflow; all
-  fields, save/cancel and list controls remain accessible. Console error lists empty.
-- Integrated app route and signed-out disabled controls inspected. Production
-  authenticated UI save was not tested with personal records; SQL/RLS and store
-  behavior have automated tests. No actionable P0/P1/P2 findings remain.
+## Artifacts and state
+- Source: `C:/Users/ksg06/.codex/generated_images/01a092fd-d241-7a60-9183-1a95b878af42/exec-301cee0e-032a-4430-b19b-686d86300c97.png` (1586×992).
+- Implementation: `outputs/bs-desktop.png` (1440×900, CSS 1440×900, DPR 1); mobile evidence is the inline full-page browser screenshot in this task (390px CSS viewport, DPR 1, 375px content excluding scrollbar). Subsequent file capture failed after a development reload, so no mobile file path is claimed.
+- Local fixture: `/outputs/balance-sheet-qa.html`, synthetic account and 35 monthly records. Private production source was separately verified through database readback; no signed-in browser session was available.
+- Full comparison: source and desktop capture emitted together in one browser-tool response. Compare content region, not mock sidebar: live navigation deliberately retains the existing ERP shell. Source has a single observation, whereas the user's latest instructions require monthly history and nested housing debt. Fixture amounts are intentionally different.
 
-final result: passed
+## Findings and iterations
+- During functional inspection the housing breakdown selector matched the housing icon. Fixed with `.bs-housing:not(.bs-icon)`. The post-fix AX state and desktop capture show asset and loan figures even when holdings are collapsed.
+- First combined visual comparison after that fix: no actionable P0/P1/P2 findings against the amended brief. Smaller type, less KPI decoration and shorter row spacing are intentional compact-design changes. A holdings-details expansion replaces the mock's drill-down chevrons.
+- Fonts/typography: existing Korean system sans fallback, tabular figures, clear KPI hierarchy; mobile values readable and do not overlap.
+- Spacing/layout: white KPI strip, aligned two-panel desktop; single-column mobile; analysis table scrolls within its panel, not the page.
+- Colors/tokens: neutral background, subtle purpose icons, indigo selection/line. Positive monthly changes red, negative blue.
+- Image/asset fidelity: no raster artwork needed; existing Font Awesome icons are reused. Mock decorative KPI circles omitted for compactness.
+- Copy/content: five purpose groups, no duplicated net-worth footer, housing loan nested, concise historical-source note. Missing attribution is visibly uncomputed.
+- Focused image crops were unnecessary: the combined full-view captures clearly show all KPI, group and chart labels; mobile capture separately checks wrapping and density.
 
----
-
-# Previous Version 1.04.03 Design QA
-
-## Evidence
-
-- Todo source visual truth: `C:/Users/ksg06/.codex/generated_images/019f9d05-5144-78a0-ae59-b967f9a0f24b/exec-1d67b7c9-87a3-415c-963b-4a2ab96a0bd1.png`
-- Learning Archive source visual truth: `C:/Users/ksg06/.codex/generated_images/019f9d05-5144-78a0-ae59-b967f9a0f24b/exec-53e08557-b7c0-460b-ba56-a9a161f16e6f.png`
-- Todo implementation: `docs/audits/update-10403-note-workspace/todo-desktop.png`
-- Learning Archive implementation: `docs/audits/update-10403-note-workspace/learning-desktop.png`
-- Full-view comparisons: `docs/audits/update-10403-note-workspace/todo-comparison.png`, `docs/audits/update-10403-note-workspace/learning-comparison.png`
-- Mobile evidence: `docs/audits/update-10403-note-workspace/todo-mobile.png`, `docs/audits/update-10403-note-workspace/learning-mobile.png`
-- Source/implementation desktop pixels: 1488×1058 each, CSS viewport 1488×1058, device scale factor 1.
-- Mobile implementation pixels and CSS viewport: 390×844, device scale factor 1.
-- State: one Career Todo with block menu open; one selected Learning Archive note with a related Todo in the Connection dock.
-
-## Comparison History
-
-### Iteration 1
-
-- [P1] Converting an existing Todo/Learning line to heading or callout replaced its text with template copy.
-  - Fix: block conversion now preserves the selected/current line for heading, checkbox, and callout blocks.
-  - Post-fix evidence: Todo comparison shows the selected note content retained while the block menu is open.
-- [P2] Todo header controls reduced the visible task-title width at the 1488px target.
-  - Fix: the long autosave label is shown only at the 2XL breakpoint while its state remains available through the icon/status element.
-  - Post-fix evidence: the selected Todo title is visible in the final desktop capture without overlapping controls.
-- [P2] The first Learning Archive pass hid the existing field/item/Chapter/tag/link editing controls.
-  - Fix: added a compact `분류 및 태그 편집` panel without changing the selected clean editor composition.
-  - Post-fix evidence: the final header includes the settings control and retained metadata inputs.
-
-### Iteration 2
-
-- No remaining actionable P0/P1/P2 differences.
-- Source/implementation content density differs because the source visual contains illustrative mock data while the browser capture uses locally created QA data. The column hierarchy, editor priority, toolbar placement, dock structure, palette, borders, and spacing rhythm match the selected direction.
-
-## Required Fidelity Surfaces
-
-- Fonts and typography: existing NetVisualizer system font stack and weight hierarchy are retained; Todo title, Learning title, small labels, and dock copy follow the source hierarchy.
-- Spacing and layout rhythm: Todo preserves the 3-column workbench; Learning uses 280px hierarchy / flexible editor / 280px Context Dock. Desktop and mobile have no horizontal overflow.
-- Colors and visual tokens: existing indigo, slate, white, border, active-row, and amber callout tokens match the selected visuals.
-- Image quality and assets: the screens require no new raster imagery. Existing brand and Font Awesome icon assets remain sharp and consistent; no placeholder or handcrafted SVG assets were introduced.
-- Copy and content: `Report Library`, `학습 아카이브`, `컨텍스트 독`, `연결 / 버전 / 목차`, autosave, block, and conversion labels are present and functional.
-
-## Primary Interactions Tested
-
-- Todo block menu insertion, Tab indentation, checkbox, autosave, version list, version restoration, sentence-to-Step conversion, and manual save.
-- Learning note creation, title/content editing, Enter line split, autosave, version tab, sentence-to-Todo conversion, and related Todo navigation.
-- Desktop 1488×1058 and mobile 390×844 responsive rendering.
-- Browser console errors: 0. Existing Tailwind CDN production warning remains unchanged.
-
-## Follow-up Polish
-
-- [P3] A future data-rich screenshot can demonstrate the hierarchy counts and backlinks at the same density as the illustrative source.
-- [P3] The existing Tailwind CDN runtime can be migrated to a compiled stylesheet in a separate infrastructure patch.
+## Verification
+- Production app route renamed and logged-out state hides all private figures.
+- Synthetic desktop: 35-point history, current observation, balance/change toggle, year selection, monthly-analysis expansion.
+- Synthetic mobile: 390×844 viewport, no page horizontal overflow; internal table overflow remains scrollable.
+- Browser console error log: empty during fixture verification.
+- Residual gap: authenticated end-to-end quote/FX refresh and real-account visual verification require the user's signed-in session. Server function deployment, source row counts, reconciliation and owner-RLS tests are separately checked; they are not represented as signed-in UI tests.
 
 final result: passed

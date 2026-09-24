@@ -62,7 +62,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         'insurance-cards-view': { label: '생활 도구', title: '보험·카드 관리' },
         'health-view': { label: '생활 도구', title: '건강 기록' },
         'personal-cfo-view': { label: '재무 도구', title: '개인 CFO' },
-        'portfolio-view': { label: '재무 도구', title: '포트폴리오' },
+        'portfolio-view': { label: '재무 도구', title: '내 자산' },
         'stats-view': { label: '재무 도구', title: 'Monthly Report' },
         'cashflow-lab-view': { label: '재무 도구', title: '현금흐름' },
         'investment-lab-view': { label: '재무 도구 · 실험실', title: '투자 Lab' },
