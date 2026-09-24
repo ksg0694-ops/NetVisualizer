@@ -12,7 +12,7 @@ const refs = [...html.matchAll(/<(?:script|link)\b[^>]*\b(?:src|href)=["'](\.\/[
 const assets = [...new Set(['./', './index.html', './manifest.json', ...refs])].sort();
 const hash = createHash('sha256');
 for (const ref of [...assets, './sw.js']) {
-  const path = ref === './' ? 'index.html' : ref.split('?')[0];
+  const path = ref === './' ? 'index.html' : ref.split('?')[0].replace(/^\.\//, '');
   const bytes = await readFile(new URL(path, root));
   hash.update(ref);
   // Git may check out CRLF on Windows and LF in CI; revision stays identical.
