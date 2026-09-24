@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko" class="auth-pending">
 <head>
+    <meta name="app-build" content="919345bf9546d8b1">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NetVisualizer</title>
@@ -101,7 +102,7 @@
                     <span class="text-lg font-bold tracking-tight truncate">NetVisualizer</span>
                 </a>
                 <div class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    version 1.04.03 · patch 2026.08.08
+                    <span id="sidebar-app-version">앱 버전 확인 중</span>
                 </div>
             </div>
             <nav class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 py-2 space-y-2">
@@ -175,6 +176,7 @@
                 <button id="btn-sync" class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors shadow-sm flex justify-center items-center" title="데이터 갱신" aria-label="데이터 새로고침">
                     <i class="fas fa-sync-alt" id="sync-icon"></i>
                 </button>
+                <button id="btn-app-update" type="button" class="app-update-button" title="앱 버전 확인" aria-label="앱 버전 확인"><i class="fas fa-download" aria-hidden="true"></i><span class="app-update-label">앱 확인</span><span id="app-update-dot" hidden></span></button>
                 <button onclick="AppExperience.openSettings()" class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors shadow-sm flex justify-center items-center" title="설정" aria-label="설정 열기">
                     <i class="fas fa-cog"></i>
                 </button>
@@ -1613,20 +1615,14 @@
                 <h3 id="settings-title" class="text-lg font-bold text-gray-800"><i class="fas fa-cog text-gray-500 mr-2"></i>계정 및 설정</h3>
                 <button onclick="closeSettings()" aria-label="설정 닫기" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-lg"></i></button>
             </div>
-            <div class="p-6 overflow-y-auto space-y-5">
-                <div class="text-sm text-gray-600 bg-indigo-50 p-4 rounded-xl border border-indigo-100 leading-relaxed">
-                    <strong>데이터베이스 및 클라우드 데이터 관리</strong><br>
-                    로그인한 사용자만 개인 재무 데이터를 불러오고 수정할 수 있습니다.
-                </div>
-
-                <div class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm space-y-3">
+            <div class="settings-body overflow-y-auto">
+                <div class="settings-account rounded-xl border border-gray-100 bg-white">
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <h4 class="font-bold text-gray-800 flex items-center gap-2">
                                 <i class="fas fa-user-shield text-indigo-500"></i>
                                 클라우드 로그인
                             </h4>
-                            <p class="text-xs text-gray-500 mt-1">처음 한 번 로그인하면 세션이 안전하게 유지됩니다.</p>
                         </div>
                     </div>
                     <div id="auth-status" class="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
@@ -1649,12 +1645,14 @@
                         </button>
                     </div>
                     <div id="auth-feedback" class="hidden rounded-xl border px-3 py-2 text-sm" role="alert" aria-live="assertive"></div>
-                    <details><summary>이 기기의 복구 자료</summary><p class="text-xs">이전 버전의 기기 기록은 새 계정으로 자동 병합하지 않습니다. 필요한 기록은 백업으로 보관할 수 있습니다.</p><button type="button" onclick="AccountStorage.exportLegacy()">이전 기기 기록 백업</button><button type="button" onclick="RecordSync.exportConflicts()">충돌 사본 내려받기</button></details>
-                    <details><summary>충돌 비교 및 해결</summary><div id="sync-conflict-list"></div></details>
-                    <details><summary>데이터별 마지막 동기화</summary><p id="source-sync-detail"></p></details>
+                    <details class="settings-sync-meta"><summary>데이터별 마지막 동기화</summary><p id="source-sync-detail"></p></details>
                 </div>
-
-                <div class="flex flex-col gap-3 mt-4">
+                <section class="settings-app-version" aria-label="앱 버전">
+                    <div><strong>앱 버전</strong><button id="settings-app-check" type="button">버전 확인</button></div>
+                    <p id="app-version-detail"></p><p id="app-update-status" role="status" aria-live="polite">배포 버전을 확인할 수 있습니다.</p>
+                    <button id="settings-app-apply" type="button" hidden>업데이트하고 다시 열기</button>
+                </section>
+                <div class="flex flex-col gap-2">
                     <a href="https://supabase.com/dashboard/project/djwqcewsochlesjcouoi/editor" target="_blank" class="flex items-center justify-between p-4 border border-emerald-200 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-colors">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-full bg-emerald-200 text-emerald-700 flex items-center justify-center text-lg"><i class="fas fa-database"></i></div>
@@ -1666,16 +1664,6 @@
                         <i class="fas fa-chevron-right text-emerald-400"></i>
                     </a>
 
-                    <a href="https://lgd.lglifecare.com/auth/login" target="_blank" class="flex items-center justify-between p-4 border border-rose-200 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-rose-200 text-rose-700 flex items-center justify-center text-lg"><i class="fas fa-gift"></i></div>
-                            <div>
-                                <h4 class="font-bold text-gray-800">LGD Lifecare</h4>
-                                <p class="text-xs text-gray-500">복지포인트 환불 · 카드번호 5107 **** **** 9655</p>
-                            </div>
-                        </div>
-                        <i class="fas fa-chevron-right text-rose-400"></i>
-                    </a>
                 </div>
             </div>
             <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
@@ -1883,6 +1871,7 @@
     <!-- Toast Message Container -->
     <div id="toast-container" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[90%] md:w-auto max-w-sm"></div>
 
-    <script defer src="./js/features/appShell.js?v=20260924-retire-1"></script>
+    <script defer src="./js/shared/appUpdater.js?v=20260925-1"></script>
+    <script defer src="./js/features/appShell.js?v=20260925-update-1"></script>
 </body>
 </html>

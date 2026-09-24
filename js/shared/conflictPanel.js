@@ -40,6 +40,7 @@
     }
     document.addEventListener('DOMContentLoaded', () => {
         list = document.getElementById('sync-conflict-list');
+        if (!list) return;
         dialog = document.createElement('dialog'); dialog.className = 'sync-conflict-dialog';
         dialog.setAttribute('aria-labelledby', 'sync-conflict-title');
         dialog.addEventListener('close', () => { reviewRequest++; selection = null; });

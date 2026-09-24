@@ -14,7 +14,7 @@
     if ('serviceWorker' in navigator && !isViteDevelopment) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
-                .then(registration => console.log('PWA ServiceWorker registered'))
+                .then(registration => window.AppUpdater?.attach(registration))
                 .catch(error => console.log('PWA ServiceWorker registration failed:', error));
         });
     }

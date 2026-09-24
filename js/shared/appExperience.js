@@ -11,7 +11,7 @@
         restoreFocus = document.activeElement;
         document.getElementById('settings-modal').classList.remove('hidden');
         document.getElementById('auth-email')?.focus();
-        root.ConflictPanel?.renderList();
+        root.AppUpdater?.render();
     }
     function closeSettings() {
         document.getElementById('settings-modal').classList.add('hidden');
@@ -67,5 +67,5 @@
     document.addEventListener('visibilitychange', refreshIfStale);
     document.addEventListener('focusout', () => { if (pendingRefresh) setTimeout(refreshIfStale, 0); });
     root.addEventListener('online', refreshIfStale);
-    root.addEventListener('record-sync-conflict', () => root.showToast?.('다른 기기 변경과 충돌했습니다. 설정의 충돌 비교 및 해결을 확인하세요.', 'warning', 8000));
+    root.addEventListener('record-sync-conflict', () => root.showToast?.('다른 기기 변경과 충돌해 저장을 중단했습니다. 이 기기의 수정본은 보관했습니다.', 'warning', 8000));
 })(window);

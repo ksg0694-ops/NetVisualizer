@@ -23,6 +23,8 @@ const [serviceWorkerResponse, indexResponse, offlineResponse] = await Promise.al
 if (!offlineResponse.ok) throw new Error(`배포 offline-assets.js 응답 실패: ${offlineResponse.status}`);
 const remoteOffline = await offlineResponse.text();
 const remoteRevision = JSON.parse(remoteOffline.slice(remoteOffline.indexOf('{'), remoteOffline.lastIndexOf('}') + 1)).revision;
+const versionResponse = await request('version.json');
+const publishedRevision = versionResponse.ok ? (await versionResponse.json()).revision : '';
 if (!serviceWorkerResponse.ok) throw new Error(`배포 sw.js 응답 실패: ${serviceWorkerResponse.status}`);
 if (!indexResponse.ok) throw new Error(`배포 index.html 응답 실패: ${indexResponse.status}`);
 
@@ -31,7 +33,8 @@ const remoteIndex = await indexResponse.text();
 const remoteCache = requireMatch(remoteServiceWorker, /CACHE_NAME\s*=\s*['"]([^'"]+)/, '배포 캐시 버전');
 const remoteShell = requireMatch(remoteIndex, /js\/features\/appShell\.js\?v=([^"']+)/, '배포 앱 셸 버전');
 
-if (remoteCache !== localCache || remoteShell !== localShell || remoteRevision !== localRevision) {
+const htmlRevision = requireMatch(remoteIndex, /name="app-build" content="([a-f0-9]+)"/, '배포 HTML 버전');
+if (remoteCache !== localCache || remoteShell !== localShell || remoteRevision !== localRevision || publishedRevision !== localRevision || htmlRevision !== localRevision) {
     console.error(`Deployment mismatch: local ${localCache}/${localShell}/${localRevision}, remote ${remoteCache}/${remoteShell}/${remoteRevision}`);
     process.exitCode = 1;
 } else {

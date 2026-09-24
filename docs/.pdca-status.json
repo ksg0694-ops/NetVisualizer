@@ -1,12 +1,15 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Personal balance sheet and monthly attribution foundation",
+  "feature": "App version check and compact settings",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-09-24",
+  "updatedAt": "2026-09-25",
   "status": "complete",
   "completed": [
+    "Network-only deployment manifest, loaded-build comparison, explicit waiting-worker activation and safe reload added",
+    "Real browser old-to-new service-worker upgrade verified; compact desktop and mobile settings inspected",
+    "Requested recovery/conflict/welfare UI removed without deleting local backups or concurrency safety",
     "Compact five-group balance sheet with housing debt nested; private sheet snapshot imported without replacing legacy records",
     "35-month long-term net-worth history reused with balance/change chart and yearly filter",
     "Monthly attribution schema, null-safe reconciliation and owner-RLS implemented; 46 tests and full npm check passed",
@@ -26,7 +29,7 @@
     "v193 assets prepared; no changes to existing transaction or insurance records"
   ],
   "remaining": [],
-  "nextStep": "Verify v196 on the signed-in device; collect calendar-month contributions and saving for reviewed attribution. Ongoing Sheets sync is not implemented.",
+  "nextStep": "Verify v197 deployment; existing pre-update clients must close app windows/tabs once, then use App update beside data sync.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }
