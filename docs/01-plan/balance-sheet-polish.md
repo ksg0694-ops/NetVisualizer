@@ -12,6 +12,7 @@
 - Compare amended reference and rendered desktop together; mobile and real modal notification checks; full project tests then deploy/verify.
 
 ## Do / check / report
+- Follow-up: display net-worth chart Y-axis in 100-million KRW (억), including change mode; retain exact KRW tooltips and unchanged source values. Verify zero, fractional and negative labels before deployment.
 - Implemented navigation order, single title, bright icon badges, compact responsive layout, collapsed housing notes and input-month timeline.
 - Toasts use the native top layer; verified above actual settings backdrop without closing the form.
 - Full `npm run check` passed with 56 tests. Desktop/mobile visual QA passed (see `design-qa.md`). No database writes or private data committed.

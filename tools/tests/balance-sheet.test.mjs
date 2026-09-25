@@ -6,6 +6,14 @@ import {PGlite} from '@electric-sql/pglite';
 const source=p=>readFile(new URL('../../'+p,import.meta.url),'utf8');
 const c=vm.createContext({});vm.runInContext(await source('js/features/balanceSheetModel.js'),c);
 const m=c.BalanceSheetModel;
+test('net worth axis uses eok units while tooltip retains exact won',async()=>{
+ const view=await source('js/features/balanceSheet.js');
+ const formatter=view.match(/ticks:\{callback:(v=>`[^`]+`)\}/)[1];
+ const format=vm.runInNewContext(formatter);
+ assert.equal(format(100000000),'1억');assert.equal(format(150000000),'1.5억');
+ assert.equal(format(0),'0억');assert.equal(format(-5000000),'-0.05억');
+ assert.match(view,/won\(c.raw\)/);
+});
 test('housing debt is nested and subtracted once; zero remains valid',()=>{
  const r=m.current([{group:'housing',amount:150},{group:'housing',amount:65,isDebt:true},{group:'operating',amount:0}]);
  assert.equal(r.assets,150);assert.equal(r.debt,65);assert.equal(r.netWorth,85);assert.equal(r.groups[4].net,85);
