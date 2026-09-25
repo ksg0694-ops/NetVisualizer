@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko" class="auth-pending">
 <head>
-    <meta name="app-build" content="312759d03bfbedc1">
+    <meta name="app-build" content="e37590bc4170ae1f">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NetVisualizer</title>
@@ -112,11 +112,11 @@
                         <a href="#" data-target="stats-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
                             <i class="fas fa-file-invoice-dollar w-4 text-center text-xs"></i> <span class="truncate">Monthly Report</span>
                         </a>
+                        <a href="#" data-target="portfolio-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
+                            <i class="fas fa-house w-4 text-center text-xs"></i> <span class="truncate">내 자산</span>
+                        </a>
                         <a href="#" data-target="cashflow-lab-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all"><i class="fas fa-chart-column w-4 text-center text-xs"></i><span>현금흐름</span></a>
                         <a href="#" data-target="investment-lab-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all"><i class="fas fa-table-cells-large w-4 text-center text-xs"></i><span>투자 Lab</span><span class="text-[10px] text-indigo-600">NEW</span></a>
-                        <a href="#" data-target="portfolio-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
-                            <i class="fas fa-briefcase w-4 text-center text-xs"></i> <span class="truncate">내 자산</span>
-                        </a>
                         <a href="#" data-target="asset-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
                             <i class="fas fa-bullseye w-4 text-center text-xs"></i> <span class="truncate">장기 목표</span>
                         </a>
@@ -1595,9 +1595,9 @@
                 <p class="px-2 pb-1 text-[10px] font-bold text-gray-400">재무</p>
                 <div class="space-y-1">
                     <button type="button" data-mobile-nav-target="stats-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-file-invoice-dollar mr-2 w-4 text-center text-xs"></i>Monthly Report</button>
+                    <button type="button" data-mobile-nav-target="portfolio-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-house mr-2 w-4 text-center text-xs"></i>내 자산</button>
                     <button type="button" data-mobile-nav-target="cashflow-lab-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-chart-column mr-2 w-4 text-center text-xs"></i>현금흐름</button>
                     <button type="button" data-mobile-nav-target="investment-lab-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-table-cells-large mr-2 w-4 text-center text-xs"></i>투자 Lab · NEW</button>
-                    <button type="button" data-mobile-nav-target="portfolio-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-briefcase mr-2 w-4 text-center text-xs"></i>내 자산</button>
                     <button type="button" data-mobile-nav-target="asset-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-bullseye mr-2 w-4 text-center text-xs"></i>장기 목표</button>
                     <button type="button" data-mobile-nav-target="personal-cfo-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-diagram-project mr-2 w-4 text-center text-xs"></i>개인 CFO</button>
                 </div>
@@ -1869,7 +1869,7 @@
     </div>
 
     <!-- Toast Message Container -->
-    <div id="toast-container" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[90%] md:w-auto max-w-sm"></div>
+    <div id="toast-container" popover="manual" role="status" aria-live="polite" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 flex flex-col gap-2 pointer-events-none w-[90%] md:w-auto max-w-sm"></div>
 
     <script defer src="./js/shared/appUpdater.js?v=20260925-1"></script>
     <script defer src="./js/features/appShell.js?v=20260925-update-1"></script>

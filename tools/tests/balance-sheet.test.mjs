@@ -24,6 +24,29 @@ test('reconciliation removes deposits from performance and never guesses savings
  assert.equal(m.reconcile(h,[{...f,net_saving:null}])[1].saving,null);
  assert.equal(m.reconcile(h,[{...f,net_saving:20}])[1].difference,5);
 });
+test('input snapshot joins its own month once and never becomes a moving live valuation',()=>{
+ const rows=[{year:2026,month:8,total_asset:100}], positions=[{group:'housing',amount:200},{group:'housing',amount:60,isDebt:true}];
+ const options={positions,asOf:'2026-09-24',today:'2026-10-05',getPrice:()=>({price:999999})};
+ const timeline=m.timeline(rows,options);assert.equal(timeline.length,2);assert.equal(timeline[1].month,'2026-09');assert.equal(timeline[1].netWorth,140);assert.equal(timeline[1].status,'input');
+ assert.equal(m.reconcile(timeline)[1].change,40);assert.equal(m.reconcile(timeline)[1].performance,null);
+ const existing=m.timeline([...rows,{year:2026,month:9,total_asset:160}],options);assert.equal(existing.length,2);assert.equal(existing[1].netWorth,160);assert.equal(existing[1].status,'recorded');
+ for(const extra of [{asOf:''},{asOf:'2026-02-31'},{today:'2026-09-20'},{positions:[]},{positions:[{group:'safe',amount:null}]}])assert.equal(m.timeline(rows,{...options,...extra}).length,1);
+});
+test('asset navigation precedes cashflow; title and housing summary are not repeated',async()=>{
+ const html=await source('index.html'),ui=await source('js/features/balanceSheet.js');
+ for(const attr of ['data-target','data-mobile-nav-target'])assert.ok(html.indexOf(`${attr}="portfolio-view"`)<html.indexOf(`${attr}="cashflow-lab-view"`));
+ assert.ok(!ui.includes('<h2>내 자산</h2>'));assert.ok(!ui.includes('wrapper.append(amount,breakdown)'));assert.ok(!ui.includes("label:'현재 평가'"));
+});
+test('toast enters top layer above forms and closes only after last notification',async()=>{
+ const text=await source('js/features/appCore.js');const toastFn=text.slice(text.indexOf('    function showToast'),text.indexOf('    // =========================================='));
+ const timers=[],items=[],calls=[];
+ const container={appendChild:t=>items.push(t),get childElementCount(){return items.length;},matches:()=>true,hidePopover:()=>calls.push('hide'),showPopover:()=>calls.push('show')};
+ const doc={getElementById:()=>container,createElement:()=>({style:{},remove(){items.splice(items.indexOf(this),1);}})};
+ const scope=vm.createContext({document:doc,escapeHtml:x=>x,setTimeout:f=>timers.push(f)});vm.runInContext(toastFn,scope);
+ scope.showToast('one');scope.showToast('two');assert.equal(calls.filter(x=>x==='show').length,2);
+ timers.shift()();timers.shift()();timers.shift()();assert.equal(items.length,1);const before=calls.length;timers.shift()();assert.equal(items.length,0);assert.equal(calls.length,before+1);
+ assert.ok((await source('index.html')).includes('id="toast-container" popover="manual"'));
+});
 test('valuation requires fresh matching quote and FX; missing or stale retain inputs',()=>{
  const p=[{group:'investment',amount:100,ticker:'TEST',currency:'USD',shares:2}];
  const opts={today:'2026-09-24',getPrice:()=>({price:10,currency:'USD',priceDate:'2026-09-23'}),getFx:()=>({krwPerUnit:1400,rateDate:'2026-09-23'})};

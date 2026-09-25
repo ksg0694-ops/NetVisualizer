@@ -10,11 +10,19 @@
         toast.className = 'bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 toast-enter pointer-events-auto break-keep';
         toast.innerHTML = `<i class="fas ${icon} ${iconColor} shrink-0"></i> <span>${escapeHtml(message)}</span>`;
         container.appendChild(toast);
+        // Native top layer also sits above modal dialogs; z-index alone cannot.
+        if (typeof container.showPopover === 'function') {
+            if (container.matches(':popover-open')) container.hidePopover();
+            container.showPopover();
+        }
         setTimeout(() => {
             toast.style.opacity = '0';
             toast.style.transform = 'translateY(100%)';
             toast.style.transition = 'all 0.3s ease-out';
-            setTimeout(() => toast.remove(), 300);
+            setTimeout(() => {
+                toast.remove();
+                if (!container.childElementCount && typeof container.hidePopover === 'function') container.hidePopover();
+            }, 300);
         }, duration);
     }
 

@@ -93,7 +93,7 @@ assert.ok(index.includes('id="cashflow-view"'));
 assert.ok(!index.includes('id="monthlyReportCashFlowChart"'), 'Monthly Report must not duplicate the monthly cash-flow trend');
 assert.ok(index.includes('>Monthly Report<'));
 assert.ok(index.indexOf('data-target="stats-view"') < index.indexOf('data-target="cashflow-lab-view"'));
-assert.ok(index.indexOf('data-target="cashflow-lab-view"') < index.indexOf('data-target="portfolio-view"'));
+assert.ok(index.indexOf('data-target="portfolio-view"') < index.indexOf('data-target="cashflow-lab-view"'));
 assert.ok(index.indexOf('data-target="portfolio-view"') < index.indexOf('data-target="asset-view"'));
 assert.ok(index.indexOf('data-target="asset-view"') < index.indexOf('data-target="personal-cfo-view"'));
 assert.ok(!index.includes('data-target="realestate-view"'), 'real-estate must not remain as a standalone tab');

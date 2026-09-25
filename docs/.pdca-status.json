@@ -1,12 +1,15 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "App version check and compact settings",
+  "feature": "My Assets visual polish and foreground notifications",
   "phase": "report",
   "progress": 100,
   "updatedAt": "2026-09-25",
   "status": "complete",
   "completed": [
+    "Bright compact asset layout, navigation order, single title and expandable housing detail verified on desktop/mobile",
+    "Input snapshot joined to its as-of month without duplicate current point or rewriting monthly records",
+    "Toast verified above actual settings dialog; 56 regression tests and full npm check passed",
     "Network-only deployment manifest, loaded-build comparison, explicit waiting-worker activation and safe reload added",
     "Real browser old-to-new service-worker upgrade verified; compact desktop and mobile settings inspected",
     "Requested recovery/conflict/welfare UI removed without deleting local backups or concurrency safety",
@@ -29,7 +32,7 @@
     "v193 assets prepared; no changes to existing transaction or insurance records"
   ],
   "remaining": [],
-  "nextStep": "Verify v197 deployment; existing pre-update clients must close app windows/tabs once, then use App update beside data sync.",
+  "nextStep": "Verify deployment revision e37590bc4170ae1f; use App update beside data sync or version check in settings.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }

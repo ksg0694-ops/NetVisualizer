@@ -1,6 +1,6 @@
 (function (root) {
     'use strict';
-    const GROUPS = [['operating','운영(생활)','fa-wallet'],['safe','안전(현금)','fa-shield-halved'],['investment','투자','fa-chart-line'],['pension','연금(목표자산1)','fa-landmark'],['housing','주거(목표자산2)','fa-house']];
+    const GROUPS = [['operating','운영(생활)','fa-cart-shopping'],['safe','안전(현금)','fa-coins'],['investment','투자','fa-chart-simple'],['pension','연금(목표자산1)','fa-bullseye'],['housing','주거(목표자산2)','fa-house']];
     const numeric = v => v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v);
     const monthIndex = key => Number(key.slice(0,4)) * 12 + Number(key.slice(5,7)) - 1;
     const keyAt = n => `${Math.floor(n/12)}-${String(n%12+1).padStart(2,'0')}`;
@@ -18,6 +18,15 @@
         const keys = [...byMonth.keys()].sort(), result=[];
         for (let i=monthIndex(keys[0]);i<=monthIndex(keys.at(-1));i++) result.push(byMonth.get(keyAt(i)) || {month:keyAt(i),netWorth:null,status:'missing'});
         return result;
+    }
+    function timeline(rows = [], {positions=[],asOf='',today=''}={}) {
+        const month=String(asOf).slice(0,7);
+        const validDate=/^\d{4}-\d{2}-\d{2}$/.test(asOf)&&Number.isFinite(Date.parse(asOf))&&new Date(asOf).toISOString().slice(0,10)===asOf;
+        const exists=rows.some(r=>Number(r.year)===Number(month.slice(0,4))&&Number(r.month)===Number(month.slice(5,7)));
+        if(!validDate||!positions.length||exists||(today&&asOf>today)||positions.some(p=>numeric(p.amount)===null))return history(rows,today);
+        const netWorth=current(positions).netWorth;
+        return history([...rows,{year:Number(month.slice(0,4)),month:Number(month.slice(5,7)),total_asset:netWorth}],today)
+            .map(p=>p.month===month?{...p,status:'input',source:'input-snapshot',asOf}:p);
     }
     function reconcile(points, flows = []) {
         return points.map((p,i) => {
@@ -60,5 +69,5 @@
         const assets=groups.reduce((s,g)=>s+g.assets,0),debt=groups.reduce((s,g)=>s+g.debt,0);
         return {groups,assets,debt,netWorth:assets-debt,stale,missing,priced};
     }
-    root.BalanceSheetModel=Object.freeze({history,reconcile,current,GROUPS,numeric});
+    root.BalanceSheetModel=Object.freeze({history,timeline,reconcile,current,GROUPS,numeric});
 })(globalThis);
