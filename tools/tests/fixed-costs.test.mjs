@@ -7,6 +7,20 @@ const source = p => readFile(new URL('../../'+p,import.meta.url),'utf8');
 const c=vm.createContext({});
 vm.runInContext(await source('js/features/fixedCostsStore.js'),c);
 const draft={name:'Internet',category:'인터넷',kind:'fixed',monthly_amount:20000,pay_day:25,is_active:true};
+test('category accordion is collapsed by default and retains user expansion across redraw',async()=>{
+    const code=await source('js/features/fixedCosts.js');
+    const nodes=Object.fromEntries(['fc-summary','fc-filter','fc-count','fc-list'].map(id=>[id,{innerHTML:'',textContent:'',value:'active'}]));
+    const group={dataset:{group:'인터넷'},open:false};
+    nodes['fc-list'].querySelectorAll=s=>s==='.fc-group'?[group]:[];
+    const state=vm.createContext({rows:[{...draft,id:'1',name:'<unsafe>'}],loaded:true,owner:'a',expandedGroups:new Set(),root:{FixedCostsStore:c.FixedCostsStore},el:id=>nodes[id],money:n=>`${n}원`,esc:s=>String(s??'').replaceAll('<','&lt;').replaceAll('>','&gt;'),candidates(){},controls(){}});
+    vm.runInContext(code.slice(code.indexOf('    function draw()'),code.indexOf('    function candidates()')),state);
+    state.draw();assert.match(nodes['fc-list'].innerHTML,/<details class="fc-group" data-group="인터넷">/);
+    assert.match(nodes['fc-list'].innerHTML,/<summary class="fc-group-heading">/);
+    assert.match(nodes['fc-list'].innerHTML,/&lt;unsafe&gt;/);assert.match(nodes['fc-list'].innerHTML,/20000원/);
+    group.open=true;group.ontoggle();state.draw();assert.match(nodes['fc-list'].innerHTML,/data-group="인터넷" open>/);
+    group.open=false;group.ontoggle();state.draw();assert.doesNotMatch(nodes['fc-list'].innerHTML,/data-group="인터넷" open>/);
+    assert.match(code,/function reset\(\) \{ expandedGroups.clear\(\)/);
+});
 test('category groups preserve rows and exclude paused amounts without mutating inputs',()=>{
     const rows = [{...draft,id:'1',category:'보험료',monthly_amount:100}, {...draft,id:'2',category:'보험',monthly_amount:200,is_active:false}, {...draft,id:'3',category:'관리비',monthly_amount:300}, {...draft,id:'4',category:'미지정 분류',monthly_amount:400}];
     const before = JSON.stringify(rows), groups = c.FixedCostsStore.groupRows(rows);

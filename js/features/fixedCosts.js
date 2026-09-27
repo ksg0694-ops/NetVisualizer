@@ -1,6 +1,7 @@
 (function (root) {
     'use strict';
     let rows = [], editing = false, busy = false, loaded = false, generation = 0, base = null, draftId = '', owner = '';
+    const expandedGroups = new Set();
     const store = root.FixedCostsStore.create(() => root.getFixedCostContext());
     const money = n => `${Number(n).toLocaleString('ko-KR')}원`;
     const el = id => document.getElementById(id);
@@ -44,7 +45,8 @@
         const visible = rows.filter(r => filter === 'all' || r.is_active === (filter === 'active')).sort((a,b)=>(a.pay_day || 32)-(b.pay_day || 32) || a.name.localeCompare(b.name));
         el('fc-count').textContent = loaded ? `${visible.length}개 · 사용 중 항목만 합계 반영` : '';
         const icons = {보험:'shield-halved',통신:'mobile-screen-button',인터넷:'wifi',구독:'repeat',주거:'house',교통:'train-subway',기타:'ellipsis'};
-        el('fc-list').innerHTML = visible.length ? root.FixedCostsStore.groupRows(visible).map(group => `<section class="fc-group" aria-label="${esc(group.label)} 고정비"><header class="fc-group-heading"><h3><i class="fas fa-${icons[group.label]}" aria-hidden="true"></i>${esc(group.label)} <small>${group.rows.length}</small></h3><span>${group.activeCount ? `<strong>${money(group.total)}</strong><small>/월</small>` : '합계 제외'}</span></header>${group.rows.map(r => `<article class="fc-item${r.is_active ? '' : ' fc-paused'}"><div class="fc-item-main"><h4>${esc(r.name)}</h4><p>${r.pay_day ? `매월 ${r.pay_day}일` : '결제일 미정'}${r.payment_method ? ` · ${esc(r.payment_method)}` : ''}</p>${r.kind === 'essential' || !r.is_active ? `<span class="fc-tag">${r.is_active ? '변동 필수비' : '중지 · 합계 제외'}</span>` : ''}${r.note || group.label === '기타' ? `<details class="fc-item-note"><summary>메모 · 상세</summary><p>${esc(r.category)} · ${r.kind === 'fixed' ? '정액 고정비' : '변동 필수비'}${r.note ? `<br>${esc(r.note)}` : ''}</p></details>` : ''}</div><div class="fc-item-end"><strong>${money(r.monthly_amount)}</strong><button type="button" data-edit="${esc(r.id)}" aria-label="${esc(r.name)} 수정">수정</button></div></article>`).join('')}</section>`).join('') : `<p class="fc-empty">${owner ? loaded ? filter === 'paused' ? '중지된 항목이 없습니다.' : '등록된 항목이 없습니다. 직접 추가하거나 최근 거래에서 가져오세요.' : '고정비를 불러오는 중입니다.' : '로그인 후 고정비를 관리할 수 있습니다.'}</p>`;
+        el('fc-list').innerHTML = visible.length ? root.FixedCostsStore.groupRows(visible).map(group => `<details class="fc-group" data-group="${esc(group.label)}"${expandedGroups.has(group.label) ? ' open' : ''}><summary class="fc-group-heading"><h3><i class="fas fa-${icons[group.label]}" aria-hidden="true"></i>${esc(group.label)} <small>${group.rows.length}</small></h3><span>${group.activeCount ? `<strong>${money(group.total)}</strong><small>/월</small>` : '합계 제외'}</span><i class="fas fa-chevron-down fc-chevron" aria-hidden="true"></i></summary><div class="fc-group-items">${group.rows.map(r => `<article class="fc-item${r.is_active ? '' : ' fc-paused'}"><div class="fc-item-main"><h4>${esc(r.name)}</h4><p>${r.pay_day ? `매월 ${r.pay_day}일` : '결제일 미정'}${r.payment_method ? ` · ${esc(r.payment_method)}` : ''}</p>${r.kind === 'essential' || !r.is_active ? `<span class="fc-tag">${r.is_active ? '변동 필수비' : '중지 · 합계 제외'}</span>` : ''}${r.note || group.label === '기타' ? `<details class="fc-item-note"><summary>메모 · 상세</summary><p>${esc(r.category)} · ${r.kind === 'fixed' ? '정액 고정비' : '변동 필수비'}${r.note ? `<br>${esc(r.note)}` : ''}</p></details>` : ''}</div><div class="fc-item-end"><strong>${money(r.monthly_amount)}</strong><button type="button" data-edit="${esc(r.id)}" aria-label="${esc(r.name)} 수정">수정</button></div></article>`).join('')}</div></details>`).join('') : `<p class="fc-empty">${owner ? loaded ? filter === 'paused' ? '중지된 항목이 없습니다.' : '등록된 항목이 없습니다. 직접 추가하거나 최근 거래에서 가져오세요.' : '고정비를 불러오는 중입니다.' : '로그인 후 고정비를 관리할 수 있습니다.'}</p>`;
+        el('fc-list').querySelectorAll('.fc-group').forEach(group => { group.ontoggle = () => { if (group.open) expandedGroups.add(group.dataset.group); else expandedGroups.delete(group.dataset.group); }; });
         el('fc-list').querySelectorAll('[data-edit]').forEach(b => { b.onclick = () => open(rows.find(r => r.id === b.dataset.edit)); });
         candidates(); controls();
     }
@@ -89,7 +91,7 @@
         catch (error) { if (token === generation) message(error.message, true); }
         finally { if (token === generation) { busy = false; controls(); } }
     }
-    function reset() { generation++; rows=[]; owner=''; loaded=false; editing=false; busy=false; base=null; const c=el('fixed-costs-view'); if(c)c.replaceChildren(); }
+    function reset() { expandedGroups.clear(); generation++; rows=[]; owner=''; loaded=false; editing=false; busy=false; base=null; const c=el('fixed-costs-view'); if(c)c.replaceChildren(); }
     function render() {
         const container = el('fixed-costs-view'); if (!container || container.classList.contains('hidden')) return;
         const next = root.getFixedCostContext()?.userId || '';

@@ -1,12 +1,15 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Retire long-term goals and Personal CFO navigation",
+  "feature": "Fixed-cost category accordion and paused-item cleanup",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-09-27",
+  "updatedAt": "2026-09-28",
   "status": "complete",
   "completed": [
+    "Native category accordions with count/subtotal and preserved expansion; reset clears account-specific UI state",
+    "User-confirmed paused fixed-cost records removed after private local backup; active records and source transactions preserved",
+    "58 tests and full npm check passed",
     "Removed goals/CFO desktop and mobile navigation, route registration and persisted-route restoration; legacy views inert",
     "Stopped standalone CFO script loading; preserved historical assets and shared Monthly Report calculations",
     "57 regression tests and full npm check passed; no user data deletion",
@@ -35,7 +38,7 @@
     "v193 assets prepared; no changes to existing transaction or insurance records"
   ],
   "remaining": [],
-  "nextStep": "Verify deployment revision 721bfdcd15fd687d; use version check in settings to activate the update.",
+  "nextStep": "Verify deployment revision fa3d07ea7bef0af1; use version check in settings and refresh fixed-cost list.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }
