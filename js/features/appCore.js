@@ -42,11 +42,9 @@
         'insurance-cards-view',
         'fixed-costs-view',
         'portfolio-view',
-        'personal-cfo-view',
         'stats-view',
         'cashflow-lab-view',
         'investment-lab-view',
-        'asset-view',
         'invest-detail-view',
     ]);
     let lastFinanceDataSyncAt = window.AccountStorage.current.getItem(CACHE_META_KEY) || '';

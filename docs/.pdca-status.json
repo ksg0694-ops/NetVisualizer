@@ -1,12 +1,15 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "My Assets visual polish and foreground notifications",
+  "feature": "Retire long-term goals and Personal CFO navigation",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-09-25",
+  "updatedAt": "2026-09-27",
   "status": "complete",
   "completed": [
+    "Removed goals/CFO desktop and mobile navigation, route registration and persisted-route restoration; legacy views inert",
+    "Stopped standalone CFO script loading; preserved historical assets and shared Monthly Report calculations",
+    "57 regression tests and full npm check passed; no user data deletion",
     "Bright compact asset layout, navigation order, single title and expandable housing detail verified on desktop/mobile",
     "Input snapshot joined to its as-of month without duplicate current point or rewriting monthly records",
     "Toast verified above actual settings dialog; 56 regression tests and full npm check passed",
@@ -32,7 +35,7 @@
     "v193 assets prepared; no changes to existing transaction or insurance records"
   ],
   "remaining": [],
-  "nextStep": "Verify deployment revision e37590bc4170ae1f; use App update beside data sync or version check in settings.",
+  "nextStep": "Verify deployment revision 721bfdcd15fd687d; use version check in settings to activate the update.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }

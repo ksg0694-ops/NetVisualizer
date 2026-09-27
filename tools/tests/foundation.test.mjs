@@ -30,7 +30,7 @@ test('retired and unknown routes resolve safely to current cashflow', async () =
     isFeatureEnabled:()=>false,useMonthScopeForView(){},persistAppUiState(){},updateAppContext(){},updateGoalNavigation(){},renderSections(){},
   });
   vm.runInContext(fn,ctx);
-  for (const id of ['dashboard-view','cashflow-view','routine-checklist-view','learning-archive-view','health-view','unknown']) {
+  for (const id of ['dashboard-view','cashflow-view','routine-checklist-view','learning-archive-view','asset-view','personal-cfo-view','health-view','unknown']) {
     ctx.switchView(id);
     assert.equal(ctx.activeViewId,'cashflow-lab-view');
     assert.deepEqual([...visible],['cashflow-lab-view']);
@@ -40,7 +40,7 @@ test('retired and unknown routes resolve safely to current cashflow', async () =
   }
   const core = await source('js/features/appCore.js');
   const restore = core.slice(core.indexOf('    const APP_UI_STATE_KEY'),core.indexOf('    function persistAppUiState'));
-  for (const id of ['dashboard-view','cashflow-view','routine-checklist-view','learning-archive-view','fixed-costs-view']) {
+  for (const id of ['dashboard-view','cashflow-view','routine-checklist-view','learning-archive-view','asset-view','personal-cfo-view','fixed-costs-view']) {
     const state=vm.createContext({CACHE_META_KEY:'test-meta',window:{AccountStorage:{current:{getItem:()=>JSON.stringify({activeViewId:id})}}},console});
     vm.runInContext(restore+';globalThis.result=restoredAppUiState;',state);
     assert.equal(state.result.activeViewId,id==='fixed-costs-view'?id:'cashflow-lab-view');

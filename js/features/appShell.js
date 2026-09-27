@@ -49,9 +49,7 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         'portfolio-view': document.getElementById('portfolio-view'),
         'career-view': document.getElementById('career-view'), 'project-view': document.getElementById('project-view'),
         'health-view': document.getElementById('health-view'),
-        'personal-cfo-view': document.getElementById('personal-cfo-view'),
         'stats-view': document.getElementById('stats-view'),
-        'asset-view': document.getElementById('asset-view'),
         'cashflow-lab-view': document.getElementById('cashflow-lab-view'),
         'investment-lab-view': document.getElementById('investment-lab-view'),
         'realestate-view': document.getElementById('realestate-view'), 'invest-detail-view': document.getElementById('invest-detail-view')
@@ -61,17 +59,15 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         'fixed-costs-view': { label: '생활 도구', title: '고정비 관리' },
         'insurance-cards-view': { label: '생활 도구', title: '보험·카드 관리' },
         'health-view': { label: '생활 도구', title: '건강 기록' },
-        'personal-cfo-view': { label: '재무 도구', title: '개인 CFO' },
         'portfolio-view': { label: '재무 도구', title: '내 자산' },
         'stats-view': { label: '재무 도구', title: 'Monthly Report' },
         'cashflow-lab-view': { label: '재무 도구', title: '현금흐름' },
         'investment-lab-view': { label: '재무 도구 · 실험실', title: '투자 Lab' },
-        'asset-view': { label: '재무 도구', title: '장기 목표' },
         'realestate-view': { label: '재무 도구', title: '부동산' },
         'invest-detail-view': { label: '재무 도구', title: '투자 상세' }
     };
 
-    const financeToolViews = new Set(['personal-cfo-view', 'portfolio-view', 'stats-view', 'cashflow-view', 'asset-view', 'realestate-view', 'invest-detail-view']);
+    const financeToolViews = new Set(['portfolio-view', 'stats-view', 'cashflow-view', 'realestate-view', 'invest-detail-view']);
     financeToolViews.add('cashflow-lab-view');
     financeToolViews.add('investment-lab-view');
     const mobileNavigationDialog = document.getElementById('mobile-navigation-dialog');
@@ -173,8 +169,6 @@ document.getElementById('btn-sync').addEventListener('click', () => fetchSheetDa
         else if (targetId === 'cashflow-lab-view') window.CashflowLab?.render();
         else if (targetId === 'investment-lab-view') window.InvestmentLab?.render();
         else if (targetId === 'stats-view' || targetId === 'cashflow-view') renderSections({ cashFlow: true });
-        else if (targetId === 'asset-view') renderSections({ financeSummary: true });
-        else if (targetId === 'personal-cfo-view') window.PersonalCfoFeature?.render();
         else if (targetId === 'realestate-view') renderSections({ realEstate: true });
         else if (targetId === 'health-view') {
             window.HealthTrackerFeature?.bindControls();

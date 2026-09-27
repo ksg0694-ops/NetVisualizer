@@ -94,10 +94,7 @@ assert.ok(!index.includes('id="monthlyReportCashFlowChart"'), 'Monthly Report mu
 assert.ok(index.includes('>Monthly Report<'));
 assert.ok(index.indexOf('data-target="stats-view"') < index.indexOf('data-target="cashflow-lab-view"'));
 assert.ok(index.indexOf('data-target="portfolio-view"') < index.indexOf('data-target="cashflow-lab-view"'));
-assert.ok(index.indexOf('data-target="portfolio-view"') < index.indexOf('data-target="asset-view"'));
-assert.ok(index.indexOf('data-target="asset-view"') < index.indexOf('data-target="personal-cfo-view"'));
 assert.ok(!index.includes('data-target="realestate-view"'), 'real-estate must not remain as a standalone tab');
-assert.ok(index.includes('>장기 목표<'));
 assert.ok(!index.includes('id="asset-goal-percent"'));
 assert.ok(!index.includes('id="asset-total-growth"'));
 assert.ok(!index.includes('id="asset-avg-growth"'));
@@ -121,11 +118,14 @@ assert.ok(!appShell.includes("targetId === 'life-view'"), 'removed Life route mu
 assert.ok(index.includes('id="btn-mobile-menu"'));
 assert.ok(index.includes('#btn-goal-home { display: none !important; }'));
 assert.ok(index.includes('id="mobile-navigation-dialog"'));
-for (const id of ['dashboard-view', 'cashflow-view', 'routine-checklist-view', 'learning-archive-view']) {
+for (const id of ['dashboard-view', 'cashflow-view', 'routine-checklist-view', 'learning-archive-view', 'asset-view', 'personal-cfo-view']) {
     assert.ok(!index.includes(`data-target="${id}"`), `retired desktop route: ${id}`);
     assert.ok(!index.includes(`data-mobile-nav-target="${id}"`), `retired mobile route: ${id}`);
 }
 assert.ok(!index.includes('src="./js/features/checklist.js'));
+assert.ok(!index.includes('src="./js/features/personalCfo.js'));
+assert.ok(index.includes('id="asset-view" hidden inert'));
+assert.ok(index.includes('id="personal-cfo-view" hidden inert'));
 assert.ok(!index.includes('src="./js/features/learningArchive.js'));
 assert.ok(appCore.includes("activeViewId: 'cashflow-lab-view'"));
 assert.ok(index.includes('id="dashboard-view" hidden inert'));
