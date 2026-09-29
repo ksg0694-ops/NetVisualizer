@@ -1,12 +1,15 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Fixed-cost category accordion and paused-item cleanup",
+  "feature": "Project management v1",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-09-28",
+  "updatedAt": "2026-09-29",
   "status": "complete",
   "completed": [
+    "Project Dashboard, 14-day Gantt, Tasks and internal Calendar with create/edit/archive/restore",
+    "63 regression tests and full npm check passed; desktop and 390px mobile synthetic flows verified",
+    "Dedicated project/task schema applied with owner RLS, composite ownership and optimistic version checks",
     "Native category accordions with count/subtotal and preserved expansion; reset clears account-specific UI state",
     "User-confirmed paused fixed-cost records removed after private local backup; active records and source transactions preserved",
     "58 tests and full npm check passed",
@@ -38,7 +41,7 @@
     "v193 assets prepared; no changes to existing transaction or insurance records"
   ],
   "remaining": [],
-  "nextStep": "Verify deployment revision fa3d07ea7bef0af1; use version check in settings and refresh fixed-cost list.",
+  "nextStep": "Verify deployment revision b4dbda2879b85f61; open Life tools > Project. Google Calendar sync remains a separate future feature.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }

@@ -4,6 +4,7 @@
 
 | Change | Primary files | Focused check |
 |---|---|---|
+| Project management (Life tools) | js/features/projectModel.js, projectStore.js, projectManager.js, styles/project-manager.css; supabase/migrations/*project_management.sql | node --test tools/tests/project-management.test.mjs |
 | Fixed-cost management (Life tools) | js/features/fixedCosts.js, fixedCostsStore.js, styles/fixed-costs.css; supabase/migrations/*fixed_costs.sql | node --test tools/tests/fixed-costs.test.mjs |
 | Auth / account transitions | js/features/appCore.js, js/shared/accountStorage.js | npm run check:foundation |
 | Todo / Learning sync | js/shared/recordSync.js, js/features/checklist.js, js/features/learningArchive.js | npm run check:foundation |
