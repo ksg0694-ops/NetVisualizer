@@ -4,6 +4,7 @@
 
 | Change | Primary files | Focused check |
 |---|---|---|
+| Card editing (Life tools) | js/features/cardStore.js, cardManager.js, cashflowControls.js, styles/card-manager.css; supabase/migrations/*card_management.sql | node --test tools/tests/card-management.test.mjs |
 | Project management (Life tools) | js/features/projectModel.js, projectStore.js, projectManager.js, styles/project-manager.css; supabase/migrations/*project_management.sql | node --test tools/tests/project-management.test.mjs |
 | Fixed-cost management (Life tools) | js/features/fixedCosts.js, fixedCostsStore.js, styles/fixed-costs.css; supabase/migrations/*fixed_costs.sql | node --test tools/tests/fixed-costs.test.mjs |
 | Auth / account transitions | js/features/appCore.js, js/shared/accountStorage.js | npm run check:foundation |

@@ -687,12 +687,14 @@
     }
 
     window.getFixedCostContext = () => ({ userId: authUser?.id || '', client: getSupabaseClient() });
+    window.getCardContext = () => ({ userId: authUser?.id || '', client: getSupabaseClient() });
     window.getProjectContext = () => ({ userId: authUser?.id || '', client: getSupabaseClient() });
 
     function setAuthSession(session) {
         if (!window.AccountStorage.activate(session?.user?.id)) return false;
         if (authUser?.id !== session?.user?.id) window.FixedCosts?.reset();
         if (authUser?.id !== session?.user?.id) window.ProjectManager?.reset();
+        if (authUser?.id !== session?.user?.id) window.CardManager?.reset();
         authSession = session || null;
         authUser = authSession?.user || null;
         updateAuthUi();

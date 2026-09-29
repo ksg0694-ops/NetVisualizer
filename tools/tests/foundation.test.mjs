@@ -15,8 +15,9 @@ test('life tools route reuses card/insurance data and retires backed-up note tab
   const controls = await source('js/features/cashflowControls.js');
   const card = {textContent:'old'}, insurance = {textContent:'old'};
   const ctx = vm.createContext({document:{getElementById:id=>id==='addon-cards-list'?card:insurance},authUser:null,switchView:id=>{ctx.target=id;}});
+  let cardRendered=false;ctx.window={CardManager:{render(){cardRendered=true;}}};
   vm.runInContext(controls,ctx); ctx.toggleAddonView(); assert.equal(ctx.target,'insurance-cards-view');
-  ctx.renderAddons(); assert.equal(card.textContent,'로그인 후 확인할 수 있습니다.'); assert.equal(insurance.textContent,card.textContent);
+  ctx.renderAddons(); assert.equal(cardRendered,true); assert.equal(card.textContent,'old'); assert.equal(insurance.textContent,'로그인 후 확인할 수 있습니다.');
 });
 test('retired and unknown routes resolve safely to current cashflow', async () => {
   const shell = await source('js/features/appShell.js');

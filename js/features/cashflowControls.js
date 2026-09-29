@@ -24,42 +24,10 @@
         const cardsContainer = document.getElementById('addon-cards-list');
         const insContainer = document.getElementById('addon-insurance-list');
 
+        window.CardManager?.render();
         if (!authUser) {
-            for (const container of [cardsContainer, insContainer]) if (container) container.textContent = '로그인 후 확인할 수 있습니다.';
+            for (const container of [insContainer]) if (container) container.textContent = '로그인 후 확인할 수 있습니다.';
             return;
-        }
-
-        if (cardsContainer) {
-            cardsContainer.innerHTML = addonCards.map(c => `
-                <div class="bg-gray-50 border border-gray-100 rounded-xl p-4 shadow-sm flex flex-col relative overflow-hidden">
-                    ${c.purpose ? `<span class="absolute top-0 right-0 bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded-bl-lg">${escapeHtml(c.purpose)}</span>` : ''}
-                    <div class="flex items-center gap-3 mb-2">
-                        ${c.image_data
-                            ? `<img src="${escapeAttr(c.image_data)}" alt="${escapeAttr(c.name)}" class="h-10 w-16 object-cover rounded-md shadow-sm border border-gray-200 shrink-0">`
-                            : `<div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-indigo-500 font-bold text-lg shrink-0"><i class="fas fa-credit-card"></i></div>`
-                        }
-                        <div class="overflow-hidden">
-                            <h4 class="text-sm font-bold text-gray-800 truncate">${escapeHtml(c.name)}</h4>
-                            <p class="text-[10px] text-gray-500 truncate">${escapeHtml(c.bank)}</p>
-                        </div>
-                    </div>
-                    <div class="mt-2 grid grid-cols-2 gap-2 text-xs">
-                        <div class="bg-white p-2 rounded border border-gray-100">
-                            <span class="text-gray-400 block mb-0.5 text-[10px]">목표실적</span>
-                            <span class="font-bold text-gray-700">${c.target_amt ? c.target_amt.toLocaleString() + '원' : '없음'}</span>
-                        </div>
-                        <div class="bg-white p-2 rounded border border-gray-100">
-                            <span class="text-gray-400 block mb-0.5 text-[10px]">연회비</span>
-                            <span class="font-bold text-gray-700">${c.annual_fee ? c.annual_fee.toLocaleString() + '원' : '없음'}</span>
-                        </div>
-                    </div>
-                    ${(c.prt_ideal || c.prt_real) ? `
-                    <div class="mt-2 flex gap-2 text-[10px]">
-                        ${c.prt_ideal ? `<span class="bg-indigo-50 text-indigo-600 px-2 py-1 rounded">Ideal 피킹률: <b>${escapeHtml(c.prt_ideal)}</b></span>` : ''}
-                        ${c.prt_real ? `<span class="bg-emerald-50 text-emerald-600 px-2 py-1 rounded">Real 피킹률: <b>${escapeHtml(c.prt_real)}</b></span>` : ''}
-                    </div>` : ''}
-                </div>
-            `).join('') || '<p class="text-sm text-gray-500">등록된 카드가 없습니다.</p>';
         }
 
         if (insContainer) {

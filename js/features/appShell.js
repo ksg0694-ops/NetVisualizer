@@ -23,7 +23,7 @@
     // UI ????鶯ㅺ동????????????좊틣???欲꼲???
     // ==========================================
 
-document.getElementById('btn-sync').addEventListener('click', () => activeViewId === 'project-manager-view' ? window.ProjectManager?.refresh() : fetchSheetData(false));
+document.getElementById('btn-sync').addEventListener('click', () => activeViewId === 'project-manager-view' ? window.ProjectManager?.refresh() : activeViewId === 'insurance-cards-view' ? Promise.all([window.CardManager?.refresh(), fetchSheetData(false)]) : fetchSheetData(false));
     document.getElementById('tx-import-file')?.addEventListener('change', (e) => handleTxImportFile(e.target.files?.[0]));
     document.getElementById('tx-import-source')?.addEventListener('input', () => {
         if (txImportRawRows) rebuildTxImportCandidates();
