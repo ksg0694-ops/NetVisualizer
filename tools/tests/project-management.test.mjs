@@ -23,6 +23,24 @@ test('overview isolates projects, archives, completed work and week/deadline bou
  const o=m.overview(projects,rows,'2026-09-29');assert.equal(o.weekStart,'2026-09-28');assert.equal(o.tasks.length,4);assert.equal(o.week.length,1);assert.equal(o.overdue.length,1);assert.equal(o.due.length,2);assert.equal(o.projects[0].progress,50);assert.equal(o.projects[1].progress,null);
  assert.equal(m.overview(projects,rows,'2026-10-04').weekStart,'2026-09-28');assert.equal(m.overview(projects,rows,'2026-09-29','empty').tasks.length,0);
 });
+test('item types separate calendar dates from activity progress and Gantt data',()=>{
+ assert.equal(m.normalize('task',task).calendar_mode,'deadline');
+ const activity=m.normalize('task',{...task,item_type:'activity'});
+ assert.equal(activity.calendar_mode,'hidden');
+ assert.equal(m.calendarIncludes(activity,'2026-09-29'),false);
+ const deadline={...activity,calendar_mode:'deadline'};
+ assert.equal(m.calendarIncludes(deadline,'2026-09-29'),false);
+ assert.equal(m.calendarIncludes(deadline,'2026-09-30'),true);
+ for(const date of ['2026-09-28','2026-09-29','2026-09-30'])assert.equal(m.calendarIncludes({...activity,calendar_mode:'full'},date),true);
+ assert.equal(m.calendarIncludes({...activity,calendar_mode:'full'},'2026-10-01'),false);
+ assert.equal(m.calendarIncludes({...deadline,archived:true},deadline.end_date),false);
+ assert.equal(m.calendarIncludes(task,'2026-09-29'),true,'legacy retains full-period display');
+ const event=m.normalize('task',{...task,item_type:'event',end_date:task.start_date});
+ assert.equal(event.milestone,true);assert.equal(event.calendar_mode,'deadline');
+ for(const patch of [{item_type:'event'},{item_type:'invalid'},{calendar_mode:'invalid'}])assert.throws(()=>m.normalize('task',{...task,...patch}));
+ const summary=m.overview([{id}],[activity],'2026-09-29');
+ assert.equal(summary.tasks.length,1);assert.equal(summary.week.length,1);assert.equal(summary.projects[0].progress,50);
+});
 test('store scopes updates, detects conflicts and rejects account switch',async()=>{
  let userId='a',response={data:[],error:null},filters=[];
  const query={eq(k,v){filters.push([k,v]);return this;},select(){return Promise.resolve(response);}};
@@ -41,6 +59,15 @@ test('project schema enforces owner isolation, composite references, versions an
   await db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${a}',false)`);
   const p=(await db.query("insert into personal_projects(name,category) values('P','개인') returning id")).rows[0].id;
   const t=(await db.query("insert into personal_project_tasks(project_id,title,start_date,end_date) values($1,'T','2026-09-29','2026-09-30') returning id",[p])).rows[0].id;
+  await db.exec('reset role');
+  await db.exec(await source('supabase/migrations/20260929100000_project_calendar_types.sql'));
+  await db.exec('set role authenticated');
+  const migrated=(await db.query('select item_type,calendar_mode,version from personal_project_tasks where id=$1',[t])).rows[0];
+  assert.deepEqual(migrated,{item_type:'task',calendar_mode:'full',version:1});
+  await assert.rejects(()=>db.query("update personal_project_tasks set item_type='invalid' where id=$1",[t]),/check constraint/);
+  await assert.rejects(()=>db.query("update personal_project_tasks set calendar_mode='invalid' where id=$1",[t]),/check constraint/);
+  await assert.rejects(()=>db.query("update personal_project_tasks set item_type='event' where id=$1",[t]),/check constraint/);
+  await db.query("update personal_project_tasks set item_type='activity',calendar_mode='hidden' where id=$1",[t]);
   await assert.rejects(()=>db.query("update personal_project_tasks set progress=50 where id=$1",[t]),/check constraint/);
   await assert.rejects(()=>db.query("update personal_project_tasks set end_date='2026-09-28' where id=$1",[t]),/check constraint/);
   await assert.rejects(()=>db.query("update personal_project_tasks set milestone=true where id=$1",[t]),/check constraint/);

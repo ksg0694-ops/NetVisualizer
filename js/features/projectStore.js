@@ -1,7 +1,7 @@
 (function(root){
  'use strict';
  const tables={project:'personal_projects',task:'personal_project_tasks'};
- const columns={project:'id,user_id,name,category,note,archived,version,created_at,updated_at',task:'id,user_id,project_id,title,start_date,end_date,status,progress,priority,milestone,note,archived,version,created_at,updated_at'};
+ const columns={project:'id,user_id,name,category,note,archived,version,created_at,updated_at',task:'id,user_id,project_id,title,start_date,end_date,status,progress,priority,milestone,item_type,calendar_mode,note,archived,version,created_at,updated_at'};
  function create(getContext){
   function context(){const c=getContext();if(!c?.userId||!c.client)throw Error('로그인 후 이용해 주세요.');return c;}
   function same(id){if(getContext()?.userId!==id)throw Error('계정이 변경되었습니다. 다시 열어 주세요.');}

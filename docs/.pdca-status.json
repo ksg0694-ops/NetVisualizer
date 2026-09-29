@@ -1,12 +1,14 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Project management v1",
+  "feature": "Project calendar types",
   "phase": "report",
   "progress": 100,
   "updatedAt": "2026-09-29",
   "status": "complete",
   "completed": [
+    "Task/activity/event types with explicit hidden/deadline/full calendar visibility; existing records preserved",
+    "64 tests and full npm check passed; synthetic browser verifies hidden study remains in Gantt and event appears on its date",
     "Project Dashboard, 14-day Gantt, Tasks and internal Calendar with create/edit/archive/restore",
     "63 regression tests and full npm check passed; desktop and 390px mobile synthetic flows verified",
     "Dedicated project/task schema applied with owner RLS, composite ownership and optimistic version checks",
@@ -41,7 +43,7 @@
     "v193 assets prepared; no changes to existing transaction or insurance records"
   ],
   "remaining": [],
-  "nextStep": "Verify deployment revision b4dbda2879b85f61; open Life tools > Project. Google Calendar sync remains a separate future feature.",
+  "nextStep": "Check app update for revision aed15283df086c5f; edit study items to activity/hidden. Google Calendar sync remains separate.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }
