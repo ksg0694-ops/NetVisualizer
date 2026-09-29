@@ -38,7 +38,7 @@
   return {...common,project_id:input.project_id,title:text(input.title,160,'할 일 이름'),start_date,end_date,status,priority,progress,item_type,calendar_mode,milestone:input.milestone===true||item_type==='event'};
  }
  function overview(projects,tasks,today,selected='all'){
-  const list=projects.filter(p=>!p.archived&&(selected==='all'||p.id===selected)),ids=new Set(list.map(p=>p.id));
+  const list=projects.filter(p=>!p.deleted&&!p.archived&&(selected==='all'||p.id===selected)),ids=new Set(list.map(p=>p.id));
   const active=tasks.filter(t=>!t.deleted&&!t.archived&&ids.has(t.project_id)).sort((a,b)=>a.end_date.localeCompare(b.end_date)||a.title.localeCompare(b.title,'ko'));
   const now=day(today),weekday=new Date(now*86400000).getUTCDay(),monday=now-(weekday+6)%7;
   return {projects:list.map(p=>{const own=active.filter(t=>t.project_id===p.id);return {...p,total:own.length,done:own.filter(t=>t.status==='done').length,progress:own.length?Math.round(own.reduce((n,t)=>n+t.progress,0)/own.length):null};}),tasks:active,

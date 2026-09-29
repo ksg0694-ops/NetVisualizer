@@ -86,6 +86,7 @@ test('project schema enforces owner isolation, composite references, versions an
   await db.exec('reset role');
   await db.exec(await source('supabase/migrations/20260929100000_project_calendar_types.sql'));
   await db.exec(await source('supabase/migrations/20260930090000_project_task_trash.sql'));
+  await db.exec(await source('supabase/migrations/20260930100000_project_trash.sql'));
   await db.exec('set role authenticated');
   const migrated=(await db.query('select item_type,calendar_mode,version from personal_project_tasks where id=$1',[t])).rows[0];
   assert.deepEqual(migrated,{item_type:'task',calendar_mode:'full',version:1});
@@ -103,6 +104,13 @@ test('project schema enforces owner isolation, composite references, versions an
   assert.equal((await db.query('update personal_projects set archived=true where id=$1 and version=1 returning version',[p])).rows[0].version,2);
   assert.equal((await db.query('update personal_projects set archived=false where id=$1 and version=1 returning id',[p])).rows.length,0);
   await db.query('update personal_projects set archived=false where id=$1 and version=2',[p]);
+  const childBefore=(await db.query('select * from personal_project_tasks where id=$1',[t])).rows[0];
+  await assert.rejects(()=>db.query('update personal_projects set deleted=true where id=$1',[p]),/check constraint/);
+  await db.query('update personal_projects set deleted=true,archived=true where id=$1 and version=3',[p]);
+  assert.equal((await db.query('select deleted from personal_projects where id=$1',[p])).rows[0].deleted,true);
+  assert.equal((await db.query('update personal_projects set deleted=false,archived=false where id=$1 and version=3 returning id',[p])).rows.length,0);
+  await db.query('update personal_projects set deleted=false,archived=false where id=$1 and version=4',[p]);
+  assert.deepEqual((await db.query('select * from personal_project_tasks where id=$1',[t])).rows[0],childBefore);
   await db.exec(`select set_config('request.jwt.claim.sub','${b}',false)`);
   assert.equal((await db.query('select * from personal_projects')).rows.length,0);assert.equal((await db.query('select * from personal_project_tasks')).rows.length,0);
   await assert.rejects(()=>db.query("insert into personal_project_tasks(project_id,title,start_date,end_date) values($1,'foreign','2026-09-29','2026-09-30')",[p]),/foreign key/);
@@ -110,6 +118,18 @@ test('project schema enforces owner isolation, composite references, versions an
   await assert.rejects(()=>db.query('delete from personal_projects'),/permission denied/);
   await db.exec('reset role;set role anon');await assert.rejects(()=>db.query('select * from personal_project_tasks'),/permission denied/);
  }finally{await db.close();}
+});
+test('project trash scopes parent writes and restores only originally active children',async()=>{
+ const children=[{...task,id:'active'},{...task,id:'archived',archived:true},{...task,id:'deleted',archived:true,deleted:true}];
+ assert.equal(m.overview([{id,deleted:true,archived:true}],children,'2026-09-30').tasks.length,0);
+ assert.equal(m.overview([{id}],children,'2026-09-30').tasks.length,1);
+ let table,filters=[],payload,response={data:[{id,deleted:true,archived:true,version:2}],error:null};
+ const q={update(p){payload=p;return this;},eq(k,v){filters.push([k,v]);return this;},select(){return Promise.resolve(response);}};
+ const store=c.ProjectStore.create(()=>({userId:'owner',client:{from(t){table=t;return q;}}}));
+ await store.trash({id,version:1},true,'project');assert.equal(table,'personal_projects');assert.deepEqual(filters,[['user_id','owner'],['id',id],['version',1]]);
+ assert.deepEqual(JSON.parse(JSON.stringify(payload)),{deleted:true,archived:true});
+ response={data:[],error:null};await assert.rejects(()=>store.trash({id,version:1},false,'project'),/다른 기기/);
+ await assert.rejects(()=>store.trash({id,version:1},false,'unknown'),/지원하지/);
 });
 test('Project navigation and private lifecycle stay independent of retired project mock',async()=>{
  const html=await source('index.html'),shell=await source('js/features/appShell.js'),core=await source('js/features/appCore.js'),ui=await source('js/features/projectManager.js');

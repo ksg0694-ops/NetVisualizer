@@ -1,12 +1,14 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Project task deletion and restore",
+  "feature": "Project and task deletion and restore",
   "phase": "report",
   "progress": 100,
   "updatedAt": "2026-09-30",
   "status": "complete",
   "completed": [
+    "Project deletion hides retained children and restores original child states; no permanent deletion",
+    "67 tests and full npm check passed; synthetic browser project delete and restore verified",
     "Explicit task Delete confirmation and Tasks trash/restore; deletion excluded from active totals and calendar",
     "66 tests and full npm check passed; browser cancel/delete/read-only trash/restore verified with synthetic data",
     "Consistent category colors, compact dashboard without duplicate lists, grouped all/month/week Gantt",
@@ -47,7 +49,7 @@
     "v193 assets prepared; no changes to existing transaction or insurance records"
   ],
   "remaining": [],
-  "nextStep": "Check app update for revision 3bfa1b44e3878d42; open an existing task and use Delete. Restore through Tasks > Trash.",
+  "nextStep": "Check app update for revision 075a136eb8c8f910; project Edit > Delete, restore through Tasks > Trash.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }

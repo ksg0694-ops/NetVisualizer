@@ -47,7 +47,13 @@
   if(!month)month=today().slice(0,7);const first=M.day(`${month}-01`),weekday=new Date(first*86400000).getUTCDay(),start=first-(weekday+6)%7;
   return `<div class="pm-period"><button data-month="-1" aria-label="이전 달">‹</button><strong>${month.replace('-','년 ')}월</strong><button data-month="1" aria-label="다음 달">›</button><button data-month-current>이번 달</button></div><div class="pm-calendar-scroll"><div class="pm-calendar">${['월','화','수','목','금','토','일'].map(d=>`<div class="pm-day-name">${d}</div>`).join('')}${Array.from({length:42},(_,i)=>{const date=M.date(start+i),items=data.tasks.filter(t=>M.calendarIncludes(t,date));return `<section class="pm-day${date===today()?' pm-today':''}${!date.startsWith(month)?' pm-other-month':''}" aria-label="${date}"><strong>${Number(date.slice(8))}</strong>${items.map(t=>`<button class="pm-calendar-task pm-color-${M.categoryKey(projects.find(p=>p.id===t.project_id)?.category)}" data-edit="task" data-id="${esc(t.id)}" title="${esc(t.title)} · ${t.end_date} 마감">${t.milestone?'◆ ':''}${esc(t.title)}${date===t.end_date&&t.item_type!=='event'?' · 마감':''}</button>`).join('')}</section>`;}).join('')}</div></div><p class="pm-footnote">앱 내부 일정 · Google Calendar 연동 전</p>`;
  }
- function taskPage(data){const archivedProjects=projects.filter(p=>p.archived),archived=tasks.filter(t=>!t.deleted&&t.archived&&(selected==='all'||t.project_id===selected));return `<section class="pm-card"><h3>할 일 ${data.tasks.length}</h3>${taskList(data.tasks)}</section><details class="pm-archive"><summary>보관함 · 프로젝트 ${archivedProjects.length} / 할 일 ${archived.length}</summary>${archivedProjects.map(p=>`<button class="pm-task-row" data-edit="project" data-id="${esc(p.id)}">${esc(p.name)}<span>복원 / 수정</span></button>`).join('')}${taskList(archived)}</details><details class="pm-archive"><summary>휴지통 · ${tasks.filter(t=>t.deleted&&(selected==='all'||t.project_id===selected)).length}개</summary>${taskList(tasks.filter(t=>t.deleted&&(selected==='all'||t.project_id===selected)))}</details>`;}
+ function taskPage(data){
+  const deletedProjects=projects.filter(p=>p.deleted),deletedIds=new Set(deletedProjects.map(p=>p.id));
+  const visible=tasks.filter(t=>!deletedIds.has(t.project_id)&&(selected==='all'||t.project_id===selected));
+  const archivedProjects=projects.filter(p=>!p.deleted&&p.archived),archived=visible.filter(t=>!t.deleted&&t.archived),trash=visible.filter(t=>t.deleted);
+  const projectRows=(rows,isTrash)=>rows.map(p=>`<button class="pm-task-row" data-edit="project" data-id="${esc(p.id)}"><span>${esc(p.name)}${isTrash?`<small> · 소속 항목 ${tasks.filter(t=>t.project_id===p.id).length}개</small>`:''}</span><span>${isTrash?'프로젝트 복원':'복원 / 수정'}</span></button>`).join('');
+  return `<section class="pm-card"><h3>할 일 ${data.tasks.length}</h3>${taskList(data.tasks)}</section><details class="pm-archive"><summary>보관함 · 프로젝트 ${archivedProjects.length} / 할 일 ${archived.length}</summary>${projectRows(archivedProjects,false)}${taskList(archived)}</details><details class="pm-archive"><summary>휴지통 · 프로젝트 ${deletedProjects.length} / 할 일 ${trash.length}</summary>${projectRows(deletedProjects,true)}${trash.length?taskList(trash):''}</details>`;
+ }
  function draw(){
   const select=$('pm-project');if(selected!=='all'&&!projects.some(p=>p.id===selected&&!p.archived))selected='all';
   select.innerHTML='<option value="all">전체</option>'+projects.filter(p=>!p.archived).map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');select.value=selected;
@@ -74,14 +80,15 @@
   $('pm-fields').insertAdjacentHTML('beforeend',`<label>메모<textarea name="note" maxlength="2000" rows="3">${esc(p.note)}</textarea></label>${row?`<label class="pm-check"><input type="checkbox" name="archived"${p.archived?' checked':''}> 보관${kind==='project'?' (소속 할 일도 기본 화면에서 숨김)':''}</label>`:''}`);
   if(kind==='task')$('pm-fields').insertAdjacentHTML('afterbegin',`<div class="pm-form-grid"><label>유형<select name="item_type">${options(Object.entries(M.itemTypes),p.item_type)}</select></label><label>캘린더 표시<select name="calendar_mode">${options(Object.entries(M.calendarModes),p.calendar_mode)}</select></label></div>`);
   const form=$('pm-form');if(kind==='task'){const fields=form.elements;const syncEvent=()=>{if(fields.item_type.value==='event'){fields.end_date.value=fields.start_date.value;fields.milestone.checked=true;}};fields.item_type.onchange=()=>{fields.calendar_mode.value=M.defaultCalendar(fields.item_type.value);fields.milestone.checked=fields.item_type.value==='event';syncEvent();};fields.start_date.onchange=syncEvent;form.elements.status.onchange=()=>{if(form.elements.status.value==='done')form.elements.progress.value=100;else if(form.elements.status.value==='waiting'||form.elements.progress.value==='100')form.elements.progress.value=0;};}
-  $('pm-delete-confirm').hidden=true;$('pm-delete').hidden=kind!=='task'||!row;$('pm-delete').textContent=row?.deleted?'복원':'삭제';$('pm-save').hidden=!!row?.deleted;
+  $('pm-delete-confirm').hidden=true;$('pm-delete').hidden=!row;
+  $('pm-delete-confirm').querySelector('p').textContent=kind==='project'?`프로젝트와 소속 항목 ${tasks.filter(t=>t.project_id===row?.id).length}개를 화면에서 삭제할까요? 프로젝트를 복원하면 소속 항목도 원래 상태로 돌아옵니다. 저장하지 않은 수정은 반영되지 않습니다.`:'이 항목을 삭제할까요? 휴지통에서 복원할 수 있습니다. 저장하지 않은 수정은 반영되지 않습니다.';$('pm-delete').textContent=row?.deleted?'복원':'삭제';$('pm-save').hidden=!!row?.deleted;
   $('pm-form-error').textContent='';controls();$('pm-dialog').showModal();if(row?.deleted)$('pm-delete').focus();else $('pm-fields').querySelector('input,select').focus();
  }
  function close(){if(busy)return;edit=null;$('pm-dialog').close();controls();if(returnFocus?.isConnected)returnFocus.focus();else $('pm-add-project').focus();}
  async function changeTrash(deleted){
-  if(busy||edit?.kind!=='task'||!edit.base)return;
-  const token=generation,base=edit.base;busy=true;controls();$('pm-form-error').textContent='';
-  try{const result=await store.trash(base,deleted);if(token!==generation)return;tasks=tasks.map(t=>t.id===result.id?result:t);busy=false;close();draw();notify(deleted?'삭제했습니다. Tasks의 휴지통에서 복원할 수 있습니다.':'복원했습니다. 프로젝트가 보관 중이면 보관 해제 후 표시됩니다.');}
+  if(busy||!edit?.base)return;
+  const token=generation,base=edit.base,kind=edit.kind;busy=true;controls();$('pm-form-error').textContent='';
+  try{const result=await store.trash(base,deleted,kind);if(token!==generation)return;if(kind==='project')projects=projects.map(p=>p.id===result.id?result:p);else tasks=tasks.map(t=>t.id===result.id?result:t);busy=false;close();draw();notify(deleted?'삭제했습니다. Tasks의 휴지통에서 복원할 수 있습니다.':kind==='project'?'프로젝트를 복원했습니다. 소속 항목의 기존 보관·삭제 상태는 유지됩니다.':'복원했습니다. 프로젝트가 보관 중이면 보관 해제 후 표시됩니다.');}
   catch(error){if(token===generation)$('pm-form-error').textContent=error.message;}
   finally{if(token===generation){busy=false;controls();}}
  }
