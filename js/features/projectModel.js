@@ -1,6 +1,15 @@
 (function(root){
  'use strict';
  const categories=['커리어','자격증','자산','여행','개인'];
+ const categoryKey=category=>({'커리어':'career','자격증':'study','자산':'assets','여행':'travel','개인':'personal'})[category]||'personal';
+ function ganttRange(tasks,today,mode='all',offset=0){
+  const now=day(today);let start,end;
+  if(mode==='week'){start=now-(new Date(now*86400000).getUTCDay()+6)%7+offset*7;end=start+6;}
+  else if(mode==='month'){const d=new Date(now*86400000);d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+offset);start=d.getTime()/86400000;d.setUTCMonth(d.getUTCMonth()+1);end=d.getTime()/86400000-1;}
+  else {const valid=tasks.filter(t=>Number.isFinite(day(t.start_date))&&Number.isFinite(day(t.end_date)));start=valid.length?Math.min(...valid.map(t=>day(t.start_date))):now;end=valid.length?Math.max(...valid.map(t=>day(t.end_date))):now+6;}
+  const span=end-start+1,count=Math.min(8,span),ticks=Array.from({length:count},(_,i)=>{const n=start+Math.floor(i*span/count);return {date:date(n),position:(n-start)/span*100};});
+  return {start,end,span,ticks};
+ }
  const itemTypes={task:'할 일',activity:'기간 활동',event:'주요 일정'},calendarModes={hidden:'숨김',deadline:'마감일만',full:'전체 기간'};
  const defaultCalendar=type=>type==='activity'?'hidden':'deadline';
  const calendarIncludes=(task,date)=>!task.archived&&(task.calendar_mode??'full')!=='hidden'&&((task.calendar_mode??'full')==='deadline'?task.end_date===date:task.start_date<=date&&task.end_date>=date);
@@ -37,5 +46,5 @@
    due:active.filter(t=>t.status!=='done'&&day(t.end_date)>=now&&day(t.end_date)<=now+7),
    overdue:active.filter(t=>t.status!=='done'&&day(t.end_date)<now),weekStart:date(monday)};
  }
- root.ProjectModel=Object.freeze({categories,statuses,priorities,itemTypes,calendarModes,defaultCalendar,calendarIncludes,day,date,normalize,overview});
+ root.ProjectModel=Object.freeze({categories,categoryKey,ganttRange,statuses,priorities,itemTypes,calendarModes,defaultCalendar,calendarIncludes,day,date,normalize,overview});
 })(globalThis);

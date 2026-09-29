@@ -7,6 +7,18 @@ const source=p=>readFile(new URL('../../'+p,import.meta.url),'utf8');
 const c=vm.createContext({});vm.runInContext(await source('js/features/projectModel.js'),c);vm.runInContext(await source('js/features/projectStore.js'),c);
 const m=c.ProjectModel,id='10000000-0000-0000-0000-000000000001';
 const task={project_id:id,title:'Task',start_date:'2026-09-28',end_date:'2026-09-30',status:'doing',progress:50,priority:'high',milestone:false};
+test('Gantt fits whole project duration and supports bounded month/week axes',()=>{
+ const rows=[{...task,start_date:'2026-01-15',end_date:'2027-05-20'},task];
+ const all=m.ganttRange(rows,'2026-09-29');assert.equal(m.date(all.start),'2026-01-15');assert.equal(m.date(all.end),'2027-05-20');assert.equal(all.ticks.length,8);
+ const week=m.ganttRange(rows,'2026-09-29','week');assert.equal(m.date(week.start),'2026-09-28');assert.equal(week.span,7);
+ assert.equal(m.date(m.ganttRange(rows,'2026-09-29','week',1).start),'2026-10-05');
+ const month=m.ganttRange(rows,'2024-01-31','month',1);assert.equal(m.date(month.start),'2024-02-01');assert.equal(month.span,29);
+ assert.equal(m.date(m.ganttRange(rows,'2026-12-29','month',1).start),'2027-01-01');
+ assert.equal(m.ganttRange([],'2026-09-29').span,7);
+ assert.equal(m.ganttRange([{...task,end_date:task.start_date}],'2026-09-29').span,1);
+ assert.ok(m.ganttRange([{...task,start_date:'1900-01-01',end_date:'2200-12-31'}],'2026-09-29').ticks.length<=8);
+ assert.equal(new Set(m.categories.map(m.categoryKey)).size,5);assert.equal(m.categoryKey('unknown'),'personal');
+});
 test('project/task validation preserves local dates and consistent progress',()=>{
  assert.equal(m.normalize('project',{name:' Test ',category:'개인'}).name,'Test');
  assert.throws(()=>m.normalize('project',{name:'x',category:'bad'}));

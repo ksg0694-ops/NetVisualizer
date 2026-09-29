@@ -1,12 +1,14 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Project calendar types",
+  "feature": "Project overview and full-range Gantt",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-09-29",
+  "updatedAt": "2026-09-30",
   "status": "complete",
   "completed": [
+    "Consistent category colors, compact dashboard without duplicate lists, grouped all/month/week Gantt",
+    "65 tests and full npm check passed; synthetic desktop and 390px mobile verified, no outer overflow",
     "Task/activity/event types with explicit hidden/deadline/full calendar visibility; existing records preserved",
     "64 tests and full npm check passed; synthetic browser verifies hidden study remains in Gantt and event appears on its date",
     "Project Dashboard, 14-day Gantt, Tasks and internal Calendar with create/edit/archive/restore",
@@ -43,7 +45,7 @@
     "v193 assets prepared; no changes to existing transaction or insurance records"
   ],
   "remaining": [],
-  "nextStep": "Check app update for revision aed15283df086c5f; edit study items to activity/hidden. Google Calendar sync remains separate.",
+  "nextStep": "Check app update for revision ad39f441053b1597; open Project > Gantt and select all/month/week.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }
