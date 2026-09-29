@@ -1,4 +1,5 @@
 #project-manager-view{color:#18243b;line-height:1.5;font-variant-numeric:tabular-nums}
+#pm-dialog .pm-danger{color:#b42335;border-color:#f3c8cf;margin-right:auto}#pm-delete-confirm{background:#fff2f3;border:1px solid #f3c8cf;border-radius:8px;padding:12px;margin:12px 0;font-size:13px}#pm-delete-confirm p{margin-bottom:10px}#pm-dialog #pm-delete-yes{background:#b42335;color:white;margin-right:8px}
 #project-manager-view{--pm-accent:#7c3aed;--pm-soft:#f3edff;--pm-ink:#5b21b6}
 .pm-color-career{--pm-accent:#2563eb;--pm-soft:#eff6ff;--pm-ink:#1e40af}.pm-color-study{--pm-accent:#7c3aed;--pm-soft:#f3edff;--pm-ink:#5b21b6}.pm-color-assets{--pm-accent:#0d9488;--pm-soft:#eafaf6;--pm-ink:#115e59}.pm-color-travel{--pm-accent:#d97706;--pm-soft:#fff7e7;--pm-ink:#92400e}.pm-color-personal{--pm-accent:#db2777;--pm-soft:#fff0f6;--pm-ink:#9d174d}
 .pm-dashboard-gantt{margin-top:18px}.pm-dashboard-gantt>h3{font-size:16px;font-weight:700;margin-bottom:12px}

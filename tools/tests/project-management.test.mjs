@@ -63,6 +63,18 @@ test('store scopes updates, detects conflicts and rejects account switch',async(
  query.select=()=>{userId='b';return Promise.resolve({data:[{id:'t'}],error:null});};await assert.rejects(()=>store.save('task',task,null,id),/계정이 변경/);
  userId='';await assert.rejects(()=>store.list(),/로그인/);
 });
+test('trash uses owner/version guards, partial updates and excludes deleted records from displays',async()=>{
+ let userId='a',payload,filters=[],response={data:[{...task,id:'t',deleted:true,archived:true,version:2}],error:null};
+ const q={update(p){payload=p;return this;},eq(k,v){filters.push([k,v]);return this;},select(){return Promise.resolve(response);}};
+ const store=c.ProjectStore.create(()=>({userId,client:{from(){return q;}}}));
+ const deleted=await store.trash({id:'t',version:1},true);
+ assert.deepEqual(JSON.parse(JSON.stringify(payload)),{deleted:true,archived:true});assert.deepEqual(filters,[['user_id','a'],['id','t'],['version',1]]);
+ assert.equal(m.overview([{id}],[deleted],'2026-09-29').tasks.length,0);assert.equal(m.calendarIncludes(deleted,task.end_date),false);
+ response={data:[],error:null};await assert.rejects(()=>store.trash(deleted,false),/다른 기기/);
+ response={data:null,error:{message:'offline'}};await assert.rejects(()=>store.trash(deleted,false),/변경하지 못/);
+ q.select=()=>{userId='b';return Promise.resolve({data:[task],error:null});};await assert.rejects(()=>store.trash(deleted,false),/계정이 변경/);
+ userId='';await assert.rejects(()=>store.trash(deleted,false),/로그인/);
+});
 test('project schema enforces owner isolation, composite references, versions and recoverable archives',async()=>{
  const db=new PGlite(),a=id,b='20000000-0000-0000-0000-000000000002';
  try{
@@ -73,9 +85,14 @@ test('project schema enforces owner isolation, composite references, versions an
   const t=(await db.query("insert into personal_project_tasks(project_id,title,start_date,end_date) values($1,'T','2026-09-29','2026-09-30') returning id",[p])).rows[0].id;
   await db.exec('reset role');
   await db.exec(await source('supabase/migrations/20260929100000_project_calendar_types.sql'));
+  await db.exec(await source('supabase/migrations/20260930090000_project_task_trash.sql'));
   await db.exec('set role authenticated');
   const migrated=(await db.query('select item_type,calendar_mode,version from personal_project_tasks where id=$1',[t])).rows[0];
   assert.deepEqual(migrated,{item_type:'task',calendar_mode:'full',version:1});
+  await assert.rejects(()=>db.query('update personal_project_tasks set deleted=true where id=$1',[t]),/check constraint/);
+  await db.query('update personal_project_tasks set deleted=true,archived=true where id=$1',[t]);
+  assert.equal((await db.query('select deleted from personal_project_tasks where id=$1',[t])).rows[0].deleted,true);
+  await db.query('update personal_project_tasks set deleted=false,archived=false where id=$1',[t]);
   await assert.rejects(()=>db.query("update personal_project_tasks set item_type='invalid' where id=$1",[t]),/check constraint/);
   await assert.rejects(()=>db.query("update personal_project_tasks set calendar_mode='invalid' where id=$1",[t]),/check constraint/);
   await assert.rejects(()=>db.query("update personal_project_tasks set item_type='event' where id=$1",[t]),/check constraint/);

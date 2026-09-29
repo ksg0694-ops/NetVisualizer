@@ -10,10 +10,12 @@
   container.innerHTML=`<div class="pm-toolbar"><div class="pm-filter"><label for="pm-project">프로젝트</label><select id="pm-project"><option value="all">전체</option></select></div><div class="pm-actions"><button id="pm-refresh">새로고침</button><button id="pm-add-project">+ 프로젝트</button><button id="pm-add-task" class="pm-primary">+ 항목</button></div></div>
    <p id="pm-message" role="status" aria-live="polite"></p><div class="pm-tabs" role="tablist" aria-label="Project 보기">${[['dashboard','Dashboard'],['gantt','Gantt'],['tasks','Tasks'],['calendar','Calendar']].map(([id,label])=>`<button role="tab" id="pm-tab-${id}" data-tab="${id}" aria-controls="pm-panel" aria-selected="${id===tab}">${label}</button>`).join('')}</div>
    <div id="pm-panel" role="tabpanel" aria-labelledby="pm-tab-dashboard"></div>
-   <dialog id="pm-dialog" aria-labelledby="pm-dialog-title"><form id="pm-form"><div class="pm-dialog-heading"><h3 id="pm-dialog-title"></h3><button type="button" id="pm-close" aria-label="닫기">×</button></div><fieldset id="pm-fields"></fieldset><p id="pm-form-error" role="alert"></p><div class="pm-actions"><button type="button" id="pm-cancel">취소</button><button type="submit" class="pm-primary" id="pm-save">저장</button></div></form></dialog>`;
+   <dialog id="pm-dialog" aria-labelledby="pm-dialog-title"><form id="pm-form"><div class="pm-dialog-heading"><h3 id="pm-dialog-title"></h3><button type="button" id="pm-close" aria-label="닫기">×</button></div><fieldset id="pm-fields"></fieldset><p id="pm-form-error" role="alert"></p><div id="pm-delete-confirm" hidden><p>이 항목을 삭제할까요? 휴지통에서 복원할 수 있습니다. 저장하지 않은 수정은 반영되지 않습니다.</p><button type="button" id="pm-delete-yes">삭제 확인</button><button type="button" id="pm-delete-no">돌아가기</button></div><div class="pm-actions"><button type="button" id="pm-delete" class="pm-danger" hidden>삭제</button><button type="button" id="pm-cancel">취소</button><button type="submit" class="pm-primary" id="pm-save">저장</button></div></form></dialog>`;
   $('pm-project').onchange=e=>{selected=e.target.value;offset=0;draw();};
   $('pm-add-project').onclick=()=>open('project');$('pm-add-task').onclick=()=>open('task');$('pm-refresh').onclick=load;
   container.querySelectorAll('[data-tab]').forEach(b=>{b.onclick=()=>{tab=b.dataset.tab;draw();};b.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const ids=['dashboard','gantt','tasks','calendar'];let i=ids.indexOf(tab);i=e.key==='Home'?0:e.key==='End'?3:(i+(e.key==='ArrowLeft'?-1:1)+4)%4;tab=ids[i];draw();$(`pm-tab-${tab}`).focus();};});
+  $('pm-delete').onclick=()=>{if(edit?.base?.deleted)changeTrash(false);else {$('pm-delete-confirm').hidden=false;$('pm-delete-yes').focus();}};
+  $('pm-delete-yes').onclick=()=>changeTrash(true);$('pm-delete-no').onclick=()=>{$('pm-delete-confirm').hidden=true;$('pm-delete').focus();};
   $('pm-close').onclick=close;$('pm-cancel').onclick=close;$('pm-form').onsubmit=save;
   $('pm-dialog').oncancel=e=>{e.preventDefault();close();};
  }
@@ -21,7 +23,7 @@
   const disabled=busy||!!edit||!owner||!loaded;
   for(const id of ['pm-add-project','pm-add-task'])$(id).disabled=disabled||(id==='pm-add-task'&&!projects.some(p=>!p.archived));
   $('pm-refresh').disabled=busy||!!edit||!owner;
-  $('pm-fields').disabled=busy;$('pm-save').disabled=busy;$('pm-close').disabled=busy;$('pm-cancel').disabled=busy;
+  $('pm-fields').disabled=busy||!!edit?.base?.deleted;for(const id of ['pm-delete','pm-delete-yes','pm-delete-no'])$(id).disabled=busy;$('pm-save').disabled=busy;$('pm-close').disabled=busy;$('pm-cancel').disabled=busy;
   $('pm-panel').querySelectorAll('[data-edit]').forEach(b=>b.disabled=disabled);
  }
  function taskRow(t){const p=projects.find(p=>p.id===t.project_id);return `<button class="pm-task-row pm-color-${M.categoryKey(p?.category)}" data-edit="task" data-id="${esc(t.id)}"><span class="pm-task-name">${t.milestone?'◆ ':''}${esc(t.title)}<small>${esc(p?.name)} · ${M.itemTypes[t.item_type??'task']} · ${t.start_date} → ${t.end_date}</small></span><span class="pm-task-meta"><span class="pm-status pm-${t.status}">${M.statuses[t.status]}</span><span>${t.progress}%</span><span class="pm-priority-${t.priority}">${M.priorities[t.priority]}</span></span></button>`;}
@@ -45,7 +47,7 @@
   if(!month)month=today().slice(0,7);const first=M.day(`${month}-01`),weekday=new Date(first*86400000).getUTCDay(),start=first-(weekday+6)%7;
   return `<div class="pm-period"><button data-month="-1" aria-label="이전 달">‹</button><strong>${month.replace('-','년 ')}월</strong><button data-month="1" aria-label="다음 달">›</button><button data-month-current>이번 달</button></div><div class="pm-calendar-scroll"><div class="pm-calendar">${['월','화','수','목','금','토','일'].map(d=>`<div class="pm-day-name">${d}</div>`).join('')}${Array.from({length:42},(_,i)=>{const date=M.date(start+i),items=data.tasks.filter(t=>M.calendarIncludes(t,date));return `<section class="pm-day${date===today()?' pm-today':''}${!date.startsWith(month)?' pm-other-month':''}" aria-label="${date}"><strong>${Number(date.slice(8))}</strong>${items.map(t=>`<button class="pm-calendar-task pm-color-${M.categoryKey(projects.find(p=>p.id===t.project_id)?.category)}" data-edit="task" data-id="${esc(t.id)}" title="${esc(t.title)} · ${t.end_date} 마감">${t.milestone?'◆ ':''}${esc(t.title)}${date===t.end_date&&t.item_type!=='event'?' · 마감':''}</button>`).join('')}</section>`;}).join('')}</div></div><p class="pm-footnote">앱 내부 일정 · Google Calendar 연동 전</p>`;
  }
- function taskPage(data){const archivedProjects=projects.filter(p=>p.archived),archived=tasks.filter(t=>t.archived&&(selected==='all'||t.project_id===selected));return `<section class="pm-card"><h3>할 일 ${data.tasks.length}</h3>${taskList(data.tasks)}</section><details class="pm-archive"><summary>보관함 · 프로젝트 ${archivedProjects.length} / 할 일 ${archived.length}</summary>${archivedProjects.map(p=>`<button class="pm-task-row" data-edit="project" data-id="${esc(p.id)}">${esc(p.name)}<span>복원 / 수정</span></button>`).join('')}${taskList(archived)}</details>`;}
+ function taskPage(data){const archivedProjects=projects.filter(p=>p.archived),archived=tasks.filter(t=>!t.deleted&&t.archived&&(selected==='all'||t.project_id===selected));return `<section class="pm-card"><h3>할 일 ${data.tasks.length}</h3>${taskList(data.tasks)}</section><details class="pm-archive"><summary>보관함 · 프로젝트 ${archivedProjects.length} / 할 일 ${archived.length}</summary>${archivedProjects.map(p=>`<button class="pm-task-row" data-edit="project" data-id="${esc(p.id)}">${esc(p.name)}<span>복원 / 수정</span></button>`).join('')}${taskList(archived)}</details><details class="pm-archive"><summary>휴지통 · ${tasks.filter(t=>t.deleted&&(selected==='all'||t.project_id===selected)).length}개</summary>${taskList(tasks.filter(t=>t.deleted&&(selected==='all'||t.project_id===selected)))}</details>`;}
  function draw(){
   const select=$('pm-project');if(selected!=='all'&&!projects.some(p=>p.id===selected&&!p.archived))selected='all';
   select.innerHTML='<option value="all">전체</option>'+projects.filter(p=>!p.archived).map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');select.value=selected;
@@ -72,11 +74,19 @@
   $('pm-fields').insertAdjacentHTML('beforeend',`<label>메모<textarea name="note" maxlength="2000" rows="3">${esc(p.note)}</textarea></label>${row?`<label class="pm-check"><input type="checkbox" name="archived"${p.archived?' checked':''}> 보관${kind==='project'?' (소속 할 일도 기본 화면에서 숨김)':''}</label>`:''}`);
   if(kind==='task')$('pm-fields').insertAdjacentHTML('afterbegin',`<div class="pm-form-grid"><label>유형<select name="item_type">${options(Object.entries(M.itemTypes),p.item_type)}</select></label><label>캘린더 표시<select name="calendar_mode">${options(Object.entries(M.calendarModes),p.calendar_mode)}</select></label></div>`);
   const form=$('pm-form');if(kind==='task'){const fields=form.elements;const syncEvent=()=>{if(fields.item_type.value==='event'){fields.end_date.value=fields.start_date.value;fields.milestone.checked=true;}};fields.item_type.onchange=()=>{fields.calendar_mode.value=M.defaultCalendar(fields.item_type.value);fields.milestone.checked=fields.item_type.value==='event';syncEvent();};fields.start_date.onchange=syncEvent;form.elements.status.onchange=()=>{if(form.elements.status.value==='done')form.elements.progress.value=100;else if(form.elements.status.value==='waiting'||form.elements.progress.value==='100')form.elements.progress.value=0;};}
-  $('pm-form-error').textContent='';controls();$('pm-dialog').showModal();$('pm-fields').querySelector('input,select').focus();
+  $('pm-delete-confirm').hidden=true;$('pm-delete').hidden=kind!=='task'||!row;$('pm-delete').textContent=row?.deleted?'복원':'삭제';$('pm-save').hidden=!!row?.deleted;
+  $('pm-form-error').textContent='';controls();$('pm-dialog').showModal();if(row?.deleted)$('pm-delete').focus();else $('pm-fields').querySelector('input,select').focus();
  }
  function close(){if(busy)return;edit=null;$('pm-dialog').close();controls();if(returnFocus?.isConnected)returnFocus.focus();else $('pm-add-project').focus();}
+ async function changeTrash(deleted){
+  if(busy||edit?.kind!=='task'||!edit.base)return;
+  const token=generation,base=edit.base;busy=true;controls();$('pm-form-error').textContent='';
+  try{const result=await store.trash(base,deleted);if(token!==generation)return;tasks=tasks.map(t=>t.id===result.id?result:t);busy=false;close();draw();notify(deleted?'삭제했습니다. Tasks의 휴지통에서 복원할 수 있습니다.':'복원했습니다. 프로젝트가 보관 중이면 보관 해제 후 표시됩니다.');}
+  catch(error){if(token===generation)$('pm-form-error').textContent=error.message;}
+  finally{if(token===generation){busy=false;controls();}}
+ }
  async function save(event){
-  event.preventDefault();if(busy||!edit)return;
+  event.preventDefault();if(busy||!edit||edit.base?.deleted)return;
   const input=Object.fromEntries(new FormData($('pm-form')));input.archived=input.archived==='on';input.milestone=input.milestone==='on';
   const token=generation,current=edit;busy=true;controls();$('pm-form-error').textContent='';
   try{const result=await store.save(current.kind,input,current.base,current.id);if(token!==generation)return;

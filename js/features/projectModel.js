@@ -12,7 +12,7 @@
  }
  const itemTypes={task:'할 일',activity:'기간 활동',event:'주요 일정'},calendarModes={hidden:'숨김',deadline:'마감일만',full:'전체 기간'};
  const defaultCalendar=type=>type==='activity'?'hidden':'deadline';
- const calendarIncludes=(task,date)=>!task.archived&&(task.calendar_mode??'full')!=='hidden'&&((task.calendar_mode??'full')==='deadline'?task.end_date===date:task.start_date<=date&&task.end_date>=date);
+ const calendarIncludes=(task,date)=>!task.deleted&&!task.archived&&(task.calendar_mode??'full')!=='hidden'&&((task.calendar_mode??'full')==='deadline'?task.end_date===date:task.start_date<=date&&task.end_date>=date);
  const statuses={waiting:'대기',doing:'진행',done:'완료'}, priorities={high:'높음',normal:'보통',low:'낮음'};
  const day=s=>typeof s==='string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && s>='1900-01-01' && s<='2200-12-31' && Number.isFinite(Date.parse(s)) && new Date(s).toISOString().slice(0,10)===s ? Date.parse(s)/86400000 : NaN;
  const date=n=>new Date(n*86400000).toISOString().slice(0,10);
@@ -39,7 +39,7 @@
  }
  function overview(projects,tasks,today,selected='all'){
   const list=projects.filter(p=>!p.archived&&(selected==='all'||p.id===selected)),ids=new Set(list.map(p=>p.id));
-  const active=tasks.filter(t=>!t.archived&&ids.has(t.project_id)).sort((a,b)=>a.end_date.localeCompare(b.end_date)||a.title.localeCompare(b.title,'ko'));
+  const active=tasks.filter(t=>!t.deleted&&!t.archived&&ids.has(t.project_id)).sort((a,b)=>a.end_date.localeCompare(b.end_date)||a.title.localeCompare(b.title,'ko'));
   const now=day(today),weekday=new Date(now*86400000).getUTCDay(),monday=now-(weekday+6)%7;
   return {projects:list.map(p=>{const own=active.filter(t=>t.project_id===p.id);return {...p,total:own.length,done:own.filter(t=>t.status==='done').length,progress:own.length?Math.round(own.reduce((n,t)=>n+t.progress,0)/own.length):null};}),tasks:active,
    week:active.filter(t=>t.status!=='done'&&day(t.start_date)<=monday+6&&day(t.end_date)>=monday),

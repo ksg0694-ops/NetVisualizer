@@ -1,12 +1,14 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Project overview and full-range Gantt",
+  "feature": "Project task deletion and restore",
   "phase": "report",
   "progress": 100,
   "updatedAt": "2026-09-30",
   "status": "complete",
   "completed": [
+    "Explicit task Delete confirmation and Tasks trash/restore; deletion excluded from active totals and calendar",
+    "66 tests and full npm check passed; browser cancel/delete/read-only trash/restore verified with synthetic data",
     "Consistent category colors, compact dashboard without duplicate lists, grouped all/month/week Gantt",
     "65 tests and full npm check passed; synthetic desktop and 390px mobile verified, no outer overflow",
     "Task/activity/event types with explicit hidden/deadline/full calendar visibility; existing records preserved",
@@ -45,7 +47,7 @@
     "v193 assets prepared; no changes to existing transaction or insurance records"
   ],
   "remaining": [],
-  "nextStep": "Check app update for revision ad39f441053b1597; open Project > Gantt and select all/month/week.",
+  "nextStep": "Check app update for revision 3bfa1b44e3878d42; open an existing task and use Delete. Restore through Tasks > Trash.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }
