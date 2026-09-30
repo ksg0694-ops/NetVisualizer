@@ -4,6 +4,10 @@
  const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
  let projects=[],tasks=[],owner='',generation=0,busy=false,loaded=false,tab='dashboard',selected='all',offset=0,ganttMode='all',month='',edit=null,returnFocus=null;
  const today=()=>root.AppUtils.toLocalDateString();
+ const expanded=new Set();let completedOpen=false;
+ const iconNames={career:'briefcase',study:'award',assets:'wallet',travel:'plane',personal:'book'};
+ const iconBase=new URL('../../assets/project-icons/',document.currentScript.src).href;
+ const icon=name=>`<img src="${iconBase}${name}.svg" alt="" width="24" height="24" aria-hidden="true">`;
  const empty=label=>`<p class="pm-empty">${label}</p>`;
  function notify(text,error=false){$('pm-message').textContent=text;$('pm-message').dataset.error=String(error);}
  function mount(container){
@@ -24,13 +28,22 @@
   for(const id of ['pm-add-project','pm-add-task'])$(id).disabled=disabled||(id==='pm-add-task'&&!projects.some(p=>!p.archived));
   $('pm-refresh').disabled=busy||!!edit||!owner;
   $('pm-fields').disabled=busy||!!edit?.base?.deleted;for(const id of ['pm-delete','pm-delete-yes','pm-delete-no'])$(id).disabled=busy;$('pm-save').disabled=busy;$('pm-close').disabled=busy;$('pm-cancel').disabled=busy;
-  $('pm-panel').querySelectorAll('[data-edit]').forEach(b=>b.disabled=disabled);
+  $('pm-panel').querySelectorAll('[data-edit],[data-complete],[data-add-to]').forEach(b=>b.disabled=disabled);
  }
  function taskRow(t){const p=projects.find(p=>p.id===t.project_id);return `<button class="pm-task-row pm-color-${M.categoryKey(p?.category)}" data-edit="task" data-id="${esc(t.id)}"><span class="pm-task-name">${t.milestone?'◆ ':''}${esc(t.title)}<small>${esc(p?.name)} · ${M.itemTypes[t.item_type??'task']} · ${t.start_date} → ${t.end_date}</small></span><span class="pm-task-meta"><span class="pm-status pm-${t.status}">${M.statuses[t.status]}</span><span>${t.progress}%</span><span class="pm-priority-${t.priority}">${M.priorities[t.priority]}</span></span></button>`;}
  function taskList(list){return list.length?list.map(taskRow).join(''):empty('해당하는 할 일이 없습니다.');}
- function dashboard(data){return `<div class="pm-stats">${[['프로젝트',data.projects.length],['이번 주',data.week.length],['7일 내 마감',data.due.length],['기한 지남',data.overdue.length]].map(([label,value])=>`<div><span>${label}</span><strong>${value}</strong></div>`).join('')}</div>
-  <div class="pm-project-grid">${data.projects.map(p=>`<article class="pm-project-card pm-color-${M.categoryKey(p.category)}"><div class="pm-card-title"><span class="pm-category">${esc(p.category)}</span><button data-edit="project" data-id="${esc(p.id)}" aria-label="${esc(p.name)} 프로젝트 수정">수정</button></div><h3>${esc(p.name)}</h3><div class="pm-progress-line"><progress value="${p.progress??0}" max="100" aria-label="${esc(p.name)} 진행률"></progress><strong>${p.progress==null?'—':`${p.progress}%`}</strong></div><small>완료 ${p.done} / ${p.total}</small></article>`).join('')||empty('첫 프로젝트를 추가해 보세요.')}</div>
-  <section class="pm-card pm-focus-list"><div class="pm-card-title"><h3>다가오는 일정</h3><button data-show-tasks>전체 항목 보기</button></div>${taskList([...data.overdue,...data.tasks.filter(t=>t.status!=='done'&&t.end_date>=today())].slice(0,5))}</section>`;}
+ function dashboard(data){
+  const rows=data.projects.map(p=>({p,...M.journey(p,data.tasks)}));
+  const row=({p,items,stages,current,complete})=>`<details class="pm-journey pm-color-${M.categoryKey(p.category)}" data-project-row="${esc(p.id)}"${expanded.has(p.id)?' open':''}>
+   <summary><span class="pm-project-identity"><span class="pm-project-icon">${icon(iconNames[M.categoryKey(p.category)])}</span><span><span class="pm-category">${esc(p.category)}</span><strong>${esc(p.name)}</strong></span></span>
+   <span class="pm-steps" aria-label="등록 항목 진행 흐름">${stages.map(t=>`<span class="pm-step pm-step-${t.status}" title="${esc(t.title)} · ${M.statuses[t.status]}"><span class="pm-step-dot">${t.status==='done'?icon('check'):''}</span><span class="pm-step-label">${esc(t.title)}</span><span class="pm-sr-only">${M.statuses[t.status]}</span></span>`).join('')||'<span class="pm-journey-muted">항목을 추가해 보세요</span>'}</span>
+   <span class="pm-current"><small>${complete?'진행 상태':'진행 중인 항목'}</small><strong>${complete?'완료':current.length?esc(current.map(t=>t.title).join(' · ')):'진행 중인 항목 없음'}</strong></span><span class="pm-chevron">${icon('chevron-down')}</span></summary>
+   <div class="pm-journey-body"><div class="pm-journey-heading"><h3>진행 항목</h3><button data-edit="project" data-id="${esc(p.id)}" aria-label="${esc(p.name)} 프로젝트 수정">프로젝트 수정</button></div>
+    <div class="pm-checklist">${items.map(t=>`<div class="pm-check-row${t.status==='done'?' is-done':''}"><input type="checkbox" data-complete="${esc(t.id)}" aria-label="${esc(t.title)} 완료"${t.status==='done'?' checked':''}><button data-edit="task" data-id="${esc(t.id)}">${esc(t.title)}</button><span class="pm-status pm-${t.status}">${M.statuses[t.status]}</span></div>`).join('')||empty('등록된 항목이 없습니다.')}</div>
+    <button class="pm-add-inline" data-add-to="${esc(p.id)}">+ 항목</button></div></details>`;
+  const active=rows.filter(r=>!r.complete),done=rows.filter(r=>r.complete);
+  return `<div class="pm-journey-list">${active.map(row).join('')||(!rows.length?empty('첫 프로젝트를 추가해 보세요.'):'')}</div>${done.length?`<details class="pm-completed"${completedOpen?' open':''}><summary>완료된 프로젝트</summary><div class="pm-journey-list">${done.map(row).join('')}</div></details>`:''}`;
+ }
  function gantt(data){
   const range=M.ganttRange(data.tasks,today(),ganttMode,offset),{start,end,span,ticks}=range;
   const list=data.tasks.filter(t=>M.day(t.start_date)<=end&&M.day(t.end_date)>=start),now=M.day(today()),todayPos=(now-start+.5)/span*100;
@@ -63,6 +76,10 @@
   const data=M.overview(projects,tasks,today(),selected);
   $('pm-panel').innerHTML=tab==='dashboard'?dashboard(data):tab==='gantt'?gantt(data):tab==='calendar'?calendar(data):taskPage(data);
   $('pm-panel').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>open(b.dataset.edit,(b.dataset.edit==='project'?projects:tasks).find(r=>r.id===b.dataset.id)));
+  $('pm-panel').querySelectorAll('[data-project-row]').forEach(d=>d.ontoggle=()=>{if(d.isConnected){if(d.open)expanded.add(d.dataset.projectRow);else expanded.delete(d.dataset.projectRow);}});
+  const completed=$('pm-panel').querySelector('.pm-completed');if(completed)completed.ontoggle=()=>{if(completed.isConnected)completedOpen=completed.open;};
+  $('pm-panel').querySelectorAll('[data-complete]').forEach(b=>b.onchange=()=>completeTask(b));
+  $('pm-panel').querySelectorAll('[data-add-to]').forEach(b=>b.onclick=()=>open('task',null,b.dataset.addTo));
   $('pm-panel').querySelector('[data-show-tasks]')?.addEventListener('click',()=>{tab='tasks';draw();$('pm-tab-tasks').focus();});
   $('pm-panel').querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>{ganttMode=b.dataset.range;offset=0;draw();});
   $('pm-panel').querySelectorAll('[data-shift]').forEach(b=>b.onclick=()=>{offset+=Number(b.dataset.shift);draw();});
@@ -70,10 +87,11 @@
   $('pm-panel').querySelectorAll('[data-month]').forEach(b=>b.onclick=()=>{const d=new Date(`${month}-01T00:00:00Z`);d.setUTCMonth(d.getUTCMonth()+Number(b.dataset.month));const next=d.toISOString().slice(0,7);if(next>='1900-01'&&next<='2200-12')month=next;draw();});
   $('pm-panel').querySelector('[data-month-current]')?.addEventListener('click',()=>{month=today().slice(0,7);draw();});controls();
  }
- function open(kind,row=null){
+ function open(kind,row=null,projectId=null){
   if(busy||edit||!loaded||!owner)return;
   returnFocus=document.activeElement;edit={kind,base:row?{...row}:null,id:root.crypto.randomUUID()};
   const p=row?{...row,item_type:row.item_type??'task',calendar_mode:row.calendar_mode??'full'}:{item_type:'task',calendar_mode:'deadline',category:'개인',project_id:selected!=='all'?selected:projects.find(p=>!p.archived)?.id,start_date:today(),end_date:today(),status:'waiting',progress:0,priority:'normal'};
+  if(projectId)p.project_id=projectId;
   const options=(values,value)=>values.map(([key,label])=>`<option value="${esc(key)}"${key===value?' selected':''}>${esc(label)}</option>`).join('');
   $('pm-dialog-title').textContent=`${kind==='project'?'프로젝트':'항목'} ${row?'수정':'추가'}`;
   $('pm-fields').innerHTML=kind==='project'?`<label>프로젝트 이름<input name="name" maxlength="100" required value="${esc(p.name)}"></label><label>분류<select name="category">${options(M.categories.map(c=>[c,c]),p.category)}</select></label>`:`<label>프로젝트<select name="project_id" required>${options(projects.filter(r=>!r.archived||r.id===p.project_id).map(r=>[r.id,`${r.name}${r.archived?' (보관됨)':''}`]),p.project_id)}</select></label><label>항목 이름<input name="title" maxlength="160" required value="${esc(p.title)}"></label><div class="pm-form-grid"><label>시작일<input type="date" name="start_date" min="1900-01-01" max="2200-12-31" required value="${p.start_date}"></label><label>종료일<input type="date" name="end_date" min="1900-01-01" max="2200-12-31" required value="${p.end_date}"></label><label>상태<select name="status">${options(Object.entries(M.statuses),p.status)}</select></label><label>진행률 %<input type="number" name="progress" min="0" max="100" step="1" required value="${p.progress}"></label><label>우선순위<select name="priority">${options(Object.entries(M.priorities),p.priority)}</select></label><label class="pm-check"><input type="checkbox" name="milestone"${p.milestone?' checked':''}> 마일스톤 (하루 일정)</label></div>`;
@@ -108,7 +126,15 @@
   catch(error){if(token===generation)notify(error.message,true);}
   finally{if(token===generation){busy=false;controls();}}
  }
- function reset(){generation++;$('pm-dialog')?.close();projects=[];tasks=[];owner='';loaded=false;busy=false;edit=null;selected='all';tab='dashboard';offset=0;ganttMode='all';month='';returnFocus=null;$('project-manager-view')?.replaceChildren();}
+ async function completeTask(control){
+  const base=tasks.find(t=>t.id===control.dataset.complete),checked=control.checked;
+  if(busy||edit||!base||!owner){if(base)control.checked=base.status==='done';return;}
+  const token=generation;busy=true;controls();
+  try{const result=await store.save('task',M.completionInput(base,checked),base);if(token!==generation)return;tasks=tasks.map(t=>t.id===result.id?result:t);if(checked)completedOpen=true;draw();notify(checked?'완료했습니다.':'진행 중으로 되돌렸습니다.');}
+  catch(error){if(token===generation){control.checked=base.status==='done';notify(error.message,true);}}
+  finally{if(token===generation){busy=false;controls();const next=Array.from($('pm-panel').querySelectorAll('[data-complete]')).find(b=>b.dataset.complete===base.id);next?.focus();}}
+ }
+ function reset(){generation++;$('pm-dialog')?.close();expanded.clear();completedOpen=false;projects=[];tasks=[];owner='';loaded=false;busy=false;edit=null;selected='all';tab='dashboard';offset=0;ganttMode='all';month='';returnFocus=null;$('project-manager-view')?.replaceChildren();}
  function render(){const container=$('project-manager-view');if(!container||container.classList.contains('hidden'))return;const next=root.getProjectContext()?.userId||'';if(next!==owner)reset();owner=next;if(!$('pm-form'))mount(container);if(edit)return;draw();if(!loaded&&owner)load();}
  root.ProjectManager=Object.freeze({render,refresh:load,reset});
 })(globalThis);

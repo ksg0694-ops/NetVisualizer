@@ -1,12 +1,14 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Card images and simplified list",
+  "feature": "Project dashboard accordion",
   "phase": "report",
   "progress": 100,
-  "updatedAt": "2026-09-30",
+  "updatedAt": "2026-10-01",
   "status": "complete",
   "completed": [
+    "Selected concept 2 implemented: project accordions, actual activity journeys, inline completion and scoped add; no dashboard statistics or upcoming deadlines",
+    "Desktop/mobile synthetic browser checked, visual QA passed; 75 regression tests and full check passed",
     "Removed closed/trash sections and status selector; immediate delete undo retains private recoverability",
     "Official image allowlist with safe raster fallback; 73 tests and full npm check passed; both images loaded in browser",
     "Card create/edit/status/delete/restore with owner/version guards and duplicate-create token; existing finance fields preserved",
@@ -53,7 +55,7 @@
     "v193 assets prepared; no changes to existing transaction or insurance records"
   ],
   "remaining": [],
-  "nextStep": "Check app update for revision 0aac1daf27d6b9e9; refresh Insurance/cards list.",
+  "nextStep": "Check app update, then open Project Dashboard and expand a project.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }

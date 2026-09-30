@@ -7,6 +7,21 @@ const source=p=>readFile(new URL('../../'+p,import.meta.url),'utf8');
 const c=vm.createContext({});vm.runInContext(await source('js/features/projectModel.js'),c);vm.runInContext(await source('js/features/projectStore.js'),c);
 const m=c.ProjectModel,id='10000000-0000-0000-0000-000000000001';
 const task={project_id:id,title:'Task',start_date:'2026-09-28',end_date:'2026-09-30',status:'doing',progress:50,priority:'high',milestone:false};
+test('dashboard journeys use actual scoped states and chronological activities, not deadline guesses',()=>{
+ const rows=[{...task,id:'later',item_type:'event',start_date:'2026-10-01',end_date:'2026-10-01',status:'waiting'},
+ {...task,id:'study',item_type:'activity'}, {...task,id:'old',start_date:'2020-01-01',end_date:'2020-01-02',status:'waiting'},
+ {...task,id:'deleted',deleted:true},{...task,id:'archived',archived:true},{...task,id:'other',project_id:'other'}];
+ const j=m.journey({id},rows);assert.equal(j.items.length,3);assert.deepEqual(Array.from(j.stages,t=>t.id),['study','later']);assert.equal(j.current[0].id,'study');assert.equal(j.complete,false);
+ assert.equal(j.items[0].status,'waiting','past date does not mean complete');
+ assert.equal(m.journey({id},[]).complete,false);assert.equal(m.journey({id},[{...task,status:'done'}]).complete,true);
+ assert.equal(m.journey({id},[task]).stages.length,1,'ordinary tasks remain a fallback');
+ assert.equal(rows[0].id,'later','source array is not mutated');
+});
+test('inline completion preserves metadata and reopens consistently',()=>{
+ const base={...task,item_type:'activity',calendar_mode:'hidden',note:'keep',archived:false};
+ const done=m.normalize('task',m.completionInput(base,true));assert.equal(done.status,'done');assert.equal(done.progress,100);assert.equal(done.note,'keep');assert.equal(done.calendar_mode,'hidden');assert.equal(done.start_date,base.start_date);
+ const reopened=m.normalize('task',m.completionInput(done,false));assert.equal(reopened.status,'doing');assert.equal(reopened.progress,0);assert.equal(base.progress,50);
+});
 test('Gantt fits whole project duration and supports bounded month/week axes',()=>{
  const rows=[{...task,start_date:'2026-01-15',end_date:'2027-05-20'},task];
  const all=m.ganttRange(rows,'2026-09-29');assert.equal(m.date(all.start),'2026-01-15');assert.equal(m.date(all.end),'2027-05-20');assert.equal(all.ticks.length,8);

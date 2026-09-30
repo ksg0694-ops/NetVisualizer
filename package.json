@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "2.116.0",
+    "@tabler/icons": "3.35.0",
     "pptxgenjs": "^3.12.0"
   }
 }

@@ -46,5 +46,11 @@
    due:active.filter(t=>t.status!=='done'&&day(t.end_date)>=now&&day(t.end_date)<=now+7),
    overdue:active.filter(t=>t.status!=='done'&&day(t.end_date)<now),weekStart:date(monday)};
  }
- root.ProjectModel=Object.freeze({categories,categoryKey,ganttRange,statuses,priorities,itemTypes,calendarModes,defaultCalendar,calendarIncludes,day,date,normalize,overview});
+ function journey(project,tasks){
+  const items=tasks.filter(t=>t.project_id===project.id&&!t.deleted&&!t.archived).sort((a,b)=>a.start_date.localeCompare(b.start_date)||a.end_date.localeCompare(b.end_date)||a.title.localeCompare(b.title,'ko'));
+  const stages=items.filter(t=>t.item_type==='activity'||t.item_type==='event'||t.milestone);
+  return {items,stages:stages.length?stages:items,current:items.filter(t=>t.status==='doing'),complete:items.length>0&&items.every(t=>t.status==='done')};
+ }
+ const completionInput=(task,done)=>({...task,status:done?'done':'doing',progress:done?100:0});
+ root.ProjectModel=Object.freeze({categories,categoryKey,ganttRange,statuses,priorities,itemTypes,calendarModes,defaultCalendar,calendarIncludes,day,date,normalize,overview,journey,completionInput});
 })(globalThis);
