@@ -57,7 +57,7 @@ document.getElementById('btn-sync').addEventListener('click', () => activeViewId
     };
 
     const viewContextMeta = {
-        'project-manager-view': { label: '생활 도구', title: 'Project' },
+        'project-manager-view': { label: '프로젝트 도구', title: 'Project' },
         'fixed-costs-view': { label: '생활 도구', title: '고정비 관리' },
         'insurance-cards-view': { label: '생활 도구', title: '보험·카드 관리' },
         'health-view': { label: '생활 도구', title: '건강 기록' },

@@ -1,12 +1,13 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Compact card header",
+  "feature": "Project navigation group",
   "phase": "report",
   "progress": 100,
   "updatedAt": "2026-10-01",
   "status": "complete",
   "completed": [
+    "Project moved into its own Project tools group on desktop/mobile; context label and mobile navigation verified; 75 tests passed",
     "Removed held-card count, moved refresh/add into Card heading row; desktop/mobile alignment and add dialog verified",
     "Selected concept 2 implemented: project accordions, actual activity journeys, inline completion and scoped add; no dashboard statistics or upcoming deadlines",
     "Desktop/mobile synthetic browser checked, visual QA passed; 75 regression tests and full check passed",
@@ -56,7 +57,7 @@
     "v193 assets prepared; no changes to existing transaction or insurance records"
   ],
   "remaining": [],
-  "nextStep": "Check app update, then open Insurance/cards to inspect the compact card heading.",
+  "nextStep": "Check app update, then open Project under the new Project tools group.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }

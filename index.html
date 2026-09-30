@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko" class="auth-pending">
 <head>
-    <meta name="app-build" content="7aad58c43a9f3554">
+    <meta name="app-build" content="ae486bc748ad7595">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NetVisualizer</title>
@@ -129,13 +129,16 @@
                 <div>
                     <p class="px-2 mb-1 text-[9px] font-bold text-gray-400 tracking-wider">생활 도구</p>
                     <a href="#" data-target="fixed-costs-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all"><i class="fas fa-calendar-check w-4 text-center text-xs"></i><span>고정비 관리</span></a>
-                    <a href="#" data-target="project-manager-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all"><i class="fas fa-diagram-project w-4 text-center text-xs"></i><span>Project</span></a>
                     <a href="#" data-target="insurance-cards-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all"><i class="fas fa-shield-alt w-4 text-center text-xs"></i><span>보험·카드 관리</span></a>
                     <div class="space-y-0.5">
                         <a href="#" data-target="health-view" data-feature="health" class="hidden nav-link items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all">
                             <i class="fas fa-heart-pulse w-4 text-center text-xs"></i> <span class="truncate">건강</span>
                         </a>
                     </div>
+                </div>
+                <div data-nav-group="project">
+                    <p class="px-2 mb-1 text-[9px] font-bold text-gray-400 tracking-wider">프로젝트 도구</p>
+                    <a href="#" data-target="project-manager-view" class="nav-link flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-all"><i class="fas fa-diagram-project w-4 text-center text-xs"></i><span>Project</span></a>
                 </div>
             </nav>
         </div>
@@ -1603,8 +1606,11 @@
                 </div>
                 <p class="mt-5 px-2 pb-1 text-[10px] font-bold text-gray-400">생활 도구</p>
                 <button type="button" data-mobile-nav-target="fixed-costs-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-calendar-check mr-2 w-4 text-center text-xs"></i>고정비 관리</button>
-                <button type="button" data-mobile-nav-target="project-manager-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-diagram-project mr-2 w-4 text-center text-xs"></i>Project</button>
                 <button type="button" data-mobile-nav-target="insurance-cards-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-shield-alt mr-2 w-4 text-center text-xs"></i>보험·카드 관리</button>
+                <div data-mobile-nav-group="project">
+                    <p class="mt-5 px-2 pb-1 text-[10px] font-bold text-gray-400">프로젝트 도구</p>
+                    <button type="button" data-mobile-nav-target="project-manager-view" class="mobile-drawer-link w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-diagram-project mr-2 w-4 text-center text-xs"></i>Project</button>
+                </div>
             </div>
         </nav>
     </div>

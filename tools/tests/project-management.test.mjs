@@ -150,5 +150,10 @@ test('Project navigation and private lifecycle stay independent of retired proje
  const html=await source('index.html'),shell=await source('js/features/appShell.js'),core=await source('js/features/appCore.js'),ui=await source('js/features/projectManager.js');
  for(const s of ['data-target="project-manager-view"','data-mobile-nav-target="project-manager-view"','id="project-manager-view"','project-manager.css','projectModel.js','projectStore.js','projectManager.js'])assert.ok(html.includes(s),s);
  assert.ok(shell.includes("get('view') === 'project'"));assert.ok(core.includes('window.ProjectManager?.reset()'));
+ assert.match(html, /data-nav-group="project"[^]*?프로젝트 도구[^]*?data-target="project-manager-view"/);
+ assert.match(html, /data-mobile-nav-group="project"[^]*?프로젝트 도구[^]*?data-mobile-nav-target="project-manager-view"/);
+ assert.equal((html.match(/data-target="project-manager-view"/g)||[]).length,1);
+ assert.equal((html.match(/data-mobile-nav-target="project-manager-view"/g)||[]).length,1);
+ assert.ok(shell.includes("'project-manager-view': { label: '프로젝트 도구'"));
  assert.ok(ui.includes('token!==generation'));assert.ok(ui.includes('esc(t.title)'));assert.ok(ui.includes('Google Calendar 연동 전'));assert.ok(ui.includes('showModal()'));
 });
