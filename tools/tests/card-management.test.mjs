@@ -44,6 +44,9 @@ test('card UI integrates with auth reset, preserves insurance, and confirms dele
  assert.ok(core.includes('window.CardManager?.reset()'));assert.ok(addons.includes('window.CardManager?.render()'));assert.ok(addons.includes('addonInsurances.map'));
  for(const s of ['showModal()','token!==generation','cm-confirm-yes','esc(c.name)','삭제 취소'])assert.ok(ui.includes(s));
  assert.ok(!ui.includes('<summary>'));assert.ok(!ui.includes("select('card_status'"));
+ assert.ok(!ui.includes('cm-count'));assert.ok(!ui.includes('보유 카드'));
+ assert.ok(ui.includes("$('cm-header')?.appendChild"));assert.ok(ui.includes("querySelector('.cm-toolbar')?.remove()"));
+ assert.ok((await source('index.html')).includes('id="cm-header"'));
 });
 test('card images allow only verified official images and safe embedded raster data',()=>{
  assert.ok(S.imageUrl('https://m.hanacard.co.kr/ATTACH/NEW_MOBILE/images/cardinfo/card_img/13889.gif'));
