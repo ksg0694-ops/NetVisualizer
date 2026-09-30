@@ -42,5 +42,12 @@ test('card migration preserves legacy fields and guards versions, identities and
 test('card UI integrates with auth reset, preserves insurance, and confirms deletion',async()=>{
  const core=await source('js/features/appCore.js'),ui=await source('js/features/cardManager.js'),addons=await source('js/features/cashflowControls.js');
  assert.ok(core.includes('window.CardManager?.reset()'));assert.ok(addons.includes('window.CardManager?.render()'));assert.ok(addons.includes('addonInsurances.map'));
- for(const s of ['showModal()','token!==generation','cm-confirm-yes','esc(c.name)','휴지통'])assert.ok(ui.includes(s));
+ for(const s of ['showModal()','token!==generation','cm-confirm-yes','esc(c.name)','삭제 취소'])assert.ok(ui.includes(s));
+ assert.ok(!ui.includes('<summary>'));assert.ok(!ui.includes("select('card_status'"));
+});
+test('card images allow only verified official images and safe embedded raster data',()=>{
+ assert.ok(S.imageUrl('https://m.hanacard.co.kr/ATTACH/NEW_MOBILE/images/cardinfo/card_img/13889.gif'));
+ assert.ok(S.imageUrl('https://cdn.www.shinhancard.com/pconts/static/images/card/plate/BGCBUR_00_h_f_d.webp'));
+ assert.ok(S.imageUrl('data:image/png;base64,YQ=='));
+ for(const url of ['javascript:alert(1)','https://evil.example/a.png','data:image/svg+xml;base64,YQ==','https://www.shinhancard.com.evil/a.png'])assert.equal(S.imageUrl(url),'');
 });
