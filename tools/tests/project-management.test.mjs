@@ -7,15 +7,22 @@ const source=p=>readFile(new URL('../../'+p,import.meta.url),'utf8');
 const c=vm.createContext({});vm.runInContext(await source('js/features/projectModel.js'),c);vm.runInContext(await source('js/features/projectStore.js'),c);
 const m=c.ProjectModel,id='10000000-0000-0000-0000-000000000001';
 const task={project_id:id,title:'Task',start_date:'2026-09-28',end_date:'2026-09-30',status:'doing',progress:50,priority:'high',milestone:false};
-test('dashboard journeys use actual scoped states and chronological activities, not deadline guesses',()=>{
+test('dashboard journeys include every item type with actual scoped states and chronological order',()=>{
  const rows=[{...task,id:'later',item_type:'event',start_date:'2026-10-01',end_date:'2026-10-01',status:'waiting'},
  {...task,id:'study',item_type:'activity'}, {...task,id:'old',start_date:'2020-01-01',end_date:'2020-01-02',status:'waiting'},
  {...task,id:'deleted',deleted:true},{...task,id:'archived',archived:true},{...task,id:'other',project_id:'other'}];
- const j=m.journey({id},rows);assert.equal(j.items.length,3);assert.deepEqual(Array.from(j.stages,t=>t.id),['study','later']);assert.equal(j.current[0].id,'study');assert.equal(j.complete,false);
+ const j=m.journey({id},rows);assert.equal(j.items.length,3);assert.deepEqual(Array.from(j.stages,t=>t.id),['old','study','later']);assert.equal(j.current[0].id,'study');assert.equal(j.complete,false);
  assert.equal(j.items[0].status,'waiting','past date does not mean complete');
  assert.equal(m.journey({id},[]).complete,false);assert.equal(m.journey({id},[{...task,status:'done'}]).complete,true);
- assert.equal(m.journey({id},[task]).stages.length,1,'ordinary tasks remain a fallback');
+ assert.equal(m.journey({id},[task]).stages.length,1,'ordinary tasks always appear');
+ for(const category of ['여행','자격증'])for(const item_type of ['task','activity','event'])assert.deepEqual(Array.from(m.journey({id,category},rows.map(t=>t.id==='study'?{...t,item_type}:t)).stages,t=>t.id),['old','study','later']);
  assert.equal(rows[0].id,'later','source array is not mutated');
+});
+test('detail notes remain multiline plain text and render escaped in dashboard',async()=>{
+ const note='1. 기출 풀기\n2. <img src=x onerror=alert(1)> 복습';
+ assert.equal(m.normalize('task',{...task,note}).note,note);
+ assert.equal(m.normalize('task',m.completionInput({...task,note},true)).note,note);
+ const ui=await source('js/features/projectManager.js');assert.ok(ui.includes('메모 · 세부 할 일'));assert.ok(ui.includes('class="pm-item-note">${esc(t.note)}'));
 });
 test('inline completion preserves metadata and reopens consistently',()=>{
  const base={...task,item_type:'activity',calendar_mode:'hidden',note:'keep',archived:false};

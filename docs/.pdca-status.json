@@ -1,12 +1,13 @@
 {
   "project": "NetVisualizer",
   "level": "dynamic",
-  "feature": "Project navigation group",
+  "feature": "Project journey consistency and detail notes",
   "phase": "report",
   "progress": 100,
   "updatedAt": "2026-10-01",
   "status": "complete",
   "completed": [
+    "All item types now appear in project journeys; existing multiline notes displayed under expanded task titles; mixed-type browser save verified and full check passed (76 tests)",
     "Project moved into its own Project tools group on desktop/mobile; context label and mobile navigation verified; 75 tests passed",
     "Removed held-card count, moved refresh/add into Card heading row; desktop/mobile alignment and add dialog verified",
     "Selected concept 2 implemented: project accordions, actual activity journeys, inline completion and scoped add; no dashboard statistics or upcoming deadlines",
@@ -57,7 +58,7 @@
     "v193 assets prepared; no changes to existing transaction or insurance records"
   ],
   "remaining": [],
-  "nextStep": "Check app update, then open Project under the new Project tools group.",
+  "nextStep": "Check app update, then edit ADsP items and use the Notes / detail tasks field.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }
