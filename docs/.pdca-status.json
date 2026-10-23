@@ -2,10 +2,10 @@
   "project": "NetVisualizer",
   "level": "dynamic",
   "feature": "On-demand BankSalad Gmail sync",
-  "phase": "check",
-  "progress": 95,
+  "phase": "report",
+  "progress": 100,
   "updatedAt": "2026-10-23",
-  "status": "released-awaiting-owner-smoke-check",
+  "status": "complete",
   "completed": [
     "Owner-only broker and opaque request queue implemented; existing mail importer and deduplication reused",
     "Full npm check passed (86 tests); Python suite passed (23 tests)",
@@ -13,12 +13,11 @@
     "GitHub write access restored; remote feature branch creation succeeded",
     "User configured server secrets; standard public-key request reaches handler unauthorized instead of configuration failure",
     "PR #44 merged as 69e965914fe288033b46d6dfdc9214a4006122ca; main Quality gates and GitHub Pages deployment passed",
-    "Live revision 3a95acba5dac27ff matches tested build; anonymous access rejected and browser preflight accepted"
+    "Live revision 3a95acba5dac27ff matches tested build; anonymous access rejected and browser preflight accepted",
+    "Owner clicked production sync: request completed in ~21 seconds; 1 email processed, 80 transactions inserted, 0 failures; workflow_dispatch run 39973236993 succeeded"
   ],
-  "remaining": [
-    "Confirm a real Gmail import and refreshed view through the owner's signed-in browser; local browser automation connection unavailable"
-  ],
-  "nextStep": "In the signed-in PWA, apply the app update and click data sync once; inspect the owner request and Gmail import acknowledgement.",
+  "remaining": [],
+  "nextStep": "Use BankSalad export email followed by the global sync button; renew the server Actions token before its configured expiry.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }
