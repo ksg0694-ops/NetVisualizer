@@ -42,7 +42,7 @@
         }
     }
     async function refreshIfStale() {
-        if (document.visibilityState !== 'visible' || refreshing || !root.navigator.onLine || !isSignedIn()) return;
+        if (root.BankSaladSync?.isBusy() || document.visibilityState !== 'visible' || refreshing || !root.navigator.onLine || !isSignedIn()) return;
         if (isEditing()) { deferRefresh(); return; }
         if (!pendingRefresh && Date.now() - lastRefresh < 60000) return;
         pendingRefresh = false;

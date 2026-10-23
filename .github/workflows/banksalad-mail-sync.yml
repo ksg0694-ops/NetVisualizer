@@ -5,6 +5,11 @@ on:
     - cron: "*/15 * * * *"
   workflow_dispatch:
     inputs:
+      sync_request_id:
+        description: Opaque owner request UUID from the authenticated sync broker
+        required: false
+        default: ""
+        type: string
       dry_run:
         description: Parse matching mail without writing to Supabase
         required: false
@@ -33,6 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
+      BANKSALAD_SYNC_REQUEST_ID: ${{ inputs.sync_request_id }}
       GMAIL_OAUTH_CLIENT_ID: ${{ secrets.GMAIL_OAUTH_CLIENT_ID }}
       GMAIL_OAUTH_CLIENT_SECRET: ${{ secrets.GMAIL_OAUTH_CLIENT_SECRET }}
       GMAIL_OAUTH_REFRESH_TOKEN: ${{ secrets.GMAIL_OAUTH_REFRESH_TOKEN }}
@@ -66,13 +72,22 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.repair_confirmed_historical_income == true }}
         run: python tools/finance_data_quality.py --repair-confirmed-historical-income
 
+      - name: Sync requested BankSalad mail
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sync_request_id != '' }}
+        run: python tools/run_requested_banksalad_sync.py
+
       - name: Sync BankSalad mail
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run != true }}
+        if: ${{ (github.event_name != 'workflow_dispatch' || inputs.dry_run != true) && inputs.sync_request_id == '' }}
         run: python tools/banksalad_mail_sync.py
 
       - name: Dry-run BankSalad mail
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true && inputs.sync_request_id == '' }}
         run: python tools/banksalad_mail_sync.py --dry-run
 
+      - name: Mark interrupted request failed
+        if: ${{ failure() && inputs.sync_request_id != '' }}
+        run: python tools/run_requested_banksalad_sync.py --fail
+
       - name: Audit full transaction ledger
+        if: ${{ inputs.sync_request_id == '' }}
         run: python tools/finance_data_quality.py --output finance-data-quality-summary.json
