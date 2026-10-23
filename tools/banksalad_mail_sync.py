@@ -702,7 +702,10 @@ def process_attachment(
     }
 
 
-def run_gmail_sync(args: argparse.Namespace) -> int:
+def run_gmail_sync(args: argparse.Namespace, totals: dict[str, int] | None = None) -> int:
+    if totals is None:
+        totals = {}
+    totals.update(messages_processed=0, messages_failed=0, rows_inserted=0)
     password = require_env("BANKSALAD_ZIP_PASSWORD")
     import_start_date = resolve_import_start_date()
     service = build_gmail_service()
@@ -745,6 +748,8 @@ def run_gmail_sync(args: argparse.Namespace) -> int:
                 args.dry_run,
                 import_start_date,
             )
+            totals["messages_processed"] += 1
+            totals["rows_inserted"] += summary["rows_inserted"]
             LOGGER.info("Message %s summary: %s", attachment.message_id, json.dumps(summary, ensure_ascii=False))
             if database is not None:
                 database.upsert_run(
@@ -757,6 +762,7 @@ def run_gmail_sync(args: argparse.Namespace) -> int:
                 )
         except Exception as error:  # audit, then fail the job after remaining messages
             failures += 1
+            totals["messages_failed"] += 1
             error_code = sanitize_error_code(error)
             LOGGER.error("Message %s failed: %s", attachment.message_id, error_code)
             if database is not None:

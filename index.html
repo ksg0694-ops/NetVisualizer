@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko" class="auth-pending">
 <head>
-    <meta name="app-build" content="ad7fe04675971d37">
+    <meta name="app-build" content="3a95acba5dac27ff">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NetVisualizer</title>
@@ -177,7 +177,7 @@
             </div>
             <div class="flex items-center gap-2 md:gap-3 shrink-0">
                 <span id="sync-status" class="hidden md:inline-block text-xs text-indigo-500 font-medium mr-2 max-w-[150px] truncate">백그라운드 동기화 중...</span>
-                <button id="btn-sync" class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors shadow-sm flex justify-center items-center" title="데이터 갱신" aria-label="데이터 새로고침">
+                <button id="btn-sync" class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors shadow-sm flex justify-center items-center" title="메일 확인 및 데이터 동기화" aria-label="뱅크샐러드 메일 확인 및 데이터 동기화">
                     <i class="fas fa-sync-alt" id="sync-icon"></i>
                 </button>
                 <button id="btn-app-update" type="button" class="app-update-button" title="앱 버전 확인" aria-label="앱 버전 확인"><i class="fas fa-download" aria-hidden="true"></i><span class="app-update-label">앱 확인</span><span id="app-update-dot" hidden></span></button>
@@ -1879,6 +1879,7 @@
     <div id="toast-container" popover="manual" role="status" aria-live="polite" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 flex flex-col gap-2 pointer-events-none w-[90%] md:w-auto max-w-sm"></div>
 
     <script defer src="./js/shared/appUpdater.js?v=20260925-1"></script>
+    <script defer src="./js/features/banksaladSync.js"></script>
     <script defer src="./js/features/appShell.js?v=20260925-update-1"></script>
 </body>
 </html>

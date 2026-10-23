@@ -1444,7 +1444,7 @@
 
         try {
             const patch = await fetchRemoteTables(tables);
-            if (window.AppExperience?.isEditing()) { window.AppExperience.deferRefresh(); return; }
+            if (window.AppExperience?.isEditing()) { window.AppExperience.deferRefresh(); return { deferred: true }; }
             dataCache = normalizeCache({ ...dataCache, ...patch });
             const meta = JSON.parse(window.AccountStorage.current.getItem('sync.tables.v1') || '{}');
             const partial = tables.some(table => meta[table]?.error);
@@ -1468,6 +1468,7 @@
             if (tables.includes('portfolios')) {
                 window.setTimeout(() => window.maybeAutoSyncMarketPrices?.(), 0);
             }
+            return { partial };
 
         } catch (error) {
             console.warn("API 연동 실패 사유:", error.message);
@@ -1489,6 +1490,7 @@
                 if(error.message === 'URL_MISSING') showToast('설정에서 Supabase URL과 Key를 입력해주세요.', 'info');
                 else showToast(`연결 실패: 표시할 데이터가 없습니다.`, 'error');
             }
+            return { error: true };
         } finally {
             if(syncIcon) syncIcon.classList.remove('animate-spin-slow');
         }

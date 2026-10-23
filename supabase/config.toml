@@ -5,3 +5,7 @@ verify_jwt = true
 
 [functions.sync-realestate-subscriptions]
 verify_jwt = true
+
+[functions.request-banksalad-sync]
+# Verify the session at the gateway and again in the owner-only handler.
+verify_jwt = true
