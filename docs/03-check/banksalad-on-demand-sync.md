@@ -10,3 +10,10 @@
 - Production frontend stays on its existing branch until server-only owner/token configuration is complete and a real request can be verified. GitHub scoped Actions token creation/Edge Function secret configuration is not exposed by the connected APIs.
 
 GitHub repository write access was restored after the user configured repository access. Remote feature branch creation succeeded; code publication and CI can now proceed. Server-only token/owner configuration and real owner end-to-end verification remain the rollout gate.
+
+## Production release
+
+- User confirmed both required server secrets saved. Standard public-key POST reaches handler authentication (`401 unauthorized`), proving configuration-presence checks passed without exposing any secret. Anonymous POST is rejected by the gateway; browser OPTIONS preflight succeeds with CORS headers. Token validity and owner-session import still need a real owner request.
+- PR #44 merged as `69e965914fe288033b46d6dfdc9214a4006122ca`; main Quality gates and GitHub Pages deployment passed. Live `version.json` reports expected revision `3a95acba5dac27ff`.
+- A proposed temporary capability-gated diagnostic route was rejected by automatic review and was never deployed. It was abandoned; subsequent checks used only the existing function and ordinary authentication paths.
+- Final remaining check: owner updates the PWA and presses sync; verify its request and Gmail import result. Local browser connection timed out, so authenticated end-to-end success is not claimed.

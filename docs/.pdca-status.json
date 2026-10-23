@@ -3,21 +3,22 @@
   "level": "dynamic",
   "feature": "On-demand BankSalad Gmail sync",
   "phase": "check",
-  "progress": 90,
+  "progress": 95,
   "updatedAt": "2026-10-23",
-  "status": "awaiting-server-secrets",
+  "status": "released-awaiting-owner-smoke-check",
   "completed": [
     "Owner-only broker and opaque request queue implemented; existing mail importer and deduplication reused",
     "Full npm check passed (86 tests); Python suite passed (23 tests)",
     "Production additive migration and broker v1 deployed; rollback-only owner/RLS/RPC checks passed; anonymous request rejected",
-    "GitHub write access restored; remote feature branch creation succeeded"
+    "GitHub write access restored; remote feature branch creation succeeded",
+    "User configured server secrets; standard public-key request reaches handler unauthorized instead of configuration failure",
+    "PR #44 merged as 69e965914fe288033b46d6dfdc9214a4006122ca; main Quality gates and GitHub Pages deployment passed",
+    "Live revision 3a95acba5dac27ff matches tested build; anonymous access rejected and browser preflight accepted"
   ],
   "remaining": [
-    "Configure server-only owner UUID and repository-scoped GitHub Actions token",
-    "Merge workflow/worker and verify a real owner Gmail collection request",
-    "Release frontend after end-to-end verification; visual browser QA pending"
+    "Confirm a real Gmail import and refreshed view through the owner's signed-in browser; local browser automation connection unavailable"
   ],
-  "nextStep": "Configure Supabase Edge Function secrets, then complete owner-triggered dispatch verification before frontend release.",
+  "nextStep": "In the signed-in PWA, apply the app update and click data sync once; inspect the owner request and Gmail import acknowledgement.",
   "previousStatus": "docs/archive/pdca-foundation-20260914.json",
   "changeMap": "docs/architecture/change-map.md"
 }
