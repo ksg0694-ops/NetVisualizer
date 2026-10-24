@@ -31,6 +31,7 @@
                 <article class="cfl-panel cfl-detail-panel"><div class="cfl-panel-heading"><h4>소비 속도</h4><label class="cfl-scale"><input type="checkbox" id="cfl-common-scale"> 월간 공통축</label></div><div class="cfl-detail-summary"><div class="cfl-pace-total"><strong id="cfl-current-spending"></strong><span id="cfl-pace-delta" role="status"></span></div><p class="cfl-note" id="cfl-baseline-note"></p></div><div class="cfl-chart cfl-chart-tall"><canvas id="cfl-pace-chart" role="img" aria-label="실제 날짜별 누적 소비. 월간 공통축을 켜면 같은 Y축 범위로 비교합니다."></canvas><p id="cfl-pace-empty" class="cfl-empty" hidden></p></div></article>
                 <article class="cfl-panel cfl-detail-panel"><div class="cfl-panel-heading"><h4>소비 구성</h4><span class="cfl-unit">단위: 만원</span></div><div class="cfl-detail-summary"><div class="cfl-pace-total"><strong id="cfl-top-category"></strong><span id="cfl-top-share"></span></div><p class="cfl-note">상위 6개 + 그 외</p></div><div class="cfl-chart cfl-chart-tall"><canvas id="cfl-category-chart" role="img" aria-label="카테고리별 현재 소비와 과거 평균 비교"></canvas><p id="cfl-category-empty" class="cfl-empty" hidden></p></div></article>
             </div>
+            <section id="finance-intelligence-panel" aria-label="거래 자동화 및 결제 검토"></section>
             <details class="cfl-evidence"><summary>계산 기준 · 집계표</summary>
                 <article class="cfl-panel"><h4>참고 · 월별 장부상 잉여</h4><p class="cfl-note">소득 − 전체 지출 · 실제 계좌 잔액과 다름</p><div class="cfl-chart"><canvas id="cfl-net-chart" role="img" aria-label="2026 월별 장부상 잉여"></canvas><p id="cfl-net-empty" class="cfl-empty" hidden></p></div></article>
                 <h4>2026 주기별 집계</h4><div id="cfl-year-table" class="cfl-table-wrap"></div>
@@ -123,6 +124,7 @@
         table('cfl-year-table', ['주기', '날짜', '소득', '소비', '일평균 소비', '상환', '잉여', '건수', '마지막 거래', '상태'], model.monthly.map(row => [row.key, `${row.start} ~ ${row.end}`, won(row.income), won(row.spending), won(row.dailySpending), won(row.repayment), won(row.net), row.count, row.latest, row.status]));
         table('cfl-category-table', ['분류', '선택 주기', '과거 평균', '증감률'], model.categories.map(row => [row.category, won(row.current), won(row.average), root.CashflowLabModel.categoryDelta(row)]));
         table('cfl-pace-table', ['실제 날짜', '경과일', '선택 주기 누적', '과거 중앙값'], model.curves.labels.map((label, index) => [model.curves.dates[index], `${index + 1}일차`, won(model.curves.current[index]), won(model.curves.baseline[index])]));
+        root.FinanceIntelligence?.render(model.selected, periods);
     }
     root.CashflowLab = Object.freeze({ render });
 })(globalThis);
