@@ -88,3 +88,23 @@ body:has(#cashflow-lab-view:not(.hidden)) {background:#f7f9fc;}
 .cfl-annual .cfl-panel-heading {min-height:34px;}
 .cfl-annual .cfl-controls select {min-height:34px;padding:4px 10px;}
 @media(max-width:600px) {.cfl-annual .cfl-panel-heading,.cfl-annual .cfl-controls select {min-height:44px;}}
+
+/* Year-level cashflow: show occasional costs separately without removing them from actual spend. */
+.cfl-year-split {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:-12px 0 22px;}
+.cfl-year-split > div {background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 16px;min-width:0;}
+.cfl-year-split span {display:block;color:#64748b;font-size:12px;}
+.cfl-year-split strong {display:block;margin-top:5px;font-size:clamp(17px,2vw,23px);font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
+.cfl-year-split > div:last-of-type {border-color:#fde68a;background:#fffbeb;}
+.cfl-year-split > div:last-of-type strong {color:#b45309;}
+.cfl-year-split small {font-size:10px;font-weight:400;}
+.cfl-year-split > p {grid-column:1/-1;margin:0;line-height:1.5;}
+.cfl-controls > label {font-size:12px;color:#64748b;white-space:nowrap;}
+.cfl-header .cfl-controls {justify-content:flex-end;}
+@media(max-width:600px) {
+    .cfl-header > .cfl-controls {grid-template-columns:auto minmax(0,1fr);align-items:center;gap:6px 8px;}
+    .cfl-year-split {gap:6px;margin-top:-8px;}
+    .cfl-year-split > div {padding:10px;}
+    .cfl-year-split strong {font-size:16px;}
+    .cfl-annual .cfl-panel-heading {align-items:flex-start;flex-wrap:wrap;}
+    .cfl-annual .cfl-controls {justify-content:flex-start;}
+}
