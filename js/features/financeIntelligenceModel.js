@@ -80,7 +80,7 @@
   function cardUsage(cards = [], transactions = [], isRepayment = () => false) {
     return cards.filter(c=>!c.deleted && c.card_status !== 'closed').map(card => {
       const alias = clean(card.name);
-      const matches = alias.length >= 3 ? transactions.filter(tx => tx.type==='지출' && !isRepayment(tx) && clean(tx.method).includes(alias)) : [];
+      const matches = alias.length >= 3 ? transactions.filter(tx => tx.type==='지출' && !isRepayment(tx) && (!tx.currency || tx.currency === 'KRW') && clean(tx.method).includes(alias)) : [];
       const observed = matches.reduce((sum,tx)=>sum+Math.abs(Number(tx.amount)||0),0);
       return {card, observed, matched:matches.length, coverage:matches.length?'matched':'unknown', target:Number(card.target_amt)||0};
     });
