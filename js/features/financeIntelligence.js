@@ -37,7 +37,7 @@
       data={rules,tags,fixed,cards};loaded=true;message='';messageError=false;
     }catch(err){
       if(owner===current&&token===request){message=err.message;messageError=true;}
-    }finally{if(owner===current&&token===request){loading=false;draw();}}
+    }finally{if(owner===current&&token===request){loading=false;draw();if(loaded)root.CashflowLab?.render();}}
   }
   function rowFor(key) {return txs().find(tx=>M.txKey(tx)===key);}
   function suggestedRows() {
@@ -61,7 +61,7 @@
       '<div class="fi-rows">'+list.map(tx=>{
         const key=M.txKey(tx), suggestion=M.suggest(tx,data.rules);
         const tag=data.tags.find(row=>row.transaction_key===key)?.event_tag||'';
-        const closed=selected?.closeStatus==='confirmed'||selected?.closeStatus==='stale';
+        const closed=selected?.basis==='calendar'||selected?.closeStatus==='confirmed'||selected?.closeStatus==='stale';
         let recommendation='';
         if(suggestion.status==='suggested') recommendation='<button type="button" data-fi-apply="'+attr(key)+'"'+(closed?' disabled':'')+'>추천 적용: '+esc(suggestion.classification.category)+' / '+esc(suggestion.classification.subcategory)+'</button>';
         if(suggestion.status==='conflict')recommendation='<span class="fi-warning">규칙 충돌: 수동 검토</span>';
@@ -113,6 +113,7 @@
       if(button.hasAttribute('data-fi-apply')){
         const tx=rowFor(button.dataset.fiApply),period=selected;
         if(!tx||!period)return;
+        if(period.basis==='calendar'){status('분류 변경은 급여주기 보기에서 적용하세요.',true);return;}
         const suggestion=M.suggest(tx,data.rules);
         if(suggestion.status!=='suggested')return;
         try{root.MonthlyCloseFeature.applySuggestedClassification(period,tx,suggestion.classification);status('분류 수정안을 월 마감에 저장했습니다. 확정 전 확인하세요.');}
@@ -135,6 +136,7 @@
           data.tags=data.tags.filter(row=>row.transaction_key!==key);
           if(tag)data.tags.push({transaction_key:key,event_tag:tag});
           status(tag?'특별지출 태그 저장 완료':'특별지출 태그 해제 완료');
+          root.CashflowLab?.render();
         }catch(err){status('태그 저장 실패: '+err.message,true);}
         finally{busy=false;draw();}
         return;
@@ -181,5 +183,8 @@
     draw();
     if(id&&!loaded&&!loading)load();
   }
-  root.FinanceIntelligence=Object.freeze({render,refresh:()=>{if(owner){loaded=false;load();}}});
+  function getTags() {
+    return loaded && owner && context().userId === owner ? data.tags.map(tag=>({...tag})) : null;
+  }
+  root.FinanceIntelligence=Object.freeze({render,getTags,refresh:()=>{if(owner){loaded=false;load();}}});
 })(globalThis);
