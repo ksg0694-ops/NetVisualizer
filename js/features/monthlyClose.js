@@ -339,10 +339,24 @@
         };
     }
 
+    function applySuggestedClassification(period, source, suggestion) {
+        if (!period?.key || !source || !suggestion) throw new Error('INVALID_SUGGESTION');
+        const record = getRecord(period.key, period);
+        if (record.status === 'closed') throw new Error('마감 완료 기간은 먼저 마감을 해제해야 합니다.');
+        const next = domain.updateFinanceMonthlyCloseClassification(record, source, {
+            type: suggestion.type, category: suggestion.category, subcategory: suggestion.subcategory,
+        }, nowIso());
+        saveLocalRecord(next);
+        queueRemote(next);
+        refreshFinance();
+        return next;
+    }
+
     loadLocal();
 
     root.MonthlyCloseFeature = Object.freeze({
         applyToPeriods,
+        applySuggestedClassification,
         getEffectiveTransactions,
         getRecord,
         hydrate,
