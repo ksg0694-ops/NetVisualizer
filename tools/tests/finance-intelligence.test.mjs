@@ -22,7 +22,7 @@ test('due day clamps month end and reconciliation never guesses paid from amount
  assert.equal(m.reconcileFixedCosts(fixed,[{...tx,amount:-60000,memo:'기타 매장'}],period,'2026-10-26')[0].status,'unconfirmed');
  const data=[{...tx,id:'2',memo:'통신비',amount:-66000}];
  assert.equal(m.reconcileFixedCosts(fixed,data,period,'2026-10-26')[0].status,'changed');
- assert.equal(m.reconcileFixedCosts(fixed,[...data,{...data,id:'3'}],period,'2026-10-26')[0].status,'ambiguous');
+ assert.equal(m.reconcileFixedCosts(fixed,[...data,{...data[0],id:'3'}],period,'2026-10-26')[0].status,'ambiguous');
  assert.equal(m.reconcileFixedCosts(fixed,data,period,'2026-10-26')[0].actual,66000);
 });
 test('special event tags change comparison only, never total ledger consumption',()=>{
