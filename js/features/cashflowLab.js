@@ -85,31 +85,64 @@
         const container = document.getElementById('cashflow-lab-view');
         if (!container || container.classList.contains('hidden')) return;
         if (!document.getElementById('cfl-period')) mount(container);
-        const periods = root.getCashFlowPeriods();
-        const model = root.CashflowLabModel.build(periods, selectedKey, root.AppUtils.toLocalDateString(), root.isRepaymentExpense, root.SpendingAnalysis.analyze);
+        const sourcePeriods = root.getCashFlowPeriods();
+        const today = root.AppUtils.toLocalDateString();
+        const allYears = root.CashflowLabModel.years(sourcePeriods, today);
+        const year = allYears.includes(Number(selectedYear)) ? Number(selectedYear) : Number(today.slice(0, 4));
+        const periods = periodBasis === 'calendar' ? root.CashflowLabModel.toCalendarPeriods(sourcePeriods) : sourcePeriods;
+        const tags = root.FinanceIntelligence?.getTags?.();
+        const tagKeys = new Set((tags || []).map(item => item.transaction_key));
+        const isSpecial = tx => tagKeys.has(root.FinanceIntelligenceModel?.txKey?.(tx));
+        const model = root.CashflowLabModel.build(periods, selectedKey, today, root.isRepaymentExpense,
+            root.SpendingAnalysis.analyze, { year, spendingView, isSpecial });
+        const yearSelect = document.getElementById('cfl-year'); yearSelect.replaceChildren();
+        allYears.forEach(value => { const option = document.createElement('option'); option.value = value; option.textContent = value + '년'; yearSelect.appendChild(option); });
+        yearSelect.value = String(year);
+        document.getElementById('cfl-basis').value = periodBasis;
+        document.getElementById('cfl-spending-view').value = spendingView;
+        text('cfl-year-heading', year + ' · CASH FLOW');
+        text('cfl-basis-note', periodBasis === 'calendar' ? '달력월 기준 (1일~말일)' : '급여주기 기준 (급여월)');
+        text('cfl-year-table-title', year + '년 월별 집계');
+        text('cfl-regular-spending', won(model.annual.regularSpending));
+        text('cfl-special-spending', won(model.annual.specialSpending));
+        text('cfl-special-note', tags == null ? '특별지출 태그를 불러오는 중입니다. 현재 일상/특별 구분은 잠정값입니다.' :
+            '태그한 거래만 특별지출로 분리합니다. 연간 소비는 실제 지출 그대로이고, 미지정 일회성 지출은 일상에 남습니다.');
         const select = document.getElementById('cfl-period'); select.replaceChildren();
         model.periods.forEach(period => { const option = document.createElement('option'); option.value = period.key; option.textContent = period.label; select.appendChild(option); });
         select.value = model.selected?.key || ''; select.disabled = !model.periods.length;
         for (const [key, value] of Object.entries(model.annual)) text(`cfl-${key}`, value === null ? '—' : `${compact(value)}원`);
-        text('cfl-coverage', `${model.availableCount}/12 주기${model.provisional ? ' · 미확정 포함' : ''}`);
+        text('cfl-coverage', `${model.availableCount}/12개월 기록${model.provisional ? ' · 미확정 포함' : ''}`);
         const labels = model.monthly.map(row => `${Number(row.key.slice(5))}월${row.partial ? '*' : ''}`);
         const selectFromChart = (_event, elements) => { const row = elements[0] && model.monthly[elements[0].index]; if (row?.known) { selectedKey = row.key; render(); document.getElementById('cfl-current-title').scrollIntoView({ behavior: 'smooth', block: 'start' }); } };
         const reference = (value, label) => ({ type: 'line', label, data: model.monthly.map(row => row.known ? value : null), borderColor: colors.comparison, borderDash: [5, 4], borderWidth: 2, pointRadius: 0, spanGaps: false });
         const daily = spendingUnit === 'daily';
         document.getElementById('cfl-spending-unit').value = spendingUnit;
-        text('cfl-spending-reference', `종료 주기 중앙값 ${won(daily ? model.dailySpendingReference : model.spendingReference)}${daily ? '/일' : ''}`);
+        const spendingLabel = spendingView === 'regular' ? '일상 소비' : spendingView === 'special' ? '특별지출' : '전체 소비';
+        text('cfl-spending-reference', `${spendingLabel} · 종료 기간 중앙값 ${won(daily ? model.dailySpendingReference : model.spendingReference)}${daily ? '/일' : ''}`);
         text('cfl-income-reference', `종료 주기 중앙값 ${won(model.incomeRange?.median ?? null)}`);
+        const spendingBar = (label, monthlyKey, dailyKey, color) => ({
+            label, data: model.monthly.map(row => daily ? row[dailyKey] : row[monthlyKey]),
+            backgroundColor: color, borderRadius: 4, maxBarThickness: 34, stack: 'consumption',
+        });
+        const bars = spendingView === 'all' ? [
+            spendingBar('일상 소비', 'regularSpending', 'dailyRegularSpending', colors.spending),
+            spendingBar('특별지출 (태그)', 'specialSpending', 'dailySpecialSpending', colors.special),
+        ] : [spendingBar(spendingLabel, spendingView === 'special' ? 'specialSpending' : 'regularSpending',
+            spendingView === 'special' ? 'dailySpecialSpending' : 'dailyRegularSpending',
+            spendingView === 'special' ? colors.special : colors.spending)];
         chart('year', labels, [
-            { label: daily ? '일평균 소비' : '월 총소비', data: model.monthly.map(row => daily ? row.dailySpending : row.spending), backgroundColor: model.monthly.map(row => row.partial ? '#c7d2fe' : colors.spending), borderRadius: 6, maxBarThickness: 34 },
-            reference(daily ? model.dailySpendingReference : model.spendingReference, '종료 주기 중앙값'),
-        ], { onClick: selectFromChart });
+            ...bars,
+            reference(daily ? model.dailySpendingReference : model.spendingReference, '종료 기간 중앙값'),
+        ], { onClick: selectFromChart,
+            scales: { x: { stacked: true, grid: { display: false } },
+                y: { stacked: true, beginAtZero: true, ticks: { callback: compact } } } });
         chart('income', labels, [
             { label: '월 소득', data: model.monthly.map(row => row.income), backgroundColor: model.monthly.map(row => row.partial ? '#99f6e4' : colors.income), borderRadius: 6, maxBarThickness: 34 },
             reference(model.incomeRange?.median ?? null, '종료 주기 중앙값'),
         ], { onClick: selectFromChart });
         chart('net', labels, [{ label: '장부상 잉여', data: model.monthly.map(row => row.net), backgroundColor: model.monthly.map(row => row.net < 0 ? colors.negative : colors.positive), borderRadius: 3 }]);
         const a = model.analysis;
-        text('cfl-current-title', model.isCurrent ? '이번 급여 주기' : '선택 급여 주기');
+        text('cfl-current-title', model.isCurrent ? (periodBasis === 'calendar' ? '이번 달' : '이번 급여 주기') : (periodBasis === 'calendar' ? '선택 달' : '선택 급여 주기'));
         text('cfl-period-range', model.selected ? `${model.selected.startDate} ~ ${model.selected.endDate} · ${a?.elapsed || 0}/${a?.duration || 0}일 경과` : '조회 가능한 주기 없음');
         text('cfl-current-spending', a?.hasCurrent ? `${compact(a.current.consumption)}원` : '기록 없음');
         const unavailable = !a?.hasCurrent ? '선택 주기 기록 없음' : !a.historyCount ? '이전 주기 기록 없음' : `${a.elapsed}일차 비교 없음`;
@@ -133,7 +166,7 @@
         const biggest = [...model.categories].sort((x, y) => y.current - x.current)[0];
         text('cfl-top-category', biggest?.category || '기록 없음');
         text('cfl-top-share', biggest && a?.current.consumption > 0 ? `${Math.round(biggest.current / a.current.consumption * 100)}% · 최대 소비 묶음` : '');
-        table('cfl-year-table', ['주기', '날짜', '소득', '소비', '일평균 소비', '상환', '잉여', '건수', '마지막 거래', '상태'], model.monthly.map(row => [row.key, `${row.start} ~ ${row.end}`, won(row.income), won(row.spending), won(row.dailySpending), won(row.repayment), won(row.net), row.count, row.latest, row.status]));
+        table('cfl-year-table', ['월', '기간', '소득', '전체 소비', '일상 소비', '특별지출', '일평균 소비', '상환', '잉여', '건수', '마지막 거래', '상태'], model.monthly.map(row => [row.key, `${row.start} ~ ${row.end}`, won(row.income), won(row.spending), won(row.regularSpending), won(row.specialSpending), won(row.dailySpending), won(row.repayment), won(row.net), row.count, row.latest, row.status]));
         table('cfl-category-table', ['분류', '선택 주기', '과거 평균', '증감률'], model.categories.map(row => [row.category, won(row.current), won(row.average), root.CashflowLabModel.categoryDelta(row)]));
         table('cfl-pace-table', ['실제 날짜', '경과일', '선택 주기 누적', '과거 중앙값'], model.curves.labels.map((label, index) => [model.curves.dates[index], `${index + 1}일차`, won(model.curves.current[index]), won(model.curves.baseline[index])]));
         root.FinanceIntelligence?.render(model.selected, periods);
