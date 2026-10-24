@@ -1,44 +1,56 @@
 // Experimental visual dashboard. Keeps the original cashflow view untouched.
 (function (root) {
     'use strict';
-    let selectedKey = '', commonScale = false, spendingUnit = 'daily';
-    const colors = { income: '#0d9488', spending: '#6366f1', comparison: '#94a3b8', positive: '#0f766e', negative: '#b45309' };
+    let selectedKey = '', commonScale = false, spendingUnit = 'total';
+    let selectedYear = '', periodBasis = 'calendar', spendingView = 'all';
+    const colors = { income: '#0d9488', spending: '#6366f1', special: '#f59e0b', comparison: '#94a3b8', positive: '#0f766e', negative: '#b45309' };
     const won = value => value == null ? '—' : `${Math.round(value).toLocaleString('ko-KR')}원`;
     const compact = value => value == null ? '—' : `${(value / 10000).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}만`;
     function text(id, value) { const element = document.getElementById(id); if (element) element.textContent = value; }
     function mount(container) {
         container.innerHTML = `
             <div class="cfl-header">
-                <div><p class="cfl-eyebrow">2026 · CASH FLOW</p><h2>현금흐름</h2></div>
+                <div><p class="cfl-eyebrow" id="cfl-year-heading">YEARLY CASH FLOW</p><h2>현금흐름</h2></div>
                 <div class="cfl-controls">
-                    <span class="cfl-status">대시보드</span>
+                    <label for="cfl-year">연도</label><select id="cfl-year" aria-label="조회 연도"></select>
+                    <label for="cfl-basis">기간</label><select id="cfl-basis" aria-label="현금흐름 집계 기준"><option value="calendar">달력월 (1~말일)</option><option value="payday">급여주기</option></select>
                 </div>
             </div>
-            <div class="cfl-section-heading"><h3>연간 흐름 <span class="cfl-heading-meta">급여 주기 기준</span></h3><span id="cfl-coverage" class="cfl-status"></span></div>
+            <div class="cfl-section-heading"><h3>연간 흐름 <span class="cfl-heading-meta" id="cfl-basis-note">달력월 기준</span></h3><span id="cfl-coverage" class="cfl-status"></span></div>
             <div class="cfl-kpis">
                 <div class="cfl-kpi"><span>누적 소득</span><strong id="cfl-income"></strong></div>
                 <div class="cfl-kpi"><span>누적 소비 <small>상환 제외</small></span><strong id="cfl-spending"></strong></div>
                 <div class="cfl-kpi"><span>누적 상환</span><strong id="cfl-repayment"></strong></div>
                 <div class="cfl-kpi"><span>장부상 잉여</span><strong id="cfl-net"></strong></div>
             </div>
-            <div class="cfl-grid cfl-annual">
-                <article class="cfl-panel"><div class="cfl-panel-heading"><h4>소비</h4><div class="cfl-controls"><select id="cfl-spending-unit" aria-label="소비 비교 기준"><option value="total">월 총소비</option><option value="daily">일평균 소비</option></select></div></div><p class="cfl-note cfl-reference" id="cfl-spending-reference"></p><div class="cfl-chart"><canvas id="cfl-year-chart" role="img" aria-label="2026 월별 소비만 비교. 점선은 종료 주기 중앙값입니다."></canvas><p id="cfl-year-empty" class="cfl-empty" hidden></p></div></article>
-                <article class="cfl-panel"><div class="cfl-panel-heading"><h4>소득</h4><span class="cfl-unit">월 소득</span></div><p class="cfl-note cfl-reference" id="cfl-income-reference"></p><div class="cfl-chart"><canvas id="cfl-income-chart" role="img" aria-label="2026 월별 소득만 비교. 소비 차트와 다른 금액 축입니다."></canvas><p id="cfl-income-empty" class="cfl-empty" hidden></p></div></article>
+            <div class="cfl-year-split" aria-label="연간 소비 구분">
+                <div><span>일상 소비 합계</span><strong id="cfl-regular-spending">—</strong></div>
+                <div><span>특별지출 합계 <small>태그 기준</small></span><strong id="cfl-special-spending">—</strong></div>
+                <p class="cfl-note" id="cfl-special-note">특별지출 태그를 지정한 금액만 별도로 보이며, 실제 소비 합계는 바뀌지 않습니다.</p>
             </div>
-            <p class="cfl-note cfl-annual-footnote">* 진행 중 · 오늘까지 반영 <span>단위: 만원 · 소득/소비 별도 축</span></p>
-            <div class="cfl-section-heading"><div><h3 id="cfl-current-title">이번 급여 주기</h3><p id="cfl-period-range"></p></div><div class="cfl-controls"><label for="cfl-period">상세 주기</label><select id="cfl-period"></select><button type="button" id="cfl-current">현재 주기</button></div></div>
+            <div class="cfl-grid cfl-annual">
+                <article class="cfl-panel"><div class="cfl-panel-heading"><h4>소비</h4><div class="cfl-controls">
+                    <label for="cfl-spending-view">구분</label><select id="cfl-spending-view" aria-label="소비 구분"><option value="all">전체 (일상 + 특별)</option><option value="regular">일상 소비만</option><option value="special">특별지출만</option></select>
+                    <label for="cfl-spending-unit">단위</label><select id="cfl-spending-unit" aria-label="소비 비교 기준"><option value="total">월 총소비</option><option value="daily">일평균 소비</option></select></div></div><p class="cfl-note cfl-reference" id="cfl-spending-reference"></p><div class="cfl-chart"><canvas id="cfl-year-chart" role="img" aria-label="선택 연도의 월별 일상 소비와 특별지출, 종료 기간 중앙값을 비교합니다."></canvas><p id="cfl-year-empty" class="cfl-empty" hidden></p></div></article>
+                <article class="cfl-panel"><div class="cfl-panel-heading"><h4>소득</h4><span class="cfl-unit">월 소득</span></div><p class="cfl-note cfl-reference" id="cfl-income-reference"></p><div class="cfl-chart"><canvas id="cfl-income-chart" role="img" aria-label="선택 연도의 월별 소득과 종료 기간 중앙값을 비교합니다."></canvas><p id="cfl-income-empty" class="cfl-empty" hidden></p></div></article>
+            </div>
+            <p class="cfl-note cfl-annual-footnote">* 진행 중 · 오늘까지 반영 <span>소득/소비 별도 축 · 태그 없는 일회성 지출은 일상에 포함</span></p>
+            <div class="cfl-section-heading"><div><h3 id="cfl-current-title">이번 달</h3><p id="cfl-period-range"></p></div><div class="cfl-controls"><label for="cfl-period">상세 기간</label><select id="cfl-period"></select><button type="button" id="cfl-current">현재 기간</button></div></div>
             <div class="cfl-grid">
                 <article class="cfl-panel cfl-detail-panel"><div class="cfl-panel-heading"><h4>소비 속도</h4><label class="cfl-scale"><input type="checkbox" id="cfl-common-scale"> 월간 공통축</label></div><div class="cfl-detail-summary"><div class="cfl-pace-total"><strong id="cfl-current-spending"></strong><span id="cfl-pace-delta" role="status"></span></div><p class="cfl-note" id="cfl-baseline-note"></p></div><div class="cfl-chart cfl-chart-tall"><canvas id="cfl-pace-chart" role="img" aria-label="실제 날짜별 누적 소비. 월간 공통축을 켜면 같은 Y축 범위로 비교합니다."></canvas><p id="cfl-pace-empty" class="cfl-empty" hidden></p></div></article>
                 <article class="cfl-panel cfl-detail-panel"><div class="cfl-panel-heading"><h4>소비 구성</h4><span class="cfl-unit">단위: 만원</span></div><div class="cfl-detail-summary"><div class="cfl-pace-total"><strong id="cfl-top-category"></strong><span id="cfl-top-share"></span></div><p class="cfl-note">상위 6개 + 그 외</p></div><div class="cfl-chart cfl-chart-tall"><canvas id="cfl-category-chart" role="img" aria-label="카테고리별 현재 소비와 과거 평균 비교"></canvas><p id="cfl-category-empty" class="cfl-empty" hidden></p></div></article>
             </div>
             <section id="finance-intelligence-panel" aria-label="거래 자동화 및 결제 검토"></section>
             <details class="cfl-evidence"><summary>계산 기준 · 집계표</summary>
-                <article class="cfl-panel"><h4>참고 · 월별 장부상 잉여</h4><p class="cfl-note">소득 − 전체 지출 · 실제 계좌 잔액과 다름</p><div class="cfl-chart"><canvas id="cfl-net-chart" role="img" aria-label="2026 월별 장부상 잉여"></canvas><p id="cfl-net-empty" class="cfl-empty" hidden></p></div></article>
-                <h4>2026 주기별 집계</h4><div id="cfl-year-table" class="cfl-table-wrap"></div>
+                <article class="cfl-panel"><h4>참고 · 월별 장부상 잉여</h4><p class="cfl-note">소득 − 전체 지출 · 실제 계좌 잔액과 다름</p><div class="cfl-chart"><canvas id="cfl-net-chart" role="img" aria-label="선택 연도의 월별 장부상 잉여"></canvas><p id="cfl-net-empty" class="cfl-empty" hidden></p></div></article>
+                <h4 id="cfl-year-table-title">연도별 월간 집계</h4><div id="cfl-year-table" class="cfl-table-wrap"></div>
                 <h4>선택 주기 카테고리 비교</h4><div id="cfl-category-table" class="cfl-table-wrap"></div>
                 <h4>선택 주기 누적 소비</h4><div id="cfl-pace-table" class="cfl-table-wrap"></div>
             </details>`;
         document.getElementById('cfl-period').addEventListener('change', event => { selectedKey = event.target.value; render(); });
+        document.getElementById('cfl-year').addEventListener('change', event => { selectedYear = event.target.value; selectedKey = ''; render(); });
+        document.getElementById('cfl-basis').addEventListener('change', event => { periodBasis = event.target.value; selectedKey = ''; render(); });
+        document.getElementById('cfl-spending-view').addEventListener('change', event => { spendingView = event.target.value; render(); });
         document.getElementById('cfl-spending-unit').addEventListener('change', event => { spendingUnit = event.target.value; render(); });
         document.getElementById('cfl-common-scale').addEventListener('change', event => { commonScale = event.target.checked; render(); });
         document.getElementById('cfl-current').addEventListener('click', () => { selectedKey = ''; render(); });
