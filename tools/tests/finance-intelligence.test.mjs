@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import { PGlite } from '@electric-sql/pglite';
 import { readFile } from 'node:fs/promises';
 const code=await readFile(new URL('../../js/features/financeIntelligenceModel.js',import.meta.url),'utf8');
 const c=vm.createContext({PersonalCfoDomain:{createTransactionKey:t=>'id:'+t.id}});
@@ -37,4 +38,24 @@ test('card spend evidence is not called official eligible spending',()=>{
  const r=m.cardUsage(cdata,[tx],()=>false)[0];
  assert.equal(r.observed,5500);assert.equal(r.target,500000);assert.equal(r.coverage,'matched');
  assert.equal(m.cardUsage([{...cdata[0],name:'X'}],[tx],()=>false)[0].coverage,'unknown');
+});
+
+test('owner-only SQL tables isolate rules/tags and reject anonymous writes',async()=>{
+ const db=new PGlite(),a='10000000-0000-0000-0000-000000000001',b='10000000-0000-0000-0000-000000000002';
+ try{
+  await db.exec("create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);insert into auth.users values('"+a+"'),('"+b+"');create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth,public to anon,authenticated;");
+  const sql=await readFile(new URL('../../supabase/migrations/20261024090000_finance_intelligence.sql',import.meta.url),'utf8');
+  await db.exec(sql);
+  await db.exec("set role authenticated; select set_config('request.jwt.claim.sub','"+a+"',false);");
+  await db.exec("insert into finance_transaction_rules(match_text,match_type,target_type,target_category,target_subcategory) values('스타벅스','지출','지출','식비','카페')");
+  await db.exec("insert into finance_transaction_tags(transaction_key,event_tag) values('id:1234','시즈오카')");
+  assert.equal((await db.query('select * from finance_transaction_rules')).rows.length,1);
+  await assert.rejects(()=>db.query("insert into finance_transaction_rules(match_text,match_type,target_type,target_category,target_subcategory) values('x','지출','지출','식비','카페')"),/check constraint/);
+  await db.exec("select set_config('request.jwt.claim.sub','"+b+"',false)");
+  assert.equal((await db.query('select * from finance_transaction_rules')).rows.length,0);
+  assert.equal((await db.query('select * from finance_transaction_tags')).rows.length,0);
+  await assert.rejects(()=>db.query("insert into finance_transaction_tags(user_id,transaction_key,event_tag) values('"+a+"','id:zzz','부정')"),/row-level security/);
+  await db.exec("reset role;set role anon");
+  await assert.rejects(()=>db.query("select * from finance_transaction_tags"),/permission denied/);
+ }finally{await db.close();}
 });
