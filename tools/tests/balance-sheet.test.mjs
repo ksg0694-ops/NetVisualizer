@@ -23,6 +23,13 @@ test('history preserves authoritative net worth, missing months and duplicate un
  assert.equal(h.length,4);assert.equal(h[0].netWorth,100);assert.equal(h[1].netWorth,null);assert.equal(h[2].netWorth,0);assert.equal(h[3].status,'duplicate');
  assert.equal(m.reconcile(h)[2].change,null);
 });
+test('next salary accounting month remains visible before calendar month changes',()=>{
+ const h=m.history([{year:2026,month:10,total_asset:239090532},{year:2026,month:11,total_asset:236481920},{year:2026,month:12,total_asset:999}], '2026-10-26');
+ assert.equal(h.length,2);
+ assert.equal(h.at(-1).month,'2026-11');
+ assert.equal(h.at(-1).netWorth,236481920);
+ assert.equal(m.reconcile(h).at(-1).change,-2608612);
+});
 test('reconciliation removes deposits from performance and never guesses savings',()=>{
  const h=m.history([{year:2026,month:1,total_asset:100},{year:2026,month:2,total_asset:130}]);
  const f={month:'2026-02',basis:'calendar',scope:'investment+pension',reviewed:true,opening_net_worth:100,closing_net_worth:130,opening_investment:50,closing_investment:75,net_contributions:20,net_saving:25,other_change:0};
