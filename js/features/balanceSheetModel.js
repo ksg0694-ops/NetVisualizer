@@ -10,7 +10,9 @@
             const year = Number(r.year), month = Number(r.month), value = numeric(r.total_asset);
             if (!Number.isInteger(year) || year < 1900 || year > 2200 || !Number.isInteger(month) || month < 1 || month > 12 || value === null) continue;
             const key = `${year}-${String(month).padStart(2,'0')}`;
-            if (today && key > today.slice(0,7)) continue;
+            // A salary-day snapshot belongs to the next accounting month.
+            // Show that next month, but continue hiding records further in the future.
+            if (today && key > keyAt(monthIndex(today.slice(0,7)) + 1)) continue;
             if (byMonth.has(key)) { byMonth.set(key, {month:key, netWorth:null, status:'duplicate'}); continue; }
             byMonth.set(key, {month:key, netWorth:value, status:'recorded', source:'assets'});
         }
